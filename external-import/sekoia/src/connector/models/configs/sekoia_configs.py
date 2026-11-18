@@ -21,6 +21,8 @@ HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 # Same flags as the SDK: `\d` only matches 0-9.
 _ISO_DATETIME_OR_DURATION_REGEX = re.compile(ISO_DATETIME_OR_DURATION_PATTERN, re.ASCII)
 
+DEFAULT_START_DATE = "P90D"
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,7 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         description="Allows you to specify the collection to query in order to retrieve or manage indicators of compromise.",
     )
     start_date: DatetimeFromIsoString = Field(
-        default="P90D",
+        default=DEFAULT_START_DATE,
         description="Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P90D'). Default: 90 days ago. Only used on the first run, when no state exists.",
     )
     limit: PositiveInt = Field(
@@ -85,10 +87,13 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         a UTC datetime, with a deprecation warning. Anything else is passed on, so
         that the SDK validator raises a clear error.
 
-        Unquoted YAML values are handled too: an integer such as `20220101` is read
+        A null value falls back to the default. Unquoted YAML values are handled too: an integer such as `20220101` is read
         as text (not as a Unix timestamp), and a date or naive datetime is read as
         UTC.
         """
+        if value is None:
+            # `start_date: null` in config.yml: use the default, like an unset value
+            return DEFAULT_START_DATE
         if isinstance(value, bool):
             return value
         if isinstance(value, int):

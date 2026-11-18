@@ -268,3 +268,9 @@ def test_out_of_range_aware_datetime_is_a_validation_error():
 
     assert "start_date" in str(exc_info.value)
     assert "out of range" in str(exc_info.value)
+
+
+def test_null_start_date_falls_back_to_the_default():
+    settings = _build(None)
+
+    _assert_close_to_now(settings.start_date, timedelta(days=90))
