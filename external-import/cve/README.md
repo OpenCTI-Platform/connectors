@@ -248,7 +248,7 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
    - Creates Software entities with vendor, product, version, and CPE URI
    - Links each Software to its Vulnerability with a `has` relationship
    - Can be combined with any operating mode (incremental or historical)
-   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one additional NVD API call per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
+   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one or more additional NVD API calls per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
 
 ### Processing Details
 
@@ -256,7 +256,7 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
 - **Rate Limiting**: NVD API has rate limits; connector handles pagination
 - **Date Range**: Maximum 120-day range per API query
 - **API Key Required**: Unauthenticated requests are heavily rate-limited
-- **CPE Match API**: When `import_software=true`, an additional API call per CVE is made to the [NVD CPE Match API](https://nvd.nist.gov/developers/products). These requests use the same NVD API key and are throttled by the connector's shared sliding-window `AsyncRateLimiter`, rather than a fixed 6-second sleep between requests.
+- **CPE Match API**: When `import_software=true`, one or more additional API calls per CVE are made to the [NVD CPE Match API](https://nvd.nist.gov/developers/products). These requests use the same NVD API key and are throttled by the connector's shared sliding-window `AsyncRateLimiter`, rather than a fixed 6-second sleep between requests.
 
 ## Debugging
 
