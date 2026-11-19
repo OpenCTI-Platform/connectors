@@ -1,0 +1,57 @@
+{
+  "has_more": false,
+  "limit": 50,
+  "result": [
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T12:00:00.000000+00:00",
+      "detections": {
+        "benign": 2,
+        "malicious": 10,
+        "total": 12
+      },
+      "download_url": null,
+      "first_seen": "2026-11-09T08:30:00.000000+00:00",
+      "id": "90000000000000001",
+      "instance_id": "90000000000000101",
+      "livescan_id": "90000000000000201",
+      "malware_family": "EICAR",
+      "matched_strings": [
+        {
+          "identifier": "$eicar",
+          "offset": 0,
+          "data": "EICAR-STANDARD-ANTIVIRUS-TEST-FILE"
+        }
+      ],
+      "matched_strings_dropped": false,
+      "md5": "44d88612fea8a8f36de82e1278abb02f",
+      "polyscore": 0.99,
+      "rule_name": "synthetic_eicar_rule",
+      "sha1": "3395856ce81f2b7382dee72602f798b642f14140",
+      "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+      "tags": "{}",
+      "yara": "rule synthetic_eicar_rule { strings: $eicar = \"EICAR-STANDARD-ANTIVIRUS-TEST-FILE\" condition: $eicar }"
+    },
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T12:05:00.000000+00:00",
+      "detections": null,
+      "download_url": null,
+      "first_seen": "2026-11-10T12:04:00.000000+00:00",
+      "id": "90000000000000002",
+      "instance_id": "90000000000000102",
+      "livescan_id": "90000000000000201",
+      "malware_family": null,
+      "matched_strings": null,
+      "matched_strings_dropped": null,
+      "md5": "44d88612fea8a8f36de82e1278abb02f",
+      "polyscore": null,
+      "rule_name": "synthetic_eicar_rule",
+      "sha1": "3395856ce81f2b7382dee72602f798b642f14140",
+      "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+      "tags": "{}",
+      "yara": null
+    }
+  ],
+  "status": "OK"
+}

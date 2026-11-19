@@ -1,0 +1,894 @@
+{
+  "objects": [
+    {
+      "type": "bundle",
+      "id": "bundle--00000000-0000-4000-a058-18f0a6ec1b17",
+      "objects": [
+        {
+          "type": "malware",
+          "spec_version": "2.1",
+          "id": "malware--00000000-0000-4000-a058-18f0a6ec1b17",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.826240Z",
+          "name": "Socks",
+          "is_family": true,
+          "aliases": [
+            "0319f6464e312255ef96ea659c0ad04483616bbeb0ff1e4522c678133f925b3e"
+          ],
+          "first_seen": "2026-10-27T14:53:00.063063Z",
+          "last_seen": "2026-10-27T14:53:00.063063Z"
+        },
+        {
+          "type": "file",
+          "spec_version": "2.1",
+          "id": "file--00000000-0000-4000-a0f6-8e132e55464f",
+          "hashes": {
+            "SSDEEP": "12288:ACCs5xOKx2NhMi8jxr/W17fAacxxwrLKbRFm:AU5xOuifituATgKFm",
+            "SHA-256": "0319f6464e312255ef96ea659c0ad04483616bbeb0ff1e4522c678133f925b3e",
+            "SHA-512": "694cbfec0cb842c1e0f7f76faa2924b23b39ec4a243ae7a8a38b2a1733aaca22335b396a9858c80cef68babf9d1bbefab40e1c8f54ea537596b6c129a02ebed3",
+            "MD5": "1ef4d4c5add6dbb30ea5013bd9dfc57a",
+            "TLSH": "11f4230a75d5cb9ac01ef13629d33be0acb9253549ee9f8b036d5ed29bd3cc84c114a6",
+            "SHA-1": "6f80dbab1f1624bab720f2ca23cea5c5701d10e0"
+          },
+          "size": 738187,
+          "name": "0319f6464e312255ef96ea659c0ad04483616bbeb0ff1e4522c678133f925b3e",
+          "mime_type": "application/vnd.microsoft.portable-executable"
+        },
+        {
+          "type": "malware",
+          "spec_version": "2.1",
+          "id": "malware--00000000-0000-4000-a0f6-8e132e55464f",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.834182Z",
+          "name": "Socks",
+          "malware_types": [
+            "worm",
+            "trojan",
+            "spyware"
+          ],
+          "is_family": false,
+          "first_seen": "2026-10-27T14:53:00.063063Z",
+          "last_seen": "2026-10-27T14:53:00.063063Z",
+          "sample_refs": [
+            "file--00000000-0000-4000-a0f6-8e132e55464f"
+          ],
+          "confidence": 99,
+          "external_references": [
+            {
+              "source_name": "polyswarm-report",
+              "url": "https://polyswarm.network/scan/results/file/0319f6464e312255ef96ea659c0ad04483616bbeb0ff1e4522c678133f925b3e/69399057303684687"
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--d9a9a7cf-ba5b-4113-b60d-ab3ca261c33b",
+          "created": "2026-11-10T14:53:10.834618Z",
+          "modified": "2026-11-10T14:53:10.834618Z",
+          "relationship_type": "variant-of",
+          "source_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f",
+          "target_ref": "malware--00000000-0000-4000-a058-18f0a6ec1b17"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.835069Z",
+          "pattern": "[file:hashes.MD5 = '1ef4d4c5add6dbb30ea5013bd9dfc57a']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.063063Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--3b21c0f1-ff86-422c-873d-861e78bfb20f",
+          "created": "2026-11-10T14:53:10.836321Z",
+          "modified": "2026-11-10T14:53:10.836321Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.836729Z",
+          "pattern": "[file:hashes.'SHA-1' = '6f80dbab1f1624bab720f2ca23cea5c5701d10e0']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.063063Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--ca5ffbda-5141-4b84-95e1-3fb662ff081b",
+          "created": "2026-11-10T14:53:10.837898Z",
+          "modified": "2026-11-10T14:53:10.837898Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.838323Z",
+          "pattern": "[file:hashes.'SHA-256' = '0319f6464e312255ef96ea659c0ad04483616bbeb0ff1e4522c678133f925b3e']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.063063Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--bb45a779-70d3-4c06-a3fd-1f91bdd2b833",
+          "created": "2026-11-10T14:53:10.839452Z",
+          "modified": "2026-11-10T14:53:10.839452Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a0f6-8e132e55464f",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76dd",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.839817Z",
+          "product": "clamav",
+          "analysis_engine_version": "ClamAV 1.5.4/28164/Sun Oct 25 06:24:12 2026",
+          "result_name": "Win.Worm.Socks-10058896-0",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--be803f49-184c-4393-8e53-208959d94413",
+          "created": "2026-11-10T14:53:10.840173Z",
+          "modified": "2026-11-10T14:53:10.840173Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76dd",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76de",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.840757Z",
+          "product": "crowdstrike-falcon-ml",
+          "analysis_engine_version": "2",
+          "result_name": "win/malicious",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--e55dbc91-1366-44d2-a58c-4ddcdee4bd8f",
+          "created": "2026-11-10T14:53:10.841115Z",
+          "modified": "2026-11-10T14:53:10.841115Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76de",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76df",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.841877Z",
+          "product": "cyberstanc_scrutiny",
+          "result": "unknown"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--4099f525-3022-4ceb-ac26-45827d85250b",
+          "created": "2026-11-10T14:53:10.842214Z",
+          "modified": "2026-11-10T14:53:10.842214Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76df",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e0",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.842535Z",
+          "product": "drweb",
+          "analysis_engine_version": "",
+          "analysis_definition_version": "",
+          "result": "unknown"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--9319cac6-2cab-4418-a78f-46b5604d1526",
+          "created": "2026-11-10T14:53:10.842919Z",
+          "modified": "2026-11-10T14:53:10.842919Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e0",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e1",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.843242Z",
+          "product": "filseclab",
+          "analysis_definition_version": "40.131.4421",
+          "result_name": "Suspicious:TrojanSpy.Ser.a.eypr.mg",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--9319dab1-cd31-45a0-a3e9-c6263d85f0e5",
+          "created": "2026-11-10T14:53:10.843575Z",
+          "modified": "2026-11-10T14:53:10.843575Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e1",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e2",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.843940Z",
+          "product": "ikarus",
+          "result_name": "Trojan-Spy.Win32.Agent",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--5202f93b-fb81-49d6-83dd-dac996b94a1d",
+          "created": "2026-11-10T14:53:10.844274Z",
+          "modified": "2026-11-10T14:53:10.844274Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e2",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e3",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.844647Z",
+          "product": "jiangmin",
+          "analysis_definition_version": "16.0.100",
+          "result_name": "Worm/Socks.cg",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--6e497b30-0cd3-45b6-9450-c4f189c1036c",
+          "created": "2026-11-10T14:53:10.845048Z",
+          "modified": "2026-11-10T14:53:10.845048Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e3",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e4",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.845382Z",
+          "product": "lionic",
+          "result_name": "Worm.Win32.Socks.l60t",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--cd918caa-2322-4a01-b7cd-26e1b3d7fb56",
+          "created": "2026-11-10T14:53:10.845766Z",
+          "modified": "2026-11-10T14:53:10.845766Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e4",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e5",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.846084Z",
+          "product": "nanoav",
+          "analysis_engine_version": "1.0.358.704",
+          "analysis_definition_version": "0.14.70.55538",
+          "result_name": "Trojan.Win32.Socks.ddcdzy",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--dfdb55f1-4f67-425b-9c0e-bac6f395c121",
+          "created": "2026-11-10T14:53:10.846416Z",
+          "modified": "2026-11-10T14:53:10.846416Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e5",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e6",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.846781Z",
+          "product": "qihoo-360",
+          "analysis_definition_version": "2022-10-09 10:05",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--45d2c462-7100-42ee-999f-8b799bdf8b0d",
+          "created": "2026-11-10T14:53:10.847114Z",
+          "modified": "2026-11-10T14:53:10.847114Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e6",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e7",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.847486Z",
+          "product": "reddrip-apt-scanner---ras",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--3ce0a2e9-39ba-45ac-a8e2-80549630bfe6",
+          "created": "2026-11-10T14:53:10.847811Z",
+          "modified": "2026-11-10T14:53:10.847811Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e7",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e8",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.848122Z",
+          "product": "secureage",
+          "result_name": "Malicious",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--e90935c7-d4c7-4abd-a912-8ad61307bcc0",
+          "created": "2026-11-10T14:53:10.848444Z",
+          "modified": "2026-11-10T14:53:10.848444Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e8",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e9",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.848755Z",
+          "product": "sentinelone-static-ml",
+          "result_name": "",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--ad5db733-0ef3-4e6d-bb8a-6307e810a4c7",
+          "created": "2026-11-10T14:53:10.849082Z",
+          "modified": "2026-11-10T14:53:10.849082Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76e9",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76ea",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.849410Z",
+          "product": "xvirus",
+          "analysis_engine_version": "3.0.2.0",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--af14c555-effe-4680-954b-a7350d8a4dca",
+          "created": "2026-11-10T14:53:10.849745Z",
+          "modified": "2026-11-10T14:53:10.849745Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76ea",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76dc",
+          "created": "2026-10-27T14:53:00.063063Z",
+          "modified": "2026-11-10T14:53:10.850060Z",
+          "product": "alibaba",
+          "analysis_engine_version": "0.2.0.3",
+          "analysis_definition_version": "20180921112649",
+          "result_name": "Gene.Win.Harmlet.1685-58",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--62683c79-a6aa-4256-ac30-e480b0818fb7",
+          "created": "2026-11-10T14:53:10.850413Z",
+          "modified": "2026-11-10T14:53:10.850413Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4006-a04f-7f7e194f76dc",
+          "target_ref": "malware--00000000-0000-4000-a0f6-8e132e55464f"
+        }
+      ]
+    },
+    {
+      "type": "bundle",
+      "id": "bundle--00000000-0000-4000-a069-a43046b00aaf",
+      "objects": [
+        {
+          "type": "malware",
+          "spec_version": "2.1",
+          "id": "malware--00000000-0000-4000-a069-a43046b00aaf",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.026142Z",
+          "name": "VBClone",
+          "is_family": true,
+          "aliases": [
+            "c3b75a4eb0a4180bbdefd118d3e148dc5b9190ae63e131c045fb9365f3b8d466"
+          ],
+          "first_seen": "2026-10-27T14:53:00.403510Z",
+          "last_seen": "2026-10-27T14:53:00.403510Z"
+        },
+        {
+          "type": "file",
+          "spec_version": "2.1",
+          "id": "file--00000000-0000-4000-a083-d7065036866d",
+          "hashes": {
+            "SSDEEP": "3072:6/i0ouN1TI0VUn9/xPOL23fhdkwdexf1n/HTWUzY7RkXfcinT8ld:6/xo7QUnnPc23fk95Y7RKUinT",
+            "SHA-256": "c3b75a4eb0a4180bbdefd118d3e148dc5b9190ae63e131c045fb9365f3b8d466",
+            "SHA-512": "07d57e98b3c7de859b180deeed6e506dbdacde201180f38f71f39e4992f1a1ba5e2080541c5f2c61040b4ee584f7cd7b8631d95de1dc42514af7249ca13850bb",
+            "MD5": "2c4e660b70b37c93f5f748c289eed7e5",
+            "TLSH": "c6a4a5929c64af46fe16453423a56eba404e7d2f66e4421c785cfa0b337399730afd0b",
+            "SHA-1": "435ba8e3a706cd1b6383e2f9418298bb7340aeb3"
+          },
+          "size": 479313,
+          "name": "c3b75a4eb0a4180bbdefd118d3e148dc5b9190ae63e131c045fb9365f3b8d466",
+          "mime_type": "application/vnd.microsoft.portable-executable"
+        },
+        {
+          "type": "malware",
+          "spec_version": "2.1",
+          "id": "malware--00000000-0000-4000-a083-d7065036866d",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.032377Z",
+          "name": "VBClone",
+          "malware_types": [
+            "trojan",
+            "worm"
+          ],
+          "is_family": false,
+          "first_seen": "2026-10-27T14:53:00.403510Z",
+          "last_seen": "2026-10-27T14:53:00.403510Z",
+          "sample_refs": [
+            "file--00000000-0000-4000-a083-d7065036866d"
+          ],
+          "confidence": 99,
+          "external_references": [
+            {
+              "source_name": "polyswarm-report",
+              "url": "https://polyswarm.network/scan/results/file/c3b75a4eb0a4180bbdefd118d3e148dc5b9190ae63e131c045fb9365f3b8d466/37109644064622189"
+            }
+          ]
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--d89681d4-87d1-4fba-a9b0-00c9f9e6aa32",
+          "created": "2026-11-10T14:53:11.032791Z",
+          "modified": "2026-11-10T14:53:11.032791Z",
+          "relationship_type": "variant-of",
+          "source_ref": "malware--00000000-0000-4000-a083-d7065036866d",
+          "target_ref": "malware--00000000-0000-4000-a069-a43046b00aaf"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.033174Z",
+          "pattern": "[file:hashes.MD5 = '2c4e660b70b37c93f5f748c289eed7e5']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.403510Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--5b56b4ea-4fd6-45ef-a80c-c2c6e869261e",
+          "created": "2026-11-10T14:53:11.034433Z",
+          "modified": "2026-11-10T14:53:11.034433Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.034870Z",
+          "pattern": "[file:hashes.'SHA-1' = '435ba8e3a706cd1b6383e2f9418298bb7340aeb3']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.403510Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--444150f0-d879-48f0-9426-1e5109b4a046",
+          "created": "2026-11-10T14:53:11.035941Z",
+          "modified": "2026-11-10T14:53:11.035941Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "indicator",
+          "spec_version": "2.1",
+          "id": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.036301Z",
+          "pattern": "[file:hashes.'SHA-256' = 'c3b75a4eb0a4180bbdefd118d3e148dc5b9190ae63e131c045fb9365f3b8d466']",
+          "pattern_type": "stix",
+          "pattern_version": "2.1",
+          "valid_from": "2026-10-27T14:53:00.403510Z",
+          "confidence": 99
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--8b331c09-0886-49f1-b499-25fdd42541fc",
+          "created": "2026-11-10T14:53:11.037454Z",
+          "modified": "2026-11-10T14:53:11.037454Z",
+          "relationship_type": "indicates",
+          "source_ref": "indicator--00000000-0000-4000-a083-d7065036866d",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829f",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.037809Z",
+          "product": "reddrip-apt-scanner---ras",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--4f72b4c6-6dcd-4853-b2c2-f1a37744fa08",
+          "created": "2026-11-10T14:53:11.038181Z",
+          "modified": "2026-11-10T14:53:11.038181Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829f",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a0",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.038513Z",
+          "product": "secureage",
+          "result_name": "Malicious",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--0864cf09-682e-460f-a770-a42d571f2f3b",
+          "created": "2026-11-10T14:53:11.038842Z",
+          "modified": "2026-11-10T14:53:11.038842Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a0",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a1",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.039163Z",
+          "product": "sentinelone-static-ml",
+          "result_name": "",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--40d36398-8e37-47ac-b5ed-9fee36cca3bb",
+          "created": "2026-11-10T14:53:11.039486Z",
+          "modified": "2026-11-10T14:53:11.039486Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a1",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a2",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.039801Z",
+          "product": "xvirus",
+          "analysis_engine_version": "3.0.2.0",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--215bd336-ede2-45e9-a012-85f18d6e181f",
+          "created": "2026-11-10T14:53:11.040133Z",
+          "modified": "2026-11-10T14:53:11.040133Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c82a2",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8294",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.040443Z",
+          "product": "alibaba",
+          "analysis_engine_version": "0.2.0.3",
+          "analysis_definition_version": "20180921112649",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--c9ae2376-1711-46f9-9cc8-acf73a3c55d1",
+          "created": "2026-11-10T14:53:11.040772Z",
+          "modified": "2026-11-10T14:53:11.040772Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8294",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8295",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.041085Z",
+          "product": "clamav",
+          "analysis_engine_version": "ClamAV 1.5.4/28164/Sun Oct 25 06:24:12 2026",
+          "result_name": "Win.Packed.Generic-9967832-0",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--7fc7a3e2-8b93-4deb-9b3f-6a8ebafa9794",
+          "created": "2026-11-10T14:53:11.041470Z",
+          "modified": "2026-11-10T14:53:11.041470Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8295",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8296",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.041862Z",
+          "product": "crowdstrike-falcon-ml",
+          "analysis_engine_version": "2",
+          "result_name": "win/malicious",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--ec618531-8fe5-4b53-a1f8-f53e86b34b02",
+          "created": "2026-11-10T14:53:11.042221Z",
+          "modified": "2026-11-10T14:53:11.042221Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8296",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8297",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.042562Z",
+          "product": "cyberstanc_scrutiny",
+          "result": "unknown"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--69475aa9-5e23-4c9f-aada-9dfb8e99181d",
+          "created": "2026-11-10T14:53:11.042894Z",
+          "modified": "2026-11-10T14:53:11.042894Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8297",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8298",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.043206Z",
+          "product": "drweb",
+          "analysis_engine_version": "",
+          "analysis_definition_version": "",
+          "result": "unknown"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--e1255867-852e-4103-af39-594b4fa1fae3",
+          "created": "2026-11-10T14:53:11.043539Z",
+          "modified": "2026-11-10T14:53:11.043539Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8298",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c8299",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.043855Z",
+          "product": "filseclab",
+          "analysis_definition_version": "40.131.4421",
+          "result_name": "Trojan.Agent.gen.mywl",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--217ea2e7-c17a-46f0-ac87-467cb21e3307",
+          "created": "2026-11-10T14:53:11.044208Z",
+          "modified": "2026-11-10T14:53:11.044208Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c8299",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829a",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.044525Z",
+          "product": "ikarus",
+          "result_name": "Trojan.Win32.VBClone",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--81d633b3-e320-49c8-b6d9-ed3fbe3dda07",
+          "created": "2026-11-10T14:53:11.044892Z",
+          "modified": "2026-11-10T14:53:11.044892Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829a",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829b",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.045240Z",
+          "product": "jiangmin",
+          "analysis_definition_version": "16.0.100",
+          "result_name": "Worm.WBNA.roep",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--45b68aea-0282-4b26-9e8d-16d3cb048a9d",
+          "created": "2026-11-10T14:53:11.045598Z",
+          "modified": "2026-11-10T14:53:11.045598Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829b",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829c",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.045914Z",
+          "product": "lionic",
+          "result_name": "Trojan.Win32.VB.tsAO",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--93bc7f9d-2c7f-4b5b-9fd0-b542d2a34101",
+          "created": "2026-11-10T14:53:11.046251Z",
+          "modified": "2026-11-10T14:53:11.046251Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829c",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829d",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.046605Z",
+          "product": "nanoav",
+          "analysis_engine_version": "1.0.358.704",
+          "analysis_definition_version": "0.14.70.55538",
+          "result_name": "Trojan.Win32.Fragtor.kqcozb",
+          "result": "malicious"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--a3398e06-91b1-415a-96b3-6bcbc8ee6300",
+          "created": "2026-11-10T14:53:11.047243Z",
+          "modified": "2026-11-10T14:53:11.047243Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829d",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        },
+        {
+          "type": "malware-analysis",
+          "spec_version": "2.1",
+          "id": "malware-analysis--00000000-0000-4003-a37f-fe77554c829e",
+          "created": "2026-10-27T14:53:00.403510Z",
+          "modified": "2026-11-10T14:53:11.047573Z",
+          "product": "qihoo-360",
+          "analysis_definition_version": "2022-10-09 10:05",
+          "result": "benign"
+        },
+        {
+          "type": "relationship",
+          "spec_version": "2.1",
+          "id": "relationship--ea1280dd-9ce7-40e4-9e5a-43fc0eb54e48",
+          "created": "2026-11-10T14:53:11.047902Z",
+          "modified": "2026-11-10T14:53:11.047902Z",
+          "relationship_type": "av-analysis-of",
+          "source_ref": "malware-analysis--00000000-0000-4003-a37f-fe77554c829e",
+          "target_ref": "malware--00000000-0000-4000-a083-d7065036866d"
+        }
+      ]
+    }
+  ],
+  "more": true,
+  "next": "REDACTED_CURSOR_5"
+}

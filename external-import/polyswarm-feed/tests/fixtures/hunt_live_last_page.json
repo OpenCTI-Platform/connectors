@@ -1,0 +1,99 @@
+{
+  "has_more": false,
+  "limit": 50,
+  "result": [
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T14:34:50.349268+00:00",
+      "detections": {
+        "benign": 8,
+        "malicious": 1,
+        "total": 9
+      },
+      "download_url": null,
+      "first_seen": "2026-11-10T14:17:24.785099+00:00",
+      "id": "10000000000000001",
+      "instance_id": "20000000000000001",
+      "livescan_id": "30000000000000001",
+      "malware_family": "Trojan.JS.Agent",
+      "matched_strings": null,
+      "matched_strings_dropped": null,
+      "md5": "25e72928c9bd333885c8d47a21714949",
+      "polyscore": 0.4412143995743074,
+      "rule_name": "example_rule_1",
+      "sha1": "da6c2fa146569e1b9468af6536bf4962e8e565e2",
+      "sha256": "62684c0ffe371cff4c59c81ae636452bb58bec5a89302fa423acc2a2c2e5a49c",
+      "tags": "{}",
+      "yara": null
+    },
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T14:31:47.372871+00:00",
+      "detections": {
+        "benign": 8,
+        "malicious": 2,
+        "total": 10
+      },
+      "download_url": null,
+      "first_seen": "2026-11-10T14:12:39.036664+00:00",
+      "id": "10000000000000002",
+      "instance_id": "20000000000000002",
+      "livescan_id": "30000000000000001",
+      "malware_family": "Impacket",
+      "matched_strings": null,
+      "matched_strings_dropped": null,
+      "md5": "0b4c937a95a2e1b8d0097e357dff53ee",
+      "polyscore": 0.4412143995743074,
+      "rule_name": "example_rule_2",
+      "sha1": "6e32cc8e26b29d5bd4554292ff2dd8822d3ec22b",
+      "sha256": "c4bef9584921ecb655b79e94a492cabf475fe5fa259608b4314bbcf15802be78",
+      "tags": "{}",
+      "yara": null
+    },
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T14:32:23.033708+00:00",
+      "detections": {
+        "benign": 16,
+        "malicious": 0,
+        "total": 16
+      },
+      "download_url": null,
+      "first_seen": "2026-11-10T14:13:04.168578+00:00",
+      "id": "10000000000000003",
+      "instance_id": "20000000000000003",
+      "livescan_id": "30000000000000001",
+      "malware_family": null,
+      "matched_strings": null,
+      "matched_strings_dropped": null,
+      "md5": "f92a9a945390ad72311d7092fe2f09fc",
+      "polyscore": 0.33460048640798623,
+      "rule_name": "example_rule_3",
+      "sha1": "e15aac81a67c550fef4f5b87daf7371a11b88fd8",
+      "sha256": "9fc9d54ebe2ad61923d420fee9780d9a3fe0a35053108ef28c829ef62c02ad40",
+      "tags": "{}",
+      "yara": null
+    },
+    {
+      "community": "mainnet1",
+      "created": "2026-11-10T14:53:32.079420+00:00",
+      "detections": null,
+      "download_url": null,
+      "first_seen": "2024-07-30T17:50:11.799045+00:00",
+      "id": "10000000000000004",
+      "instance_id": "20000000000000004",
+      "livescan_id": "30000000000000001",
+      "malware_family": null,
+      "matched_strings": null,
+      "matched_strings_dropped": null,
+      "md5": "0f736d30fbdaebed364c4cd9f084e500",
+      "polyscore": null,
+      "rule_name": "example_rule_3",
+      "sha1": "d7e96b736463af4b3edacd5cc5525cb70c593334",
+      "sha256": "431b7f30b7f8d520f69066b03b8dccbb35a6cb40a53c5e2320c6b5acf96b2e34",
+      "tags": "{}",
+      "yara": null
+    }
+  ],
+  "status": "OK"
+}
