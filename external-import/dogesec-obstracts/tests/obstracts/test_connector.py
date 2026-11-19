@@ -15,7 +15,7 @@ def test_connector_init(mocked_helper, mock_session: MagicMock, mock_config) -> 
     assert connector.base_url == "https://test-obstracts-url/"
     assert connector.api_key == "test-api-key"
     assert connector.feed_ids == ["feed-1", "feed-2"]
-    assert connector.interval_hours == 1
+    assert connector.config.connector.duration_period == timedelta(hours=1)
     assert connector.days_to_backfill == 7
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
@@ -368,20 +368,6 @@ def test_run_in_work_failure(connector: ObstractsConnector) -> None:
     assert call_kwargs["in_error"] is True
     assert "[OBSTRACTS] Work failed" in call_kwargs["message"]
     assert "ValueError: Test error" in call_kwargs["message"]
-
-
-@freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_get_param(connector: ObstractsConnector) -> None:
-    """Test _get_param method"""
-
-    # String param
-    result = connector._get_param("base_url")
-    assert result == "https://test-obstracts-url/"
-
-    # Number param
-    result = connector._get_param("interval_hours", is_number=True)
-    assert result == 1
-    assert isinstance(result, int)
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
