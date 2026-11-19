@@ -3,15 +3,17 @@ services:
   connector-dogesec-siemrules:
     image: opencti/connector-dogesec-siemrules:6.7.7
     environment:
+      # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGME
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME="SIEM Rules"
-      - CONNECTOR_SCOPE=siemrules
-      - CONNECTOR_CONFIDENCE_LEVEL=70
-      - CONNECTOR_LOG_LEVEL=error
-      - SIEMRULES_BASE_URL=http://api.siemrules.com/
-      - SIEMRULES_API_KEY=
-      - SIEMRULES_DETECTION_PACKS=
-      - SIEMRULES_INTERVAL_HOURS=1
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=SIEM Rules
+      # - CONNECTOR_SCOPE=siemrules
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
+      # Parameters for connector-dogesec-siemrules
+      - SIEMRULES_API_KEY=ChangeMe
+      - SIEMRULES_DETECTION_PACKS=ChangeMe # comma-separated Detection Pack IDs
+      # - SIEMRULES_BASE_URL=https://api.siemrules.com/
     restart: always
