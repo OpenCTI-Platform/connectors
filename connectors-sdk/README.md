@@ -45,12 +45,12 @@ for obj in [author, ip, org, rel]:
 
 The SDK includes custom exceptions to handle errors gracefully. Use these exceptions to manage edge cases and improve the reliability of your connector.
 
-See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
+See [docs/HOW-TO-Handle-errors-in-connectors.md](https://github.com/OpenCTI-Platform/connectors/blob/master/connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
 
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  
-See [How to generate documentation](docs/HOW-TO_Generate_sphinx_doc.md) for more details on how to set up and use Sphinx for this project.
+See [How to generate documentation](https://github.com/OpenCTI-Platform/connectors/blob/master/connectors-sdk/docs/HOW_TO_Generate_sphinx_doc.md) for more details on how to set up and use Sphinx for this project.
 
 ## Using the Connectors SDK in Your Connector
 
@@ -102,8 +102,8 @@ When using the `connectors-sdk`, it is recommended to write unit tests for your 
 
 Contributions are welcome! To get started, refer to:
 
-- [Contributing guidelines](docs/CONTRIBUTING.md)
-- [TDRs](TDRs) to understand the technical decisions made in this project
+- [Contributing guidelines](https://github.com/OpenCTI-Platform/connectors/blob/master/connectors-sdk/docs/CONTRIBUTING.md)
+- [TDRs](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk/TDRs) to understand the technical decisions made in this project
 - Documentation and HOW TO guides in the `docs` directory
 
 These resources will help you understand the contribution process and coding standards.

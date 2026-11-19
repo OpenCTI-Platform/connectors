@@ -14,6 +14,9 @@ keywords = ["opencti", "connectors", "stix", "threat-intelligence", "cti"]
 classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Security",
     "Typing :: Typed",
 ]
