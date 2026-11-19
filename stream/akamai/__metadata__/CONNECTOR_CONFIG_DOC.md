@@ -13,7 +13,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | AKAMAI_CLIENT_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid client token. |
 | AKAMAI_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid client secret. |
 | AKAMAI_ACCESS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid access token. |
-| AKAMAI_CLIENT_LIST_ID | `string` | ✅ | string |  | Target Client List ID |
+| AKAMAI_CLIENT_LIST_ID | `string` | ✅ | string |  | Target IP Client List ID |
+| AKAMAI_ASN_CLIENT_LIST_ID | `string` |  | string |  | Optional target ASN Client List ID. If omitted, ASN indicators are ignored and IP synchronization continues. |
 | CONNECTOR_NAME | `string` |  | string | `"Akamai Connector"` | Connector name |
 | CONNECTOR_SCOPE | `array` |  | string | `["indicator"]` | Connector scope |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
