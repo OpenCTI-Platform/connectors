@@ -15,6 +15,7 @@ polyswarm:
   api_key: 'ChangeMe'
   api_url: 'https://api.polyswarm.network'
   community: 'default'
+  allow_public_community: false # uploads to the public 'default' community are refused unless true
   replace_with_lower_score: true
   timeout: 300
 

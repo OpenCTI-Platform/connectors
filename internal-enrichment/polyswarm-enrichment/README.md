@@ -26,6 +26,7 @@
   - [Relationship Types](#relationship-types)
   - [Multi-Community Mode](#multi-community-mode)
   - [polykg Integration (Optional)](#polykg-integration-optional)
+- [Data Handling](#data-handling)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
 
@@ -36,7 +37,8 @@
 [PolySwarm](https://polyswarm.io/) is a crowdsourced threat intelligence
 marketplace where security engines compete to detect malware. This connector
 enriches file hash observables by querying the PolySwarm API and importing
-threat intelligence into OpenCTI.
+threat intelligence into OpenCTI. It also looks up URL, domain and IP
+observables (lookup only, nothing is submitted).
 
 Key features:
 
@@ -52,6 +54,8 @@ Key features:
 - **Malware profile enrichment** (optional): Threat actors, MITRE ATT&CK TTPs,
   CVEs, target locations, industry sectors via polykg knowledge graph
 - **Error reporting**: API errors surfaced as STIX Notes visible in OpenCTI
+- **URL, domain and IP lookups**: latest PolySwarm URL scan verdict, scored from
+  engine detections, plus files PolySwarm links to an IP or domain
 
 ---
 
@@ -81,8 +85,8 @@ Key features:
 |------------------------------|------------------------------|-----------|------------------------------------------------------------------|
 | `connector_id`               | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` unique for this connector             |
 | `connector_name`             | `CONNECTOR_NAME`             | No        | Display name (default: `PolySwarm Hash Enrichment`)              |
-| `connector_scope`            | `CONNECTOR_SCOPE`            | No        | Observable types to enrich (default: `File,StixFile`)            |
-| `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `true`)                 |
+| `connector_scope`            | `CONNECTOR_SCOPE`            | No        | Observable types to enrich (default: `StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr`) |
+| `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `false`)                |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | No        | Default confidence level (default: `80`)                         |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | No        | Log level: `debug`, `info`, `warning`, `error` (default: `info`) |
 | `connector_max_tlp`          | `CONNECTOR_MAX_TLP`          | No        | Max TLP level to enrich (default: `TLP:RED`, no limit). Replaces the deprecated `POLYSWARM_MAX_TLP` |
@@ -95,7 +99,10 @@ Key features:
 | `polyswarm_community`                | `POLYSWARM_COMMUNITY`                | No        | Community: `default` or `private` (default: `default`)                       |
 | `polyswarm_max_polling_time`         | `POLYSWARM_MAX_POLLING_TIME`         | No        | Maximum API polling time in seconds (default: `120`)                         |
 | `polyswarm_replace_with_lower_score` | `POLYSWARM_REPLACE_WITH_LOWER_SCORE` | No        | Overwrite score even if lower (default: `true`). Set `false` to keep higher. |
-| `polykg_api_url`                     | `POLYKG_API_URL`                     | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
+| `polyswarm_network_related_files_max` | `POLYSWARM_NETWORK_RELATED_FILES_MAX` | No       | Max related file hashes imported per IP or domain lookup (default: `10`, `0` disables) |
+| `polyswarm_network_url_send_query` | `POLYSWARM_NETWORK_URL_SEND_QUERY` | No | Send a URL's query string and fragment for lookup (default: `false`, only scheme, host and path are sent) |
+| `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
+| `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
 
@@ -120,8 +127,9 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=PolySwarm Hash Enrichment
-      - CONNECTOR_SCOPE=File,StixFile
-      - CONNECTOR_AUTO=true
+      - CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr
+      # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
+      - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_MAX_TLP=TLP:AMBER
@@ -158,6 +166,37 @@ The connector enriches file hash observables by:
 6. Creating a Malware object from PolyUnite family classification
 7. (Optional) Enriching with malware profiles from polykg: threat actors,
    locations, CVEs, TTPs, sectors, campaigns
+
+The connector enriches URL, domain and IP (v4 and v6) observables by:
+
+1. Looking up the latest PolySwarm URL scan of the exact value (search only,
+   nothing is submitted or uploaded)
+2. Creating a Note with the malicious and total engine counts, the scan date
+   (flagged when older than 90 days) and a link to the PolySwarm scan, with an
+   external reference to that link
+3. Updating the observable's `x_opencti_score` to the share of engines that
+   flagged it (`round(100 * malicious / total)`), following
+   `POLYSWARM_REPLACE_WITH_LOWER_SCORE`. For these observables the score is the
+   share of engines that flagged the value (malicious / total). No score is
+   set when no engine answered.
+4. Creating an Indicator (confidence 50, valid for 30 days) only when at least
+   `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` engines flagged the value.
+   URL engine counts are small (1 to 5), so a single detection is weak.
+5. For IPs and domains, importing up to `POLYSWARM_NETWORK_RELATED_FILES_MAX`
+   files PolySwarm links to the value, as file observables (SHA-256) with a
+   `related-to` relationship
+6. Creating a short "No Scan Found" Note when PolySwarm has no scan of the value
+
+Private, reserved, shared (`100.64.0.0/10`), loopback, link-local and
+multicast IPs (including IPv4-mapped IPv6 forms and non-canonical IPv4 forms
+such as `127.1` or `2130706433`), internal domains (single label, `.local`,
+`.internal`, `.lan`, `.corp`, `.home.arpa`, `.localhost`) and URLs containing
+a username or password are skipped and never sent to PolySwarm. Observables
+carrying a marking the connector can't resolve to a TLP are also skipped,
+unless `CONNECTOR_MAX_TLP` is `TLP:RED`.
+
+Notes, Indicators, relationships and related file observables created for a
+URL, domain or IP carry the same markings as the source observable.
 
 Trigger enrichment:
 - Manually via the OpenCTI UI observable detail page
@@ -197,6 +236,8 @@ flowchart LR
 | Observable Type   | Enrichment Data                                                     |
 |-------------------|---------------------------------------------------------------------|
 | StixFile/Artifact | PolyScore, detections, PolyUnite family, platform tags, hashes, Indicator, Malware, Note |
+| Url               | Latest URL scan: engine detections, score, scan date, Note, Indicator (threshold) |
+| Domain-Name, IPv4-Addr, IPv6-Addr | Latest URL scan as above, plus related file hashes          |
 
 ### Generated STIX Objects
 
@@ -212,6 +253,7 @@ flowchart LR
 | `identity`       | polykg             | Targeted industry sectors (`identity_class: "class"`).         |
 | `intrusion-set`  | polykg             | Campaigns or intrusion sets using the malware.                 |
 | `software`       | polykg             | Targeted operating systems/platforms.                          |
+| `file`           | PolySwarm API      | Files PolySwarm links to an enriched IP or domain (SHA-256 only, no score). |
 | `relationship`   | All sources        | Links between all above entities (see table below).            |
 
 ### Relationship Types
@@ -220,6 +262,7 @@ flowchart LR
 |------------------|-----------------------|---------------------|------------|
 | `indicates`      | Indicator             | Malware             | 100        |
 | `based-on`       | Indicator             | Observable          | varies     |
+| `related-to`     | IP / domain observable| File                | n/a        |
 | `related-to`     | Malware               | Related Malware     | 80         |
 | `uses`           | Threat Actor          | Malware             | 85         |
 | `uses`           | Intrusion Set         | Malware             | 85         |
@@ -279,8 +322,21 @@ If polykg is unreachable, the connector logs a warning and continues with
 PolySwarm-only enrichment. A circuit breaker skips polykg for 5 minutes after
 a connection failure to avoid blocking the single-threaded enrichment queue.
 
-Set `POLYKG_API_URL` to enable (e.g. `http://polykg:4141`). Leave empty or
+Set `POLYSWARM_POLYKG_API_URL` to enable (e.g. `http://polykg:4141`). Leave empty or
 unset to disable.
+
+---
+
+## Data Handling
+
+What leaves your environment, and when. The connector sends data to PolySwarm only when it enriches an observable, which is manual by default (`CONNECTOR_AUTO=false`).
+
+- **File observables: hashes only.** The observable's file hash (SHA-256, SHA-1 or MD5) is sent to PolySwarm to look up existing scan results, and the SHA-256 is used to look up associated indicators. Files are never uploaded.
+- **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For URLs, only the scheme, host and path are sent by default: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_NETWORK_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password are never sent. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
+- **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
+- **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
+- **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---
 
@@ -300,7 +356,7 @@ CONNECTOR_LOG_LEVEL=debug
 | Error Note: "401 Access Denied"  | Invalid API key or no community access   | Verify `POLYSWARM_API_KEY`                             |
 | Error Note: "429 Rate Limited"   | API quota exceeded                       | Reduce feeder rate or upgrade PolySwarm plan           |
 | Error Note: "Circuit Breaker"    | 5+ consecutive API failures              | Check network; breaker resets after 5 min              |
-| No profile enrichment            | polykg unreachable or not configured     | Set `POLYKG_API_URL` or verify polykg is running       |
+| No profile enrichment            | polykg unreachable or not configured     | Set `POLYSWARM_POLYKG_API_URL` or verify polykg is running       |
 | Score not updating               | Bundle import doesn't persist scores     | This is expected; connector uses explicit `update_field()` |
 
 ### Circuit Breaker
