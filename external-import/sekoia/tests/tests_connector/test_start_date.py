@@ -104,11 +104,6 @@ def test_first_cursor_from_default_setting(monkeypatch):
     _assert_close_to_now(parsed, timedelta(days=90))
 
 
-def _build(start_date) -> _ConfigLoaderSekoia:
-    """Build the settings with a value as a YAML or env source would provide it."""
-    return _ConfigLoaderSekoia(api_key="test-api-key", start_date=start_date)
-
-
 def test_first_cursor_is_not_generated_when_state_has_a_cursor():
     connector = _connector(datetime(2023, 5, 1, tzinfo=timezone.utc))
     connector.helper.get_state.return_value = {"last_cursor": "state-cursor"}
