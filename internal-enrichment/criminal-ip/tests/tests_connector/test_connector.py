@@ -51,13 +51,11 @@ class TestCriminalIPConnector:
         self.helper = MagicMock()
         self.helper.connect_scope = "IPv4-Addr, Domain-Name"
         self.helper.connector_logger = MagicMock()
-        self.helper.check_max_tlp.return_value = True
 
     def test_connector_initialization(self):
         """Test connector initializes with correct attributes."""
         connector = CriminalIPConnector(config=self.settings, helper=self.helper)
         assert connector.token == "my-secret-api-key"
-        assert connector.max_tlp == "TLP:AMBER"
         assert connector.client is not None
 
     def test_entity_in_scope_ipv4(self):
@@ -86,21 +84,31 @@ class TestCriminalIPConnector:
         }
         # Should not raise
         connector._extract_and_check_markings(entity)
-        self.helper.check_max_tlp.assert_called_once_with("TLP:GREEN", "TLP:AMBER")
 
     def test_extract_and_check_markings_no_markings(self):
-        """Test default TLP:CLEAR when no markings present."""
+        """Test that an entity without TLP passes validation."""
         connector = CriminalIPConnector(config=self.settings, helper=self.helper)
         entity = {"objectMarking": []}
+        # Should not raise
         connector._extract_and_check_markings(entity)
-        self.helper.check_max_tlp.assert_called_once_with("TLP:CLEAR", "TLP:AMBER")
 
     def test_extract_and_check_markings_exceeds_max_tlp(self):
         """Test raises ValueError when TLP exceeds max."""
-        self.helper.check_max_tlp.return_value = False
         connector = CriminalIPConnector(config=self.settings, helper=self.helper)
         entity = {
             "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}]
+        }
+        with pytest.raises(ValueError, match="Do not send any data"):
+            connector._extract_and_check_markings(entity)
+
+    def test_extract_and_check_markings_one_tlp_exceeds_max_tlp(self):
+        """Test raises ValueError when one of the TLPs exceeds max."""
+        connector = CriminalIPConnector(config=self.settings, helper=self.helper)
+        entity = {
+            "objectMarking": [
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            ]
         }
         with pytest.raises(ValueError, match="Do not send any data"):
             connector._extract_and_check_markings(entity)

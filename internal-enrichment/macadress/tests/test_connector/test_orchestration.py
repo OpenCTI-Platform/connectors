@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
 from connector.connector import MacadressConnector
 from connectors_sdk.models.enums import TLPLevel
 from pycti import STIX_EXT_OCTI_SCO
@@ -148,6 +149,21 @@ def test_tlp_above_max_raises_and_writes_nothing():
 
     assert raised
     assert "x_opencti_description" not in _ext(msg["stix_entity"])
+
+
+def test_one_tlp_above_max_raises_and_writes_nothing():
+    # Every TLP of the entity is checked, not only the last one
+    conn, _ = _connector(max_tlp=TLPLevel.AMBER)
+    msg = _message("F0:18:98:11:22:33")
+    msg["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+    ]
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        conn.process_message(msg)
+
+    conn.client.lookup.assert_not_called()
 
 
 def test_out_of_scope_returns_original_bundle():

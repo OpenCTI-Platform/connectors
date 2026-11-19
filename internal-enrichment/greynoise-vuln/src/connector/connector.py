@@ -3,6 +3,7 @@ from typing import Dict
 
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from greynoise.api import APIConfig, GreyNoise
 from pycti import (
     Identity,
@@ -19,7 +20,6 @@ class GreyNoiseVulnConnector:
         self.helper = helper
 
         self.greynoise_key = self.config.greynoise_vuln.key.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.greynoise_ent_name = self.config.greynoise_vuln.name
         self.greynoise_ent_desc = self.config.greynoise_vuln.description
 
@@ -35,12 +35,15 @@ class GreyNoiseVulnConnector:
                                including "objectMarking", the marking that the observable uses.
         """
 
-        tlp = "TLP:AMBER"
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        # An entity without TLP is handled as TLP:AMBER
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels or ["TLP:AMBER"], self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[ERROR] Do not send any data, TLP of the observable is greater than MAX TLP, "
                 "the connector does not have access to this observable, "

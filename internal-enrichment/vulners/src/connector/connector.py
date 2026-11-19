@@ -3,6 +3,7 @@ import re
 from typing import Any
 
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from vulners_client import VulnersClient
 
@@ -38,27 +39,25 @@ class VulnersConnector:
             api_key=self.settings.vulners.api_key.get_secret_value(),
             base_url=self.settings.vulners.api_base_url,
         )
-        self.max_tlp = f"TLP:{self.settings.connector.max_tlp.upper()}"
 
     @staticmethod
-    def _resolve_tlp(enrichment_entity: dict[str, Any]) -> str:
+    def _resolve_tlp_levels(enrichment_entity: dict[str, Any]) -> list[str]:
         """
-        Resolve the TLP marking of the enriched entity.
+        Resolve the TLP markings of the enriched entity.
 
         OpenCTI resolves the entity's markings server-side and exposes them on
         the enrichment entity under ``objectMarking`` (a list of marking
         definitions, each carrying ``definition_type``/``definition``). An
-        entity with no TLP marking defaults to ``TLP:CLEAR`` (enrichment
-        allowed).
+        entity with no TLP marking has no TLP (enrichment allowed).
 
         :param enrichment_entity: The ``enrichment_entity`` resolved by pycti.
-        :return: The canonical TLP name (e.g. ``TLP:RED``).
+        :return: The TLP names (e.g. ``["TLP:RED"]``), empty if none.
         """
-        tlp = "TLP:CLEAR"
-        for marking in enrichment_entity.get("objectMarking", []) or []:
-            if marking.get("definition_type") == "TLP":
-                tlp = marking["definition"]
-        return tlp
+        return [
+            marking["definition"]
+            for marking in enrichment_entity.get("objectMarking", []) or []
+            if marking.get("definition_type") == "TLP"
+        ]
 
     def _resolve_work_id(self, data: dict[str, Any]) -> str | None:
         """Resolve the work id from the message, falling back to the helper."""
@@ -128,16 +127,17 @@ class VulnersConnector:
         # the enrichment entity, then enforce the max-TLP gate before fetching
         # or relaying any data.
         enrichment_entity = data.get("enrichment_entity") or {}
-        tlp = self._resolve_tlp(enrichment_entity)
+        tlp_levels = self._resolve_tlp_levels(enrichment_entity)
+        max_tlp = self.settings.connector.max_tlp
 
-        if not self.helper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             self.helper.connector_logger.info(
                 "TLP of the entity exceeds the connector max TLP, skipping "
                 "enrichment",
                 {
-                    "tlp": tlp,
+                    "tlp": tlp_levels,
                     "stix_entity_id": stix_entity_id,
-                    "max_tlp": self.max_tlp,
+                    "max_tlp": max_tlp,
                 },
             )
             self._skip(data, "Skipped: TLP of the entity exceeds the max TLP")

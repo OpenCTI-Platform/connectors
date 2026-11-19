@@ -25,5 +25,3 @@ class ConfigMalbeacon:
         self.api_base_url = str(self.settings.malbeacon.api_base_url)
 
         self.indicator_score_level = self.settings.malbeacon.indicator_score_level
-
-        self.max_tlp = f"TLP:{self.settings.connector.max_tlp.upper()}"

@@ -105,7 +105,41 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector.helper == helper
     assert connector.api_base_url == "http://test.com/"
     assert connector.api_key == "test-api-key"
-    assert connector.max_tlp == "TLP:CLEAR"
+    assert connector.config.connector.max_tlp == "clear"
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:GREEN"}],
+        # Every TLP of the entity is checked, not only the last one
+        [
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+        ],
+    ],
+)
+def test_process_message_refuses_entity_above_max_tlp(
+    mock_opencti_connector_helper, object_marking
+):
+    """An entity with any TLP above the max TLP (clear) is never sent to Modat."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = ModatConnector(config=settings, helper=helper)
+    connector.client = MagicMock()
+
+    data = {
+        "enrichment_entity": {
+            "entity_type": "IPv4-Addr",
+            "objectMarking": object_marking,
+        },
+        "stix_objects": [],
+        "stix_entity": {"type": "ipv4-addr", "value": "1.2.3.4"},
+    }
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector.process_message(data)
+
+    assert connector.client.method_calls == []
 
 
 # --- ModatClient: SSRF / IPv4 validation ----------------------------------

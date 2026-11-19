@@ -88,3 +88,37 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:RED"}],
+        # Every TLP of the entity is checked, not only the last one
+        [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+        ],
+    ],
+)
+def test_check_tlp_markings_refuses_entity_above_max_tlp(
+    mock_opencti_connector_helper, object_marking
+):
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(
+        config=settings.to_helper_config(), playbook_compatible=True
+    )
+    connector = ReversingLabsSpectraIntelConnector(config=settings, helper=helper)
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector._check_tlp_markings({"objectMarking": object_marking})
+
+
+def test_check_tlp_markings_accepts_entity_without_tlp(mock_opencti_connector_helper):
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(
+        config=settings.to_helper_config(), playbook_compatible=True
+    )
+    connector = ReversingLabsSpectraIntelConnector(config=settings, helper=helper)
+
+    connector._check_tlp_markings({"objectMarking": []})

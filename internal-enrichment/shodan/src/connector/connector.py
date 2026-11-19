@@ -5,6 +5,7 @@ from typing import Dict
 import shodan
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -39,7 +40,6 @@ class ShodanConnector:
         self.helper = helper
 
         self.token = self.config.shodan.token.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
@@ -52,16 +52,17 @@ class ShodanConnector:
         )
 
     def _extract_and_check_markings(self, entity):
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
-        if not is_valid_max_tlp:
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return tlp
 
     def _generate_stix_relationship(
         self, source_ref, stix_core_relationship_type, target_ref

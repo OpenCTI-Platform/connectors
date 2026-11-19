@@ -281,12 +281,6 @@ def test_normalize_tlp():
 def test_connector_check_max_tlp(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.side_effect = lambda tlp, max_tlp: tlp in (
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-    )
 
     with patch.dict("os.environ", {"CONNECTOR_MAX_TLP": "TLP:AMBER"}):
         connector = LamisNetworkConnector()
@@ -371,7 +365,6 @@ def test_connector_process_message_success(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper.connect_confidence_level = 50
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -414,7 +407,6 @@ def test_connector_process_message_success(mock_helper_cls):
 def test_connector_process_message_tlp_skip(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = False
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -445,7 +437,6 @@ def test_connector_process_message_tlp_skip(mock_helper_cls):
 @patch("lamis_network.connector.OpenCTIConnectorHelper")
 def test_mixed_tlp_never_calls_external_api(mock_helper_cls):
     mock_helper_cls.return_value = MagicMock()
-    mock_helper_cls.check_max_tlp.side_effect = lambda tlp, maximum: tlp != "TLP:RED"
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
     obs_id = f"ipv4-addr--{uuid.uuid4()}"
@@ -481,7 +472,6 @@ def test_mixed_tlp_never_calls_external_api(mock_helper_cls):
 def test_connector_process_message_api_failure_preserves_knowledge(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -533,7 +523,6 @@ def test_connector_process_message_api_failure_preserves_knowledge(mock_helper_c
 def test_invalid_api_response_causes_no_writes(mock_helper_cls, payload):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
     connector.client.get_ip_reputation.return_value = payload
@@ -558,7 +547,6 @@ def test_invalid_api_response_causes_no_writes(mock_helper_cls, payload):
 @patch("lamis_network.connector.OpenCTIConnectorHelper")
 def test_false_config_disables_indicator_and_relationships(mock_helper_cls):
     mock_helper_cls.return_value = MagicMock()
-    mock_helper_cls.check_max_tlp.return_value = True
     with patch.dict(
         "os.environ",
         {
@@ -575,7 +563,6 @@ def test_false_config_disables_indicator_and_relationships(mock_helper_cls):
 def test_connector_process_ipv6_success(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -664,7 +651,6 @@ def test_connector_ip_family_mismatch(mock_helper_cls):
 def test_playbook_passthrough_on_tlp_skip(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = False
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -685,6 +671,13 @@ def test_playbook_passthrough_on_tlp_skip(mock_helper_cls):
                 "standard_id": obs_id,
                 "entity_type": "IPv4-Addr",
                 "value": "198.51.100.5",
+                "objectMarking": [
+                    {
+                        "definition_type": "TLP",
+                        "definition": "TLP:RED",
+                        "standard_id": stix2.TLP_RED.id,
+                    }
+                ],
             },
             "stix_objects": existing_objects,
         }
@@ -700,7 +693,6 @@ def test_playbook_passthrough_on_tlp_skip(mock_helper_cls):
 def test_playbook_bundle_preserves_existing_objects(mock_helper_cls):
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -776,11 +768,6 @@ def test_stix_entity_tlp_red_blocks_external_api(mock_helper_cls):
     The external API must NOT be called — the IP must not be disclosed."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.side_effect = lambda level, max_tlp: (
-        level in ("TLP:CLEAR", "TLP:WHITE", "TLP:GREEN")
-        if max_tlp == "TLP:AMBER"
-        else True
-    )
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -826,7 +813,6 @@ def test_analyst_labels_preserved_on_re_enrichment(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -905,7 +891,6 @@ def test_unknown_stix_entity_marking_ref_blocks_api(mock_helper_cls):
     as a failed TLP check and never call the external API."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -945,7 +930,6 @@ def test_generated_objects_carry_stricter_union_marking(mock_helper_cls):
     be present), not just TLP:GREEN."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1016,7 +1000,6 @@ def test_generated_objects_inherit_stix_entity_tlp(mock_helper_cls):
     not fall back to the connector's default TLP:CLEAR."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1078,7 +1061,6 @@ def test_flat_observable_marking_refs_not_downgraded(mock_helper_cls):
     must inherit TLP:AMBER, not be downgraded to the default TLP:CLEAR."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1137,7 +1119,6 @@ def test_enriched_observable_preserves_stricter_marking_union(mock_helper_cls):
     the enriched SCO in the bundle must contain TLP:AMBER (not just GREEN)."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1207,7 +1188,6 @@ def test_pap_non_tlp_marking_in_stix_entity_not_rejected(mock_helper_cls):
     and skipped rather than treated as an unknown marking that blocks enrichment."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1270,7 +1250,6 @@ def test_obsolete_asn_and_geo_relationships_replaced_on_re_enrichment(mock_helpe
     replaced rather than leaving duplicate contradictory links."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1367,7 +1346,6 @@ def test_indicator_retired_when_score_falls_below_threshold(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1470,7 +1448,6 @@ def test_indicator_retired_via_opencti_read_when_not_in_bundle(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1565,7 +1542,6 @@ def test_indicator_not_retired_if_owned_by_another_creator(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1644,7 +1620,6 @@ def test_indicator_reactivated_when_score_rises_again(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1753,7 +1728,6 @@ def test_bundle_includes_all_referenced_markings_and_author(mock_helper_cls):
     marking definitions so cleanup_inconsistent_bundle does not strip them."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1821,7 +1795,6 @@ def test_indicator_not_created_if_owned_by_another_creator(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1888,7 +1861,6 @@ def test_partial_geo_retains_existing_location_links(mock_helper_cls):
     located-at relationships from Lamis Network are retained rather than destroyed."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -1952,7 +1924,6 @@ def test_no_direct_api_mutations_outside_bundle_flow(mock_helper_cls):
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2005,7 +1976,6 @@ def test_indicator_not_created_when_ownership_check_raises_exception(
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2062,7 +2032,6 @@ def test_passthrough_bundles_use_required_cleanup(mock_helper_cls):
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = False
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2086,6 +2055,13 @@ def test_passthrough_bundles_use_required_cleanup(mock_helper_cls):
                 "standard_id": obs_id,
                 "entity_type": "IPv4-Addr",
                 "value": "198.51.100.96",
+                "objectMarking": [
+                    {
+                        "definition_type": "TLP",
+                        "definition": "TLP:RED",
+                        "standard_id": stix2.TLP_RED.id,
+                    }
+                ],
             },
             "stix_objects": stix_objects,
         }
@@ -2109,7 +2085,6 @@ def test_obsolete_relationships_retired_and_deleted_from_opencti(
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2191,7 +2166,6 @@ def test_changed_geo_deletes_old_located_at_in_opencti(mock_helper_cls):
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2276,7 +2250,6 @@ def test_revoked_indicator_deletes_based_on_relationship_in_opencti(
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2363,7 +2336,6 @@ def test_enriched_bundle_preserves_non_tlp_markings(mock_helper_cls):
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2449,7 +2421,6 @@ def test_indicator_not_created_when_existing_indicator_has_no_creator(mock_helpe
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2516,7 +2487,6 @@ def test_indicator_not_created_when_in_bundle_indicator_has_no_creator(
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2586,7 +2556,6 @@ def test_re_enrichment_preserves_indicator_valid_from_in_bundle(mock_helper_cls)
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2656,7 +2625,6 @@ def test_re_enrichment_preserves_indicator_valid_from_from_opencti_api(mock_help
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2726,7 +2694,6 @@ def test_revoke_indicator_preserves_valid_from_from_opencti_api(mock_helper_cls)
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2838,7 +2805,6 @@ def test_preserve_city_links_when_geo_response_omits_city(mock_helper_cls):
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -2926,7 +2892,6 @@ def test_reconcile_stale_risk_labels_on_score_drop_and_flag_change(mock_helper_c
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3014,7 +2979,6 @@ def test_preserve_analyst_labels_sharing_connector_names(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3086,7 +3050,6 @@ def test_retain_infrastructure_labels_when_flags_omitted(mock_helper_cls):
 
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3301,7 +3264,6 @@ def test_preserve_indicator_labels_when_flags_omitted(mock_helper_cls):
     with only 'suspicious'."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3379,7 +3341,6 @@ def test_preserve_analyst_labels_on_indicator(mock_helper_cls):
     evaluated as False may be removed."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3470,7 +3431,6 @@ def test_preserve_untracked_analyst_labels_on_indicator(mock_helper_cls):
     names (e.g. 'vpn') must NOT be removed even if the flag is False."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3544,7 +3504,6 @@ def test_missing_stix_entity_raises_before_api_call(mock_helper_cls):
     the connector must raise ValueError before calling the external API."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -3571,7 +3530,6 @@ def test_mismatched_stix_entity_value_raises_before_api_call(mock_helper_cls):
     IP, the connector must raise ValueError before calling the external API."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -3661,7 +3619,6 @@ def test_fail_closed_on_malformed_stix_marking_refs(mock_helper_cls):
     """[P2] R20: Reject malformed object_marking_refs on stix_entity before external API call."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -3693,7 +3650,6 @@ def test_normalize_observable_id_when_standard_id_absent(mock_helper_cls):
     so builder.enrich_observable succeeds without raising."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,
@@ -3730,7 +3686,6 @@ def test_missing_stix_value_or_type_raises_before_api_call(mock_helper_cls):
     """[P2] R20: If stix_entity omits value or type, raise ValueError before querying."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
 
     connector = LamisNetworkConnector()
     connector.client = MagicMock()
@@ -3782,7 +3737,6 @@ def test_equivalent_ipv6_spellings_accepted(mock_helper_cls):
     must be accepted via parsed IP comparison."""
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
-    mock_helper_cls.check_max_tlp.return_value = True
     mock_helper.stix2_create_bundle.side_effect = lambda objs: {
         "type": "bundle",
         "objects": objs,

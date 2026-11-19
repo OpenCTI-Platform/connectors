@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from unittest.mock import MagicMock
 
 from connectors_sdk.models.enums import TLPLevel
-from pycti import OpenCTIConnectorHelper
 
 ENTITY_ID = "artifact--00000000-0000-0000-0000-000000000001"
 
@@ -93,7 +92,6 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
         side_effect=lambda objs: {"type": "bundle", "objects": objs}
     )
     c.helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
-    c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
 
     config = MagicMock()
     config.polyswarm = _mock_polyswarm_config(**(polyswarm_overrides or {}))
@@ -101,7 +99,6 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
     c.config = config
 
     # Set attributes normally assigned in __init__ from config
-    c.max_tlp = config.connector.max_tlp
     c.replace_with_lower_score = config.polyswarm.replace_with_lower_score
 
     c.polyswarm_client = MagicMock()

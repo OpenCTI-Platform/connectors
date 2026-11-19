@@ -26,7 +26,6 @@ ARTICLE = Article(url=URL, title=NAME, html="<p>body</p>", text="body " * 200)
 
 def _connector(max_tlp="amber"):
     helper = MagicMock()
-    helper.check_max_tlp.return_value = True
     helper.stix2_create_bundle.side_effect = lambda objects: {"objects": objects}
     config = SimpleNamespace(
         connector=SimpleNamespace(max_tlp=max_tlp),
@@ -125,20 +124,18 @@ def test_skipped_outside_a_playbook_sends_nothing(fetched, monkeypatch):
 
 def test_refuses_a_report_above_the_max_tlp(fetched):
     connector, helper = _connector(max_tlp="green")
-    helper.check_max_tlp.return_value = False
     markings = [{"definition_type": "TLP", "definition": "TLP:RED"}]
 
     message = connector.process_message(_message(markings=markings))
 
     assert message.startswith("Not enriched: TLP")
-    helper.check_max_tlp.assert_called_once_with("TLP:RED", "TLP:GREEN")
     helper.send_stix2_bundle.assert_not_called()
 
 
 def test_reads_a_null_marking_list_as_no_marking(fetched):
-    connector, helper = _connector()
-    connector.process_message(_message(markings=None))
-    helper.check_max_tlp.assert_called_once_with(None, "TLP:AMBER")
+    connector, helper = _connector(max_tlp="clear")
+    message = connector.process_message(_message(markings=None))
+    assert not message.startswith("Not enriched: TLP")
 
 
 def test_ignores_markings_that_are_not_tlp(fetched):
@@ -147,13 +144,12 @@ def test_ignores_markings_that_are_not_tlp(fetched):
         {"definition_type": "PAP", "definition": "PAP:RED"},
         {"definition_type": "TLP", "definition": "TLP:GREEN"},
     ]
-    connector.process_message(_message(markings=markings))
-    helper.check_max_tlp.assert_called_once_with("TLP:GREEN", "TLP:AMBER")
+    message = connector.process_message(_message(markings=markings))
+    assert not message.startswith("Not enriched: TLP")
 
 
 def test_checks_every_tlp_of_the_report(fetched):
     connector, helper = _connector(max_tlp="green")
-    helper.check_max_tlp.side_effect = lambda tlp, _: tlp != "TLP:RED"
     markings = [
         {"definition_type": "TLP", "definition": "TLP:RED"},
         {"definition_type": "TLP", "definition": "TLP:CLEAR"},
