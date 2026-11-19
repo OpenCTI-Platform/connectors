@@ -158,11 +158,41 @@ jobs:
           python -m build --outdir dist .
           twine check --strict dist/*
 
-      - name: Smoke test the wheel
+      - name: Smoke test the wheel and the sdist
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          python -m venv /tmp/smoke
-          /tmp/smoke/bin/pip install --quiet dist/*.whl
-          /tmp/smoke/bin/python -c "import connectors_sdk, connectors_sdk.models; from importlib.metadata import version; print(version('connectors-sdk'))"
+          for dist in dist/*.whl dist/*.tar.gz; do
+            echo "::group::Smoke test $dist"
+            venv="$RUNNER_TEMP/smoke-$(basename "$dist")"
+            python -m venv "$venv"
+            "$venv/bin/pip" install --quiet "$dist"
+            # -I (isolated mode) keeps the current directory, this checkout,
+            # out of sys.path: the SDK is imported from the installed package.
+            "$venv/bin/python" -I - <<'EOF'
+          import os
+          import sys
+          from importlib.metadata import distribution, entry_points
+          from importlib.resources import files
+          from importlib.util import find_spec
+
+          import connectors_sdk
+          import connectors_sdk.models
+
+          expected = os.environ["VERSION"]
+          dist = distribution("connectors-sdk")
+          assert connectors_sdk.__file__.startswith(sys.prefix), f"SDK imported from {connectors_sdk.__file__}"
+          assert dist.version == expected, f"Package version {dist.version}, expected {expected}"
+          assert connectors_sdk.__version__ == expected, f"__version__ {connectors_sdk.__version__}, expected {expected}"
+          assert files("connectors_sdk").joinpath("py.typed").is_file(), "py.typed is missing"
+          assert find_spec("_connectors_sdk_plugins.pytest_plugin"), "The pytest plugin module is missing"
+          assert entry_points(group="pytest11", name="connectors_sdk"), "The pytest11 entry point is missing"
+          readme = dist.read_text("METADATA").partition("\n\n")[2]
+          assert dist.metadata["Description-Content-Type"] == "text/markdown" and readme.strip(), "The README is missing"
+          print(f"connectors-sdk {dist.version}: OK")
+          EOF
+            echo "::endgroup::"
+          done
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
