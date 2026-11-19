@@ -34,6 +34,9 @@ src/
     loader.py                 AbstractLoader (loads stix2 Bundles)
     record_to_file.py         RecordToFile
     connector.py              Connector, CycleResult
+    factory.py                AbstractConnectorFactory[S: BaseSettings],
+                              ConnectorConfigurationError
+    type_arguments.py         declared_types, reads a component's type arguments
   crowdstrike_indicators/     CrowdStrike implementation
     entities/                 records, STIX classes, ids and errors
       models.py               CrowdStrikeIndicator, CrowdStrikeActor,
@@ -58,12 +61,13 @@ src/
 tests/                        pytest, no network
 ```
 
-Dependency rule: `shared/` depends only on the standard library, Pydantic and
-stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/`
+Dependency rule: `shared/` depends only on the standard library, Pydantic,
+pydantic-settings and stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/`
 depends on `shared/`: inside it, `extract/` and `transform/` both depend on
 `entities/`, never on each other. `crowdstrike_indicators_cli/` depends on
 `crowdstrike_indicators/` and `shared/`, and nothing depends on it. Runtime
-dependencies are `crowdstrike-falconpy`, `pydantic` and `stix2`. There is no
+dependencies are `crowdstrike-falconpy`, `pydantic`, `pydantic-settings` and
+`stix2`. There is no
 pycti and no connectors-sdk.
 
 ### The extraction contract
@@ -223,6 +227,68 @@ connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
 - The cursor lives in memory: a restarted process starts from the `from_date`
   it is given. The waiting function can be injected (`sleep=`), which the
   tests use to stop the endless loop.
+
+### The factory contract
+
+A factory turns one validated configuration into a source's extractor and
+chain of transformers, so that every caller gets the same components from the
+same settings.
+
+```python
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from shared.factory import AbstractConnectorFactory, ConnectorConfigurationError
+
+
+class MySettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="MYSOURCE_", extra="ignore")
+
+    api_key: SecretStr
+    base_url: str = "https://api.example.com"
+
+
+class MyFactory(AbstractConnectorFactory[MySettings]):
+    def create_extractor(self):
+        ...  # build the extractor from self.settings
+
+    def create_transformers(self):
+        ...  # build the chain of transformers from self.settings
+
+
+try:
+    MyFactory()  # reads MYSOURCE_* from the environment, then from ./.env
+except ConnectorConfigurationError as error:
+    print(error)  # invalid configuration:
+    #                 MYSOURCE_API_KEY: missing
+
+factory = MyFactory(api_key="key")  # given values win over the environment
+print(factory.settings.base_url)  # https://api.example.com
+```
+
+- **The settings model is the type argument.** The contract reads it from
+  `AbstractConnectorFactory[MySettings]`; it must be a pydantic-settings
+  `BaseSettings` model.
+- **Settings are loaded at construction**, in decreasing precedence: values
+  given to the factory, the process environment, then the `.env` file,
+  `./.env` unless `env_file=` names another one (`None` for none). A missing
+  file is not an error.
+- **Settings are validated in full at construction.** Any missing or invalid
+  parameter raises one `ConnectorConfigurationError` (a `ValueError`) whose
+  `problems` name every parameter at fault by its environment variable, with
+  the reason, and never the rejected value. A factory that was built holds a
+  complete, valid configuration: nothing is validated later.
+- **`create_extractor()` and `create_transformers()`** build the components
+  from the settings, without contacting the source.
+- **The factory builds neither the loader nor the connector.** The caller
+  chooses the destination and assembles the `Connector`, which checks the
+  chain:
+
+```python
+connector = Connector(
+    factory.create_extractor(), factory.create_transformers(), loader
+)
+```
 
 ### CrowdStrike actors
 
