@@ -24,7 +24,7 @@ class CyberThreatExchangeConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.cyberthreatexchange.base_url.strip("/") + "/"
+        self.base_url = str(self.config.cyberthreatexchange.base_url).strip("/") + "/"
         self.api_key = self.config.cyberthreatexchange.api_key.get_secret_value()
         self.feed_ids = self.config.cyberthreatexchange.feed_ids
 
@@ -168,7 +168,7 @@ class CyberThreatExchangeConnector:
         self.helper.log_info("Starting CyberThreatExchange")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=int(self.config.connector.duration_period.total_seconds()),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 

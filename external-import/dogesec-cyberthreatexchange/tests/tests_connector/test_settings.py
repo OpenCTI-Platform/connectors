@@ -88,7 +88,8 @@ def test_settings_should_apply_defaults():
     assert settings.connector.log_level == "error"
     assert settings.connector.duration_period == timedelta(hours=1)
     assert (
-        settings.cyberthreatexchange.base_url == "https://api.cyberthreatexchange.com/"
+        str(settings.cyberthreatexchange.base_url)
+        == "https://api.cyberthreatexchange.com/"
     )
     assert settings.cyberthreatexchange.feed_ids == []
 
@@ -190,3 +191,21 @@ def test_settings_should_prefer_duration_period_over_interval_hours():
         )
 
     assert settings.connector.duration_period == timedelta(hours=6)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`cyberthreatexchange.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "cyberthreatexchange": {
+            **MINIMAL_VALID_SETTINGS_DICT["cyberthreatexchange"],
+            "base_url": base_url,
+        },
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings(settings_dict)

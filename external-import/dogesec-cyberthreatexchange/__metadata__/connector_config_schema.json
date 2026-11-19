@@ -57,6 +57,9 @@
     "CYBERTHREATEXCHANGE_BASE_URL": {
       "default": "https://api.cyberthreatexchange.com/",
       "description": "The base URL of the Cyber Threat Exchange API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "CYBERTHREATEXCHANGE_API_KEY": {

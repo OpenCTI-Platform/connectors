@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class CyberThreatExchangeConnectorConfig(BaseExternalImportConnectorConfig):
@@ -36,9 +36,9 @@ class CyberThreatExchangeConnectorConfig(BaseExternalImportConnectorConfig):
 class CyberThreatExchangeConfig(BaseConfigModel):
     """Settings specific to the Cyber Threat Exchange connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The base URL of the Cyber Threat Exchange API.",
-        default="https://api.cyberthreatexchange.com/",
+        default=HttpUrl("https://api.cyberthreatexchange.com/"),
     )
     api_key: SecretStr = Field(
         description="The API key used to authenticate to the Cyber Threat Exchange API.",
