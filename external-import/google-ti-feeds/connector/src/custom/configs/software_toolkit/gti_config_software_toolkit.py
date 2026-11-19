@@ -4,21 +4,26 @@ This module defines configuration settings specific to GTI software toolkit impo
 """
 
 from datetime import timedelta
+from typing import Literal, get_args
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES,
     GTIBaseConfig,
+    ListOfFromString,
+    SoftwareToolkitSubentity,
     validate_origins_list,
     validate_subentities_list,
 )
 from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
 
-ALLOWED_ORIGINS = [
+# Software toolkits have no crowdsourced origin.
+SoftwareToolkitOrigin = Literal[
     "All",
     "partner",
     "google threat intelligence",
 ]
+ALLOWED_ORIGINS = list(get_args(SoftwareToolkitOrigin))
 
 
 class GTISoftwareToolkitConfig(GTIBaseConfig):
@@ -34,7 +39,7 @@ class GTISoftwareToolkitConfig(GTIBaseConfig):
         description="ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
     )
 
-    software_toolkit_origins: ListFromString = Field(
+    software_toolkit_origins: ListOfFromString[SoftwareToolkitOrigin] = Field(
         default=["google threat intelligence"],
         description="Comma-separated list of software toolkit origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
@@ -47,7 +52,7 @@ class GTISoftwareToolkitConfig(GTIBaseConfig):
         examples=["name:Cobalt Strike"],
     )
 
-    software_toolkit_subentities: ListFromString = Field(
+    software_toolkit_subentities: ListOfFromString[SoftwareToolkitSubentity] = Field(
         default=[
             "malware_families",
             "attack_techniques",
@@ -58,15 +63,15 @@ class GTISoftwareToolkitConfig(GTIBaseConfig):
         examples=["malware_families", ""],
     )
 
-    @field_validator("software_toolkit_origins", mode="after")
+    @field_validator("software_toolkit_origins", mode="before")
     @classmethod
-    def validate_software_toolkit_origins(cls, v: list[str]) -> list[str]:
+    def validate_software_toolkit_origins(cls, v: str | list[str]) -> list[str]:
         """Validate software toolkit origins against allowed values."""
         return validate_origins_list(v, "software toolkit origin", ALLOWED_ORIGINS)
 
-    @field_validator("software_toolkit_subentities", mode="after")
+    @field_validator("software_toolkit_subentities", mode="before")
     @classmethod
-    def validate_software_toolkit_subentities(cls, v: list[str]) -> list[str]:
+    def validate_software_toolkit_subentities(cls, v: str | list[str]) -> list[str]:
         """Validate software toolkit sub-entities against allowed values."""
         return validate_subentities_list(
             v, "software toolkit subentity", ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES
