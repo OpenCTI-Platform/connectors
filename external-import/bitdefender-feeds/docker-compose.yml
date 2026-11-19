@@ -1,0 +1,17 @@
+services:
+  connector-bitdefender:
+    image: opencti/connector-bitdefender-feeds:latest
+    depends_on:
+      opencti:
+        condition: service_healthy
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=9aae46c5-9e5a-4379-9f1b-49202674de3f
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Bitdefender
+      - CONNECTOR_SCOPE=Bitdefender
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - BITDEFENDER_API_KEY=ChangeMe     # Threat Intelligence license key
+      - BITDEFENDER_FEEDS=file,web,ip    # which feeds to import, from [file web ip] comma-separated - feeds must be available through your license
