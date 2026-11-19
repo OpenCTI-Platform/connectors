@@ -26,7 +26,7 @@ dependencies = [
     "pydantic_settings~=2.16.2",
     "python-dotenv~=1.2.2",
     "stix2~=3.0.1",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.261119.0#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
