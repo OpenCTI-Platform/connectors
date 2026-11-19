@@ -92,3 +92,30 @@ def test_connector_is_instantiated(monkeypatch: pytest.MonkeyPatch) -> None:
     assert connector.duration_period == 12 * 3600
     assert connector.session is session
     assert session.headers == {"API-KEY": "test-api-key"}
+
+
+@pytest.mark.usefixtures("mock_opencti_connector_helper")
+def test_connector_stops_without_detection_packs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`SiemrulesConnector` stops when no Detection Pack ID is configured."""
+
+    class StubSettingsWithoutDetectionPacks(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **STUB_SETTINGS_DICT,
+                    "siemrules": {"api_key": "test-api-key"},
+                }
+            )
+
+    monkeypatch.setattr(
+        "connector.ConnectorSettings", StubSettingsWithoutDetectionPacks
+    )
+    monkeypatch.setattr("connector.OpenCTIConnectorHelper.stop", MagicMock())
+
+    with pytest.raises(SystemExit) as exit_info:
+        SiemrulesConnector()
+
+    assert exit_info.value.code == 0

@@ -66,7 +66,8 @@
       "writeOnly": true
     },
     "SIEMRULES_DETECTION_PACKS": {
-      "description": "A comma-separated list of SIEM Rules Detection Pack IDs to import (at least one is required).",
+      "default": [],
+      "description": "A comma-separated list of SIEM Rules Detection Pack IDs to import. At least one is required: the connector stops when the list is empty.",
       "items": {
         "type": "string"
       },
@@ -82,8 +83,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "SIEMRULES_API_KEY",
-    "SIEMRULES_DETECTION_PACKS"
+    "SIEMRULES_API_KEY"
   ],
   "additionalProperties": true
 }

@@ -16,7 +16,6 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
     "connector": {},
     "siemrules": {
         "api_key": "test-api-key",
-        "detection_packs": "pack-1",
     },
 }
 
@@ -93,6 +92,7 @@ def test_settings_should_apply_defaults() -> None:
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(hours=1)
     assert settings.siemrules.base_url == "https://api.siemrules.com/"
+    assert settings.siemrules.detection_packs == []
 
 
 def test_settings_should_default_connector_id() -> None:
@@ -124,13 +124,6 @@ def test_settings_should_default_connector_id() -> None:
                 "siemrules": {"detection_packs": "pack-1"},
             },
             id="missing_siemrules_api_key",
-        ),
-        pytest.param(
-            {
-                **MINIMAL_VALID_SETTINGS_DICT,
-                "siemrules": {"api_key": "test-api-key"},
-            },
-            id="missing_siemrules_detection_packs",
         ),
     ],
 )

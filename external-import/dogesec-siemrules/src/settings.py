@@ -45,9 +45,10 @@ class SiemrulesConfig(BaseConfigModel):
     )
     detection_packs: ListFromString = Field(
         description=(
-            "A comma-separated list of SIEM Rules Detection Pack IDs to import "
-            "(at least one is required)."
+            "A comma-separated list of SIEM Rules Detection Pack IDs to import. "
+            "At least one is required: the connector stops when the list is empty."
         ),
+        default=[],
     )
     interval_hours: int | None = DeprecatedField(
         deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
