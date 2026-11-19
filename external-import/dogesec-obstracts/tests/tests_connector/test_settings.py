@@ -88,7 +88,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["obstracts"]
     assert settings.connector.log_level == "error"
     assert settings.connector.duration_period == timedelta(hours=1)
-    assert settings.obstracts.base_url == "https://api.obstracts.com/"
+    assert str(settings.obstracts.base_url) == "https://api.obstracts.com/"
     assert settings.obstracts.api_key.get_secret_value() == "test-api-key"
     assert settings.obstracts.feed_ids == []
     assert settings.obstracts.days_to_backfill == 7
@@ -188,3 +188,18 @@ def test_settings_should_prefer_duration_period_over_deprecated_interval_hours()
         )
 
     assert settings.connector.duration_period == timedelta(hours=2)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`obstracts.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "obstracts": {**MINIMAL_VALID_SETTINGS_DICT["obstracts"], "base_url": base_url},
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings(settings_dict)

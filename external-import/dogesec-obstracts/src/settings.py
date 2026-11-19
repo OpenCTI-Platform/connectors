@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ObstractsConnectorConfig(BaseExternalImportConnectorConfig):
@@ -36,9 +36,9 @@ class ObstractsConnectorConfig(BaseExternalImportConnectorConfig):
 class ObstractsConfig(BaseConfigModel):
     """Settings specific to the Obstracts connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The URL of the Obstracts API.",
-        default="https://api.obstracts.com/",
+        default=HttpUrl("https://api.obstracts.com/"),
     )
     api_key: SecretStr = Field(
         description="The Obstracts API key used to authenticate.",

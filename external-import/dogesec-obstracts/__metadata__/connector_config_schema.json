@@ -57,6 +57,9 @@
     "OBSTRACTS_BASE_URL": {
       "default": "https://api.obstracts.com/",
       "description": "The URL of the Obstracts API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "OBSTRACTS_API_KEY": {

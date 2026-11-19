@@ -1,5 +1,7 @@
+from copy import deepcopy
 from typing import Any
 from unittest.mock import MagicMock
+from urllib.parse import urljoin
 
 import pytest
 from obstracts import ObstractsConnector
@@ -116,3 +118,40 @@ def test_connector_should_schedule_with_duration_period(
         message_callback=connector.run_once,
         duration_period=12 * 3600,
     )
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://api.example.com",
+        "https://api.example.com/",
+        "https://api.example.com//",
+        "http://proxy.local:8000/prefix",
+        "http://proxy.local:8000/prefix/",
+    ],
+)
+@pytest.mark.usefixtures("mock_opencti_connector_helper")
+def test_connector_api_urls_have_no_double_slash(monkeypatch, base_url):
+    """
+    Test that the validated `base_url`, joined with an API path the way the
+    connector does it, never produces a `//` in the URL path.
+    """
+
+    class BaseUrlConnectorSettings(StubConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            def with_base_url(config: dict[str, Any]) -> dict[str, Any]:
+                config = deepcopy(config)
+                config["obstracts"]["base_url"] = base_url
+                return handler(config)
+
+            return super()._load_config_dict(_, with_base_url)
+
+    monkeypatch.setattr("obstracts.ConnectorSettings", BaseUrlConnectorSettings)
+    monkeypatch.setattr("obstracts.requests.Session", MagicMock())
+
+    connector = ObstractsConnector()
+    url = urljoin(connector.base_url, "v1/objects/")
+
+    assert url == base_url.rstrip("/") + "/v1/objects/"
+    assert "//" not in url.split("://", 1)[1]

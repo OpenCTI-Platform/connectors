@@ -23,7 +23,7 @@ class ObstractsConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.obstracts.base_url.strip("/") + "/"
+        self.base_url = str(self.config.obstracts.base_url).strip("/") + "/"
         self.api_key = self.config.obstracts.api_key.get_secret_value()
         self.feed_ids = self.config.obstracts.feed_ids
         self.days_to_backfill = self.config.obstracts.days_to_backfill
@@ -163,7 +163,7 @@ class ObstractsConnector:
         self.helper.log_info("Starting Obstracts")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=int(self.config.connector.duration_period.total_seconds()),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 
