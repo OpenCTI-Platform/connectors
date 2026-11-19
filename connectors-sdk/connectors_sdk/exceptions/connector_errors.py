@@ -8,8 +8,6 @@ Hierarchy::
 
     ConnectorError                              (abstract)
     +-- UnknownError                            other.unknown               CRITICAL
-    +-- ConfigurationError                      (abstract)
-    |   +-- ConfigurationInvalidError           config.invalid              CRITICAL  (also a ValueError)
     +-- ProviderApiError                        (abstract, the source the connector reads)
     |   +-- ProviderApiAuthenticationError      api.authentication          CRITICAL
     |   +-- ProviderApiAuthorizationError       api.authorization           CRITICAL
@@ -21,23 +19,10 @@ Hierarchy::
     |   +-- ProviderApiInvalidResponseError     api.invalid_response        ERROR
     |   +-- ProviderApiUnknownError             api.unknown                 ERROR
     +-- OctiError                               (abstract)
-    |   +-- OctiAuthenticationError             octi.authentication         CRITICAL
-    |   +-- OctiVersionIncompatibleError        octi.version_incompatible   CRITICAL
     |   +-- OctiUnreachableError                octi.unreachable            ERROR
-    +-- TargetError                             (abstract, stream targets)
-    |   +-- TargetAuthenticationError           target.authentication       CRITICAL
-    |   +-- TargetAuthorizationError            target.authorization        CRITICAL
-    |   +-- TargetRateLimitError                target.rate_limit           ERROR
-    |   +-- TargetUnreachableError              target.unreachable          ERROR
-    |   +-- TargetRejectedError                 target.rejected             WARNING
     +-- DataError                               (abstract, one item fails)
     |   +-- DataNotFoundError                   data.not_found              WARNING
     |   +-- DataConversionError                 data.conversion             WARNING
-    |   +-- DataInvalidValueError               data.invalid_value          WARNING
-    |   +-- DataUnsupportedTypeError            data.unsupported_type       WARNING
-    |   +-- DataOutOfScopeError                 data.out_of_scope           WARNING
-    |   +-- DataTlpExceededError                data.tlp_exceeded           WARNING
-    |   +-- DataMissingDataError                data.missing_data           WARNING
     +-- LegacyError                             (abstract, the older SDK errors)
         +-- ApiClientError                      api.unknown.legacy          ERROR
         |   +-- ApiUnauthorizedError            api.authentication.legacy   ERROR
@@ -158,29 +143,6 @@ class UnknownError(ConnectorError):
 
 
 # ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-
-class ConfigurationError(ConnectorError):
-    """Abstract base of the configuration errors (``config.*``)."""
-
-    __abstract__ = True
-
-
-class ConfigurationInvalidError(ConfigurationError, ValueError):
-    """A configuration value is missing or invalid.
-
-    It is also a ``ValueError``, so it can be raised in a Pydantic validator: Pydantic
-    reports it as a ``value_error`` in its ``ValidationError``, with the original error
-    in the ``ctx`` of the error details.
-    """
-
-    code = "config.invalid"
-    criticity = Criticity.CRITICAL
-
-
-# ---------------------------------------------------------------------------
 # Provider API (the source the connector reads from)
 # ---------------------------------------------------------------------------
 
@@ -271,71 +233,11 @@ class OctiError(ConnectorError):
     __abstract__ = True
 
 
-class OctiAuthenticationError(OctiError):
-    """The connector's OpenCTI token is rejected."""
-
-    code = "octi.authentication"
-    criticity = Criticity.CRITICAL
-
-
-class OctiVersionIncompatibleError(OctiError):
-    """The connector version is not compatible with the platform version."""
-
-    code = "octi.version_incompatible"
-    criticity = Criticity.CRITICAL
-
-
 class OctiUnreachableError(OctiError):
     """OpenCTI or RabbitMQ is unreachable from the connector."""
 
     code = "octi.unreachable"
     criticity = Criticity.ERROR
-
-
-# ---------------------------------------------------------------------------
-# Stream targets
-# ---------------------------------------------------------------------------
-
-
-class TargetError(ConnectorError):
-    """Abstract base of the errors of a stream target (``target.*``)."""
-
-    __abstract__ = True
-
-
-class TargetAuthenticationError(TargetError):
-    """A stream target rejects the connector's credentials."""
-
-    code = "target.authentication"
-    criticity = Criticity.CRITICAL
-
-
-class TargetAuthorizationError(TargetError):
-    """A stream target refuses the operation."""
-
-    code = "target.authorization"
-    criticity = Criticity.CRITICAL
-
-
-class TargetRateLimitError(TargetError):
-    """A stream target throttles the connector."""
-
-    code = "target.rate_limit"
-    criticity = Criticity.ERROR
-
-
-class TargetUnreachableError(TargetError):
-    """A stream target is unreachable or fails (5xx)."""
-
-    code = "target.unreachable"
-    criticity = Criticity.ERROR
-
-
-class TargetRejectedError(TargetError):
-    """A stream target refuses one item."""
-
-    code = "target.rejected"
-    criticity = Criticity.WARNING
 
 
 # ---------------------------------------------------------------------------
@@ -360,41 +262,6 @@ class DataConversionError(DataError):
     """One item could not be converted to STIX."""
 
     code = "data.conversion"
-    criticity = Criticity.WARNING
-
-
-class DataInvalidValueError(DataError):
-    """One item has a malformed value."""
-
-    code = "data.invalid_value"
-    criticity = Criticity.WARNING
-
-
-class DataUnsupportedTypeError(DataError):
-    """The entity or observable type is not supported by the connector."""
-
-    code = "data.unsupported_type"
-    criticity = Criticity.WARNING
-
-
-class DataOutOfScopeError(DataError):
-    """The entity is outside the configured connector scope."""
-
-    code = "data.out_of_scope"
-    criticity = Criticity.WARNING
-
-
-class DataTlpExceededError(DataError):
-    """The entity TLP is higher than the configured max TLP."""
-
-    code = "data.tlp_exceeded"
-    criticity = Criticity.WARNING
-
-
-class DataMissingDataError(DataError):
-    """The item was retrieved only partially."""
-
-    code = "data.missing_data"
     criticity = Criticity.WARNING
 
 

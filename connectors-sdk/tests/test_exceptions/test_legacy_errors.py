@@ -10,14 +10,12 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.exceptions.connector_errors import (
-    ConfigurationError,
     ConnectorError,
     Criticity,
     DataError,
     LegacyError,
     OctiError,
     ProviderApiError,
-    TargetError,
 )
 from connectors_sdk.exceptions.error import DataRetrievalError, UseCaseError
 from connectors_sdk.exceptions.error_store import ErrorStore
@@ -37,10 +35,8 @@ LEGACY_ERRORS = [
 ]
 
 STANDARD_CATEGORIES = (
-    ConfigurationError,
     ProviderApiError,
     OctiError,
-    TargetError,
     DataError,
 )
 

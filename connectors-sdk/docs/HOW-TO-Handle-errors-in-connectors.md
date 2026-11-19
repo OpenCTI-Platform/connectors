@@ -83,7 +83,6 @@ All errors derive from `ConnectorError`, grouped into categories:
 
 | Category | Error | Code | Criticity |
 |---|---|---|---|
-| `ConfigurationError` | `ConfigurationInvalidError` | `config.invalid` | CRITICAL |
 | `ProviderApiError` (the source the connector reads) | `ProviderApiAuthenticationError` | `api.authentication` | CRITICAL |
 | | `ProviderApiAuthorizationError` | `api.authorization` | CRITICAL |
 | | `ProviderApiNotFoundError` | `api.not_found` | CRITICAL |
@@ -93,23 +92,13 @@ All errors derive from `ConnectorError`, grouped into categories:
 | | `ProviderApiConnectionError` | `api.connection` | ERROR |
 | | `ProviderApiInvalidResponseError` | `api.invalid_response` | ERROR |
 | | `ProviderApiUnknownError` | `api.unknown` | ERROR |
-| `OctiError` | `OctiAuthenticationError` | `octi.authentication` | CRITICAL |
-| | `OctiVersionIncompatibleError` | `octi.version_incompatible` | CRITICAL |
-| | `OctiUnreachableError` | `octi.unreachable` | ERROR |
-| `TargetError` (stream targets) | `TargetAuthenticationError` | `target.authentication` | CRITICAL |
-| | `TargetAuthorizationError` | `target.authorization` | CRITICAL |
-| | `TargetRateLimitError` | `target.rate_limit` | ERROR |
-| | `TargetUnreachableError` | `target.unreachable` | ERROR |
-| | `TargetRejectedError` | `target.rejected` | WARNING |
+| `OctiError` | `OctiUnreachableError` | `octi.unreachable` | ERROR |
 | `DataError` (one item) | `DataNotFoundError` | `data.not_found` | WARNING |
 | | `DataConversionError` | `data.conversion` | WARNING |
-| | `DataInvalidValueError` | `data.invalid_value` | WARNING |
-| | `DataUnsupportedTypeError` | `data.unsupported_type` | WARNING |
-| | `DataOutOfScopeError` | `data.out_of_scope` | WARNING |
-| | `DataTlpExceededError` | `data.tlp_exceeded` | WARNING |
-| | `DataMissingDataError` | `data.missing_data` | WARNING |
 | none | `UnknownError` | `other.unknown` | CRITICAL |
 | `LegacyError` (the older SDK errors) | see below | `*.legacy` | ERROR |
+
+The SDK only defines the errors connectors use. When none fits, propose a new error in the SDK rather than a connector-specific code.
 
 - **Raise the concrete errors, catch the categories**
 
@@ -136,28 +125,6 @@ All errors derive from `ConnectorError`, grouped into categories:
 
     → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
 
-- **Raise `ConfigurationInvalidError` in Pydantic validators**
-
-    → `ConfigurationInvalidError` is also a `ValueError`, so Pydantic handles it like any validation failure: it is collected with the other invalid fields into one `ValidationError`, as a `value_error`, with the original error in the `ctx` of the error details. `BaseConnectorSettings` then raises its usual `ConfigValidationError` from that `ValidationError`.
-
-    ```python
-    from connectors_sdk import BaseConfigModel, ConfigurationInvalidError
-    from pydantic import field_validator
-
-
-    class MyFeedConfig(BaseConfigModel):
-        url: str
-
-        @field_validator("url")
-        @classmethod
-        def check_scheme(cls, value: str) -> str:
-            if not value.startswith("https://"):
-                raise ConfigurationInvalidError("url must use https")
-            return value
-    ```
-
-    Outside a validator, it behaves like the other standard errors. Note that an `except ValueError` clause catches it too.
-
 - **The older SDK errors are `LegacyError`s**
 
     → `BaseClientApi` still raises `ApiClientError` and its subclasses, and connectors still raise `ConfigError`, `DataRetrievalError` and `UseCaseError`. These older errors are concrete subclasses of the abstract `LegacyError` category, so they are `ConnectorError`s that can be recorded and reported. Their names, modules, constructors and parent classes don't change, so existing `except` clauses keep working. `except LegacyError` catches all of them, and none of the standard categories does.
@@ -174,7 +141,7 @@ All errors derive from `ConnectorError`, grouped into categories:
     | `DataRetrievalError` | `api.retrieval.legacy` | ERROR |
     | `UseCaseError` | `data.conversion.legacy` | ERROR |
 
-    A connector's own subclass of an older error inherits its code and criticity. Every older error reports ERROR, even when the matching standard error is CRITICAL (`config.invalid`, `api.authentication`…) or WARNING. Migrate to the standard errors to give your failures the right criticity.
+    A connector's own subclass of an older error inherits its code and criticity. Every older error reports ERROR, even when the matching standard error is CRITICAL (`api.authentication`…) or WARNING. Migrate to the standard errors to give your failures the right criticity.
 
 ### Reporting errors to OpenCTI
 
