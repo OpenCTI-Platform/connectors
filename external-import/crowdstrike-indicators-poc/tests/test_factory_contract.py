@@ -181,6 +181,56 @@ def test_env_file_none_reads_no_file(isolated):
         ExampleFactory(env_file=None)
 
 
+# .env syntax
+
+
+@pytest.fixture
+def no_references(monkeypatch):
+    """Make sure the names referenced by the ``.env`` tests are set nowhere."""
+    for key in ("REGION", "UNDEFINED", "B"):
+        monkeypatch.delenv(key, raising=False)
+
+
+def test_env_file_syntax(isolated):
+    (isolated / ".env").write_text(
+        "# comment\n"
+        "\n"
+        f"EXAMPLE_TOKEN={VALID['token']}\n"
+        "export EXAMPLE_COUNT=7\n"
+        'EXAMPLE_HOST="a=b#c"\n'
+    )
+
+    settings = ExampleFactory().settings
+
+    assert settings.count == 7
+    assert settings.host == "a=b#c"
+
+
+def test_env_file_replaces_references(isolated, no_references):
+    (isolated / ".env").write_text(
+        "REGION=eu-1\n"
+        f"EXAMPLE_TOKEN={VALID['token']}\n"
+        'EXAMPLE_HOST="api.${REGION}.example"\n'
+    )
+
+    assert ExampleFactory().settings.host == "api.eu-1.example"
+
+
+def test_undefined_reference_in_single_quotes_is_removed(isolated, no_references):
+    (isolated / ".env").write_text(
+        f"EXAMPLE_TOKEN={VALID['token']}\n" "EXAMPLE_HOST='abc${UNDEFINED}def'\n"
+    )
+
+    assert ExampleFactory().settings.host == "abcdef"
+
+
+def test_environment_values_are_kept_literally(monkeypatch, no_references):
+    monkeypatch.setenv("EXAMPLE_TOKEN", VALID["token"])
+    monkeypatch.setenv("EXAMPLE_HOST", "a${B}c")
+
+    assert ExampleFactory().settings.host == "a${B}c"
+
+
 # Validation
 
 

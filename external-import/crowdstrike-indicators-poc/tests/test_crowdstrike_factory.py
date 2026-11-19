@@ -8,7 +8,6 @@ import falconpy
 import pytest
 from conftest import FIXTURES_DIR, FakeIndicatorsAPI, make_indicator
 from crowdstrike_indicators.factory import (
-    DEFAULT_BASE_URL,
     CrowdStrikeConnectorFactory,
     CrowdStrikeSettings,
 )
@@ -108,54 +107,6 @@ def test_unknown_keys_are_ignored(isolated):
     factory = CrowdStrikeConnectorFactory()
 
     assert factory.settings.client_id.get_secret_value() == "file-id"
-
-
-def _credentials(settings: CrowdStrikeSettings) -> tuple[str, str, str]:
-    return (
-        settings.client_id.get_secret_value(),
-        settings.client_secret.get_secret_value(),
-        settings.base_url,
-    )
-
-
-def test_env_file_syntax(isolated):
-    (isolated / ".env").write_text(
-        "# comment\n"
-        "\n"
-        "export CROWDSTRIKE_CLIENT_ID=exported-id\n"
-        'CROWDSTRIKE_CLIENT_SECRET="a=b#c"\n'
-        "UNRELATED_KEY=ignored\n"
-    )
-
-    settings = CrowdStrikeConnectorFactory().settings
-
-    assert _credentials(settings) == ("exported-id", "a=b#c", DEFAULT_BASE_URL)
-
-
-def test_env_file_replaces_references(isolated):
-    (isolated / ".env").write_text(
-        "REGION=eu-1\n"
-        "CROWDSTRIKE_CLIENT_ID=id-${REGION}\n"
-        "CROWDSTRIKE_CLIENT_SECRET='a${UNDEFINED}c'\n"
-        'CROWDSTRIKE_BASE_URL="https://api.${REGION}.crowdstrike.com"\n'
-    )
-
-    settings = CrowdStrikeConnectorFactory().settings
-
-    assert _credentials(settings) == (
-        "id-eu-1",
-        "ac",
-        "https://api.eu-1.crowdstrike.com",
-    )
-
-
-def test_environment_values_are_kept_literally(monkeypatch, isolated):
-    monkeypatch.setenv("CROWDSTRIKE_CLIENT_ID", "env-id")
-    monkeypatch.setenv("CROWDSTRIKE_CLIENT_SECRET", "a${B}c")
-
-    settings = CrowdStrikeConnectorFactory().settings
-
-    assert _credentials(settings) == ("env-id", "a${B}c", DEFAULT_BASE_URL)
 
 
 def test_both_credentials_missing_are_named_together():
