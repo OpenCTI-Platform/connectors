@@ -396,6 +396,22 @@ class ConnectorAccenture:
 
         return stix_bundle
 
+    def _close_work_in_error(self, work_id: str, err: Exception) -> None:
+        """Close a work in error, so that it does not stay in progress in OpenCTI.
+
+        A failure to close the work is logged, never raised: the caller re-raises
+        the error that made the work fail.
+        """
+        try:
+            self.helper.api.work.to_processed(
+                work_id, "Failed to send the bundle", in_error=True
+            )
+        except Exception as close_err:  # noqa: BLE001
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Failed to close the work in error",
+                {"work_id": work_id, "error": str(err), "close_error": str(close_err)},
+            )
+
     def _send_bundle(
         self, current_timestamp: int, stix_bundle: Dict[str, Any]
     ) -> List[Any]:
@@ -408,11 +424,15 @@ class ConnectorAccenture:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            bundles_sent = self.helper.send_stix2_bundle(
-                json.dumps(stix_bundle),
-                work_id=work_id,
-                cleanup_inconsistent_bundle=True,
-            )
+            try:
+                bundles_sent = self.helper.send_stix2_bundle(
+                    json.dumps(stix_bundle),
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
+                )
+            except Exception as err:
+                self._close_work_in_error(work_id, err)
+                raise
             self.helper.connector_logger.info(
                 f"Sending {len(stix_bundle['objects'])} STIX objects to OpenCTI..."
             )
