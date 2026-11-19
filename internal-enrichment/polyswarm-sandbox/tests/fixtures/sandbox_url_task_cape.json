@@ -1,0 +1,1104 @@
+{
+ "account_number": null,
+ "artifact": {
+  "extended_type": "ASCII text, with no line terminators",
+  "failed": false,
+  "filename": "https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe",
+  "mimetype": "text/plain",
+  "size": 77
+ },
+ "community": "mainnet1",
+ "config": {
+  "arguments": "",
+  "artifact_type": "URL",
+  "browser": null,
+  "cape_malscore": 0.15,
+  "network_enabled": true,
+  "provider": {
+   "id": "1",
+   "name": "cape",
+   "slug": "cape",
+   "tool": "cape_sandbox_v2"
+  },
+  "target": "https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe",
+  "vm": {
+   "architecture": "x64",
+   "id": "100",
+   "language": "English (United States)",
+   "name": "Microsoft Windows 10 Pro Build 19041",
+   "os_name": "Microsoft Windows 10 Pro",
+   "os_version": "10.0.19041 Build 19041",
+   "slug": "win-10-build-19041"
+  }
+ },
+ "created": "2026-09-28T10:10:30.442782+00:00",
+ "expiration": "2026-09-28T13:10:30.445202+00:00",
+ "id": "77644073879916446",
+ "instance_id": "5453602204337058",
+ "report": {
+  "behavior": {
+   "anomaly": [],
+   "encryptedbuffers": [],
+   "processes": [
+    {
+     "calls": [
+      {
+       "api": "DllLoadNotification",
+       "arguments": [
+        {
+         "name": "NotificationReason",
+         "value": "load"
+        },
+        {
+         "name": "DllName",
+         "value": "C:\\Windows\\System32\\bcryptPrimitives"
+        },
+        {
+         "name": "DllBase",
+         "value": "0x77720000"
+        }
+       ],
+       "caller": "0x00000000",
+       "category": "system",
+       "id": 0,
+       "parentcaller": "0x00000000",
+       "repeated": 0,
+       "return": "0x00000000",
+       "status": true,
+       "thread_id": "5440",
+       "timestamp": "2026-09-28 17:10:47,241"
+      },
+      {
+       "api": "NtCreateUserProcess",
+       "arguments": [
+        {
+         "name": "ProcessHandle",
+         "value": "0x00000218"
+        },
+        {
+         "name": "ThreadHandle",
+         "value": "0x000001fc"
+        },
+        {
+         "name": "ProcessDesiredAccess",
+         "value": "0x02000000"
+        },
+        {
+         "name": "ThreadDesiredAccess",
+         "value": "0x02000000"
+        },
+        {
+         "name": "ProcessFileName",
+         "value": ""
+        },
+        {
+         "name": "ThreadName",
+         "value": ""
+        },
+        {
+         "name": "ImagePathName",
+         "value": "C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe"
+        },
+        {
+         "name": "CommandLine",
+         "value": "\"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\" https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe"
+        },
+        {
+         "name": "ProcessId",
+         "value": "5920"
+        }
+       ],
+       "caller": "0x00b93c12",
+       "category": "process",
+       "id": 1,
+       "parentcaller": "0x00b911c7",
+       "repeated": 0,
+       "return": "0x00000000",
+       "status": true,
+       "thread_id": "5440",
+       "timestamp": "2026-09-28 17:10:47,256"
+      },
+      {
+       "api": "sysenter",
+       "arguments": [
+        {
+         "name": "ThreadIdentifier",
+         "value": "5440"
+        },
+        {
+         "name": "Module",
+         "value": "KERNELBASE.dll"
+        },
+        {
+         "name": "Return Address",
+         "value": "0x75aa00dc"
+        }
+       ],
+       "caller": "0x00b93c12",
+       "category": "__notification__",
+       "id": 2,
+       "parentcaller": "0x00b911c7",
+       "repeated": 0,
+       "return": "0x00000000",
+       "status": true,
+       "thread_id": "5440",
+       "timestamp": "2026-09-28 17:10:47,272"
+      },
+      {
+       "api": "DllLoadNotification",
+       "arguments": [
+        {
+         "name": "NotificationReason",
+         "value": "load"
+        },
+        {
+         "name": "DllName",
+         "value": "C:\\Windows\\SYSTEM32\\kernel.appcore"
+        },
+        {
+         "name": "DllBase",
+         "value": "0x75960000"
+        }
+       ],
+       "caller": "0x00b93c12",
+       "category": "system",
+       "id": 3,
+       "parentcaller": "0x00b911c7",
+       "repeated": 0,
+       "return": "0x00000000",
+       "status": true,
+       "thread_id": "5440",
+       "timestamp": "2026-09-28 17:10:48,834"
+      }
+     ],
+     "environ": {
+      "Bitness": "32-bit",
+      "CommandLine": "\"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\" \"https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe\"",
+      "ComputerName": "WIN10",
+      "MachineGUID": "",
+      "MainExeBase": "0x00b90000",
+      "MainExeSize": "0x00097000",
+      "ProductName": "",
+      "RegisteredOrganization": "",
+      "RegisteredOwner": "",
+      "SystemVolumeGUID": "c41b9245-0000-0000-0000-100000000000",
+      "SystemVolumeSerialNumber": "2206-9930",
+      "TempPath": "C:\\Users\\maxine\\AppData\\Local\\Temp\\",
+      "UserName": "maxine",
+      "WindowsPath": "C:\\Windows"
+     },
+     "file_activities": {
+      "delete_files": [],
+      "read_files": [],
+      "write_files": []
+     },
+     "first_seen": "2026-09-28 17:10:47,209",
+     "module_path": "C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe",
+     "parent_id": 3436,
+     "process_id": 6836,
+     "process_name": "firefox.exe",
+     "threads": [
+      "5440"
+     ]
+    }
+   ],
+   "processtree": [
+    {
+     "children": [],
+     "environ": {
+      "Bitness": "32-bit",
+      "CommandLine": "\"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\" \"https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe\"",
+      "ComputerName": "WIN10",
+      "MachineGUID": "",
+      "MainExeBase": "0x00b90000",
+      "MainExeSize": "0x00097000",
+      "ProductName": "",
+      "RegisteredOrganization": "",
+      "RegisteredOwner": "",
+      "SystemVolumeGUID": "c41b9245-0000-0000-0000-100000000000",
+      "SystemVolumeSerialNumber": "2206-9930",
+      "TempPath": "C:\\Users\\maxine\\AppData\\Local\\Temp\\",
+      "UserName": "maxine",
+      "WindowsPath": "C:\\Windows"
+     },
+     "module_path": "C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe",
+     "name": "firefox.exe",
+     "parent_id": 3436,
+     "pid": 6836,
+     "threads": [
+      "5440"
+     ]
+    }
+   ],
+   "summary": {
+    "created_services": [],
+    "delete_files": [],
+    "delete_keys": [],
+    "executed_commands": [
+     "\"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\" https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe"
+    ],
+    "files": [],
+    "keys": [],
+    "mutexes": [],
+    "read_files": [],
+    "read_keys": [],
+    "resolved_apis": [],
+    "started_services": [],
+    "write_files": [],
+    "write_keys": []
+   }
+  },
+  "detections": [],
+  "dropped": [],
+  "jarm": {
+   "hosts": [
+    {
+     "host": "github.com",
+     "jarm": "27d27d27d00027d00041d41d000000aa5feb68b57d31b6dc713b6917a988e3",
+     "port": 443
+    },
+    {
+     "host": "release-assets.githubusercontent.com",
+     "jarm": "29d3fd00029d29d00041d41d00041d6b5eefa2404a56c2ced79a0d16afe36c",
+     "port": 443
+    }
+   ]
+  },
+  "malscore": 0.15,
+  "malware_family": [],
+  "network": {
+   "dead_hosts": [],
+   "dns": [
+    {
+     "answers": [
+      {
+       "data": "140.82.114.3",
+       "type": "A"
+      }
+     ],
+     "first_seen": 1790590260.946132,
+     "request": "github.com",
+     "type": "A"
+    },
+    {
+     "answers": [],
+     "first_seen": 1790590261.014029,
+     "request": "github.com",
+     "type": "AAAA"
+    },
+    {
+     "answers": [
+      {
+       "data": "185.199.111.133",
+       "type": "A"
+      },
+      {
+       "data": "185.199.109.133",
+       "type": "A"
+      },
+      {
+       "data": "185.199.108.133",
+       "type": "A"
+      },
+      {
+       "data": "185.199.110.133",
+       "type": "A"
+      }
+     ],
+     "first_seen": 1790590261.479526,
+     "request": "release-assets.githubusercontent.com",
+     "type": "A"
+    },
+    {
+     "answers": [
+      {
+       "data": "44.239.117.182",
+       "type": "A"
+      },
+      {
+       "data": "34.223.186.57",
+       "type": "A"
+      },
+      {
+       "data": "44.237.182.123",
+       "type": "A"
+      }
+     ],
+     "first_seen": 1790590261.701255,
+     "request": "shavar.prod.mozaws.net",
+     "type": "A"
+    },
+    {
+     "answers": [],
+     "first_seen": 1790590261.701745,
+     "request": "release-assets.githubusercontent.com",
+     "type": "AAAA"
+    },
+    {
+     "answers": [],
+     "first_seen": 1790590261.81362,
+     "request": "shavar.prod.mozaws.net",
+     "type": "AAAA"
+    },
+    {
+     "answers": [
+      {
+       "data": "151.101.129.91",
+       "type": "A"
+      },
+      {
+       "data": "151.101.65.91",
+       "type": "A"
+      },
+      {
+       "data": "151.101.1.91",
+       "type": "A"
+      },
+      {
+       "data": "151.101.193.91",
+       "type": "A"
+      }
+     ],
+     "first_seen": 1790590263.489556,
+     "request": "mozilla.map.fastly.net",
+     "type": "A"
+    },
+    {
+     "answers": [
+      {
+       "data": "2a04:4e42:600::347",
+       "type": "AAAA"
+      },
+      {
+       "data": "2a04:4e42:200::347",
+       "type": "AAAA"
+      },
+      {
+       "data": "2a04:4e42:400::347",
+       "type": "AAAA"
+      },
+      {
+       "data": "2a04:4e42::347",
+       "type": "AAAA"
+      },
+      {
+       "data": "2a04:4e42:b::347",
+       "type": "AAAA"
+      }
+     ],
+     "first_seen": 1790590263.627121,
+     "request": "mozilla.map.fastly.net",
+     "type": "AAAA"
+    }
+   ],
+   "domains": [
+    {
+     "domain": "github.com",
+     "ip": "140.82.112.3"
+    },
+    {
+     "domain": "release-assets.githubusercontent.com",
+     "ip": "185.199.110.133"
+    },
+    {
+     "domain": "shavar.prod.mozaws.net",
+     "ip": "44.239.117.182"
+    },
+    {
+     "domain": "mozilla.map.fastly.net",
+     "ip": "146.75.77.91"
+    }
+   ],
+   "hosts": [
+    {
+     "asn": "",
+     "asn_name": "",
+     "country_name": "unknown",
+     "hostname": "release-assets.githubusercontent.com",
+     "inaddrarpa": "",
+     "ip": "185.199.108.133",
+     "ports": []
+    },
+    {
+     "asn": "",
+     "asn_name": "",
+     "country_name": "unknown",
+     "hostname": "github.com",
+     "inaddrarpa": "",
+     "ip": "140.82.114.3",
+     "ports": []
+    },
+    {
+     "asn": "",
+     "asn_name": "",
+     "country_name": "unknown",
+     "hostname": "",
+     "inaddrarpa": "",
+     "ip": "151.101.46.172",
+     "ports": []
+    }
+   ],
+   "http": [],
+   "icmp": [],
+   "irc": [],
+   "pcap_sha256": "65cf35786c2b45f818b2ab7d9a2bae9fc6771faf22fb0ff65eb527311523d482",
+   "smtp": [],
+   "tcp": [
+    {
+     "dport": 443,
+     "dst": "85.210.193.152",
+     "offset": 5531,
+     "sport": 49976,
+     "src": "192.168.144.131",
+     "time": 2.2732808589935303
+    },
+    {
+     "dport": 443,
+     "dst": "74.179.77.204",
+     "offset": 61936,
+     "sport": 49978,
+     "src": "192.168.144.131",
+     "time": 2.7906270027160645
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 111423,
+     "sport": 49981,
+     "src": "192.168.144.131",
+     "time": 4.573309898376465
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 128217,
+     "sport": 49983,
+     "src": "192.168.144.131",
+     "time": 5.111658811569214
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 154896,
+     "sport": 49985,
+     "src": "192.168.144.131",
+     "time": 5.573748826980591
+    },
+    {
+     "dport": 443,
+     "dst": "72.153.5.112",
+     "offset": 180006,
+     "sport": 49987,
+     "src": "192.168.144.131",
+     "time": 5.875021934509277
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 217770,
+     "sport": 49990,
+     "src": "192.168.144.131",
+     "time": 6.5606818199157715
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 250984,
+     "sport": 49992,
+     "src": "192.168.144.131",
+     "time": 7.687085866928101
+    },
+    {
+     "dport": 443,
+     "dst": "172.215.188.225",
+     "offset": 268706,
+     "sport": 49995,
+     "src": "192.168.144.131",
+     "time": 13.749159812927246
+    },
+    {
+     "dport": 443,
+     "dst": "23.43.15.204",
+     "offset": 284224,
+     "sport": 50001,
+     "src": "192.168.144.131",
+     "time": 17.345036029815674
+    },
+    {
+     "dport": 443,
+     "dst": "140.82.114.3",
+     "offset": 292762,
+     "sport": 50002,
+     "src": "192.168.144.131",
+     "time": 18.285096883773804
+    },
+    {
+     "dport": 443,
+     "dst": "185.199.108.133",
+     "offset": 304350,
+     "sport": 50003,
+     "src": "192.168.144.131",
+     "time": 18.78709888458252
+    },
+    {
+     "dport": 443,
+     "dst": "34.107.243.93",
+     "offset": 715987,
+     "sport": 50005,
+     "src": "192.168.144.131",
+     "time": 19.142237901687622
+    },
+    {
+     "dport": 443,
+     "dst": "151.101.65.91",
+     "offset": 2644987,
+     "sport": 50008,
+     "src": "192.168.144.131",
+     "time": 20.44411301612854
+    },
+    {
+     "dport": 443,
+     "dst": "57.154.63.210",
+     "offset": 10085745,
+     "sport": 50010,
+     "src": "192.168.144.131",
+     "time": 24.470157861709595
+    },
+    {
+     "dport": 443,
+     "dst": "57.154.63.210",
+     "offset": 10101630,
+     "sport": 50012,
+     "src": "192.168.144.131",
+     "time": 25.84126591682434
+    },
+    {
+     "dport": 443,
+     "dst": "57.154.63.210",
+     "offset": 10118312,
+     "sport": 50014,
+     "src": "192.168.144.131",
+     "time": 26.78187894821167
+    },
+    {
+     "dport": 443,
+     "dst": "74.179.71.159",
+     "offset": 10135607,
+     "sport": 50017,
+     "src": "192.168.144.131",
+     "time": 43.96233797073364
+    },
+    {
+     "dport": 80,
+     "dst": "199.232.210.172",
+     "offset": 10150929,
+     "sport": 50019,
+     "src": "192.168.144.131",
+     "time": 44.852789878845215
+    },
+    {
+     "dport": 443,
+     "dst": "151.101.1.91",
+     "offset": 12070292,
+     "sport": 50021,
+     "src": "192.168.144.131",
+     "time": 47.0762038230896
+    },
+    {
+     "dport": 443,
+     "dst": "52.123.249.22",
+     "offset": 12097524,
+     "sport": 50023,
+     "src": "192.168.144.131",
+     "time": 48.62981581687927
+    },
+    {
+     "dport": 80,
+     "dst": "151.101.46.172",
+     "offset": 12200153,
+     "sport": 50025,
+     "src": "192.168.144.131",
+     "time": 62.7990608215332
+    }
+   ],
+   "udp": [
+    {
+     "dport": 138,
+     "dst": "192.168.144.255",
+     "offset": 24,
+     "sport": 138,
+     "src": "192.168.144.131",
+     "time": 0.0
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 423,
+     "sport": 64274,
+     "src": "192.168.144.131",
+     "time": 1.3425629138946533
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 949,
+     "sport": 50917,
+     "src": "192.168.144.131",
+     "time": 1.478139877319336
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 4848,
+     "sport": 58370,
+     "src": "192.168.144.131",
+     "time": 1.9874699115753174
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 69412,
+     "sport": 65416,
+     "src": "192.168.144.131",
+     "time": 3.055757999420166
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 104842,
+     "sport": 60720,
+     "src": "192.168.144.131",
+     "time": 3.4318108558654785
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 110830,
+     "sport": 61310,
+     "src": "192.168.144.131",
+     "time": 4.495177984237671
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 142039,
+     "sport": 63314,
+     "src": "192.168.144.131",
+     "time": 5.300376892089844
+    },
+    {
+     "dport": 137,
+     "dst": "192.168.144.255",
+     "offset": 155182,
+     "sport": 137,
+     "src": "192.168.144.131",
+     "time": 5.5751378536224365
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 258752,
+     "sport": 55292,
+     "src": "192.168.144.131",
+     "time": 13.378345012664795
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 275884,
+     "sport": 64852,
+     "src": "192.168.144.131",
+     "time": 17.01240086555481
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 291915,
+     "sport": 56964,
+     "src": "192.168.144.131",
+     "time": 18.20942187309265
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 292185,
+     "sport": 60638,
+     "src": "192.168.144.131",
+     "time": 18.25365900993347
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 292455,
+     "sport": 60190,
+     "src": "192.168.144.131",
+     "time": 18.277318954467773
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 303828,
+     "sport": 52985,
+     "src": "192.168.144.131",
+     "time": 18.74281597137451
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 305104,
+     "sport": 59497,
+     "src": "192.168.144.131",
+     "time": 18.800861835479736
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 313144,
+     "sport": 63524,
+     "src": "192.168.144.131",
+     "time": 18.939934015274048
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 344643,
+     "sport": 50560,
+     "src": "192.168.144.131",
+     "time": 18.958627939224243
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 349097,
+     "sport": 58101,
+     "src": "192.168.144.131",
+     "time": 18.964545011520386
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 353577,
+     "sport": 56986,
+     "src": "192.168.144.131",
+     "time": 18.96503496170044
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 490249,
+     "sport": 61335,
+     "src": "192.168.144.131",
+     "time": 19.07351303100586
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 491097,
+     "sport": 57165,
+     "src": "192.168.144.131",
+     "time": 19.0769100189209
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 1004994,
+     "sport": 50302,
+     "src": "192.168.144.131",
+     "time": 19.203824996948242
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 1209454,
+     "sport": 58507,
+     "src": "192.168.144.131",
+     "time": 19.343686819076538
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 3298131,
+     "sport": 61225,
+     "src": "192.168.144.131",
+     "time": 20.752846002578735
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 4311285,
+     "sport": 58740,
+     "src": "192.168.144.131",
+     "time": 20.890410900115967
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 10085159,
+     "sport": 62910,
+     "src": "192.168.144.131",
+     "time": 24.38532590866089
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 10135060,
+     "sport": 64672,
+     "src": "192.168.144.131",
+     "time": 43.87235689163208
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 10147924,
+     "sport": 62934,
+     "src": "192.168.144.131",
+     "time": 44.630823850631714
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12050637,
+     "sport": 56547,
+     "src": "192.168.144.131",
+     "time": 45.99604296684265
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12068922,
+     "sport": 59550,
+     "src": "192.168.144.131",
+     "time": 47.036969900131226
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12069512,
+     "sport": 63295,
+     "src": "192.168.144.131",
+     "time": 47.05432486534119
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12071039,
+     "sport": 61129,
+     "src": "192.168.144.131",
+     "time": 47.078068017959595
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12086126,
+     "sport": 62841,
+     "src": "192.168.144.131",
+     "time": 47.14115381240845
+    },
+    {
+     "dport": 53,
+     "dst": "192.168.144.1",
+     "offset": 12111580,
+     "sport": 53555,
+     "src": "192.168.144.131",
+     "time": 62.6707878112793
+    }
+   ]
+  },
+  "platform": {
+   "provider": "cape",
+   "vm": "windows"
+  },
+  "public_ip": "23.165.56.207",
+  "signature_names": [
+   "stealth_network"
+  ],
+  "signatures": [
+   {
+    "alert": false,
+    "categories": [
+     "stealth"
+    ],
+    "confidence": 30,
+    "data": [
+     {
+      "ip": "185.199.108.133"
+     },
+     {
+      "ip": "140.82.114.3"
+     },
+     {
+      "ip": "151.101.46.172"
+     },
+     {
+      "domain": "github.com"
+     },
+     {
+      "domain": "release-assets.githubusercontent.com"
+     },
+     {
+      "domain": "shavar.prod.mozaws.net"
+     },
+     {
+      "domain": "mozilla.map.fastly.net"
+     }
+    ],
+    "description": "Network activity detected but not expressed in monitor API logs",
+    "families": [],
+    "name": "stealth_network",
+    "severity": 1,
+    "weight": 1
+   }
+  ],
+  "suricata": {
+   "tls": [
+    {
+     "dstip": "140.82.114.3",
+     "dstport": 443,
+     "ja3": {
+      "hash": "b5001237acdf006056b409cc433726b0",
+      "string": "771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0"
+     },
+     "ja3s": {
+      "hash": "f4febc55ea12b31ae17cfb7e614afda8",
+      "string": "771,4865,43-51"
+     },
+     "sni": "github.com",
+     "srcip": "192.168.144.131",
+     "srcport": 50002,
+     "timestamp": "2026-09-28 10:11:01.134047+0000",
+     "version": "TLS 1.3"
+    },
+    {
+     "dstip": "185.199.108.133",
+     "dstport": 443,
+     "ja3": {
+      "hash": "b5001237acdf006056b409cc433726b0",
+      "string": "771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0"
+     },
+     "ja3s": {
+      "hash": "f4febc55ea12b31ae17cfb7e614afda8",
+      "string": "771,4865,43-51"
+     },
+     "sni": "release-assets.githubusercontent.com",
+     "srcip": "192.168.144.131",
+     "srcport": 50003,
+     "timestamp": "2026-09-28 10:11:01.614352+0000",
+     "version": "TLS 1.3"
+    }
+   ]
+  },
+  "target": {
+   "file": {
+    "data": null
+   }
+  },
+  "ttp": []
+ },
+ "sandbox": "cape",
+ "sandbox_artifacts": [
+  {
+   "created": "2026-09-28T10:13:57.952161+00:00",
+   "extended_type": "JSON data",
+   "id": "5173313012",
+   "instance_id": "46345141378527814",
+   "mimetype": "",
+   "name": "cape_raw_report.json",
+   "sandbox_task_id": "77644073879916446",
+   "type": "raw_report"
+  },
+  {
+   "created": "2026-09-28T10:13:56.979673+00:00",
+   "extended_type": "JSON data",
+   "id": "5173312960",
+   "instance_id": "51669720176409127",
+   "mimetype": "",
+   "name": "cape_report.json",
+   "sandbox_task_id": "77644073879916446",
+   "type": "report"
+  },
+  {
+   "created": "2026-09-28T10:13:59.523417+00:00",
+   "extended_type": "JSON data",
+   "id": "5173313099",
+   "instance_id": "62686576917158741",
+   "mimetype": "",
+   "name": "jarm.json",
+   "sandbox_task_id": "77644073879916446",
+   "type": "jarm"
+  },
+  {
+   "created": "2026-09-28T10:13:59.537059+00:00",
+   "extended_type": "pcap capture file, microsecond ts (little-endian) - version 2.4 (Ethernet, capture length 262144)",
+   "id": "5173313100",
+   "instance_id": "39926325769372019",
+   "mimetype": "",
+   "name": "cape_pcap-1.pcap",
+   "sandbox_task_id": "77644073879916446",
+   "type": "pcap"
+  },
+  {
+   "created": "2026-09-28T10:13:58.068368+00:00",
+   "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+   "id": "5173313020",
+   "instance_id": "57225588580865288",
+   "mimetype": "",
+   "name": "0003.jpg",
+   "sandbox_task_id": "77644073879916446",
+   "type": "screenshot"
+  },
+  {
+   "created": "2026-09-28T10:13:57.753090+00:00",
+   "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+   "id": "5173313003",
+   "instance_id": "75601277471249110",
+   "mimetype": "",
+   "name": "0001.jpg",
+   "sandbox_task_id": "77644073879916446",
+   "type": "screenshot"
+  },
+  {
+   "created": "2026-09-28T10:13:57.866780+00:00",
+   "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+   "id": "5173313009",
+   "instance_id": "62994516611096784",
+   "mimetype": "",
+   "name": "0005.jpg",
+   "sandbox_task_id": "77644073879916446",
+   "type": "screenshot"
+  },
+  {
+   "created": "2026-09-28T10:13:58.094293+00:00",
+   "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+   "id": "5173313021",
+   "instance_id": "6485116337793548",
+   "mimetype": "",
+   "name": "0002.jpg",
+   "sandbox_task_id": "77644073879916446",
+   "type": "screenshot"
+  },
+  {
+   "created": "2026-09-28T10:13:57.860783+00:00",
+   "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+   "id": "5173313008",
+   "instance_id": "51922243574513320",
+   "mimetype": "",
+   "name": "0004.jpg",
+   "sandbox_task_id": "77644073879916446",
+   "type": "screenshot"
+  },
+  {
+   "created": "2026-09-28T10:13:58.459469+00:00",
+   "extended_type": "ASCII text",
+   "id": "5173313041",
+   "instance_id": "74364179613773693",
+   "mimetype": "",
+   "name": "analysis.log",
+   "sandbox_task_id": "77644073879916446",
+   "type": "raw_report"
+  }
+ ],
+ "sha256": "dce84ea4a81e08eb5994ba0e7a702f52da0a253fce4a6d06d9a20e37b01d10c8",
+ "status": "SUCCEEDED",
+ "team_account_number": null,
+ "upload_url": null
+}

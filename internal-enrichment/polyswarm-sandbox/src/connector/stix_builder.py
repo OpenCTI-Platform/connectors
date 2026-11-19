@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
+from connector.polyswarm import USER_AGENT
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
@@ -175,7 +176,7 @@ class StixBuilder:
             StixBuilder._POLYKG_CIRCUIT_OPENED_AT = None
 
         try:
-            headers: dict = {}
+            headers: dict = {"User-Agent": USER_AGENT}
             if self._polyswarm_api_key:
                 headers["Authorization"] = f"Bearer {self._polyswarm_api_key}"
 
@@ -734,6 +735,10 @@ class StixBuilder:
             update["hashes"] = entity["hashes"]
         if entity.get("name"):
             update["name"] = entity["name"]
+        # A url SCO needs its value: when the incoming bundle does not carry
+        # the observable, this update object is sent on its own (#8351)
+        if entity.get("value"):
+            update["value"] = entity["value"]
         # The entity being enriched here is a ``file`` SCO (or
         # equivalent ``entity.get("type", "file")`` SCO). Author goes
         # on ``x_opencti_created_by_ref``, not the SDO/SRO-only
@@ -1428,7 +1433,7 @@ class StixBuilder:
         content_parts.append("")
         content_parts.append("## Need Help?")
         content_parts.append(
-            "Contact **sales@polyswarm.io** for assistance with sandbox failures, "
+            "Contact **customersuccess@polyswarm.io** for assistance with sandbox failures, "
             "quota issues, or to upgrade your plan."
         )
         content_parts.append("")
@@ -1503,7 +1508,7 @@ class StixBuilder:
         content_parts.append(
             "For questions about API quotas, file size limits, feature access, or enterprise plans:"
         )
-        content_parts.append("- **Email:** sales@polyswarm.io")
+        content_parts.append("- **Email:** customersuccess@polyswarm.io")
         content_parts.append("- **Website:** https://polyswarm.io")
         content_parts.append("")
 
@@ -1523,7 +1528,7 @@ class StixBuilder:
                 {
                     "source_name": "PolySwarm Support",
                     "url": "https://polyswarm.io",
-                    "description": "Contact sales@polyswarm.io for assistance",
+                    "description": "Contact customersuccess@polyswarm.io for assistance",
                 }
             ],
         }
@@ -1908,7 +1913,9 @@ class StixBuilder:
             }
             objects.append(domain_obj)
             objects.append(
-                self._create_rel(entity["id"], "communicates-with", domain_id)
+                self._create_rel(
+                    entity["id"], self._contact_rel_type(entity), domain_id
+                )
             )
 
         # === IP OBSERVABLES ===
@@ -1943,7 +1950,9 @@ class StixBuilder:
                     ip_obj["x_polyswarm_reason"] = c2.get("reason")
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
@@ -1973,12 +1982,27 @@ class StixBuilder:
             }
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
 
         return objects
+
+    @staticmethod
+    def _contact_rel_type(entity: dict) -> str:
+        """Relationship from the detonated observable to a host it contacted.
+
+        OpenCTI refuses ``communicates-with`` from a Url, so a detonated URL is
+        ``related-to`` the domains and IPs its sandbox run contacted.
+        """
+        return (
+            "related-to"
+            if str(entity.get("id", "")).startswith("url--")
+            else "communicates-with"
+        )
 
     # ============= HELPER OBJECTS =============
 

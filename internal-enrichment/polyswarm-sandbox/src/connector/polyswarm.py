@@ -1,21 +1,23 @@
 """
-Single import point for polyswarm-api with connector-branded user agent.
+Single import point for polyswarm-api and the connector's User-Agent.
 
-Import PolyswarmAPI from here instead of polyswarm_api.api directly.
-The UA patch runs once at import time before any session is created.
+Import PolyswarmAPI and USER_AGENT from here instead of polyswarm_api directly.
+
+The SDK binds its default User-Agent as a default argument of
+``PolyswarmSession.__init__`` when ``polyswarm_api`` is imported, so patching
+``polyswarm_api.settings.DEFAULT_USER_AGENT`` afterwards has no effect. Set the
+header on each session instead with ``apply_user_agent``.
 """
 
-import platform
+import pycti
+from polyswarm_api.api import PolyswarmAPI
 
-import polyswarm_api
-from polyswarm_api import settings
+USER_AGENT = f"PolySwarm-OpenCTI-Sandbox/{pycti.__version__} (OpenCTI)"
 
-settings.DEFAULT_USER_AGENT = (
-    f"opencti-polyswarm-connector/{polyswarm_api.__version__}"
-    f" ({platform.machine()}-{platform.system()}"
-    f"-{platform.python_implementation()}-{platform.python_version()})"
-)
 
-from polyswarm_api.api import PolyswarmAPI  # noqa: E402
+def apply_user_agent(session) -> None:
+    """Set the connector User-Agent on a requests.Session (or PolyswarmSession)."""
+    session.headers["User-Agent"] = USER_AGENT
 
-__all__ = ["PolyswarmAPI"]
+
+__all__ = ["PolyswarmAPI", "USER_AGENT", "apply_user_agent"]
