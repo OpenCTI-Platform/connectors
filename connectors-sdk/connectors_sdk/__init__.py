@@ -64,7 +64,6 @@ from connectors_sdk.exceptions.connector_errors import (
     UnknownError,
 )
 from connectors_sdk.exceptions.error_store import ErrorStore
-from connectors_sdk.exceptions.swallow import swallow_connector_errors
 from connectors_sdk.logger import (
     ConnectorLoggerAdapter,
     configure_logging,
@@ -165,7 +164,6 @@ __all__ = [
     "DataMissingDataError",
     "LegacyError",
     "ErrorStore",
-    "swallow_connector_errors",
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
