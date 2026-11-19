@@ -159,7 +159,8 @@ class TestProcessFamilies:
         client.get_families.return_value = FAMILIES
         client.get_yara_rules.return_value = {}
         client.get_samples.return_value = []
-        client.get_actor.side_effect = ApiNotFoundError("Not found (404)")
+        # An actor with no value is skipped without a warning.
+        client.get_actor.return_value = {"value": ""}
         connector.api_client = client
         return connector
 
@@ -222,11 +223,16 @@ class TestProcessFamilies:
         ]
 
     def test_unknown_actor_is_skipped(self, connector, helper):
+        connector.api_client.get_actor.side_effect = ApiNotFoundError("Not found (404)")
+
         connector._process_families()
 
         connector.api_client.get_actor.assert_called_once_with("apt_test")
+        assert self.malware_names(connector) == ["Test"]
         assert not [o for o in connector.stix_objects if o.type == "intrusion-set"]
-        helper.connector_logger.warning.assert_not_called()
+        assert warning_messages(helper) == [
+            "[API] No Actor matches the given query, skipping it"
+        ]
 
     def test_actor_error_skips_actor(self, connector, helper):
         connector.api_client.get_actor.side_effect = NETWORK_ERROR

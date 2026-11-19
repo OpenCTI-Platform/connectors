@@ -525,8 +525,9 @@ class MalpediaConnector:
             try:
                 actor_json = self.api_client.get_actor(actor.lower().replace(" ", "_"))
             except ApiNotFoundError:
-                self.helper.connector_logger.info(
-                    "[API] No Actor matches the given query", {"actor": actor}
+                self.helper.connector_logger.warning(
+                    "[API] No Actor matches the given query, skipping it",
+                    {"actor": actor},
                 )
                 continue
             except (ApiClientError, requests.RequestException) as err:
