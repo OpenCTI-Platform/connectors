@@ -14,7 +14,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
     "connector": {},
     "cyberthreatexchange": {
         "api_key": "test-api-key",
-        "feed_ids": "feed-1",
     },
 }
 
@@ -91,6 +90,7 @@ def test_settings_should_apply_defaults():
     assert (
         settings.cyberthreatexchange.base_url == "https://api.cyberthreatexchange.com/"
     )
+    assert settings.cyberthreatexchange.feed_ids == []
 
 
 def test_settings_should_parse_feed_ids():
@@ -145,13 +145,6 @@ def test_settings_should_default_connector_id():
                 "cyberthreatexchange": {"feed_ids": "feed-1"},
             },
             id="missing_cyberthreatexchange_api_key",
-        ),
-        pytest.param(
-            {
-                **MINIMAL_VALID_SETTINGS_DICT,
-                "cyberthreatexchange": {"api_key": "test-api-key"},
-            },
-            id="missing_cyberthreatexchange_feed_ids",
         ),
     ],
 )

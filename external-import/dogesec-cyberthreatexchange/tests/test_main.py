@@ -98,6 +98,31 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert session.headers == {"API-KEY": "test-api-key"}
 
 
+def test_connector_should_exit_without_feed_ids(
+    mock_opencti_connector_helper, monkeypatch
+):
+    """The connector MUST stop at startup when no feed ID is configured."""
+
+    class NoFeedConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "cyberthreatexchange": {"api_key": "test-api-key"},
+                }
+            )
+
+    monkeypatch.setattr("connector.ConnectorSettings", NoFeedConnectorSettings)
+    monkeypatch.setattr("connector.requests.Session", MagicMock())
+    monkeypatch.setattr(OpenCTIConnectorHelper, "stop", MagicMock())
+
+    with pytest.raises(SystemExit) as exc_info:
+        CyberThreatExchangeConnector()
+    assert exc_info.value.code == 1
+
+
 def test_connector_schedules_with_duration_period(
     mock_opencti_connector_helper, monkeypatch
 ):

@@ -47,8 +47,9 @@ class CyberThreatExchangeConfig(BaseConfigModel):
         description=(
             "Comma-separated list of the IDs of the subscribed feeds to import "
             "(e.g. 'f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132'). "
-            "At least one feed ID is required."
+            "At least one feed ID is required: the connector stops at startup otherwise."
         ),
+        default=[],
     )
     interval_hours: int | None = DeprecatedField(
         deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",

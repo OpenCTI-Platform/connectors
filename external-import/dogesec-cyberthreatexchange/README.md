@@ -83,7 +83,7 @@ They are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for
 |-----------|---------------|------------|-----------|---------|-------------|
 | Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | No | `https://api.cyberthreatexchange.com/` | Cyber Threat Exchange API URL |
 | API Key | `CYBERTHREATEXCHANGE_API_KEY` | `cyberthreatexchange.api_key` | Yes | - | API key for authentication |
-| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
+| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. The connector stops at startup when no Feed ID is set |
 | Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | No | - | **Deprecated**: use `CONNECTOR_DURATION_PERIOD` instead. Polling interval in hours, still honoured when `CONNECTOR_DURATION_PERIOD` is not set |
 
 ---
