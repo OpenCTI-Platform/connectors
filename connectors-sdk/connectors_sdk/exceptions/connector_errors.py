@@ -21,23 +21,8 @@ Hierarchy::
     +-- OctiError                               (abstract)
     |   +-- OctiUnreachableError                octi.unreachable            ERROR
     +-- DataError                               (abstract, one item fails)
-    |   +-- DataNotFoundError                   data.not_found              WARNING
-    |   +-- DataConversionError                 data.conversion             WARNING
-    +-- LegacyError                             (abstract, the older SDK errors)
-        +-- ApiClientError                      api.unknown.legacy          ERROR
-        |   +-- ApiUnauthorizedError            api.authentication.legacy   ERROR
-        |   +-- ApiForbiddenError               api.authorization.legacy    ERROR
-        |   +-- ApiNotFoundError                api.not_found.legacy        ERROR
-        |   +-- ApiRateLimitError               api.rate_limit.legacy       ERROR
-        |   +-- ApiServerError                  api.server.legacy           ERROR
-        +-- ConfigError                         config.invalid.legacy       ERROR
-        |   +-- ConfigValidationError           config.invalid.legacy       ERROR
-        +-- DataRetrievalError                  api.retrieval.legacy        ERROR
-        +-- UseCaseError                        data.conversion.legacy      ERROR
-
-The older SDK errors stay in their own modules (``connectors_sdk.client.exceptions``,
-``connectors_sdk.settings.exceptions`` and ``connectors_sdk.exceptions.error``),
-with their constructors unchanged. Prefer the standard errors in new code.
+        +-- DataNotFoundError                   data.not_found              WARNING
+        +-- DataConversionError                 data.conversion             WARNING
 """
 
 import logging
@@ -263,18 +248,3 @@ class DataConversionError(DataError):
 
     code = "data.conversion"
     criticity = Criticity.WARNING
-
-
-# ---------------------------------------------------------------------------
-# Older SDK errors
-# ---------------------------------------------------------------------------
-
-
-class LegacyError(ConnectorError):
-    """Abstract base of the older SDK errors (codes ending in ``.legacy``).
-
-    The older errors keep their own modules and constructors. Migrating a connector
-    to the standard errors gives its failures the right code and criticity.
-    """
-
-    __abstract__ = True

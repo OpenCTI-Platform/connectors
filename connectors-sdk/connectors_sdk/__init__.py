@@ -33,7 +33,6 @@ from connectors_sdk.exceptions.connector_errors import (
     DataConversionError,
     DataError,
     DataNotFoundError,
-    LegacyError,
     OctiError,
     OctiUnreachableError,
     ProviderApiAuthenticationError,
@@ -132,7 +131,6 @@ __all__ = [
     "DataError",
     "DataNotFoundError",
     "DataConversionError",
-    "LegacyError",
     "ErrorStore",
     # Annotated types
     "DatetimeFromIsoString",

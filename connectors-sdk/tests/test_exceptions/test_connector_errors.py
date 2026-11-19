@@ -9,7 +9,6 @@ from connectors_sdk.exceptions.connector_errors import (
     ConnectorError,
     Criticity,
     DataConversionError,
-    LegacyError,
     ProviderApiServerError,
     ProviderApiTimeoutError,
 )
@@ -57,14 +56,6 @@ def test_connector_error_cannot_be_instantiated():
     # Then a TypeError should be raised
     with pytest.raises(TypeError, match="ConnectorError is abstract"):
         ConnectorError("message")
-
-
-def test_legacy_category_cannot_be_instantiated():
-    """Test that the category of the older SDK errors is refused."""
-    # When instantiating LegacyError directly
-    # Then a TypeError should be raised
-    with pytest.raises(TypeError, match="LegacyError is abstract"):
-        LegacyError("message")
 
 
 def test_abstract_subclass_cannot_be_instantiated():
@@ -230,8 +221,8 @@ def test_categories_are_abstract():
     abstract = {
         cls.__name__ for cls in _module_classes() if "__abstract__" in vars(cls)
     }
-    assert abstract == set(CATEGORY_PREFIXES) | {"LegacyError"}
-    for name in [*CATEGORY_PREFIXES, "LegacyError"]:
+    assert abstract == set(CATEGORY_PREFIXES)
+    for name in CATEGORY_PREFIXES:
         assert getattr(connector_errors, name).__bases__ in (
             (ConnectorError,),
             (Exception,),
@@ -303,8 +294,6 @@ def test_category_catches_only_its_family(name, code, criticity, category):
         # Then only its own category (and ConnectorError) should catch it
         catches = isinstance(error, getattr(connector_errors, other))
         assert catches is (other in (category, "ConnectorError"))
-    # And the category of the older SDK errors should not catch it either
-    assert not isinstance(error, LegacyError)
     try:
         raise error
     except ConnectorError as caught:

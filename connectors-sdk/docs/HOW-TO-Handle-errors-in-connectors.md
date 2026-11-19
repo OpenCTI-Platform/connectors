@@ -96,7 +96,6 @@ All errors derive from `ConnectorError`, grouped into categories:
 | `DataError` (one item) | `DataNotFoundError` | `data.not_found` | WARNING |
 | | `DataConversionError` | `data.conversion` | WARNING |
 | none | `UnknownError` | `other.unknown` | CRITICAL |
-| `LegacyError` (the older SDK errors) | see below | `*.legacy` | ERROR |
 
 The SDK only defines the errors connectors use. When none fits, propose a new error in the SDK rather than a connector-specific code.
 
@@ -124,24 +123,6 @@ The SDK only defines the errors connectors use. When none fits, propose a new er
 - **Specialize a standard error rather than inventing a code**
 
     → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
-
-- **The older SDK errors are `LegacyError`s**
-
-    → `BaseClientApi` still raises `ApiClientError` and its subclasses, and connectors still raise `ConfigError`, `DataRetrievalError` and `UseCaseError`. These older errors are concrete subclasses of the abstract `LegacyError` category, so they are `ConnectorError`s that can be recorded and reported. Their names, modules, constructors and parent classes don't change, so existing `except` clauses keep working. `except LegacyError` catches all of them, and none of the standard categories does.
-
-    | Older error | Code | Criticity |
-    |---|---|---|
-    | `ApiClientError` | `api.unknown.legacy` | ERROR |
-    | `ApiUnauthorizedError` | `api.authentication.legacy` | ERROR |
-    | `ApiForbiddenError` | `api.authorization.legacy` | ERROR |
-    | `ApiNotFoundError` | `api.not_found.legacy` | ERROR |
-    | `ApiRateLimitError` | `api.rate_limit.legacy` | ERROR |
-    | `ApiServerError` | `api.server.legacy` | ERROR |
-    | `ConfigError`, `ConfigValidationError` | `config.invalid.legacy` | ERROR |
-    | `DataRetrievalError` | `api.retrieval.legacy` | ERROR |
-    | `UseCaseError` | `data.conversion.legacy` | ERROR |
-
-    A connector's own subclass of an older error inherits its code and criticity. Every older error reports ERROR, even when the matching standard error is CRITICAL (`api.authentication`…) or WARNING. Migrate to the standard errors to give your failures the right criticity.
 
 ### Reporting errors to OpenCTI
 
