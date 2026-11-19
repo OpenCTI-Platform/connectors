@@ -94,7 +94,7 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 |-----------|---------------|------------|----------|---------|-------------|
 | Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | No | `https://api.stixify.com/` | Stixify API URL |
 | API Key | `STIXIFY_API_KEY` | `stixify.api_key` | Yes | - | API key for authentication |
-| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | - | Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
+| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | `[]` | At least one ID is needed: the connector stops at startup when none is set. Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
 | Interval Hours (deprecated) | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | No | - | Deprecated: use `CONNECTOR_DURATION_PERIOD` instead. When set alone, its value (in hours) is migrated to `CONNECTOR_DURATION_PERIOD` |
 
 ---

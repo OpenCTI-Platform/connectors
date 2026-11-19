@@ -50,8 +50,11 @@ class StixifyConfig(BaseConfigModel):
         description=(
             "Comma-separated list of Stixify Dossier IDs. The Reports (and the "
             "objects extracted from them) in these Dossiers are imported into "
-            "OpenCTI. The Dossiers must be visible to the team of the API key."
+            "OpenCTI. The Dossiers must be visible to the team of the API key. "
+            "At least one Dossier ID is needed: the connector stops at startup "
+            "when none is set."
         ),
+        default=[],
     )
     interval_hours: int | None = DeprecatedField(
         default=None,

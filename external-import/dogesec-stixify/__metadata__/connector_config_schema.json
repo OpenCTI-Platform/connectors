@@ -66,7 +66,8 @@
       "writeOnly": true
     },
     "STIXIFY_DOSSIER_IDS": {
-      "description": "Comma-separated list of Stixify Dossier IDs. The Reports (and the objects extracted from them) in these Dossiers are imported into OpenCTI. The Dossiers must be visible to the team of the API key.",
+      "default": [],
+      "description": "Comma-separated list of Stixify Dossier IDs. The Reports (and the objects extracted from them) in these Dossiers are imported into OpenCTI. The Dossiers must be visible to the team of the API key. At least one Dossier ID is needed: the connector stops at startup when none is set.",
       "items": {
         "type": "string"
       },
@@ -82,8 +83,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "STIXIFY_API_KEY",
-    "STIXIFY_DOSSIER_IDS"
+    "STIXIFY_API_KEY"
   ],
   "additionalProperties": true
 }

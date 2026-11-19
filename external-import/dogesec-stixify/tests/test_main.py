@@ -124,3 +124,34 @@ def test_connector_schedules_with_duration_period(
     connector.helper.schedule_process.assert_called_once_with(
         message_callback=connector.run_once, duration_period=12 * 3600
     )
+
+
+def test_connector_should_exit_without_dossier_ids(
+    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+):
+    """Test that the connector stops at startup when no Dossier ID is set."""
+
+    class NoDossierConnectorSettings(StubConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "stixify": {"api_key": "test-api-key"},
+                }
+            )
+
+    monkeypatch.setattr("connector.ConnectorSettings", NoDossierConnectorSettings)
+    monkeypatch.setattr(
+        "pycti.connector.opencti_connector_helper.OpenCTIConnectorHelper.stop",
+        MagicMock(),
+    )
+
+    with pytest.raises(SystemExit) as err:
+        StixifyConnector()
+
+    assert err.value.code == 1

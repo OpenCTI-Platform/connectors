@@ -78,6 +78,17 @@ def test_settings_should_apply_defaults():
     assert settings.stixify.base_url == "https://api.stixify.com/"
 
 
+def test_settings_should_default_dossier_ids_to_empty_list():
+    settings = build_settings(
+        {
+            **MINIMAL_VALID_SETTINGS_DICT,
+            "stixify": {"api_key": "test-api-key"},
+        }
+    )
+
+    assert settings.stixify.dossier_ids == []
+
+
 def test_settings_should_default_connector_id():
     settings = build_settings(MINIMAL_VALID_SETTINGS_DICT)
 
@@ -127,13 +138,6 @@ def test_settings_should_trim_dossier_ids():
                 "stixify": {"dossier_ids": "dossier-1"},
             },
             id="missing_stixify_api_key",
-        ),
-        pytest.param(
-            {
-                **MINIMAL_VALID_SETTINGS_DICT,
-                "stixify": {"api_key": "test-api-key"},
-            },
-            id="missing_stixify_dossier_ids",
         ),
     ],
 )
