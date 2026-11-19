@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class SiemrulesConnectorConfig(BaseExternalImportConnectorConfig):
@@ -36,9 +36,9 @@ class SiemrulesConnectorConfig(BaseExternalImportConnectorConfig):
 class SiemrulesConfig(BaseConfigModel):
     """Settings specific to the SIEM Rules connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The base URL of the SIEM Rules API.",
-        default="https://api.siemrules.com/",
+        default=HttpUrl("https://api.siemrules.com/"),
     )
     api_key: SecretStr = Field(
         description="The API key used to authenticate to SIEM Rules Web.",

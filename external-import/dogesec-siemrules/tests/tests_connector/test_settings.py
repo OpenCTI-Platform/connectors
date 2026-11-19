@@ -77,7 +77,7 @@ def test_settings_should_parse_full_input() -> None:
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["test", "connector"]
     assert settings.connector.duration_period == timedelta(hours=12)
-    assert settings.siemrules.base_url == "https://test-siemrules-url/"
+    assert str(settings.siemrules.base_url) == "https://test-siemrules-url/"
     assert settings.siemrules.api_key.get_secret_value() == "test-api-key"
     assert settings.siemrules.detection_packs == ["pack-1", "pack-2"]
 
@@ -91,7 +91,7 @@ def test_settings_should_apply_defaults() -> None:
     assert settings.connector.log_level == "error"
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(hours=1)
-    assert settings.siemrules.base_url == "https://api.siemrules.com/"
+    assert str(settings.siemrules.base_url) == "https://api.siemrules.com/"
     assert settings.siemrules.detection_packs == []
 
 
@@ -162,3 +162,18 @@ def test_settings_should_prefer_duration_period_over_interval_hours() -> None:
         settings = build_settings_class(settings_dict)()
 
     assert settings.connector.duration_period == timedelta(minutes=30)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`siemrules.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "siemrules": {**MINIMAL_VALID_SETTINGS_DICT["siemrules"], "base_url": base_url},
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings_class(settings_dict)()

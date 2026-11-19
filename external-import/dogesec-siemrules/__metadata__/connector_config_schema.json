@@ -57,6 +57,9 @@
     "SIEMRULES_BASE_URL": {
       "default": "https://api.siemrules.com/",
       "description": "The base URL of the SIEM Rules API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SIEMRULES_API_KEY": {

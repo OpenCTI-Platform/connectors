@@ -23,12 +23,10 @@ class SiemrulesConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.siemrules.base_url.strip("/") + "/"
+        self.base_url = str(self.config.siemrules.base_url).strip("/") + "/"
         self.api_key = self.config.siemrules.api_key.get_secret_value()
         self.detection_packs = self.config.siemrules.detection_packs
-        self.duration_period = int(
-            self.config.connector.duration_period.total_seconds()
-        )
+        self.duration_period = self.config.connector.duration_period.total_seconds()
 
         if not self.detection_packs:
             self.helper.log_error("at least one id is required on detection_packs")

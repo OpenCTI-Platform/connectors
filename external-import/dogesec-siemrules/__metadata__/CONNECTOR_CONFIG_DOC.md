@@ -14,6 +14,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | The period of time to await between two runs of the connector. |
-| SIEMRULES_BASE_URL | `string` |  | string |  | `"https://api.siemrules.com/"` | The base URL of the SIEM Rules API. |
+| SIEMRULES_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.siemrules.com/"` | The base URL of the SIEM Rules API. |
 | SIEMRULES_DETECTION_PACKS | `array` |  | string |  | `[]` | A comma-separated list of SIEM Rules Detection Pack IDs to import. At least one is required: the connector stops when the list is empty. |
 | SIEMRULES_INTERVAL_HOURS | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
