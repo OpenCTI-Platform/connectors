@@ -18,12 +18,12 @@ def config_dict() -> dict[str, Any]:
             "name": "Stixify",
             "scope": "stixify",
             "log_level": "info",
+            "duration_period": "PT1H",
         },
         "stixify": {
             "base_url": "https://test-stixify-url/",
             "api_key": "test-api-key",
             "dossier_ids": "dossier-1,dossier-2",
-            "interval_hours": "1",
         },
     }
 
