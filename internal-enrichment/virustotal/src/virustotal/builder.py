@@ -226,12 +226,13 @@ class VirusTotalBuilder:
         """Whether this observable warrants creating an Indicator.
 
         A threshold of 0 is documented as fully disabling indicator
-        creation for this observable type, so that always wins. Otherwise,
-        an Indicator is created either when GTI's own verdict says
-        malicious, or (falling back to the legacy behavior) when the
-        multi-engine malicious count meets the configured threshold.
+        creation for this observable type, so that always wins. The score
+        must also meet the configured floor. Otherwise, an Indicator is
+        created either when GTI's own verdict says malicious, or (falling
+        back to the legacy behavior) when the multi-engine malicious count
+        meets the configured threshold.
         """
-        if indicator_config.threshold <= 0:
+        if indicator_config.threshold <= 0 or self.score < indicator_config.min_score:
             return False
         if self._gti_verdict_is_malicious():
             return True
@@ -273,11 +274,9 @@ class VirusTotalBuilder:
             self.helper.log_debug(
                 f"[VirusTotal] creating indicator with pattern {pattern}"
             )
-            # If the valid_minutes field is NULL or blank for files with no expiry, set a default value
-            minutes = indicator_config.valid_minutes
-            if minutes is None:
-                minutes = 2880  # 48 hours
-            valid_until = now_time + datetime.timedelta(minutes)
+            valid_until = now_time + datetime.timedelta(
+                minutes=indicator_config.valid_minutes
+            )
 
             indicator = stix2.Indicator(
                 id=Indicator.generate_id(pattern),
@@ -294,6 +293,7 @@ class VirusTotalBuilder:
                 confidence=self.helper.connect_confidence_level,
                 pattern=pattern,
                 pattern_type="stix",
+                valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
                 external_references=(
                     [self.external_reference]

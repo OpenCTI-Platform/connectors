@@ -15,6 +15,7 @@ services:
       - VIRUSTOTAL_TOKEN=ChangeMe
 #      - VIRUSTOTAL_MAX_TLP=TLP:AMBER
 #      - VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE=true # Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).
+#      - VIRUSTOTAL_INDICATOR_MIN_SCORE=0 # Minimum VirusTotal score required to create an Indicator
 #      # File/Artifact specific config settings
 #      - VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT=true # Whether or not to include the full report as a Note
 #      - VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS=true # Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of

@@ -103,8 +103,9 @@ class IndicatorConfig(ConfigBaseSettings):
     """Configuration for a given indicator type."""
 
     threshold: int
-    valid_minutes: int
+    valid_minutes: int = Field(gt=0)
     detect: bool
+    min_score: int = Field(default=0, ge=0, le=100)
 
 
 class ConfigLoaderVirusTotal(ConfigBaseSettings):
@@ -122,6 +123,12 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     replace_with_lower_score: bool = Field(
         default=True,
         description="Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).",
+    )
+    indicator_min_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Minimum VirusTotal score required to create an Indicator.",
     )
 
     # File/Artifact specific config settings
@@ -143,6 +150,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     )
     file_indicator_valid_minutes: int = Field(
         default=2880,
+        gt=0,
         description="How long the indicator is valid for in minutes.",
     )
     file_indicator_detect: bool = Field(
@@ -162,6 +170,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     )
     ip_indicator_valid_minutes: int = Field(
         default=2880,
+        gt=0,
         description="How long the indicator is valid for in minutes.",
     )
     ip_indicator_detect: bool = Field(
@@ -222,6 +231,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     )
     domain_indicator_valid_minutes: int = Field(
         default=2880,
+        gt=0,
         description="How long the indicator is valid for in minutes.",
     )
     domain_indicator_detect: bool = Field(
@@ -241,6 +251,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     )
     url_indicator_valid_minutes: int = Field(
         default=2880,
+        gt=0,
         description="How long the indicator is valid for in minutes.",
     )
     url_indicator_detect: bool = Field(
@@ -307,5 +318,6 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
                     threshold=values.get(f"{prefix}_indicator_create_positives", 10),
                     valid_minutes=values.get(f"{prefix}_indicator_valid_minutes", 2880),
                     detect=values.get(f"{prefix}_indicator_detect", True),
+                    min_score=values.get("indicator_min_score", 0),
                 )
         return values
