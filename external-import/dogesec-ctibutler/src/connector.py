@@ -61,7 +61,7 @@ class CTIButlerConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.ctibutler.base_url.strip("/") + "/"
+        self.base_url = str(self.config.ctibutler.base_url).strip("/") + "/"
         self.api_key = self.config.ctibutler.api_key.get_secret_value()
         self.knowledgebases = parse_knowledgebases(
             self.helper, self.config.ctibutler.knowledgebases
@@ -206,7 +206,7 @@ class CTIButlerConnector:
         self.helper.log_info("Starting CTIButler")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=int(self.config.connector.duration_period.total_seconds()),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 

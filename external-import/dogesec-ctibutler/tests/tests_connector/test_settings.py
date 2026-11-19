@@ -75,7 +75,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.log_level == "error"
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(days=7)
-    assert settings.ctibutler.base_url == "https://api.ctibutler.com/"
+    assert str(settings.ctibutler.base_url) == "https://api.ctibutler.com/"
 
 
 def test_settings_should_default_connector_id():
@@ -154,3 +154,18 @@ def test_settings_should_prefer_duration_period_over_interval_days():
         settings = build_settings(settings_dict)
 
     assert settings.connector.duration_period == timedelta(hours=12)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`ctibutler.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "ctibutler": {**MINIMAL_VALID_SETTINGS_DICT["ctibutler"], "base_url": base_url},
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings(settings_dict)

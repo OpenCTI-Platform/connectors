@@ -15,5 +15,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"P7D"` | The period of time to await between two runs of the connector. |
-| CTIBUTLER_BASE_URL | `string` |  | string |  | `"https://api.ctibutler.com/"` | The URL of the CTI Butler API. |
+| CTIBUTLER_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.ctibutler.com/"` | The URL of the CTI Butler API. |
 | CTIBUTLER_INTERVAL_DAYS | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |

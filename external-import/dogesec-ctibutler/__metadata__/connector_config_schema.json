@@ -57,6 +57,9 @@
     "CTIBUTLER_BASE_URL": {
       "default": "https://api.ctibutler.com/",
       "description": "The URL of the CTI Butler API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "CTIBUTLER_API_KEY": {

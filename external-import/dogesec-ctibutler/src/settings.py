@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class CTIButlerConnectorConfig(BaseExternalImportConnectorConfig):
@@ -36,9 +36,9 @@ class CTIButlerConnectorConfig(BaseExternalImportConnectorConfig):
 class CTIButlerConfig(BaseConfigModel):
     """Settings specific to the CTI Butler connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The URL of the CTI Butler API.",
-        default="https://api.ctibutler.com/",
+        default=HttpUrl("https://api.ctibutler.com/"),
     )
     api_key: SecretStr = Field(
         description="The API key used to authenticate against the CTI Butler API.",
