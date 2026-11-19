@@ -1,6 +1,6 @@
 """Offer a package to develop OpenCTI Connectors."""
 
-__version__ = "0.1.0"
+import importlib.metadata
 
 from connectors_sdk.client.base_client_api import BaseClientApi
 from connectors_sdk.client.exceptions import (
@@ -97,6 +97,25 @@ from connectors_sdk.settings.exceptions import (
     ConfigValidationError,
 )
 from connectors_sdk.states.states import ExternalImportConnectorState
+
+
+def _read_version() -> str:
+    """Return the version of the installed `connectors-sdk` distribution.
+
+    The version is only set at release time, in the package metadata, so it
+    is read from there rather than hard-coded.
+
+    Returns:
+        The installed version, or `0.0.0` when the SDK is imported from a
+        source tree that is not installed.
+    """
+    try:
+        return importlib.metadata.version("connectors-sdk")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.0.0"
+
+
+__version__ = _read_version()
 
 __all__ = [
     # Logger
