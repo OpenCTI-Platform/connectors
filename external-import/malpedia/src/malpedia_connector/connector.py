@@ -1,6 +1,7 @@
 """OpenCTI Malpedia Knowledge importer module."""
 
 import sys
+import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -10,8 +11,10 @@ from connectors_sdk import (
     ApiClientError,
     ApiForbiddenError,
     ApiNotFoundError,
-    ConfigValidationError,
+    ApiRateLimitError,
+    ApiServerError,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 from malpedia_connector.settings import ConnectorSettings
 from malpedia_services import (
     MalpediaClient,
@@ -27,6 +30,11 @@ from malpedia_services.constants import (
 )
 from pycti import OpenCTIConnectorHelper
 from pydantic.v1 import ValidationError
+
+# When Malpedia cannot be reached at startup, try the API key check up to
+# this many times, and wait this long (in seconds) between two tries.
+API_KEY_CHECK_ATTEMPTS = 5
+API_KEY_CHECK_RETRY_DELAY = 60
 
 
 class MalpediaConnector:
@@ -83,16 +91,40 @@ class MalpediaConnector:
     def _check_api_key(self) -> None:
         """Check that Malpedia accepts the API key.
 
-        A rejected key stops the connector.
+        A rejected key stops the connector at once. When Malpedia cannot be
+        reached, retry a few times before stopping. A network problem must not
+        look like an invalid key.
         """
-        try:
-            self.api_client.check_api_key()
-        except ApiForbiddenError as err:
-            raise ConfigValidationError(
-                "The API request failed because the token is invalid. "
-                "Please enter a valid auth_key or "
-                "run the connector in unauthenticated mode (no value)."
-            ) from err
+        for attempt in range(1, API_KEY_CHECK_ATTEMPTS + 1):
+            try:
+                self.api_client.check_api_key()
+                return
+            except ApiForbiddenError as err:
+                raise ApiForbiddenError(
+                    "The API request failed because the token is invalid. "
+                    "Please enter a valid auth_key or "
+                    "run the connector in unauthenticated mode (no value).",
+                    response_body=err.response_body,
+                ) from err
+            except (
+                requests.RequestException,
+                ApiServerError,
+                ApiRateLimitError,
+            ) as err:
+                if attempt == API_KEY_CHECK_ATTEMPTS:
+                    raise DataRetrievalError(
+                        "Could not reach the Malpedia API to check the API key"
+                    ) from err
+                self.helper.connector_logger.warning(
+                    "[API] Could not reach the Malpedia API to check the API key, retrying",
+                    {
+                        "attempt": attempt,
+                        "max_attempts": API_KEY_CHECK_ATTEMPTS,
+                        "retry_in_seconds": API_KEY_CHECK_RETRY_DELAY,
+                        "error": str(err),
+                    },
+                )
+                time.sleep(API_KEY_CHECK_RETRY_DELAY)
 
     def run(self):
         self.helper.schedule_unit(

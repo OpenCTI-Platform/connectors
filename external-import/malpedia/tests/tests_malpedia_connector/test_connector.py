@@ -5,10 +5,15 @@ import requests
 from connectors_sdk import (
     ApiForbiddenError,
     ApiNotFoundError,
+    ApiRateLimitError,
     ApiServerError,
-    ConfigValidationError,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 from malpedia_connector import MalpediaConnector
+from malpedia_connector.connector import (
+    API_KEY_CHECK_ATTEMPTS,
+    API_KEY_CHECK_RETRY_DELAY,
+)
 from malpedia_services import MalpediaClient
 
 FAMILY_NAME = "win.test"
@@ -72,10 +77,67 @@ class TestConnectorStartup:
             "check_api_key",
             side_effect=ApiForbiddenError("Forbidden (403)"),
         ) as mock_check:
-            with pytest.raises(ConfigValidationError, match="token is invalid"):
+            with pytest.raises(ApiForbiddenError, match="token is invalid"):
                 MalpediaConnector(config=make_config(), helper=MagicMock())
 
         mock_check.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            NETWORK_ERROR,
+            requests.exceptions.ConnectTimeout("Connection timed out"),
+            ApiServerError("Server error (502)"),
+            ApiRateLimitError("Rate limited (429)"),
+        ],
+        ids=["--Proxy", "--Timeout", "--Server", "--RateLimit"],
+    )
+    def test_unreachable_api_retries_then_starts(self, error):
+        helper = MagicMock()
+        with (
+            patch.object(
+                MalpediaClient, "check_api_key", side_effect=[error, error, None]
+            ) as mock_check,
+            patch("malpedia_connector.connector.time.sleep") as mock_sleep,
+        ):
+            MalpediaConnector(config=make_config(), helper=helper)
+
+        assert mock_check.call_count == 3
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_called_with(API_KEY_CHECK_RETRY_DELAY)
+        assert (
+            warning_messages(helper)
+            == ["[API] Could not reach the Malpedia API to check the API key, retrying"]
+            * 2
+        )
+
+    def test_unreachable_api_stops_after_last_try(self):
+        with (
+            patch.object(
+                MalpediaClient, "check_api_key", side_effect=NETWORK_ERROR
+            ) as mock_check,
+            patch("malpedia_connector.connector.time.sleep") as mock_sleep,
+        ):
+            with pytest.raises(DataRetrievalError, match="Could not reach") as exc:
+                MalpediaConnector(config=make_config(), helper=MagicMock())
+
+        assert mock_check.call_count == API_KEY_CHECK_ATTEMPTS
+        assert mock_sleep.call_count == API_KEY_CHECK_ATTEMPTS - 1
+        assert exc.value.__cause__ is NETWORK_ERROR
+
+    def test_rejected_api_key_after_network_error_is_not_retried(self):
+        with (
+            patch.object(
+                MalpediaClient,
+                "check_api_key",
+                side_effect=[NETWORK_ERROR, ApiForbiddenError("Forbidden (403)")],
+            ) as mock_check,
+            patch("malpedia_connector.connector.time.sleep"),
+        ):
+            with pytest.raises(ApiForbiddenError, match="token is invalid"):
+                MalpediaConnector(config=make_config(), helper=MagicMock())
+
+        assert mock_check.call_count == 2
 
 
 class TestProcessFamilies:
