@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from src.connector.sekoia import SekoiaConnector
@@ -72,19 +72,19 @@ def test_limit_external_references_should_ignore_objects_without_references():
     assert items == [{"id": RELATIONSHIP_ID}]
 
 
-def test_limit_external_references_should_keep_sekoia_then_other_then_sandbox():
+def test_limit_external_references_should_keep_sekoia_then_the_first_others():
     # The Sekoia.io reference is last in the list, as the connector adds it.
     # It is still kept, and it counts toward the limit.
-    connector = make_connector(max_external_references=5)
+    # The other references keep the API order, whatever their source.
+    connector = make_connector(max_external_references=4)
     sandbox = sandbox_references(10)
     others = other_references(2)
-    hatching = {"source_name": "Hatching Triage", "url": "https://tria.ge/hatching"}
     items = [
         {
             "id": INDICATOR_ID,
-            "external_references": sandbox[:5]
-            + [others[0], hatching]
-            + sandbox[5:]
+            "external_references": sandbox[:2]
+            + [others[0]]
+            + sandbox[2:]
             + [others[1], SEKOIA_REFERENCE],
         }
     ]
@@ -93,14 +93,13 @@ def test_limit_external_references_should_keep_sekoia_then_other_then_sandbox():
 
     assert items[0]["external_references"] == [
         SEKOIA_REFERENCE,
-        others[0],
-        others[1],
         sandbox[0],
         sandbox[1],
+        others[0],
     ]
 
 
-def test_limit_external_references_should_log_a_summary():
+def test_limit_external_references_should_log_each_truncated_object():
     connector = make_connector(max_external_references=3)
     items = [
         {"id": INDICATOR_ID, "external_references": sandbox_references(10)},
@@ -110,14 +109,26 @@ def test_limit_external_references_should_log_a_summary():
 
     connector._limit_external_references(items)
 
-    connector.helper.connector_logger.info.assert_called_once_with(
-        "External references limited",
-        {
-            "max_external_references": 3,
-            "limited_objects": 2,
-            "removed_references": 8,
-        },
-    )
+    assert connector.helper.connector_logger.info.call_args_list == [
+        call(
+            "External references truncated",
+            {
+                "object_id": INDICATOR_ID,
+                "max_external_references": 3,
+                "references_count": 10,
+                "removed_references_count": 7,
+            },
+        ),
+        call(
+            "External references truncated",
+            {
+                "object_id": MALWARE_ID,
+                "max_external_references": 3,
+                "references_count": 4,
+                "removed_references_count": 1,
+            },
+        ),
+    ]
 
 
 def test_run_should_limit_external_references_on_every_object_sent():
@@ -160,8 +171,7 @@ def test_run_should_limit_external_references_on_every_object_sent():
     sent_by_id = {item["id"]: item for item in sent_items}
     assert sent_by_id[INDICATOR_ID]["external_references"] == [
         SEKOIA_REFERENCE,
-        other_references(1)[0],
-        sandbox_references(1)[0],
+        *sandbox_references(2),
     ]
     assert sent_by_id[MALWARE_ID]["external_references"] == sandbox_references(3)
     assert "external_references" not in sent_by_id[RELATIONSHIP_ID]

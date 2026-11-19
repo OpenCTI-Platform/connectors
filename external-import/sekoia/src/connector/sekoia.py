@@ -23,9 +23,6 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 # so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
 SEKOIA_SOURCE_NAME = "Sekoia.io"
-# Sandbox sources can add thousands of references to one indicator.
-# When the number of references is limited, they are dropped first.
-SANDBOX_SOURCE_NAMES = {"triage sandbox", "hatching triage"}
 
 
 class SekoiaConnector(object):
@@ -237,50 +234,40 @@ class SekoiaConnector(object):
         """
         Keep at most `max_external_references` external references on each object.
 
-        The references are kept in this order: the Sekoia.io reference,
-        then the references from other sources, then the sandbox references.
-        Inside each group, the order of the Sekoia.io API is kept.
+        The Sekoia.io reference is always kept and counts toward the limit.
+        The other references are kept in the order of the Sekoia.io API.
         """
         if self.max_external_references is None:
             return
 
-        limited_objects = 0
-        removed_references = 0
         for item in items:
             external_references = item.get("external_references") or []
-            if len(external_references) <= self.max_external_references:
+            references_count = len(external_references)
+            if references_count <= self.max_external_references:
                 continue
-            # sorted() is stable, so each group keeps the API order.
-            external_references = sorted(
-                external_references, key=self._external_reference_rank
-            )
-            item["external_references"] = external_references[
+            sekoia_references = [
+                ref
+                for ref in external_references
+                if ref.get("source_name") == SEKOIA_SOURCE_NAME
+            ]
+            other_references = [
+                ref
+                for ref in external_references
+                if ref.get("source_name") != SEKOIA_SOURCE_NAME
+            ]
+            item["external_references"] = (sekoia_references + other_references)[
                 : self.max_external_references
             ]
-            limited_objects += 1
-            removed_references += (
-                len(external_references) - self.max_external_references
-            )
-
-        if limited_objects:
             self.helper.connector_logger.info(
-                "External references limited",
+                "External references truncated",
                 {
+                    "object_id": item["id"],
                     "max_external_references": self.max_external_references,
-                    "limited_objects": limited_objects,
-                    "removed_references": removed_references,
+                    "references_count": references_count,
+                    "removed_references_count": references_count
+                    - self.max_external_references,
                 },
             )
-
-    @staticmethod
-    def _external_reference_rank(external_reference: Dict) -> int:
-        """Rank used to choose which external references to keep (lowest first)."""
-        source_name = external_reference.get("source_name") or ""
-        if source_name == SEKOIA_SOURCE_NAME:
-            return 0
-        if source_name.lower() in SANDBOX_SOURCE_NAMES:
-            return 2
-        return 1
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """

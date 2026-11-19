@@ -100,10 +100,8 @@ class SekoiaConfig(BaseConfigModel):
     )
     max_external_references: PositiveInt | None = Field(
         description=(
-            "Maximum number of external references kept on each object. "
+            "Maximum number of external references kept on each object (for example 50). "
             "The Sekoia.io reference is always kept and counts toward the limit. "
-            "Some indicators have thousands of sandbox references, "
-            "which makes their import very slow: 50 is a good value in that case. "
             "Defaults to no limit."
         ),
         default=None,

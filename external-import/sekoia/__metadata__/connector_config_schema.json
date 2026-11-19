@@ -120,7 +120,7 @@
     },
     "SEKOIA_MAX_EXTERNAL_REFERENCES": {
       "default": null,
-      "description": "Maximum number of external references kept on each object. The Sekoia.io reference is always kept and counts toward the limit. Some indicators have thousands of sandbox references, which makes their import very slow: 50 is a good value in that case. Defaults to no limit.",
+      "description": "Maximum number of external references kept on each object (for example 50). The Sekoia.io reference is always kept and counts toward the limit. Defaults to no limit.",
       "exclusiveMinimum": 0,
       "type": "integer"
     }

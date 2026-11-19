@@ -23,4 +23,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SEKOIA_IMPORT_IOC_RELATIONSHIPS | `boolean` |  | boolean | `true` | Import IOCs relationships and related objects. |
 | SEKOIA_CONFIDENCE_SCORE | `integer` |  | integer | `null` | This will be the score assigned to the indicators. Defaults to null, maximum 100. |
 | SEKOIA_SEND_CONFIDENCE | `boolean` |  | boolean | `true` | Whether to include Sekoia's native STIX confidence property on objects in the bundle sent. |
-| SEKOIA_MAX_EXTERNAL_REFERENCES | `integer` |  | `0 < x ` | `null` | Maximum number of external references kept on each object. The Sekoia.io reference is always kept and counts toward the limit. Some indicators have thousands of sandbox references, which makes their import very slow: 50 is a good value in that case. Defaults to no limit. |
+| SEKOIA_MAX_EXTERNAL_REFERENCES | `integer` |  | `0 < x ` | `null` | Maximum number of external references kept on each object (for example 50). The Sekoia.io reference is always kept and counts toward the limit. Defaults to no limit. |

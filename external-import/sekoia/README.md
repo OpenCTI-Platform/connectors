@@ -133,12 +133,9 @@ reports (Triage). OpenCTI creates each external reference as a separate entity, 
 import and can block the other messages in the queue. Sekoia.io also updates them after each new sandbox analysis, so
 they are imported again on later runs.
 
-To avoid this, set `SEKOIA_MAX_EXTERNAL_REFERENCES` (50 is a good value). The connector then keeps at most this number of
-external references on each object it sends, in this order:
-
-1. The Sekoia.io reference, which is always kept and counts toward the limit.
-2. The references from other sources.
-3. The sandbox references (Triage Sandbox, Hatching Triage).
+To avoid this, set `SEKOIA_MAX_EXTERNAL_REFERENCES` (for example 50). The connector then keeps at most this number of
+external references on each object it sends. The Sekoia.io reference is always kept and counts toward the limit. The
+other references are the first ones returned by the Sekoia.io API.
 
 By default, there is no limit. The limit does not remove the external references already imported in OpenCTI.
 
