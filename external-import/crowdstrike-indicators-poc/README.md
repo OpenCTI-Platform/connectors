@@ -38,6 +38,7 @@ src/
                               ConnectorConfigurationError
     type_arguments.py         declared_types, reads a component's type arguments
   crowdstrike_indicators/     CrowdStrike implementation
+    factory.py                CrowdStrikeSettings, CrowdStrikeConnectorFactory
     entities/                 records, STIX classes, ids and errors
       models.py               CrowdStrikeIndicator, CrowdStrikeActor,
                               EnrichedCrowdStrikeIndicator (Pydantic)
@@ -64,7 +65,8 @@ tests/                        pytest, no network
 Dependency rule: `shared/` depends only on the standard library, Pydantic,
 pydantic-settings and stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/`
 depends on `shared/`: inside it, `extract/` and `transform/` both depend on
-`entities/`, never on each other. `crowdstrike_indicators_cli/` depends on
+`entities/`, never on each other, and `factory.py`, which assembles them,
+depends on both. `crowdstrike_indicators_cli/` depends on
 `crowdstrike_indicators/` and `shared/`, and nothing depends on it. Runtime
 dependencies are `crowdstrike-falconpy`, `pydantic`, `pydantic-settings` and
 `stix2`. There is no
@@ -182,18 +184,14 @@ extract(cursor, max) -> [(dt, item)] -> t1 -> t2 -> ... -> tn -> loader.load  |
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from crowdstrike_indicators.extract.actors import CrowdStrikeActorEnricher
-from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.factory import CrowdStrikeConnectorFactory
 from shared.connector import Connector
 from shared.record_to_file import RecordToFile
 
+factory = CrowdStrikeConnectorFactory()  # CROWDSTRIKE_* from the environment or ./.env
 connector = Connector(
-    # client: a FalconPy Intel client, for both indicators and actors
-    CrowdStrikeIndicatorExtractor(client, CrowdStrikeActorEnricher(client)),
-    [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware(), MakeStixBundle()],
+    factory.create_extractor(),
+    factory.create_transformers(),
     RecordToFile(Path("bundles")),
 )
 connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
@@ -289,6 +287,29 @@ connector = Connector(
     factory.create_extractor(), factory.create_transformers(), loader
 )
 ```
+
+### The CrowdStrike factory
+
+`CrowdStrikeConnectorFactory` implements the factory contract for this source,
+with `CrowdStrikeSettings` as its settings (see [Setup](#setup) for the keys).
+
+- **Settings.** `CROWDSTRIKE_CLIENT_ID` and `CROWDSTRIKE_CLIENT_SECRET` are
+  required (both `SecretStr`, never displayed), `CROWDSTRIKE_BASE_URL` defaults
+  to `https://api.crowdstrike.com`, `CROWDSTRIKE_ATTACK_DATA` is the optional
+  path of a local ATT&CK dataset, which must exist. Empty values count as
+  unset, and keys that are not settings are ignored, so a `.env` shared with
+  other tools works.
+- **The ATT&CK dataset is read at construction**, once per factory: a file
+  that is not a STIX bundle fails construction, naming the file, like a
+  missing credential.
+- **`create_extractor()`** returns a new `CrowdStrikeIndicatorExtractor` with
+  a new `CrowdStrikeActorEnricher` (and so an empty actor cache). Every
+  extractor and enricher of a factory shares one FalconPy `Intel` client,
+  built on the first API call only: FalconPy authenticates when the client is
+  built, and creating components must not contact CrowdStrike.
+- **`create_transformers()`** returns new `CrowdStrikeIndicatorTransformer`,
+  `CrowdStrikeAddMalware`, `CrowdStrikeAddAttackPatterns` when a dataset is
+  set, and `MakeStixBundle`.
 
 ### CrowdStrike actors
 
@@ -561,6 +582,9 @@ The install is editable: changes under `src/` apply without reinstalling.
 | `CROWDSTRIKE_CLIENT_ID` | yes | |
 | `CROWDSTRIKE_CLIENT_SECRET` | yes | |
 | `CROWDSTRIKE_BASE_URL` | no | `https://api.crowdstrike.com` (US-1). Other regions: `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`, ... |
+| `CROWDSTRIKE_ATTACK_DATA` | no | none. Path of a local MITRE ATT&CK Enterprise STIX bundle; when set, `transform` adds the AttackPatterns (see [Attack patterns](#attack-patterns)). |
+
+An empty value counts as unset. Keys that are not in this table are ignored.
 
 The API client needs the **Indicators (Falcon Intelligence): Read** scope, and
 the **Actors (Falcon Intelligence): Read** scope to resolve actors. Without
