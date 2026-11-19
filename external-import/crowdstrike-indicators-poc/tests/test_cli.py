@@ -148,6 +148,42 @@ def test_missing_secret_exits_2_without_building_a_client(monkeypatch, capsys):
     assert captured.out == ""
 
 
+def test_env_file_syntax(monkeypatch, isolated):
+    (isolated / ".env").write_text(
+        "# comment\n"
+        "\n"
+        "export CROWDSTRIKE_CLIENT_ID=exported-id\n"
+        'CROWDSTRIKE_CLIENT_SECRET="a=b#c"\n'
+        "UNRELATED_KEY=ignored\n"
+    )
+    factory = _install(monkeypatch, FakeIndicatorsAPI([]))
+
+    assert _extract("--from", FROM, "--max", "5") == 0
+    assert factory.calls == [("exported-id", "a=b#c", DEFAULT_BASE_URL)]
+
+
+def test_env_file_replaces_references(monkeypatch, isolated):
+    (isolated / ".env").write_text(
+        "REGION=eu-1\n"
+        "CROWDSTRIKE_CLIENT_ID=id-${REGION}\n"
+        "CROWDSTRIKE_CLIENT_SECRET='a${UNDEFINED}c'\n"
+        'CROWDSTRIKE_BASE_URL="https://api.${REGION}.crowdstrike.com"\n'
+    )
+    factory = _install(monkeypatch, FakeIndicatorsAPI([]))
+
+    assert _extract("--from", FROM, "--max", "5") == 0
+    assert factory.calls == [("id-eu-1", "ac", "https://api.eu-1.crowdstrike.com")]
+
+
+def test_environment_values_are_kept_literally(monkeypatch, isolated):
+    monkeypatch.setenv(CLIENT_ID, "env-id")
+    monkeypatch.setenv(CLIENT_SECRET, "a${B}c")
+    factory = _install(monkeypatch, FakeIndicatorsAPI([]))
+
+    assert _extract("--from", FROM, "--max", "5") == 0
+    assert factory.calls == [("env-id", "a${B}c", DEFAULT_BASE_URL)]
+
+
 def test_missing_explicit_env_file_is_a_usage_error(monkeypatch, capsys):
     factory = _install(monkeypatch, FakeIndicatorsAPI([]))
     with pytest.raises(SystemExit) as caught:
