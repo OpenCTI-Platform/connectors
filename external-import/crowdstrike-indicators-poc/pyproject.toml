@@ -22,7 +22,7 @@ test = [
 ]
 
 [project.scripts]
-crowdstrike-indicators-cli = "crowdstrike_indicators_cli.cli:main"
+connector-cli = "shared.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,7 +1,11 @@
 """End-to-end tests of the generic CLI with the CrowdStrike connector factory."""
 
 import json
+import os
 import re
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -270,3 +274,27 @@ def test_extract_item_goes_through_transform(isolated, monkeypatch, capsys):
 
     assert transform(isolated, item) == 0
     assert len(steps(capsys.readouterr().out)) == 3
+
+
+# Console command
+
+
+def test_installed_console_command(isolated):
+    command = Path(sys.executable).parent / "connector-cli"
+    environment = {
+        key: value for key, value in os.environ.items() if key != "PYTHONPATH"
+    }
+    environment.update({CLIENT_ID: "FAKE_CLIENT_ID", CLIENT_SECRET: "FAKE_SECRET"})
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    completed = subprocess.run(
+        [str(command), "--factory", FACTORY, "transform", "indicator.json"],
+        cwd=isolated,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert [name for name, _ in steps(completed.stdout)][-1] == "MakeStixBundle"
