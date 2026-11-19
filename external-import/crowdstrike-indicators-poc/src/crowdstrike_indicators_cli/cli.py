@@ -14,12 +14,11 @@ configuration error.
 import argparse
 import json
 import logging
-import os
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from crowdstrike_indicators.entities.errors import (
     CrowdStrikeAPIError,
@@ -28,22 +27,10 @@ from crowdstrike_indicators.entities.errors import (
 )
 from crowdstrike_indicators.entities.models import EnrichedCrowdStrikeIndicator
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.extract.actors import ActorsClient, CrowdStrikeActorEnricher
-from crowdstrike_indicators.extract.extractor import (
-    CrowdStrikeIndicatorExtractor,
-    IndicatorsClient,
-    validate_indicator,
-)
-from crowdstrike_indicators.transform.attack import (
-    AttackPatternCatalog,
-    CrowdStrikeAddAttackPatterns,
-)
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
-from crowdstrike_indicators_cli.dotenv import read_dotenv
+from crowdstrike_indicators.extract.extractor import validate_indicator
+from crowdstrike_indicators.factory import CrowdStrikeConnectorFactory
 
-from shared.transformer import AbstractTransformer
+from shared.factory import ConnectorConfigurationError
 
 LOGGER = logging.getLogger("crowdstrike_indicators")
 
@@ -51,38 +38,7 @@ EXIT_OK = 0
 EXIT_FAILURE = 1
 EXIT_USAGE_ERROR = 2
 
-CLIENT_ID = "CROWDSTRIKE_CLIENT_ID"
-CLIENT_SECRET = "CROWDSTRIKE_CLIENT_SECRET"
-BASE_URL = "CROWDSTRIKE_BASE_URL"
-DEFAULT_BASE_URL = "https://api.crowdstrike.com"
 DEFAULT_ENV_FILE = Path(".env")
-
-# The steps ``transform`` always runs, in order: each takes the previous
-# one's output. ``build_transform_steps`` adds the ones needing a dataset.
-TRANSFORM_STEPS: tuple[AbstractTransformer[Any, Any], ...] = (
-    CrowdStrikeIndicatorTransformer(),
-    CrowdStrikeAddMalware(),
-)
-
-
-def build_transform_steps(
-    catalog: AttackPatternCatalog | None,
-) -> tuple[AbstractTransformer[Any, Any], ...]:
-    """Return the steps of ``transform``: attack patterns given a catalog, then
-    always the STIX bundle."""
-    attack_steps = () if catalog is None else (CrowdStrikeAddAttackPatterns(catalog),)
-    return (*TRANSFORM_STEPS, *attack_steps, MakeStixBundle())
-
-
-class IntelClient(IndicatorsClient, ActorsClient, Protocol):
-    """The FalconPy ``Intel`` operations ``extract`` uses: indicators and actors."""
-
-
-def build_client(client_id: str, client_secret: str, base_url: str) -> IntelClient:
-    """Build the FalconPy ``Intel`` service class."""
-    from falconpy import Intel
-
-    return Intel(client_id=client_id, client_secret=client_secret, base_url=base_url)
 
 
 def _parse_from_date(value: str) -> datetime:
@@ -112,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="log level on standard error (default: INFO)",
+    )
+    common.add_argument(
+        "--env-file",
+        type=Path,
+        metavar="PATH",
+        help=f"file holding the configuration (default: ./{DEFAULT_ENV_FILE})",
     )
 
     parser = argparse.ArgumentParser(
@@ -151,12 +113,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="maximum number of indicators to return (1 or more)",
     )
     extract.add_argument(
-        "--env-file",
-        type=Path,
-        metavar="PATH",
-        help=f"file holding the credentials (default: ./{DEFAULT_ENV_FILE})",
-    )
-    extract.add_argument(
         "--output",
         type=Path,
         metavar="FILE",
@@ -189,27 +145,31 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="PATH",
         help=(
-            "local MITRE ATT&CK Enterprise STIX bundle (enterprise-attack.json); "
-            "when given, a third step adds the AttackPatterns the labels name"
+            "local MITRE ATT&CK Enterprise STIX bundle (enterprise-attack.json), "
+            "instead of CROWDSTRIKE_ATTACK_DATA; with a dataset, a third step "
+            "adds the AttackPatterns the labels name"
         ),
     )
     return parser
 
 
-def _load_config(env_file: Path) -> dict[str, str | None]:
-    """Read the configuration; the process environment wins over the file."""
-    file_values = read_dotenv(env_file)
+def _build_factory(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, **overrides: Any
+) -> CrowdStrikeConnectorFactory | None:
+    """Build the factory from the configuration, or report why it cannot be.
 
-    def value(key: str) -> str | None:
-        if key in os.environ:
-            return os.environ[key]
-        return file_values.get(key)
-
-    return {
-        CLIENT_ID: value(CLIENT_ID),
-        CLIENT_SECRET: value(CLIENT_SECRET),
-        BASE_URL: value(BASE_URL) or DEFAULT_BASE_URL,
-    }
+    The process environment wins over the ``.env`` file, and ``overrides``
+    over both. Returns ``None`` after reporting a configuration error.
+    """
+    if args.env_file is not None and not args.env_file.is_file():
+        parser.error(f"--env-file: no such file: {args.env_file}")
+    env_file = args.env_file or DEFAULT_ENV_FILE
+    try:
+        return CrowdStrikeConnectorFactory(env_file=env_file, **overrides)
+    except ConnectorConfigurationError as error:
+        print(f"error: {error}", file=sys.stderr)
+        print(f"(read from the environment, then from {env_file})", file=sys.stderr)
+        return None
 
 
 def _write_output(path: Path, text: str, count: int) -> None:
@@ -233,21 +193,10 @@ def _json_type_name(value: Any) -> str:
 
 
 def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
-    if args.env_file is not None and not args.env_file.is_file():
-        parser.error(f"--env-file: no such file: {args.env_file}")
-    config = _load_config(args.env_file or DEFAULT_ENV_FILE)
-
-    missing = [key for key in (CLIENT_ID, CLIENT_SECRET) if not config[key]]
-    if missing:
-        print(
-            f"error: missing configuration: {', '.join(missing)} "
-            f"(expected in the environment or in {args.env_file or DEFAULT_ENV_FILE})",
-            file=sys.stderr,
-        )
+    factory = _build_factory(parser, args)
+    if factory is None:
         return EXIT_USAGE_ERROR
-
-    client = build_client(config[CLIENT_ID], config[CLIENT_SECRET], config[BASE_URL])
-    extractor = CrowdStrikeIndicatorExtractor(client, CrowdStrikeActorEnricher(client))
+    extractor = factory.create_extractor()
 
     try:
         result = extractor.extract(args.from_date, args.max_element_count)
@@ -289,27 +238,25 @@ def _to_json(value: Any) -> Any:
     return json.loads(value.serialize(pretty=True))
 
 
-def _load_catalog(
-    parser: argparse.ArgumentParser, path: Path | None
-) -> AttackPatternCatalog | None:
-    """Load the ATT&CK dataset given with ``--attack-data``, if any."""
-    if path is None:
-        return None
-    if not path.is_file():
-        parser.error(f"--attack-data: no such file: {path}")
-    catalog = AttackPatternCatalog.from_file(path)
-    LOGGER.info("Loaded %d ATT&CK technique(s) from %s", len(catalog), path)
-    return catalog
-
-
 def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     if args.file is not None and not args.file.is_file():
         parser.error(f"no such file: {args.file}")
-    try:
-        catalog = _load_catalog(parser, args.attack_data)
-    except ValueError as error:
-        print(f"error: --attack-data: {error}", file=sys.stderr)
+    overrides: dict[str, Any] = {}
+    if args.attack_data is not None:
+        if not args.attack_data.is_file():
+            parser.error(f"--attack-data: no such file: {args.attack_data}")
+        overrides["attack_data"] = args.attack_data
+    factory = _build_factory(parser, args, **overrides)
+    if factory is None:
         return EXIT_USAGE_ERROR
+    catalog = factory.attack_pattern_catalog
+    if catalog is not None:
+        LOGGER.info(
+            "Loaded %d ATT&CK technique(s) from %s",
+            len(catalog),
+            factory.settings.attack_data,
+        )
+    transformers = factory.create_transformers()
     text = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
 
     try:
@@ -327,7 +274,7 @@ def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
     steps: list[dict[str, Any]] = []
     try:
         value: Any = validate_indicator(raw, EnrichedCrowdStrikeIndicator)
-        for number, step in enumerate(build_transform_steps(catalog), start=1):
+        for number, step in enumerate(transformers, start=1):
             value = step.convert(value)
             steps.append(
                 {

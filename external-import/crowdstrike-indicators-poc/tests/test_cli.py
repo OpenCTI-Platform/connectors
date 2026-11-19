@@ -16,15 +16,25 @@ from conftest import (
     ok,
 )
 from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.factory import (
+    DEFAULT_BASE_URL,
+    CrowdStrikeConnectorFactory,
+)
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 from crowdstrike_indicators_cli import cli
 
 SECRET = "s3cr3t-value-never-shown"
-CREDENTIAL_KEYS = (cli.CLIENT_ID, cli.CLIENT_SECRET, cli.BASE_URL)
+CLIENT_ID = "CROWDSTRIKE_CLIENT_ID"
+CLIENT_SECRET = "CROWDSTRIKE_CLIENT_SECRET"
+BASE_URL = "CROWDSTRIKE_BASE_URL"
+ATTACK_DATA = "CROWDSTRIKE_ATTACK_DATA"
+CONFIGURATION_KEYS = (CLIENT_ID, CLIENT_SECRET, BASE_URL, ATTACK_DATA)
 FROM = "2023-11-14T22:13:20Z"
 
 
 class ClientFactory:
-    """Stands in for ``cli.build_client`` and records how it was called."""
+    """Stands in for the factory's API client creation and records the
+    settings each client was built with."""
 
     def __init__(self, client: Any) -> None:
         self.client = client
@@ -37,9 +47,9 @@ class ClientFactory:
 
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch, tmp_path):
-    """Run each test in an empty directory with no credential in the env."""
+    """Run each test in an empty directory with no configuration in the env."""
     monkeypatch.chdir(tmp_path)
-    for key in CREDENTIAL_KEYS:
+    for key in CONFIGURATION_KEYS:
         monkeypatch.delenv(key, raising=False)
     return tmp_path
 
@@ -58,9 +68,25 @@ def credentials(isolated):
 
 
 def _install(monkeypatch, client: Any) -> ClientFactory:
-    factory = ClientFactory(client)
-    monkeypatch.setattr(cli, "build_client", factory)
-    return factory
+    recorder = ClientFactory(client)
+
+    def create_client(factory: CrowdStrikeConnectorFactory) -> Any:
+        settings = factory.settings
+        return recorder(
+            settings.client_id.get_secret_value(),
+            settings.client_secret.get_secret_value(),
+            settings.base_url,
+        )
+
+    monkeypatch.setattr(CrowdStrikeConnectorFactory, "_create_client", create_client)
+    return recorder
+
+
+def _forbid_client(monkeypatch) -> None:
+    def forbidden(factory: CrowdStrikeConnectorFactory) -> Any:
+        raise AssertionError("transform must not build a CrowdStrike client")
+
+    monkeypatch.setattr(CrowdStrikeConnectorFactory, "_create_client", forbidden)
 
 
 def _run(*args: str) -> int:
@@ -77,12 +103,12 @@ def _extract(*args: str) -> int:
 def test_credentials_come_from_the_env_file(monkeypatch, credentials):
     factory = _install(monkeypatch, FakeIndicatorsAPI([]))
     assert _extract("--from", FROM, "--max", "5") == 0
-    assert factory.calls == [("file-id", SECRET, cli.DEFAULT_BASE_URL)]
+    assert factory.calls == [("file-id", SECRET, DEFAULT_BASE_URL)]
 
 
 def test_environment_overrides_the_env_file(monkeypatch, credentials):
-    monkeypatch.setenv(cli.CLIENT_ID, "env-id")
-    monkeypatch.setenv(cli.BASE_URL, "https://api.eu-1.crowdstrike.com")
+    monkeypatch.setenv(CLIENT_ID, "env-id")
+    monkeypatch.setenv(BASE_URL, "https://api.eu-1.crowdstrike.com")
     factory = _install(monkeypatch, FakeIndicatorsAPI([]))
 
     assert _extract("--from", FROM, "--max", "5") == 0
@@ -103,15 +129,15 @@ def test_explicit_env_file(monkeypatch, isolated):
 
 
 def test_credentials_from_environment_only(monkeypatch):
-    monkeypatch.setenv(cli.CLIENT_ID, "env-id")
-    monkeypatch.setenv(cli.CLIENT_SECRET, SECRET)
+    monkeypatch.setenv(CLIENT_ID, "env-id")
+    monkeypatch.setenv(CLIENT_SECRET, SECRET)
     factory = _install(monkeypatch, FakeIndicatorsAPI([]))
     assert _extract("--from", FROM, "--max", "5") == 0
-    assert factory.calls == [("env-id", SECRET, cli.DEFAULT_BASE_URL)]
+    assert factory.calls == [("env-id", SECRET, DEFAULT_BASE_URL)]
 
 
 def test_missing_secret_exits_2_without_building_a_client(monkeypatch, capsys):
-    monkeypatch.setenv(cli.CLIENT_ID, "env-id")
+    monkeypatch.setenv(CLIENT_ID, "env-id")
     factory = _install(monkeypatch, FakeIndicatorsAPI([]))
 
     assert _extract("--from", FROM, "--max", "5") == 2
@@ -129,6 +155,28 @@ def test_missing_explicit_env_file_is_a_usage_error(monkeypatch, capsys):
     assert caught.value.code == 2
     assert factory.calls == []
     assert "nope.env" in capsys.readouterr().err
+
+
+def test_invalid_dataset_path_stops_extract(monkeypatch, credentials, capsys):
+    monkeypatch.setenv(ATTACK_DATA, "missing.json")
+    factory = _install(monkeypatch, FakeIndicatorsAPI([]))
+
+    assert _extract("--from", FROM, "--max", "5") == 2
+
+    assert factory.calls == []
+    captured = capsys.readouterr()
+    assert ATTACK_DATA in captured.err
+    assert captured.out == ""
+
+
+def test_configuration_errors_name_every_parameter(monkeypatch, capsys):
+    factory = _install(monkeypatch, FakeIndicatorsAPI([]))
+
+    assert _extract("--from", FROM, "--max", "5") == 2
+
+    assert factory.calls == []
+    err = capsys.readouterr().err
+    assert CLIENT_ID in err and CLIENT_SECRET in err
 
 
 # --- Arguments ---------------------------------------------------------------
@@ -342,12 +390,11 @@ SAMPLE_DOMAIN = next(
 
 @pytest.fixture
 def no_api(monkeypatch):
-    """Fail the test if anything tries to build a CrowdStrike client."""
-
-    def forbidden(*args: Any) -> Any:
-        raise AssertionError("transform must not build a CrowdStrike client")
-
-    monkeypatch.setattr(cli, "build_client", forbidden)
+    """Set placeholder credentials, and fail the test if anything tries to
+    build a CrowdStrike client."""
+    monkeypatch.setenv(CLIENT_ID, "FAKE_CLIENT_ID")
+    monkeypatch.setenv(CLIENT_SECRET, "FAKE_CLIENT_SECRET")
+    _forbid_client(monkeypatch)
 
 
 def _transform_steps(capsys) -> list[dict[str, Any]]:
@@ -385,11 +432,39 @@ def test_transform_reads_standard_input(monkeypatch, no_api, capsys):
     _assert_stix_of_sample(_transform_output(capsys))
 
 
-def test_transform_needs_no_configuration(isolated, no_api, capsys):
+def test_transform_with_placeholder_credentials(isolated, no_api, capsys):
     assert not (isolated / ".env").exists()
     (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
 
     assert _run("transform", "indicator.json") == 0
+
+
+def test_transform_without_credentials_exits_2(monkeypatch, isolated, capsys):
+    _forbid_client(monkeypatch)
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    assert _run("transform", "indicator.json") == 2
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert CLIENT_ID in captured.err and CLIENT_SECRET in captured.err
+
+
+def test_transform_reads_the_env_file(monkeypatch, credentials, isolated, capsys):
+    _forbid_client(monkeypatch)
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    assert _run("transform", "indicator.json") == 0
+
+
+def test_transform_missing_env_file_is_a_usage_error(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    with pytest.raises(SystemExit) as caught:
+        _run("transform", "indicator.json", "--env-file", "nope.env")
+
+    assert caught.value.code == 2
+    assert "nope.env" in capsys.readouterr().err
 
 
 def test_transform_logs_go_to_standard_error_only(isolated, no_api, capsys):
@@ -509,7 +584,11 @@ def test_transform_later_step_failure_prints_nothing(
         def convert(self, item: Any) -> Any:
             raise IndicatorConversionError(SAMPLE_DOMAIN["id"], "forced failure")
 
-    monkeypatch.setattr(cli, "TRANSFORM_STEPS", (cli.TRANSFORM_STEPS[0], FailingStep()))
+    monkeypatch.setattr(
+        CrowdStrikeConnectorFactory,
+        "create_transformers",
+        lambda self: [CrowdStrikeIndicatorTransformer(), FailingStep()],
+    )
     (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
 
     assert _run("transform", "indicator.json") == 1
@@ -571,6 +650,36 @@ def test_transform_without_attack_data_runs_three_steps(isolated, no_api, capsys
     ]
 
 
+def test_transform_takes_the_dataset_from_the_configuration(
+    monkeypatch, isolated, no_api, capsys
+):
+    monkeypatch.setenv(ATTACK_DATA, str(ATTACK_FILE))
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+
+    assert _run("transform", "indicator.json") == 0
+
+    steps = _transform_steps(capsys)
+    assert steps[2]["transformer"] == "CrowdStrikeAddAttackPatterns"
+    assert steps[2]["output"]["attack_patterns"] != []
+
+
+def test_attack_data_option_overrides_the_configuration(
+    monkeypatch, isolated, no_api, capsys
+):
+    (isolated / "empty-attack.json").write_text(
+        json.dumps({"type": "bundle", "id": "bundle--0", "objects": []})
+    )
+    monkeypatch.setenv(ATTACK_DATA, "empty-attack.json")
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+
+    code = _run("transform", "indicator.json", "--attack-data", str(ATTACK_FILE))
+
+    assert code == 0
+    steps = _transform_steps(capsys)
+    assert steps[2]["transformer"] == "CrowdStrikeAddAttackPatterns"
+    assert steps[2]["output"]["attack_patterns"] != []
+
+
 def test_transform_missing_attack_data_exits_2(isolated, no_api, capsys):
     (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
 
@@ -625,10 +734,7 @@ def test_transform_takes_an_element_of_the_extract_output(
     [element] = json.loads(capsys.readouterr().out)
     (isolated / "indicator.json").write_text(json.dumps(element["indicator"]))
 
-    def forbidden(*args: Any) -> Any:
-        raise AssertionError("transform must not build a CrowdStrike client")
-
-    monkeypatch.setattr(cli, "build_client", forbidden)
+    _forbid_client(monkeypatch)
     assert _run("transform", "indicator.json") == 0
 
     stix = _transform_output(capsys)
