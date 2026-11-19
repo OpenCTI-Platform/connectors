@@ -22,6 +22,8 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 
 # so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
+SEKOIA_SOURCE_NAME = "Sekoia.io"
+
 
 class SekoiaConnector(object):
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -45,6 +47,7 @@ class SekoiaConnector(object):
         self.create_observables = self.config.sekoia.create_observables
         self.import_source_list = self.config.sekoia.import_source_list
         self.import_ioc_relationships = self.config.sekoia.import_ioc_relationships
+        self.max_external_references = self.config.sekoia.max_external_references
 
         self.all_labels = []
 
@@ -188,6 +191,8 @@ class SekoiaConnector(object):
 
             items += all_related_objects + all_relationships
 
+        self._limit_external_references(items)
+
         if not self.send_confidence:
             self._remove_confidence_from_items(items)
 
@@ -212,7 +217,7 @@ class SekoiaConnector(object):
             has_sekoia_source = False
             external_references = item.setdefault("external_references", [])
             for ref in external_references:
-                if ref.get("source_name") == "Sekoia.io":
+                if ref.get("source_name") == SEKOIA_SOURCE_NAME:
                     has_sekoia_source = True
                 for key in list(ref.keys()):
                     if not ref[key]:
@@ -220,10 +225,46 @@ class SekoiaConnector(object):
             if not has_sekoia_source:
                 external_references.append(
                     {
-                        "source_name": "Sekoia.io",
+                        "source_name": SEKOIA_SOURCE_NAME,
                         "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
                     }
                 )
+
+    def _limit_external_references(self, items: List[Dict]):
+        """
+        Keep at most `max_external_references` external references on each object.
+
+        The Sekoia.io reference is always kept and counts toward the limit.
+        The other references are kept in the order of the Sekoia.io API.
+        """
+        if self.max_external_references is None:
+            return
+
+        for item in items:
+            external_references = item.get("external_references") or []
+            references_count = len(external_references)
+            if references_count <= self.max_external_references:
+                continue
+            sekoia_references = []
+            other_references = []
+            for ref in external_references:
+                if ref.get("source_name") == SEKOIA_SOURCE_NAME:
+                    sekoia_references.append(ref)
+                else:
+                    other_references.append(ref)
+            item["external_references"] = (sekoia_references + other_references)[
+                : self.max_external_references
+            ]
+            self.helper.connector_logger.info(
+                "External references truncated",
+                {
+                    "object_id": item["id"],
+                    "max_external_references": self.max_external_references,
+                    "references_count": references_count,
+                    "removed_references_count": references_count
+                    - self.max_external_references,
+                },
+            )
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """

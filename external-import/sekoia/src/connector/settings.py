@@ -98,6 +98,14 @@ class SekoiaConfig(BaseConfigModel):
         description="Whether to include Sekoia's native STIX confidence property on objects in the bundle sent.",
         default=True,
     )
+    max_external_references: PositiveInt | None = Field(
+        description=(
+            "Maximum number of external references kept on each object (for example 50). "
+            "The Sekoia.io reference is always kept and counts toward the limit. "
+            "Defaults to no limit."
+        ),
+        default=None,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

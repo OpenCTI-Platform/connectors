@@ -51,6 +51,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "import_ioc_relationships": False,
                     "confidence_score": 50,
                     "send_confidence": False,
+                    "max_external_references": 50,
                 },
             }
         )
@@ -93,6 +94,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector.import_ioc_relationships is False
     assert connector.confidence_score == 50
     assert connector.send_confidence is False
+    assert connector.max_external_references == 50
 
 
 def test_main_runs_connector_with_settings(monkeypatch, mock_opencti_connector_helper):
