@@ -13560,6 +13560,232 @@
       "container_type": "EXTERNAL_IMPORT"
     },
     {
+      "title": "Flashpoint Vulnerability",
+      "slug": "flashpoint-vulnerability",
+      "description": "Flashpoint Vulnerability Intelligence provides vulnerability data independent of the NVD, including vulnerabilities without a CVE ID, real-time exploit analysis and Flashpoint's own scoring.\n\nThe integration with OpenCTI imports these vulnerabilities, the affected software and Flashpoint analyst notes, with filters on severity, CVSS and EPSS scores and tags. It is separate from the Flashpoint connector, which imports alerts, reports, communities, indicators and CCM alerts.",
+      "short_description": "Imports vulnerabilities from Flashpoint Vulnerability Intelligence into OpenCTI, including non-CVE vulnerabilities, exploit analysis, affected software and analyst notes.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Vulnerability & Exploit Awareness"
+      ],
+      "solution_categories": [
+        "Threat Intelligence Feed"
+      ],
+      "license_type": "Commercial",
+      "contact": null,
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": false,
+      "max_confidence_level": 55,
+      "support_version": ">=6.8.12",
+      "subscription_link": "https://flashpoint.io/ignite/vulnerability-intelligence/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flashpoint-vulnerability",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-flashpoint-vulnerability",
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/flashpoint-vulnerability_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Flashpoint Vulnerability",
+            "description": "Name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "vulnerability",
+              "software",
+              "note"
+            ],
+            "description": "Scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT1H",
+            "description": "Interval between two runs.",
+            "format": "duration",
+            "type": "string"
+          },
+          "FLASHPOINT_VULNERABILITY_API_KEY": {
+            "description": "API key to connect to Flashpoint.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "FLASHPOINT_VULNERABILITY_BASE_URL": {
+            "default": "https://api.flashpoint.io/vulnerability-intelligence/v1",
+            "description": "Base URL of the Flashpoint Vulnerability Intelligence API.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "FLASHPOINT_VULNERABILITY_TLP_LEVEL": {
+            "description": "TLP marking level applied to created objects.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          },
+          "FLASHPOINT_VULNERABILITY_MAX_REQUESTS_PER_MINUTE": {
+            "default": 100,
+            "description": "Maximum number of requests sent to the Flashpoint API per minute.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "FLASHPOINT_VULNERABILITY_START_DATE": {
+            "default": "P30D",
+            "description": "On the first run, import vulnerabilities since this date, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or a duration relative to now (e.g. 'P30D').",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
+            "type": "string"
+          },
+          "FLASHPOINT_VULNERABILITY_SYNC_FIELD": {
+            "description": "Vulnerability date field used to fetch new data incrementally.",
+            "enum": [
+              "touched",
+              "updated"
+            ],
+            "type": "string",
+            "default": "updated"
+          },
+          "FLASHPOINT_VULNERABILITY_INCLUDE_NO_CVE": {
+            "default": false,
+            "description": "Whether to import vulnerabilities that have no CVE ID.",
+            "type": "boolean"
+          },
+          "FLASHPOINT_VULNERABILITY_MIN_SEVERITY": {
+            "description": "Only import vulnerabilities with at least this severity: low, medium, high or critical.",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "type": "string",
+            "default": null
+          },
+          "FLASHPOINT_VULNERABILITY_MIN_CVSS": {
+            "default": null,
+            "description": "Only import vulnerabilities with at least this CVSS score.",
+            "maximum": 10,
+            "minimum": 0,
+            "type": "number"
+          },
+          "FLASHPOINT_VULNERABILITY_MIN_EPSS": {
+            "default": null,
+            "description": "Only import vulnerabilities with at least this EPSS score.",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "FLASHPOINT_VULNERABILITY_TAGS": {
+            "default": [],
+            "description": "Only import vulnerabilities with one of these tags (comma-separated).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "FLASHPOINT_VULNERABILITY_DEPRECATED": {
+            "description": "How to handle vulnerabilities marked as deprecated by Flashpoint.",
+            "enum": [
+              "skip",
+              "revoke"
+            ],
+            "type": "string",
+            "default": "skip"
+          },
+          "FLASHPOINT_VULNERABILITY_SOFTWARE_MODE": {
+            "description": "How affected software is imported.",
+            "enum": [
+              "product",
+              "cpe"
+            ],
+            "type": "string",
+            "default": null
+          },
+          "FLASHPOINT_VULNERABILITY_IMPORT_ANALYST_NOTES": {
+            "default": true,
+            "description": "Whether to import Flashpoint analyst notes.",
+            "type": "boolean"
+          },
+          "FLASHPOINT_VULNERABILITY_LABELS": {
+            "default": [
+              "tags",
+              "severity"
+            ],
+            "description": "Vulnerability fields turned into labels (comma-separated).",
+            "items": {
+              "description": "Enumeration of the possible vulnerability fields that can be turned into labels.",
+              "enum": [
+                "tags",
+                "severity",
+                "ransomware",
+                "classifications"
+              ],
+              "title": "Labels",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "FLASHPOINT_VULNERABILITY_MAX_REFERENCES": {
+            "default": 50,
+            "description": "Maximum number of external references imported per vulnerability.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "FLASHPOINT_VULNERABILITY_API_KEY"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "Malpedia",
       "slug": "malpedia",
       "description": "Malpedia is a free resource from Fraunhofer FKIE that provides comprehensive information on malware families, including descriptions, aliases, references, and YARA detection rules. The platform is curated by security researchers and provides high-quality malware intelligence.\n\nThis connector imports malware families, associated threat actors (intrusion sets), and YARA rules from Malpedia into OpenCTI.\n\nKey features:\n\n- Malware family import with descriptions, aliases, and references\n- Threat actor (intrusion set) associations\n- YARA detection rule import as indicators\n- Sample hash observables creation\n- Configurable TLP markings",
