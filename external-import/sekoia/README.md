@@ -64,7 +64,7 @@ connector-sekoia:
   identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship =>
   Sekoia Intelligence elements set to be exported in OpenCTI that can be chosen from this list
 - SEKOIA_API_KEY = Sekoia API key with CTI_Permissions
-- SEKOIA_START_DATE = e.g. 2023-05-01 or a duration such as P30D. Default: P90D (90 days ago). Only used on the first run: once the connector has a state, the last cursor takes precedence. Legacy non ISO 8601 formats such as `2022/01/01` or `20220101` are still accepted when the connector starts (Docker/environment variables), but are deprecated and log a warning (date parts missing from the value, e.g. the day in `2022/01`, are taken from the current date). They are **refused** by the deployment form of the Composer/catalog, which only accepts ISO 8601 dates (`2023-05-01`, `2023-05-01T00:00:00`) and ISO 8601 durations (`P90D`)
+- SEKOIA_START_DATE = e.g. 2023-05-01 or a duration such as P30D. Default: P90D (90 days ago). Only used on the first run: once the connector has a state, the last cursor takes precedence. Other formats, including an empty or null value, are rejected and stop the connector at startup.
 
 3. Build and launch Sekoia connector
 
