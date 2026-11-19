@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class StixifyConnectorConfig(BaseExternalImportConnectorConfig):
@@ -39,9 +39,9 @@ class StixifyConnectorConfig(BaseExternalImportConnectorConfig):
 class StixifyConfig(BaseConfigModel):
     """Settings specific to the Stixify connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The URL of the Stixify API.",
-        default="https://api.stixify.com/",
+        default=HttpUrl("https://api.stixify.com/"),
     )
     api_key: SecretStr = Field(
         description="The Stixify API key used for authentication.",

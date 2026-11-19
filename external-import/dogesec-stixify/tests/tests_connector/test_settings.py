@@ -75,7 +75,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.log_level == "error"
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(hours=1)
-    assert settings.stixify.base_url == "https://api.stixify.com/"
+    assert str(settings.stixify.base_url) == "https://api.stixify.com/"
 
 
 def test_settings_should_default_dossier_ids_to_empty_list():
@@ -177,3 +177,18 @@ def test_settings_should_prefer_duration_period_over_interval_hours():
         settings = build_settings(settings_dict)
 
     assert settings.connector.duration_period == timedelta(hours=6)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`stixify.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "stixify": {**MINIMAL_VALID_SETTINGS_DICT["stixify"], "base_url": base_url},
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings(settings_dict)

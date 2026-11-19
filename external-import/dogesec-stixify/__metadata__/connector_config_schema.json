@@ -57,6 +57,9 @@
     "STIXIFY_BASE_URL": {
       "default": "https://api.stixify.com/",
       "description": "The URL of the Stixify API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "STIXIFY_API_KEY": {

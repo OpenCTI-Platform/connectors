@@ -24,7 +24,7 @@ class StixifyConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.stixify.base_url.strip("/") + "/"
+        self.base_url = str(self.config.stixify.base_url).strip("/") + "/"
         self.api_key = self.config.stixify.api_key.get_secret_value()
         self.dossier_ids = self.config.stixify.dossier_ids
 
@@ -160,7 +160,7 @@ class StixifyConnector:
         self.helper.log_info("Starting Stixify")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=int(self.config.connector.duration_period.total_seconds()),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 
