@@ -1,8 +1,8 @@
 {
   "title": "PolySwarm Enrichment",
   "slug": "polyswarm-enrichment",
-  "description": "Enriches SHA-256, SHA-1, and MD5 file hash observables with PolySwarm multi-engine detection results across default and private communities. Creates STIX indicators with detection scores, malware family profiles with threat actor and CVE associations, MITRE ATT&CK technique mappings, network IOCs (domains, IPs, URLs), and geolocation data. Malware intelligence is sourced from polykg knowledge graph.",
-  "short_description": "Enrich file hash observables with PolySwarm detection data, malware profiles, and MITRE ATT&CK mappings.",
+  "description": "Enriches SHA-256, SHA-1, and MD5 file hash observables with PolySwarm multi-engine detection results across default and private communities, and looks up URL, domain, and IP observables for engine verdicts and related files. Creates STIX indicators with detection scores, malware family profiles with threat actor and CVE associations, MITRE ATT&CK technique mappings, network IOCs (domains, IPs, URLs), and geolocation data. Malware intelligence is sourced from polykg knowledge graph.",
+  "short_description": "Enrich file hash, URL, domain, and IP observables with PolySwarm detection data, malware profiles, and MITRE ATT&CK mappings.",
   "logo": "internal-enrichment/polyswarm-enrichment/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"
@@ -12,7 +12,7 @@
     "Enrichment & Reputation"
   ],
   "license_type": "Commercial",
-  "contact": null,
+  "contact": "customersuccess@polyswarm.io",
   "verified": true,
   "last_verified_date": "2026-06-22",
   "playbook_supported": true,

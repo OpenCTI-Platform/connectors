@@ -11,24 +11,70 @@ Enriches file observables with comprehensive threat intelligence including:
 - Exploited vulnerabilities (CVEs)
 - Targeted industry sectors
 - Intrusion sets and campaigns
+
+Also enriches URL, domain and IP observables with PolySwarm URL scan
+verdicts and, for IPs and domains, related file hashes (lookup only).
 """
 
+import json
 import traceback
 from datetime import datetime, timezone
 
 from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
+from polyswarm_enrichment.client_api import (
+    NETWORK_OBSERVABLE_TYPES,
+    is_non_public_network_value,
+    loggable_network_value,
+    url_for_lookup,
+    url_has_userinfo,
+)
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
+from polyswarm_enrichment.pivots import PivotService, extract_mitre_id, has_pivot_label
+from polyswarm_enrichment.quota import QuotaMonitor
+from polyswarm_enrichment.sample_artifact import build_sample_artifact
 from polyswarm_enrichment.settings import ConnectorSettings
+from polyswarm_enrichment.yara_hunt import (
+    YaraHunter,
+    build_file_objects,
+    build_note,
+    is_yara_indicator,
+    with_markings,
+)
 from pycti import Note, OpenCTIConnectorHelper
 
-# Standard TLP marking definition IDs (STIX 2.1)
+# Standard TLP marking definition IDs: the STIX 2.1 ids (stix2.TLP_WHITE,
+# TLP_GREEN, TLP_AMBER, TLP_RED) plus the OpenCTI TLP:AMBER+STRICT id that
+# pycti uses. OpenCTI shows the STIX TLP:WHITE id as TLP:CLEAR.
 _TLP_MARKING_TO_NAME = {
-    "marking-definition--36218b84-3861-514a-8360-29dbdd9ba0d9": "TLP:WHITE",
+    "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9": "TLP:CLEAR",
     "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da": "TLP:GREEN",
-    "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ea": "TLP:AMBER",
-    "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9": "TLP:AMBER+STRICT",
-    "marking-definition--36218b84-3861-514a-8360-29dbdd9ba0d8": "TLP:RED",
+    "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82": "TLP:AMBER",
+    "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37": "TLP:AMBER+STRICT",
+    "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed": "TLP:RED",
 }
+
+# TLP restriction rank, used to report the most restrictive marking
+_TLP_RANK = {
+    "TLP:CLEAR": 0,
+    "TLP:WHITE": 0,
+    "TLP:GREEN": 1,
+    "TLP:AMBER": 2,
+    "TLP:AMBER+STRICT": 3,
+    "TLP:RED": 4,
+}
+
+# Human-readable names for network observable types in notes
+_NETWORK_KIND = {
+    "Url": "URL",
+    "Domain-Name": "domain",
+    "IPv4-Addr": "IP address",
+    "IPv6-Addr": "IP address",
+}
+
+_IOC_NOT_FETCHED = object()
+
+# A URL scan older than this is flagged as stale in the note
+_STALE_SCAN_DAYS = 90
 
 
 class ConnectorTemplate:
@@ -36,6 +82,11 @@ class ConnectorTemplate:
     Enhanced PolySwarm connector with comprehensive malware profile enrichment
     and MITRE ATT&CK attack pattern creation.
     """
+
+    # Account quota reader (read-only); None until the connector is initialized
+    quota: QuotaMonitor | None = None
+    # Opt-in sample download; set from settings in __init__
+    download_sample = False
 
     def __init__(self, settings: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Enhanced Connector."""
@@ -52,14 +103,45 @@ class ConnectorTemplate:
         self.ioc_max_count = ps.ioc_max_count
         self.ioc_score = ps.ioc_score
         self.ioc_types = list(ps.ioc_types)
+        # URL, domain and IP observable lookups
+        self.network_related_files_max = ps.network_related_files_max
+        self.network_indicator_min_detections = ps.network_indicator_min_detections
+        self.network_url_send_query = ps.network_url_send_query
+        # YARA hunting (off by default: writes to the PolySwarm account)
+        self.yara_hunt_enabled = ps.yara_hunt_enabled
+        self.yara_hunt_window_days = ps.yara_hunt_window_days
+        self.yara_hunt_timeout = ps.yara_hunt_timeout
+        self.yara_hunt_max_results = ps.yara_hunt_max_results
+
+        # Sample download (opt-in): live malware stored as an Artifact
+        self.download_sample = ps.download_sample
 
         # Initialize client (PolySwarm SDK + polykg profile API)
         from polyswarm_enrichment.client_api import ConnectorClient
 
         self.client = ConnectorClient(self.helper, ps)
 
+        # Read the account plan and quota at startup and hourly after that. A
+        # failure here is logged and never stops the connector.
+        self.quota = QuotaMonitor(
+            self.client.polyswarm,
+            self.helper.connector_logger,
+            warn_below=ps.quota_warn_below,
+        )
+        self.quota.refresh()
+
         # Initialize STIX converter — client doubles as profile loader
         self.converter_to_stix = ConverterToStix(self.helper, self.client)
+
+        # Optional imphash and technique pivots (both off by default)
+        self.pivots = PivotService(
+            self.helper,
+            self.client,
+            self.converter_to_stix,
+            imphash_max=ps.pivot_imphash_max,
+            ttp_max=ps.pivot_ttp_max,
+        )
+        self._last_ioc_data = _IOC_NOT_FETCHED
 
         # Initialize Attack Pattern Handler — TTP data fetched via client
         ttp_data = self.client.fetch_attack_patterns()
@@ -128,6 +210,14 @@ class ConnectorTemplate:
 - First Seen: {polyswarm_data.get("first_seen", "N/A")}
 - Last Seen: {polyswarm_data.get("last_seen", "N/A")}
 """
+
+        rescan_section = self._rescan_note_section(polyswarm_data.get("rescan"))
+        if rescan_section:
+            note_content += f"\n{rescan_section}"
+
+        sample_text = polyswarm_data.get("sample_download")
+        if sample_text:
+            note_content += f"\n**Sample Download:**\n- {sample_text}\n"
 
         file_names = polyswarm_data.get("filenames", [])
         if file_names and file_names[0]:
@@ -207,6 +297,51 @@ class ConnectorTemplate:
             "object_refs": [observable_id],
         }
 
+    @staticmethod
+    def _rescan_note_text(rescan: dict | None) -> str | None:
+        """One line for the note describing what the opt-in rescan did."""
+        if not rescan:
+            return None
+        reason = rescan.get("reason", "scan due for refresh")
+        status = rescan.get("status")
+        if status == "completed":
+            return f"Rescanned by PolySwarm ({reason}); these results are from the new scan."
+        if status == "timed_out":
+            return (
+                f"Rescan requested ({reason}) but not finished within "
+                f"{rescan.get('timeout')} seconds; these results are from the "
+                "previous scan."
+            )
+        if status == "no_result":
+            return (
+                f"Rescan requested ({reason}) but returned no usable result; these "
+                "results are from the previous scan."
+            )
+        if rescan.get("quota_exhausted"):
+            return (
+                f"Rescan requested ({reason}) but the account quota is exhausted "
+                "or the API rate limit was hit; these results are from the "
+                "previous scan, if any."
+            )
+        return (
+            f"Rescan requested ({reason}) but failed; these results are from the "
+            "previous scan, if any."
+        )
+
+    def _rescan_note_section(self, rescan: dict | None) -> str | None:
+        """The Rescan block of a note, with account quota lines after a 429."""
+        text = self._rescan_note_text(rescan)
+        if not text:
+            return None
+        section = f"**Rescan:**\n- {text}\n"
+        if rescan.get("quota_exhausted") and self.quota is not None:
+            section += (
+                "\n**Account quota:**\n"
+                + "\n".join(self.quota.exhausted_note_lines())
+                + "\n"
+            )
+        return section
+
     def _create_error_note(self, observable_id: str, errors: list) -> dict:
         """Create a STIX Note reporting API errors to the user."""
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -253,7 +388,7 @@ class ConnectorTemplate:
 - Contact PolySwarm support if the issue persists
 """
         elif has_quota_error:
-            note_content += """- Your API quota may be exceeded
+            note_content += """- Your API quota is exhausted or the API rate limit was hit
 - Wait for quota reset or upgrade your PolySwarm plan
 - Consider reducing enrichment frequency
 """
@@ -262,6 +397,13 @@ class ConnectorTemplate:
 - Verify network connectivity
 - Retry the enrichment later
 """
+
+        if has_quota_error and self.quota is not None:
+            note_content += (
+                "\n**Account quota:**\n"
+                + "\n".join(self.quota.exhausted_note_lines())
+                + "\n"
+            )
 
         note_content += f"\n**Timestamp:** {current_time}\n"
 
@@ -281,9 +423,35 @@ class ConnectorTemplate:
             "object_refs": [observable_id],
         }
 
-    def _create_hash_not_found_note(self, observable_id: str, hash_value: str) -> dict:
-        """Create a STIX Note informing the user the hash was not found in PolySwarm."""
+    def _create_hash_not_found_note(
+        self, observable_id: str, hash_value: str, rescan: dict | None = None
+    ) -> dict:
+        """Create a STIX Note informing the user the hash was not found in PolySwarm.
+
+        With ``rescan`` (PolySwarm holds the sample but had no completed scan, and
+        the requested rescan did not produce a result) the Note says that instead.
+        """
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        if rescan:
+            return {
+                "type": "note",
+                "spec_version": "2.1",
+                "id": Note.generate_id(
+                    created=None, content=f"polyswarm-not-found:{observable_id}"
+                ),
+                "created": current_time,
+                "modified": current_time,
+                "content": (
+                    "**PolySwarm Enrichment - No Completed Scan**\n\n"
+                    f"**Hash:** `{hash_value}`\n\n"
+                    "PolySwarm holds this sample but has no completed scan of it.\n\n"
+                    f"{self._rescan_note_section(rescan)}\n"
+                    f"**Timestamp:** {current_time}\n"
+                ),
+                "abstract": "PolySwarm - No Completed Scan",
+                "created_by_ref": self.converter_to_stix.author.id,
+                "object_refs": [observable_id],
+            }
 
         note_content = f"""**PolySwarm Enrichment — Hash Not Found**
 
@@ -314,6 +482,115 @@ class ConnectorTemplate:
             "modified": current_time,
             "content": note_content,
             "abstract": "ℹ️ PolySwarm — Hash Not Found",
+            "created_by_ref": self.converter_to_stix.author.id,
+            "object_refs": [observable_id],
+        }
+
+    def _create_network_scan_note(
+        self, observable_id: str, observable_type: str, value: str, scan: dict
+    ) -> dict:
+        """Create a STIX Note with the PolySwarm URL scan of a URL, domain or IP."""
+        kind = _NETWORK_KIND.get(observable_type, "value")
+        community = scan.get("community", "default")
+        malicious = scan.get("malicious", 0)
+        total = scan.get("total", 0)
+        benign = scan.get("benign", 0)
+        score = scan.get("x_opencti_score")
+        scan_date_dt = scan.get("scan_date_dt")
+
+        abstract = (
+            f"PolySwarm ({community}) scan: {malicious}/{total} engines malicious"
+        )
+        score_text = (
+            f"{score}/100 (share of engines that flagged it)"
+            if score is not None
+            else "N/A (no engine verdicts)"
+        )
+
+        note_content = f"""**PolySwarm Enrichment Results**
+
+**Community:** {community}
+
+**Value:** `{value}`
+
+**Detection Summary:**
+- Malicious: {malicious}/{total}
+- Benign: {benign}/{total}
+- Score: {score_text}
+
+**Scan Date:** {scan.get("scan_date") or "N/A"}
+"""
+        if scan_date_dt:
+            age_days = (datetime.now(timezone.utc) - scan_date_dt).days
+            if age_days > _STALE_SCAN_DAYS:
+                note_content += (
+                    f"\n**Stale scan:** this scan is {age_days} days old (older than "
+                    f"{_STALE_SCAN_DAYS} days). The verdict may not reflect the "
+                    f"current state of this {kind}.\n"
+                )
+        if scan.get("window_closed") is False:
+            note_content += (
+                "\n**Scan in progress:** engines were still answering when "
+                "this result was read.\n"
+            )
+
+        permalink = scan.get("permalink")
+        if permalink:
+            note_content += f"\n**PolySwarm Analysis:**\n- {permalink}\n"
+
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        # Same stable-ID scheme as the file note: re-enrichment upserts
+        stable_content = f"polyswarm-network:{observable_id}:{community}"
+        note = {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": Note.generate_id(created=None, content=stable_content),
+            "created": current_time,
+            "modified": current_time,
+            "content": note_content,
+            "abstract": abstract,
+            "created_by_ref": self.converter_to_stix.author.id,
+            "object_refs": [observable_id],
+        }
+        if permalink:
+            note["external_references"] = [
+                self.converter_to_stix.create_scan_reference(
+                    scan, f"PolySwarm scan results ({community})"
+                )
+            ]
+        return note
+
+    def _create_network_not_found_note(
+        self, observable_id: str, observable_type: str, value: str
+    ) -> dict:
+        """Create a STIX Note saying PolySwarm has no scan for a URL, domain or IP."""
+        kind = _NETWORK_KIND.get(observable_type, "value")
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        note_content = f"""**PolySwarm Enrichment: No Scan Found**
+
+**Status:** PolySwarm has no scan for this {kind}.
+
+**Value:** `{value}`
+
+**What this means:**
+- PolySwarm has not scanned this exact value
+- This does NOT mean it is safe or malicious, it is simply unknown
+
+**Timestamp:** {current_time}
+"""
+
+        stable_content = f"polyswarm-not-found:{observable_id}"
+        note_id = Note.generate_id(created=None, content=stable_content)
+
+        return {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": note_id,
+            "created": current_time,
+            "modified": current_time,
+            "content": note_content,
+            "abstract": f"PolySwarm: No Scan Found for this {kind}",
             "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
@@ -378,7 +655,7 @@ class ConnectorTemplate:
                             obs_hash = observable["hashes"][algo]
                             break
                 not_found_note = self._create_hash_not_found_note(
-                    observable["id"], obs_hash
+                    observable["id"], obs_hash, polyswarm_result.get("rescan")
                 )
                 stix_objects.append(not_found_note)
                 self.helper.connector_logger.info(
@@ -711,6 +988,7 @@ class ConnectorTemplate:
                     sha256 = enrichment_data.get("sha256")
                     if sha256:
                         ioc_data = self.client.fetch_iocs(sha256)
+                        self._last_ioc_data = ioc_data
                         if ioc_data:
                             ioc_objects = self.converter_to_stix.create_ioc_observables(
                                 observable_id=observable["id"],
@@ -775,6 +1053,382 @@ class ConnectorTemplate:
             )
             return []
 
+    def _collect_network_intelligence(
+        self,
+        observable: dict,
+        observable_type: str,
+        value: str,
+        lookup: dict,
+        marking_refs: list | None = None,
+    ) -> list:
+        """Build the STIX objects for a URL, domain or IP lookup result.
+
+        Every object created here carries the source observable's
+        ``marking_refs``; the observable score goes in the bundle only.
+        """
+        # Incoming objects (observable and its marking definitions) are kept
+        stix_objects = self.stix_objects_list.copy()
+        if self.converter_to_stix.author:
+            stix_objects.append(self.converter_to_stix.author)
+        derived: list = []
+
+        errors = lookup.get("errors", [])
+        if errors:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] API errors detected", {"count": len(errors)}
+            )
+            derived.append(self._create_error_note(observable["id"], errors))
+
+        scan = lookup.get("scan")
+        if scan:
+            derived.append(
+                self._create_network_scan_note(
+                    observable["id"], observable_type, value, scan
+                )
+            )
+
+            # Score from engine detections; PolyScore is not used for URLs
+            score = scan.get("x_opencti_score")
+            if score is not None and self._should_replace_score(observable, score):
+                for i, obj in enumerate(stix_objects):
+                    if obj.get("id") == observable["id"]:
+                        enriched_obs = obj.copy()
+                        enriched_obs["x_opencti_score"] = score
+                        stix_objects[i] = enriched_obs
+                        break
+                else:
+                    stix_objects.insert(0, {**observable, "x_opencti_score": score})
+
+            if scan.get("malicious", 0) >= self.network_indicator_min_detections:
+                indicator = self.converter_to_stix.create_network_indicator(
+                    observable_type, value, scan
+                )
+                if indicator:
+                    derived.append(indicator)
+                    based_on = self.converter_to_stix.create_relationship(
+                        source_id=indicator["id"],
+                        relationship_type="based-on",
+                        target_id=observable["id"],
+                        description=(
+                            "This indicator is based on the PolySwarm scan of "
+                            f"the observed {_NETWORK_KIND.get(observable_type)}"
+                        ),
+                    )
+                    if based_on:
+                        derived.append(based_on)
+        elif not errors:
+            derived.append(
+                self._create_network_not_found_note(
+                    observable["id"], observable_type, value
+                )
+            )
+
+        for sha256 in lookup.get("related_files", []):
+            related_file = self.converter_to_stix.create_related_file(sha256)
+            derived.append(related_file)
+            relationship = self.converter_to_stix.create_relationship(
+                source_id=observable["id"],
+                relationship_type="related-to",
+                target_id=related_file["id"],
+                description=(
+                    "PolySwarm links this file to the "
+                    f"{_NETWORK_KIND.get(observable_type)} (search by IOC)"
+                ),
+            )
+            if relationship:
+                derived.append(relationship)
+
+        # Derived objects keep the source's visibility (TLP and other markings)
+        if marking_refs:
+            # stix2 objects (relationships, indicators) become plain JSON dicts first:
+            # copying them with ** keeps stix2 datetimes that json can't serialize
+            derived = [
+                {
+                    **(
+                        json.loads(obj.serialize())
+                        if hasattr(obj, "serialize")
+                        else obj
+                    ),
+                    "object_marking_refs": list(marking_refs),
+                }
+                for obj in derived
+            ]
+        stix_objects.extend(derived)
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Network observable bundle built",
+            {
+                "scan_found": scan is not None,
+                "related_files": len(lookup.get("related_files", [])),
+                "objects": len(stix_objects),
+            },
+        )
+        return stix_objects
+
+    def _process_network_observable(
+        self, data: dict, opencti_entity: dict, observable: dict
+    ) -> str:
+        """Enrich a URL, domain or IP observable (lookup only, never upload)."""
+        observable_type = opencti_entity.get("entity_type")
+        if not self.entity_in_scope(data):
+            if not data.get("event_type"):
+                return self._send_bundle(self.stix_objects_list)
+            raise ValueError(f"Entity type {observable_type} not supported")
+
+        value = (observable.get("value") or "").strip()
+        if not value:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Observable does not contain a value",
+                {"entity_type": observable_type},
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] No value found to enrich"
+
+        log_value = loggable_network_value(value, observable_type)
+
+        # URLs with a username or password are never sent (credentials)
+        if observable_type == "Url" and url_has_userinfo(value):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Skipping: URL contains a username or password and is "
+                "never sent to PolySwarm",
+                {"entity_type": observable_type, "value": log_value},
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Skipped URL with credentials, nothing sent to PolySwarm"
+
+        # Private and internal values never leave the platform
+        if is_non_public_network_value(value, observable_type):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Skipping: private or internal value is never sent to PolySwarm",
+                {"entity_type": observable_type, "value": log_value},
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Skipped private or internal value, nothing sent to PolySwarm"
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Enrichment starting for network observable",
+            {"entity_type": observable_type, "value": log_value},
+        )
+        lookup_value = (
+            url_for_lookup(value, self.network_url_send_query)
+            if observable_type == "Url"
+            else value
+        )
+        lookup = self.client.lookup_network_observable(
+            lookup_value,
+            observable_type,
+            related_files_max=self.network_related_files_max,
+        )
+        stix_objects = self._collect_network_intelligence(
+            observable,
+            observable_type,
+            value,
+            lookup,
+            marking_refs=self._source_marking_refs(observable, opencti_entity),
+        )
+
+        # Playbook compatibility: keep the original observable in the bundle
+        obs_ids = {obj.get("id") for obj in stix_objects}
+        if observable.get("id") and observable["id"] not in obs_ids:
+            stix_objects.insert(0, observable)
+
+        # The score travels in the bundle (no separate API write). Marking refs
+        # are kept even when their definition is not in the bundle: OpenCTI
+        # resolves them, and stripping them would drop the source's TLP.
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
+
+    def _imphash_pivot(
+        self,
+        observable: dict,
+        opencti_entity: dict,
+        polyswarm_data: dict | None,
+        stix_objects: list,
+    ) -> list:
+        """Files sharing the enriched file's imphash (off unless configured)."""
+        pivots = getattr(self, "pivots", None)
+        if pivots is None or not pivots.imphash_enabled or not stix_objects:
+            return []
+        if has_pivot_label(observable, opencti_entity):
+            # A file imported by a pivot never pivots again
+            return []
+        try:
+            sha256 = ((polyswarm_data or {}).get("data") or {}).get("sha256")
+            if not sha256:
+                return []
+            ioc_data = getattr(self, "_last_ioc_data", _IOC_NOT_FETCHED)
+            self._last_ioc_data = _IOC_NOT_FETCHED
+            if ioc_data is _IOC_NOT_FETCHED:
+                # IOC extraction did not run for this file: read the imphash here
+                ioc_data = self.client.fetch_iocs(sha256)
+            return pivots.imphash_objects(
+                observable["id"],
+                sha256,
+                (ioc_data or {}).get("imphash"),
+                marking_refs=self._source_marking_refs(observable, opencti_entity),
+            )
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Imphash pivot failed", {"error_type": type(err).__name__}
+            )
+            return []
+
+    def _process_attack_pattern(
+        self, data: dict, opencti_entity: dict, attack_pattern: dict
+    ) -> str:
+        """Technique pivot: files PolySwarm associates with an ATT&CK id."""
+        pivots = getattr(self, "pivots", None)
+        # Gate on the setting, not on entity_in_scope: the helper takes
+        # CONNECTOR_SCOPE from the environment first, which hides the type the
+        # settings added, and the platform only sends types in that scope anyway
+        if pivots is None or not pivots.ttp_enabled:
+            if not data.get("event_type"):
+                return self._send_bundle(self.stix_objects_list)
+            raise ValueError("Entity type Attack-Pattern not supported")
+
+        if getattr(self.helper, "connect_auto", False) is True:
+            # Auto-enrichment would search for every Attack-Pattern created
+            # (a MITRE import is hundreds), so the technique pivot is manual only
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Technique pivot skipped: it runs only with "
+                "CONNECTOR_AUTO=false"
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Technique pivot skipped (CONNECTOR_AUTO=true)"
+
+        mitre_id = extract_mitre_id(attack_pattern) or extract_mitre_id(opencti_entity)
+        if not mitre_id:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Attack-Pattern has no MITRE ATT&CK id, nothing sent"
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] No MITRE ATT&CK id found to enrich"
+
+        marking_refs = self._source_marking_refs(attack_pattern, opencti_entity)
+        derived = pivots.ttp_objects(
+            attack_pattern["id"], mitre_id, marking_refs=marking_refs
+        )
+        stix_objects = list(self.stix_objects_list)
+        if attack_pattern.get("id") and attack_pattern["id"] not in {
+            obj.get("id") for obj in stix_objects
+        }:
+            stix_objects.insert(0, attack_pattern)
+        if self.converter_to_stix.author:
+            stix_objects.append(self.converter_to_stix.author)
+        stix_objects.extend(derived)
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
+
+    def _ignore_entity(self, data: dict, reason: str) -> str:
+        """Quietly skip an entity; playbooks get their original bundle back."""
+        self.helper.connector_logger.info(f"[CONNECTOR] Ignored: {reason}")
+        if not data.get("event_type"):
+            self._send_bundle(self.stix_objects_list)
+        return f"[CONNECTOR] Ignored: {reason}"
+
+    def _process_yara_indicator(
+        self, data: dict, opencti_entity: dict, indicator: dict
+    ) -> str:
+        """Hunt a YARA Indicator's rule in PolySwarm and import the matches.
+
+        Creates a hunt in the customer's PolySwarm account, so it only runs
+        when yara_hunt_enabled is true and the Indicator is a YARA rule.
+        """
+        if not self.yara_hunt_enabled:
+            return self._ignore_entity(data, "YARA hunting is disabled")
+        if not is_yara_indicator(indicator):
+            return self._ignore_entity(data, "the Indicator is not a YARA rule")
+
+        # Fail closed: the rule text leaves OpenCTI, so an unreadable marking
+        # could hide a TLP above max_tlp
+        _, unresolved = self._get_tlps(
+            indicator, opencti_entity, self.stix_objects_list
+        )
+        if unresolved and self.max_tlp != "TLP:RED":
+            return self._ignore_entity(
+                data,
+                "marking can't be resolved against max_tlp, nothing sent to PolySwarm",
+            )
+
+        rule = indicator["pattern"].strip()
+        hunter = YaraHunter(
+            self.client.polyswarm,
+            self.helper,
+            window_days=self.yara_hunt_window_days,
+            timeout=self.yara_hunt_timeout,
+            max_results=self.yara_hunt_max_results,
+        )
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Starting YARA hunt",
+            {"indicator": indicator.get("id"), "window_days": hunter.window_days},
+        )
+        outcome = hunter.run(rule)
+
+        author = self.converter_to_stix.author
+        derived = [build_note(indicator, rule, outcome, author.id)]
+        if not outcome.failed and not outcome.timed_out:
+            derived.extend(
+                build_file_objects(self.converter_to_stix, indicator, outcome)
+            )
+        derived = with_markings(
+            derived, self._source_marking_refs(indicator, opencti_entity)
+        )
+
+        stix_objects = self.stix_objects_list.copy()
+        stix_objects.append(author)
+        stix_objects.extend(derived)
+        obj_ids = {obj.get("id") for obj in stix_objects}
+        if indicator.get("id") and indicator["id"] not in obj_ids:
+            stix_objects.insert(0, indicator)
+        self.helper.connector_logger.info(
+            "[CONNECTOR] YARA hunt finished",
+            {
+                "hunt_id": outcome.hunt_id,
+                "status": outcome.status,
+                "files": len(outcome.results),
+                "timed_out": outcome.timed_out,
+                "failed": outcome.failed,
+            },
+        )
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
+
+    def _should_replace_score(self, observable: dict, score: int) -> bool:
+        """#39 replace_with_lower_score: when False, keep a higher existing score."""
+        if self.replace_with_lower_score:
+            return True
+        existing_score = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", observable
+        )
+        if existing_score is not None and int(existing_score) > int(score):
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Keeping existing score {existing_score} "
+                f"(higher than new score {score})"
+            )
+            return False
+        return True
+
+    def _update_observable_score(
+        self, entity_id: str, observable: dict, score: int
+    ) -> None:
+        """Explicitly update the observable score (bundle import may not)."""
+        if not self._should_replace_score(observable, score):
+            return
+        try:
+            self.helper.api.stix_cyber_observable.update_field(
+                id=entity_id,
+                input={
+                    "key": "x_opencti_score",
+                    "value": str(score),
+                },
+            )
+        except Exception as score_err:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Could not update score: {score_err}"
+            )
+
     def entity_in_scope(self, data) -> bool:
         """Check if entity type is in connector scope."""
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
@@ -782,22 +1436,408 @@ class ConnectorTemplate:
         return entity_type in scopes
 
     @staticmethod
-    def _get_tlp(stix_entity: dict, opencti_entity: dict = None) -> str | None:
-        """Extract TLP marking name from a STIX entity or OpenCTI entity."""
-        # Try OpenCTI entity objectMarking first
-        if opencti_entity:
-            for marking in opencti_entity.get("objectMarking", []):
-                definition = marking.get("definition", "")
-                if definition.startswith("TLP:"):
-                    return definition
-        # Fallback to STIX object_marking_refs
-        for ref in stix_entity.get("object_marking_refs", []):
-            if ref in _TLP_MARKING_TO_NAME:
-                return _TLP_MARKING_TO_NAME[ref]
-        return None
+    def _marking_object_tlp(marking: dict) -> str | None:
+        """TLP name of a marking-definition object (None when it is not a TLP)."""
+        if str(marking.get("x_opencti_definition_type", "")).upper() == "TLP":
+            return str(marking.get("x_opencti_definition", "")).upper() or None
+        if str(marking.get("definition_type", "")).lower() != "tlp":
+            return None
+        definition = marking.get("definition")
+        if isinstance(definition, dict) and definition.get("tlp"):
+            return f"TLP:{str(definition['tlp']).upper()}"
+        if isinstance(definition, str) and definition.upper().startswith("TLP:"):
+            return definition.upper()
+        name = str(marking.get("name", "")).upper()
+        return name if name.startswith("TLP:") else None
+
+    @classmethod
+    def _get_tlps(
+        cls,
+        stix_entity: dict,
+        opencti_entity: dict | None = None,
+        stix_objects: list | None = None,
+    ) -> tuple[list[str], list[str]]:
+        """
+        Resolve every marking on the source observable.
+
+        Returns: (TLP names, unresolved marking refs). A ref is resolved when
+        it is a standard TLP id, a marking-definition object in the bundle, or
+        an objectMarking entry of the OpenCTI entity. Resolved markings that
+        are not TLPs (PAP, statements) are not returned as TLPs.
+        """
+        known: dict[str, str | None] = dict(_TLP_MARKING_TO_NAME)
+        for obj in stix_objects or []:
+            if (
+                isinstance(obj, dict)
+                and obj.get("type") == "marking-definition"
+                and obj.get("id")
+            ):
+                known[obj["id"]] = cls._marking_object_tlp(obj)
+
+        tlps: list[str] = []
+        for marking in (opencti_entity or {}).get("objectMarking") or []:
+            definition = str(marking.get("definition") or "").upper()
+            tlp = definition if definition.startswith("TLP:") else None
+            if marking.get("standard_id"):
+                known[marking["standard_id"]] = tlp
+            if tlp and tlp not in tlps:
+                tlps.append(tlp)
+
+        unresolved: list[str] = []
+        for ref in stix_entity.get("object_marking_refs") or []:
+            if ref not in known:
+                unresolved.append(ref)
+            elif known[ref] and known[ref] not in tlps:
+                tlps.append(known[ref])
+        return tlps, unresolved
+
+    @classmethod
+    def _get_tlp(cls, stix_entity: dict, opencti_entity: dict = None) -> str | None:
+        """Most restrictive TLP marking name of a STIX or OpenCTI entity."""
+        tlps, _ = cls._get_tlps(stix_entity, opencti_entity)
+        if not tlps:
+            return None
+        return max(tlps, key=lambda tlp: _TLP_RANK.get(tlp, len(_TLP_RANK)))
+
+    @staticmethod
+    def _marking_definition_object(marking: dict) -> dict | None:
+        """STIX marking-definition built from an OpenCTI objectMarking entry."""
+        standard_id = (marking or {}).get("standard_id")
+        if not standard_id or not str(standard_id).startswith("marking-definition--"):
+            return None
+        definition = str(marking.get("definition") or "")
+        definition_type = str(marking.get("definition_type") or "")
+        if not definition_type and ":" in definition:
+            definition_type = definition.split(":", 1)[0]
+        if not definition or not definition_type:
+            return None
+        obj = {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": standard_id,
+            "created": "2017-01-20T00:00:00.000Z",
+            "name": definition,
+            "definition_type": definition_type.lower(),
+            "x_opencti_definition_type": definition_type,
+            "x_opencti_definition": definition,
+        }
+        if definition_type.upper() == "TLP":
+            obj["definition"] = {"tlp": definition.split(":")[-1].lower()}
+        else:
+            obj["definition"] = {definition_type.lower(): definition}
+        return obj
+
+    def _with_marking_definitions(self, objects: list, opencti_entity: dict) -> list:
+        """Add the marking definitions the bundle's markings point to.
+
+        OpenCTI drops a reference to an object the bundle does not contain when
+        it cleans up an inconsistent bundle, so a derived object's marking would
+        silently vanish. Definitions come first from the platform-exported
+        marking-definition objects in the incoming message, then from the source
+        entity's markings, then from OpenCTI.
+        """
+        present = {obj.get("id") for obj in objects}
+        wanted = []
+        for obj in objects:
+            for ref in obj.get("object_marking_refs") or []:
+                if ref not in present and ref not in wanted:
+                    wanted.append(ref)
+        if not wanted:
+            return objects
+        exported = {
+            o.get("id"): o
+            for o in self.stix_objects_list or []
+            if isinstance(o, dict) and o.get("type") == "marking-definition"
+        }
+        known = {
+            m.get("standard_id"): m
+            for m in (opencti_entity or {}).get("objectMarking") or []
+            if isinstance(m, dict) and m.get("standard_id")
+        }
+        added = []
+        for ref in wanted:
+            if ref in exported:
+                added.append(exported[ref])
+                continue
+            marking = known.get(ref)
+            if marking is None:
+                try:
+                    marking = self.helper.api.marking_definition.read(
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": "standard_id", "values": [ref]}],
+                            "filterGroups": [],
+                        }
+                    )
+                except Exception as e:
+                    self.helper.connector_logger.warning(
+                        f"[CONNECTOR] Marking lookup failed: {type(e).__name__}"
+                    )
+                    marking = None
+            definition = self._marking_definition_object(marking or {})
+            if definition and definition["id"] == ref:
+                added.append(definition)
+            else:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Marking definition could not be resolved",
+                    {"marking": ref},
+                )
+        return list(objects) + added
+
+    def _markings_defined(self, objects: list) -> bool:
+        """True when every marking ref in the bundle has its definition in it."""
+        present = {obj.get("id") for obj in objects if isinstance(obj, dict)}
+        missing = {
+            ref
+            for obj in objects
+            if isinstance(obj, dict)
+            for ref in obj.get("object_marking_refs") or []
+            if ref not in present
+        }
+        if missing:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Sending without bundle cleanup so unresolved "
+                "markings are kept",
+                {"markings": sorted(missing)},
+            )
+        return not missing
+
+    @staticmethod
+    def _source_marking_refs(stix_entity: dict, opencti_entity: dict) -> list[str]:
+        """Marking refs of the source, copied to every derived object.
+
+        Union of the STIX object_marking_refs and the OpenCTI entity's
+        objectMarking standard ids (both are used to authorize), deduplicated,
+        STIX refs first.
+        """
+        refs = list(stix_entity.get("object_marking_refs") or [])
+        refs += [
+            marking["standard_id"]
+            for marking in (opencti_entity or {}).get("objectMarking") or []
+            if marking.get("standard_id")
+        ]
+        return list(dict.fromkeys(refs))
+
+    # Per-sample observable types, the only ones that can be an owned end of a
+    # relationship or be marked as an observable. Anything else (identities,
+    # malware, attack patterns, actors, locations, software, unknown or custom
+    # types) is shared and left unmarked: OpenCTI merges markings on upsert, so
+    # marking a shared object would spread the source's markings platform-wide.
+    # STIX 2.1 SCO types plus OpenCTI observable types, except ``software``.
+    _SCO_TYPES = frozenset(
+        {
+            "artifact",
+            "autonomous-system",
+            "directory",
+            "domain-name",
+            "email-addr",
+            "email-message",
+            "file",
+            "ipv4-addr",
+            "ipv6-addr",
+            "mac-addr",
+            "mutex",
+            "network-traffic",
+            "process",
+            "url",
+            "user-account",
+            "windows-registry-key",
+            "x509-certificate",
+            "hostname",
+            "text",
+            "user-agent",
+            "cryptocurrency-wallet",
+            "bank-account",
+            "phone-number",
+            "payment-card",
+            "media-content",
+            "tracking-number",
+            "credential",
+        }
+    )
+
+    @classmethod
+    def _is_sco(cls, stix_id: str | None) -> bool:
+        """True for a per-sample cyber observable id (allowlist, not software)."""
+        return str(stix_id or "").split("--")[0] in cls._SCO_TYPES
+
+    def _with_source_markings(
+        self, objects: list, marking_refs: list[str], observable: dict
+    ) -> list:
+        """Union the source's markings onto the objects that belong to it.
+
+        Only Notes, Indicators, observables other than the source, and
+        relationships with at least one end that is the source, an Indicator or
+        an observable are marked. Shared objects (identities, malware families,
+        attack patterns, actors, locations and so on) and relationships between
+        them are never marked, because OpenCTI merges markings on upsert.
+        Markings an object already carries are kept.
+        """
+        if not marking_refs:
+            return objects
+        source_id = observable.get("id")
+        skip_ids = {source_id} | {obj.get("id") for obj in self.stix_objects_list}
+
+        def owned(ref: str | None) -> bool:
+            return (
+                ref == source_id
+                or str(ref or "").startswith("indicator--")
+                or self._is_sco(ref)
+            )
+
+        stamped = []
+        for obj in objects:
+            plain = json.loads(obj.serialize()) if hasattr(obj, "serialize") else obj
+            obj_type = plain.get("type")
+            if plain.get("id") in skip_ids:
+                mark = False
+            elif obj_type in ("note", "indicator"):
+                mark = True
+            elif obj_type == "relationship":
+                mark = owned(plain.get("source_ref")) or owned(plain.get("target_ref"))
+            else:
+                mark = self._is_sco(plain.get("id"))
+            if not mark:
+                stamped.append(obj)
+                continue
+            refs = list(plain.get("object_marking_refs") or []) + list(marking_refs)
+            stamped.append({**plain, "object_marking_refs": list(dict.fromkeys(refs))})
+        return stamped
+
+    def _existing_artifact_id(self, sha256: str | None) -> str | None:
+        """STIX id of an Artifact with this SHA-256 already in OpenCTI, if any.
+
+        A failed lookup returns None (the download then proceeds; the Artifact id
+        is derived from the hashes, so a repeat updates the same Artifact).
+        """
+        if not sha256:
+            return None
+        try:
+            found = self.helper.api.stix_cyber_observable.read(
+                types=["Artifact"],
+                filters={
+                    "mode": "and",
+                    # read() ignores `types`, so the type is part of the filter;
+                    # without it the File being enriched would match its own hash
+                    "filters": [
+                        {"key": "entity_type", "values": ["Artifact"]},
+                        {"key": "hashes.SHA-256", "values": [sha256]},
+                    ],
+                    "filterGroups": [],
+                },
+            )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Existing Artifact lookup failed: {type(e).__name__}"
+            )
+            return None
+        return (found or {}).get("standard_id") if isinstance(found, dict) else None
+
+    def _sample_relationship(
+        self, artifact_id: str, observable_id: str, marking_refs: list[str]
+    ) -> dict | None:
+        """Artifact related-to File, carrying the File's markings."""
+        relationship = self.converter_to_stix.create_relationship(
+            source_id=artifact_id,
+            relationship_type="related-to",
+            target_id=observable_id,
+            description="Live malware sample downloaded from PolySwarm",
+        )
+        if not relationship:
+            return None
+        rel = (
+            json.loads(relationship.serialize())
+            if hasattr(relationship, "serialize")
+            else dict(relationship)
+        )
+        if marking_refs:
+            rel["object_marking_refs"] = list(marking_refs)
+        return rel
+
+    def _download_sample_objects(
+        self, observable: dict, opencti_entity: dict, polyswarm_result: dict | None
+    ) -> list:
+        """Download the sample and build its Artifact and relationship (opt-in).
+
+        The outcome is written to the result's ``sample_download`` text so the
+        Note shows what happened. Never raises: a failed download must not
+        stop the rest of the enrichment.
+        """
+        enrichment_data = (polyswarm_result or {}).get("data")
+        if not enrichment_data:
+            return []
+        try:
+            marking_refs = self._source_marking_refs(observable, opencti_entity)
+            existing_id = self._existing_artifact_id(enrichment_data.get("sha256"))
+            if existing_id:
+                enrichment_data["sample_download"] = (
+                    "Not downloaded: an Artifact with this SHA-256 is already in "
+                    "OpenCTI; it is linked to this file instead."
+                )
+                relationship = self._sample_relationship(
+                    existing_id, observable["id"], marking_refs
+                )
+                if not relationship:
+                    return []
+                # The Artifact must be in the bundle or the relationship is
+                # dropped as inconsistent: a minimal reference (id and hashes)
+                hashes = {
+                    algo: enrichment_data[key]
+                    for algo, key in (
+                        ("SHA-256", "sha256"),
+                        ("SHA-1", "sha1"),
+                        ("MD5", "md5"),
+                    )
+                    if enrichment_data.get(key)
+                }
+                reference = {
+                    "type": "artifact",
+                    "spec_version": "2.1",
+                    "id": existing_id,
+                    "hashes": hashes,
+                }
+                # No markings on the reference: OpenCTI merges them on upsert, which
+                # would add this File's TLP to someone else's Artifact. Rare race:
+                # if the Artifact is deleted before import, a hash-only one remains.
+                return [reference, relationship]
+            content, reason = self.client.download_sample(enrichment_data)
+            if content is None:
+                enrichment_data["sample_download"] = f"Not downloaded: {reason}."
+                return []
+            artifact = build_sample_artifact(
+                content,
+                enrichment_data,
+                self.converter_to_stix.author.id,
+                marking_refs,
+            )
+            if artifact is None:
+                enrichment_data["sample_download"] = (
+                    "Not stored: the downloaded bytes did not match the SHA-256 "
+                    "PolySwarm reported."
+                )
+                return []
+            objects = [artifact]
+            relationship = self._sample_relationship(
+                artifact["id"], observable["id"], marking_refs
+            )
+            if relationship:
+                objects.append(relationship)
+            enrichment_data["sample_download"] = (
+                f"Live malware sample ({len(content)} bytes) stored as an "
+                "Artifact. Handle it as malware."
+            )
+            return objects
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Sample download skipped: {type(e).__name__}"
+            )
+            enrichment_data["sample_download"] = f"Not downloaded: {type(e).__name__}."
+            return []
 
     def process_message(self, data: dict) -> str:
         """Process the enrichment request."""
+        if self.quota is not None:
+            self.quota.refresh()  # at most hourly; never raises
         try:
             opencti_entity = data["enrichment_entity"]
 
@@ -822,16 +1862,49 @@ class ConnectorTemplate:
                                 )
                                 break
 
-            # #38 — max_tlp: refuse enrichment for high-TLP observables
-            entity_tlp = self._get_tlp(observable, opencti_entity)
-            if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
-                entity_tlp, self.max_tlp
-            ):
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
-                    {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
+            # #38 max_tlp: refuse enrichment when any TLP marking is too high
+            entity_tlps, unresolved_markings = self._get_tlps(
+                observable, opencti_entity, self.stix_objects_list
+            )
+            for entity_tlp in entity_tlps:
+                if not OpenCTIConnectorHelper.check_max_tlp(entity_tlp, self.max_tlp):
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
+                        {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
+                    )
+                    return "Observable TLP exceeds configured max_tlp"
+
+            # Attack-Pattern: technique pivot (only in scope when it is enabled)
+            if opencti_entity.get("entity_type") == "Attack-Pattern":
+                if unresolved_markings and self.max_tlp != "TLP:RED":
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: marking can't be resolved to a TLP, "
+                        "nothing sent to PolySwarm",
+                        {"markings": unresolved_markings, "max_tlp": self.max_tlp},
+                    )
+                    if not data.get("event_type"):
+                        self._send_bundle(self.stix_objects_list)
+                    return "Observable marking can't be resolved against max_tlp"
+                return self._process_attack_pattern(data, opencti_entity, observable)
+            # Indicators: only YARA hunting handles them, everything else is ignored
+            if opencti_entity.get("entity_type") == "Indicator":
+                return self._process_yara_indicator(data, opencti_entity, observable)
+
+            # URL, domain and IP observables take the lookup path
+            if opencti_entity.get("entity_type") in NETWORK_OBSERVABLE_TYPES:
+                # Fail closed: a marking that can't be resolved may be above max_tlp
+                if unresolved_markings and self.max_tlp != "TLP:RED":
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: observable has a marking that can't "
+                        "be resolved to a TLP, nothing sent to PolySwarm",
+                        {"markings": unresolved_markings, "max_tlp": self.max_tlp},
+                    )
+                    if not data.get("event_type"):
+                        self._send_bundle(self.stix_objects_list)
+                    return "Observable marking can't be resolved against max_tlp"
+                return self._process_network_observable(
+                    data, opencti_entity, observable
                 )
-                return "Observable TLP exceeds configured max_tlp"
 
             # Extract hash value
             hash_value = None
@@ -853,10 +1926,42 @@ class ConnectorTemplate:
                 )
 
                 # Query PolySwarm
-                polyswarm_data = self.client.query_polyswarm(hash_value)
+                # Files imported by a pivot are neither rescanned nor downloaded,
+                # so auto-enrichment can't multiply that spend across them
+                pivot_result = has_pivot_label(observable, opencti_entity)
+                if pivot_result:
+                    polyswarm_data = self.client.query_polyswarm(
+                        hash_value, allow_rescan=False
+                    )
+                else:
+                    polyswarm_data = self.client.query_polyswarm(hash_value)
+
+                # Opt-in: store the sample PolySwarm holds as an Artifact
+                sample_objects = []
+                if (
+                    self.download_sample
+                    and not pivot_result
+                    and opencti_entity.get("entity_type") == "StixFile"
+                ):
+                    sample_objects = self._download_sample_objects(
+                        observable, opencti_entity, polyswarm_data
+                    )
 
                 # Collect comprehensive intelligence with profile enrichment
+                self._last_ioc_data = _IOC_NOT_FETCHED
                 stix_objects = self._collect_intelligence(observable, polyswarm_data)
+                stix_objects = self._with_source_markings(
+                    stix_objects,
+                    self._source_marking_refs(observable, opencti_entity),
+                    observable,
+                )
+                if stix_objects:
+                    stix_objects.extend(sample_objects)
+                stix_objects.extend(
+                    self._imphash_pivot(
+                        observable, opencti_entity, polyswarm_data, stix_objects
+                    )
+                )
 
                 # #40 — Playbook compatibility: ensure the original observable
                 # is present in the bundle so Playbook triggers fire correctly.
@@ -865,42 +1970,28 @@ class ConnectorTemplate:
                     stix_objects.insert(0, observable)
 
                 if stix_objects and len(stix_objects) > 0:
-                    result = self._send_bundle(stix_objects)
+                    # This send cleans up dangling references, which would strip
+                    # any marking the bundle does not define: add them first.
+                    stix_objects = self._with_marking_definitions(
+                        stix_objects, opencti_entity
+                    )
+                    # A definition that could not be resolved still exists in
+                    # OpenCTI (the source carries it): skip the client-side
+                    # cleanup so the reference is kept, never stripped.
+                    result = self._send_bundle(
+                        stix_objects,
+                        cleanup_inconsistent_bundle=self._markings_defined(
+                            stix_objects
+                        ),
+                    )
                     # Explicitly update observable score — bundle import
                     # doesn't always persist x_opencti_score on existing objects.
                     enrichment_data = (polyswarm_data or {}).get("data") or {}
                     score = enrichment_data.get("x_opencti_score", 0)
                     if score and opencti_entity.get("id"):
-                        # #39 — replace_with_lower_score: skip update if existing
-                        # score is higher and config says don't replace.
-                        should_update = True
-                        if not self.replace_with_lower_score:
-                            existing_score = (
-                                OpenCTIConnectorHelper.get_attribute_in_extension(
-                                    "score", observable
-                                )
-                            )
-                            if existing_score is not None and int(existing_score) > int(
-                                score
-                            ):
-                                self.helper.connector_logger.info(
-                                    f"[CONNECTOR] Keeping existing score {existing_score} "
-                                    f"(higher than new score {score})"
-                                )
-                                should_update = False
-                        if should_update:
-                            try:
-                                self.helper.api.stix_cyber_observable.update_field(
-                                    id=opencti_entity["id"],
-                                    input={
-                                        "key": "x_opencti_score",
-                                        "value": str(score),
-                                    },
-                                )
-                            except Exception as score_err:
-                                self.helper.connector_logger.warning(
-                                    f"[CONNECTOR] Could not update score: {score_err}"
-                                )
+                        self._update_observable_score(
+                            opencti_entity["id"], observable, score
+                        )
                     return result
                 return "[CONNECTOR] No intelligence found or created"
             if not data.get("event_type"):
@@ -913,7 +2004,9 @@ class ConnectorTemplate:
             self.helper.connector_logger.error(error_msg, {"error_message": str(err)})
             return error_msg
 
-    def _send_bundle(self, stix_objects: list) -> str:
+    def _send_bundle(
+        self, stix_objects: list, cleanup_inconsistent_bundle: bool = True
+    ) -> str:
         """Create and send STIX bundle to OpenCTI with deduplication."""
         try:
             # PERF-5: Deduplicate STIX objects by ID before sending
@@ -945,7 +2038,8 @@ class ConnectorTemplate:
 
             stix_objects_bundle = self.helper.stix2_create_bundle(unique_objects)
             bundles_sent = self.helper.send_stix2_bundle(
-                stix_objects_bundle, cleanup_inconsistent_bundle=True
+                stix_objects_bundle,
+                cleanup_inconsistent_bundle=cleanup_inconsistent_bundle,
             )
 
             return f"[CONNECTOR] Successfully sent {len(bundles_sent)} bundle(s)"

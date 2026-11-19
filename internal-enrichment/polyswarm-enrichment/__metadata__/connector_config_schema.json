@@ -24,7 +24,11 @@
     "CONNECTOR_SCOPE": {
       "default": [
         "StixFile",
-        "Artifact"
+        "Artifact",
+        "Url",
+        "Domain-Name",
+        "IPv4-Addr",
+        "IPv6-Addr"
       ],
       "description": "The scope of the connector.",
       "items": {
@@ -120,6 +124,90 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "POLYSWARM_RESCAN_OLDER_THAN_DAYS": {
+      "default": 0,
+      "description": "Ask PolySwarm to rescan a sample it already holds when its latest scan is older than this many days, or when it has no completed scan (0 = never rescan, maximum 36500). Each rescan spends PolySwarm scan quota. Nothing is uploaded: PolySwarm rescans its own copy of the sample.",
+      "maximum": 36500,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_RESCAN_TIMEOUT": {
+      "default": 300,
+      "description": "Maximum seconds to wait for a rescan to finish. On timeout the enrichment uses the previous scan result and says so in the note.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_DOWNLOAD_SAMPLE": {
+      "default": false,
+      "description": "Download the sample for a File PolySwarm holds and store it as an Artifact in OpenCTI. This puts LIVE MALWARE in OpenCTI file storage and spends PolySwarm download quota. Off by default.",
+      "type": "boolean"
+    },
+    "POLYSWARM_DOWNLOAD_MAX_SIZE_MB": {
+      "default": 20,
+      "description": "Largest sample, in MB, that will be downloaded. Larger samples are skipped and the note says so.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_NETWORK_RELATED_FILES_MAX": {
+      "default": 10,
+      "description": "Max related file hashes to import when enriching an IP or domain observable (0 = disabled).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_NETWORK_URL_SEND_QUERY": {
+      "default": false,
+      "description": "Send a URL observable's query string and fragment to PolySwarm. Off by default: only scheme, host and path are looked up, so tokens in a query string never leave OpenCTI.",
+      "type": "boolean"
+    },
+    "POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS": {
+      "default": 2,
+      "description": "Minimum malicious engine detections on a URL, domain or IP scan before an Indicator is created.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_QUOTA_WARN_BELOW": {
+      "default": 100,
+      "description": "Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (0 = no warnings). Accounts with no cap are never warned.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_PIVOT_IMPHASH_MAX": {
+      "default": 0,
+      "description": "Max other files with the same imphash to import when enriching a file PolySwarm reports a PE imphash for (0 = off, e.g. 10). Imported files are labelled polyswarm-pivot-result and never pivot again.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_PIVOT_TTP_MAX": {
+      "default": 0,
+      "description": "Max files to import when enriching an Attack-Pattern with a MITRE ATT&CK id (0 = off, e.g. 10). Any value above 0 adds Attack-Pattern to the default connector scope; if you set CONNECTOR_SCOPE yourself, add Attack-Pattern to it or OpenCTI will not offer this connector for Attack-Patterns. Runs only with CONNECTOR_AUTO=false: with auto enrichment on, every Attack-Pattern created would trigger a search.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_YARA_HUNT_ENABLED": {
+      "default": false,
+      "description": "Run a PolySwarm historical hunt for each YARA Indicator that is enriched. Writes to your PolySwarm account (creates hunts), spends hunt quota, and sends the YARA rule text to PolySwarm. Adds Indicator to the default connector scope; if you set CONNECTOR_SCOPE yourself, add Indicator to it or OpenCTI will not offer this connector for Indicators.",
+      "type": "boolean"
+    },
+    "POLYSWARM_YARA_HUNT_WINDOW_DAYS": {
+      "default": 30,
+      "description": "How many days back a hunt reaches: 30, 60, 90 or 180.",
+      "type": "integer"
+    },
+    "POLYSWARM_YARA_HUNT_TIMEOUT": {
+      "default": 300,
+      "description": "Seconds to wait for a hunt before reporting it as still running (hunts can be slow).",
+      "minimum": 60,
+      "type": "integer"
+    },
+    "POLYSWARM_YARA_HUNT_MAX_RESULTS": {
+      "default": 50,
+      "description": "Max matched files imported as File observables per hunt.",
+      "maximum": 1000,
+      "minimum": 1,
+      "type": "integer"
     },
     "POLYSWARM_POLYKG_API_URL": {
       "default": "",
