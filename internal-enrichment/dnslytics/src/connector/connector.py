@@ -1,6 +1,7 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.hosting import derive_hosting
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from dnslytics_client import DATASET_DOMAINS_CREDITS, DnslyticsClient
 from pycti import OpenCTIConnectorHelper
 
@@ -79,15 +80,17 @@ class DnslyticsConnector:
             )
 
     def _check_markings(self, opencti_entity: dict) -> None:
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        for marking in opencti_entity.get("objectMarking") or []:
-            if marking.get("definition_type") != "TLP":
-                continue
-            if not self.helper.check_max_tlp(marking["definition"], max_tlp):
-                raise ValueError(
-                    f"Do not send any data, TLP of the Indicator ({marking['definition']}) "
-                    f"is greater than MAX TLP ({max_tlp})"
-                )
+        tlp_levels = [
+            marking["definition"]
+            for marking in opencti_entity.get("objectMarking") or []
+            if marking.get("definition_type") == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
+            raise ValueError(
+                f"Do not send any data, TLP of the Indicator ({', '.join(tlp_levels)}) "
+                f"is greater than MAX TLP ({max_tlp})"
+            )
 
     def _send_bundle(self, stix_objects: list) -> None:
         bundle = self.helper.stix2_create_bundle(stix_objects)

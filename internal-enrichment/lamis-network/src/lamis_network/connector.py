@@ -4,6 +4,7 @@
 import ipaddress
 from typing import Any, Dict, List, Optional
 
+from connectors_sdk import InternalEnrichmentConnector
 from lamis_network.builder import (
     _MARKING_ID_TO_TLP,
     _TLP_MAP,
@@ -116,16 +117,6 @@ def _validated_response(response: Any, ip_value: str) -> Optional[Dict[str, Any]
     return normalized
 
 
-_TLP_RANK = {
-    "TLP:CLEAR": 0,
-    "TLP:WHITE": 0,
-    "TLP:GREEN": 1,
-    "TLP:AMBER": 2,
-    "TLP:AMBER+STRICT": 3,
-    "TLP:RED": 4,
-}
-
-
 class LamisNetworkConnector:
     """Lamis Network internal-enrichment connector for OpenCTI."""
 
@@ -154,12 +145,11 @@ class LamisNetworkConnector:
         self.add_relationships = self.config.lamis_network.add_relationships
 
         self.default_tlp = _normalize_tlp(self.config.lamis_network.default_tlp)
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        if self.default_tlp not in _TLP_MAP or self.max_tlp not in _TLP_MAP:
-            raise ValueError(
-                "LAMIS_NETWORK_DEFAULT_TLP and CONNECTOR_MAX_TLP must be known TLP levels"
-            )
-        if _TLP_RANK[self.default_tlp] > _TLP_RANK[self.max_tlp]:
+        if self.default_tlp not in _TLP_MAP:
+            raise ValueError("LAMIS_NETWORK_DEFAULT_TLP must be a known TLP level")
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            [self.default_tlp], self.config.connector.max_tlp
+        ):
             raise ValueError("LAMIS_NETWORK_DEFAULT_TLP exceeds CONNECTOR_MAX_TLP")
 
         self.author = Identity(
@@ -306,13 +296,14 @@ class LamisNetworkConnector:
                     levels.append(res)
                     seen_in_levels.add(res)
 
-        valid = all(
-            OpenCTIConnectorHelper.check_max_tlp(level, self.max_tlp)
-            for level in (levels or [self.default_tlp])
+        # An observable without TLP is handled with the default TLP
+        valid = InternalEnrichmentConnector.is_entity_tlp_allowed(
+            levels or [self.default_tlp], self.config.connector.max_tlp
         )
         if not valid and raise_on_invalid:
             raise ValueError(
-                f"[Lamis Network] Observable TLP exceeds maximum allowed ({self.max_tlp})"
+                "[Lamis Network] Observable TLP exceeds maximum allowed "
+                f"({self.config.connector.max_tlp})"
             )
         return valid
 
@@ -445,7 +436,7 @@ class LamisNetworkConnector:
         if not self._check_max_tlp(observable, extra_stix_refs=stix_entity_refs):
             self.helper.connector_logger.info(
                 f"[Lamis Network] Skipping {ip_value}: TLP exceeds "
-                f"configured maximum ({self.max_tlp})"
+                f"configured maximum ({self.config.connector.max_tlp})"
             )
             self._send_passthrough_bundle(stix_objects)
             return f"Observable {ip_value} skipped due to TLP restrictions."

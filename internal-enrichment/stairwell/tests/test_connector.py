@@ -6,7 +6,6 @@ from connector.connector import StairwellConnector
 from connector.settings import ConnectorSettings
 from connector.stairwell import StairwellAPIError
 from connectors_sdk import ConfigValidationError
-from pycti import OpenCTIConnectorHelper
 from stairwell_fakes import lookup
 
 
@@ -25,8 +24,6 @@ def env(monkeypatch):
 
 def _connector():
     helper = MagicMock()
-    # The real static check, so a wrong max-TLP format fails as it would live.
-    helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
     helper.stix2_create_bundle.side_effect = lambda objects: json.dumps(
         {"type": "bundle", "id": "bundle--0", "objects": objects}
     )
@@ -71,14 +68,14 @@ def test_defaults_are_amber_max_tlp_and_no_sightings(env):
     assert not hasattr(settings.stairwell, "max_tlp_level")
     assert settings.stairwell.sightings_limit == 0
     connector, _ = _connector()
-    assert connector.dispatcher.max_tlp == "TLP:AMBER"
+    assert connector.dispatcher.max_tlp == "amber"
     assert connector.dispatcher.file.sightings_limit == 0
 
 
 @pytest.mark.parametrize(
     "configured", ["clear", "white", "green", "amber", "amber+strict", "red"]
 )
-def test_every_configurable_max_tlp_works_with_pycti(env, configured):
+def test_every_configurable_max_tlp_works_with_the_tlp_check(env, configured):
     env.setenv("CONNECTOR_MAX_TLP", configured)
     connector, helper = _connector()
     data, _ = _message("TLP:CLEAR")

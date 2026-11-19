@@ -6,8 +6,6 @@ and StixBuilder produces valid output structure.
 
 from unittest.mock import patch
 
-from pycti import OpenCTIConnectorHelper
-
 
 class StubHelper:
     """Minimal stand-in for OpenCTIConnectorHelper."""
@@ -55,9 +53,6 @@ class StubHelper:
 
     def send_stix2_bundle(self, bundle, **kwargs):
         return ["bundle-1"]
-
-    # pycti's real helper, so tests exercise its actual contract (#7955).
-    check_max_tlp = staticmethod(OpenCTIConnectorHelper.check_max_tlp)
 
 
 # ── 1. All modules import without error ───────────────────────────────────────

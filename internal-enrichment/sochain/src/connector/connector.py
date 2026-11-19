@@ -9,6 +9,7 @@ a note when the address was targeted by address poisoning.
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import SochainUtils, detect_network
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 from sochain_client import SochainAPIError, SochainClient
 
@@ -23,7 +24,6 @@ class SochainConnector:
         self.helper = helper
 
         sochain = config.sochain
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.check_poisoning = bool(sochain.check_poisoning)
 
         api_key = sochain.api_key.get_secret_value() if sochain.api_key else None
@@ -37,14 +37,14 @@ class SochainConnector:
 
     def _check_tlp(self, entity: dict) -> None:
         """Raise when any of the observable's TLP markings is above MAX TLP."""
-        tlps = [
+        tlp_levels = [
             marking_definition.get("definition", "TLP:CLEAR")
             for marking_definition in entity.get("objectMarking", [])
             if marking_definition.get("definition_type") == "TLP"
-        ] or ["TLP:CLEAR"]
+        ]
         # Every marking is checked, so their order cannot hide a stricter one.
-        if not all(
-            OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp) for tlp in tlps
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
@@ -100,7 +100,7 @@ class SochainConnector:
             return self._skip(
                 data,
                 "[SOCHAIN] Observable TLP is above MAX TLP; skipping",
-                {"max_tlp": self.max_tlp},
+                {"max_tlp": self.config.connector.max_tlp},
             )
 
         network = detect_network(address)

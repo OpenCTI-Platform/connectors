@@ -23,14 +23,6 @@ DOMAIN_ID = "domain-name--11111111-1111-4111-8111-111111111111"
 TLP_CLEAR_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR")
 TLP_GREEN_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:GREEN")
 TLP_RED_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
-TLP_ORDER = [
-    "TLP:CLEAR",
-    "TLP:WHITE",
-    "TLP:GREEN",
-    "TLP:AMBER",
-    "TLP:AMBER+STRICT",
-    "TLP:RED",
-]
 
 
 def make_settings(**overrides: Any) -> ConnectorSettings:
@@ -56,9 +48,6 @@ def make_settings(**overrides: Any) -> ConnectorSettings:
 def make_connector(check=CHECK_LISTED_NOW, rank=RANK_NOT_IN_TOP_1M, **overrides):
     helper = MagicMock()
     helper.connect_scope = "Domain-Name,Hostname,IPv4-Addr,Url"  # as pycti keeps it
-    helper.check_max_tlp.side_effect = lambda tlp, max_tlp: TLP_ORDER.index(tlp) <= max(
-        TLP_ORDER.index(max_tlp), 1
-    )
     helper.stix2_create_bundle.side_effect = lambda objects: {"objects": objects}
     helper.send_stix2_bundle.return_value = ["bundle"]
     client = MagicMock()
@@ -146,8 +135,7 @@ def test_tlp_above_the_maximum_is_never_sent_to_netapi(tlp):
     message = connector.process_message(make_data(tlp=tlp))
 
     assert (
-        message
-        == f"Observable is {tlp}, above the maximum TLP:AMBER: not sent to NetAPI"
+        message == f"Observable is {tlp}, above the maximum amber: not sent to NetAPI"
     )
     client.compromised_check.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
@@ -519,8 +507,7 @@ def test_tlp_red_on_the_stix_entity_alone_is_never_sent_to_netapi():
     message = connector.process_message(data)
 
     assert (
-        message
-        == "Observable is TLP:RED, above the maximum TLP:AMBER: not sent to NetAPI"
+        message == "Observable is TLP:RED, above the maximum amber: not sent to NetAPI"
     )
     client.compromised_check.assert_not_called()
 
@@ -581,8 +568,7 @@ def test_lower_case_tlp_type_of_the_opencti_entity_is_still_checked():
     message = connector.process_message(data)
 
     assert (
-        message
-        == "Observable is TLP:RED, above the maximum TLP:AMBER: not sent to NetAPI"
+        message == "Observable is TLP:RED, above the maximum amber: not sent to NetAPI"
     )
     client.compromised_check.assert_not_called()
 

@@ -216,10 +216,8 @@ def _enrich(connector, api_data, value="203.0.113.7"):
     stix_entity = {"id": "ipv4-addr--test", "value": value}
     with (
         patch.object(connector, "_call_api", return_value=api_data),
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(
             {
                 "event_type": "INTERNAL_ENRICHMENT",
@@ -261,7 +259,9 @@ def test_infrastructure_only_observable_is_not_reported_as_threat():
     assert "Detected by" not in description
 
 
-def _message(entity_type="IPv4-Addr", value="203.0.113.7", from_playbook=False):
+def _message(
+    entity_type="IPv4-Addr", value="203.0.113.7", from_playbook=False, tlp=None
+):
     from connector.ismalicious import STIX_EXT_OCTI_SCO
 
     entity = {
@@ -271,7 +271,12 @@ def _message(entity_type="IPv4-Addr", value="203.0.113.7", from_playbook=False):
     }
     message = {
         "entity_id": entity["id"],
-        "enrichment_entity": {"entity_type": entity_type, "objectMarking": []},
+        "enrichment_entity": {
+            "entity_type": entity_type,
+            "objectMarking": (
+                [{"definition_type": "TLP", "definition": tlp}] if tlp else []
+            ),
+        },
         "stix_entity": entity,
         "stix_objects": [entity],
     }
@@ -291,10 +296,8 @@ def test_unknown_score_does_not_downgrade_existing_score(api_data, expected_verd
     message = _message()
     with (
         patch.object(connector, "_call_api", return_value=api_data),
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(message)
     assert message["stix_entity"]["extensions"][STIX_EXT_OCTI_SCO]["score"] == 85
     assert all(
@@ -314,10 +317,8 @@ def test_missing_or_below_threshold_score_does_not_enrich(api_data):
     connector, helper = _make_connector(min_score=60)
     with (
         patch.object(connector, "_call_api", return_value=api_data),
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(_message())
     assert "skipping" in result
     stix2_cls.put_attribute_in_extension.assert_not_called()
@@ -340,10 +341,8 @@ def test_non_malicious_response_keeps_api_score_for_supported_types(entity_type,
             "_call_api",
             return_value={"malicious": False, "riskScore": {"score": 42}},
         ),
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(_message(entity_type, value))
     written_scores = [
         call.args[3]
@@ -357,12 +356,8 @@ def test_non_malicious_response_keeps_api_score_for_supported_types(entity_type,
 
 def test_tlp_exclusion_never_calls_api():
     connector, helper = _make_connector()
-    with (
-        patch.object(connector, "_call_api") as api_call,
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
-    ):
-        helper_cls.check_max_tlp.return_value = False
-        result = connector._process_message(_message())
+    with (patch.object(connector, "_call_api") as api_call,):
+        result = connector._process_message(_message(tlp="TLP:RED"))
     assert result == "TLP too high, skipping enrichment"
     api_call.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
@@ -372,10 +367,8 @@ def test_api_failure_leaves_observable_unchanged():
     connector, helper = _make_connector()
     with (
         patch.object(connector, "_call_api", return_value=None),
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(_message())
     assert result == "API call failed for 203.0.113.7"
     stix2_cls.put_attribute_in_extension.assert_not_called()
@@ -384,12 +377,14 @@ def test_api_failure_leaves_observable_unchanged():
 
 def _playbook_skip(connector, message, api_data=None, tlp_ok=True):
     """Run a playbook message through _process_message with the given API answer."""
+    if not tlp_ok:
+        message["enrichment_entity"]["objectMarking"] = [
+            {"definition_type": "TLP", "definition": "TLP:RED"}
+        ]
     with (
         patch.object(connector, "_call_api", return_value=api_data) as api_call,
-        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
         patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
     ):
-        helper_cls.check_max_tlp.return_value = tlp_ok
         result = connector._process_message(message)
     return result, api_call, stix2_cls
 
@@ -459,3 +454,17 @@ def test_out_of_scope_entity_never_calls_api():
     assert result == "Entity not in connector scope, skipping"
     api_call.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_one_tlp_above_max_never_calls_api():
+    """Every TLP of the entity is checked, not only the last one."""
+    connector, helper = _make_connector()
+    message = _message()
+    message["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+    ]
+    with patch.object(connector, "_call_api") as api_call:
+        result = connector._process_message(message)
+    assert result == "TLP too high, skipping enrichment"
+    api_call.assert_not_called()
