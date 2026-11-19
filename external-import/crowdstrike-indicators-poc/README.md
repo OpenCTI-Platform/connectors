@@ -37,6 +37,7 @@ src/
     factory.py                AbstractConnectorFactory[S: BaseSettings],
                               ConnectorConfigurationError
     type_arguments.py         declared_types, reads a component's type arguments
+    cli.py                    the connector-cli command, for any factory
   crowdstrike_indicators/     CrowdStrike implementation
     factory.py                CrowdStrikeSettings, CrowdStrikeConnectorFactory
     entities/                 records, STIX classes, ids and errors
@@ -56,8 +57,6 @@ src/
       malware.py              CrowdStrikeAddMalware
       attack.py               AttackPatternCatalog, CrowdStrikeAddAttackPatterns
       bundle.py               MakeStixBundle
-  crowdstrike_indicators_cli/ command line
-    cli.py                    the crowdstrike-indicators-cli command
 tests/                        pytest, no network
 ```
 
@@ -65,8 +64,8 @@ Dependency rule: `shared/` depends only on the standard library, Pydantic,
 pydantic-settings and stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/`
 depends on `shared/`: inside it, `extract/` and `transform/` both depend on
 `entities/`, never on each other, and `factory.py`, which assembles them,
-depends on both. `crowdstrike_indicators_cli/` depends on
-`crowdstrike_indicators/` and `shared/`, and nothing depends on it. Runtime
+depends on both. The command line, `shared/cli.py`, knows no source: it
+imports the factory named by `--factory` when it runs. Runtime
 dependencies are `crowdstrike-falconpy`, `pydantic`, `pydantic-settings` and
 `stix2`. There is no
 pycti and no connectors-sdk.
@@ -549,7 +548,7 @@ such as OpenCTI takes.
 ## Setup
 
 Python 3.12 or later. The project is declared in `pyproject.toml`, which
-installs the command line as the `crowdstrike-indicators-cli` command.
+installs the command line as the `connector-cli` command.
 
 With [uv](https://docs.astral.sh/uv/), there is nothing to install by hand:
 the first `uv run` creates `.venv` in this folder and installs the project
@@ -558,7 +557,7 @@ and its dependencies in it.
 ```sh
 cd external-import/crowdstrike-indicators-poc
 cp .env.example .env                           # then fill in the credentials
-uv run crowdstrike-indicators-cli --help
+uv run connector-cli --help
 ```
 
 Or with pip, in a virtual environment of your own:
@@ -568,7 +567,7 @@ cd external-import/crowdstrike-indicators-poc
 python3.12 -m venv .venv && . .venv/bin/activate
 pip install -e '.[test]'                       # runtime + pytest
 cp .env.example .env                           # then fill in the credentials
-crowdstrike-indicators-cli --help
+connector-cli --help
 ```
 
 The install is editable: changes under `src/` apply without reinstalling.
@@ -581,7 +580,7 @@ The install is editable: changes under `src/` apply without reinstalling.
 | `CROWDSTRIKE_CLIENT_ID` | yes | |
 | `CROWDSTRIKE_CLIENT_SECRET` | yes | |
 | `CROWDSTRIKE_BASE_URL` | no | `https://api.crowdstrike.com` (US-1). Other regions: `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`, ... |
-| `CROWDSTRIKE_ATTACK_DATA` | no | none. Path of a local MITRE ATT&CK Enterprise STIX bundle; when set, `transform` adds the AttackPatterns (see [Attack patterns](#attack-patterns)). |
+| `CROWDSTRIKE_ATTACK_DATA` | no | none. Path of a local MITRE ATT&CK Enterprise STIX bundle; when set, the chain adds the AttackPatterns (see [Attack patterns](#attack-patterns)). |
 
 Both subcommands read this configuration through the
 [CrowdStrike factory](#the-crowdstrike-factory) and stop with status 2, naming
@@ -598,93 +597,109 @@ empty and the failures in the logs.
 
 ## Usage
 
-Run from this folder, with `uv run crowdstrike-indicators-cli`, or with
-`crowdstrike-indicators-cli` alone in an activated virtual environment where
-the project is installed. The examples below use `uv run`. The command has two
-subcommands:
+`connector-cli` runs the components of any source that has a
+[connector factory](#the-factory-contract), named by
+`--factory MODULE:CLASS`. It is a debug tool: it prints what the components
+return, as JSON, without reshaping it. Run it from this folder with
+`uv run connector-cli`, or with `connector-cli` alone in an activated virtual
+environment where the project is installed. For CrowdStrike, a shell alias
+saves typing the factory each time:
 
-- `extract` calls the CrowdStrike API and prints the indicators;
-- `transform` converts one indicator into STIX, without contacting
-  CrowdStrike. It still needs a complete configuration: placeholder
-  credentials are enough, for example
-  `CROWDSTRIKE_CLIENT_ID=FAKE_CLIENT_ID CROWDSTRIKE_CLIENT_SECRET=FAKE_CLIENT_SECRET`.
+```sh
+alias cs-cli='uv run connector-cli --factory crowdstrike_indicators.factory:CrowdStrikeConnectorFactory'
+```
+
+The examples below use that alias. The command has two subcommands:
+
+- `extract` runs the factory's extractor (for CrowdStrike, it calls the API);
+- `transform` runs one item through the factory's chain of transformers.
+
+The configuration comes from the environment, then from `./.env` or the file
+given by `--env-file`, never from arguments. The factory validates all of it
+before anything runs, so `transform` needs a complete configuration too even
+though it never contacts CrowdStrike: placeholder credentials are enough.
+
+| Option, before the subcommand | |
+|---|---|
+| `--factory MODULE:CLASS` | required. The connector factory, for example `crowdstrike_indicators.factory:CrowdStrikeConnectorFactory`. |
+| `--env-file PATH` | configuration file, read after the environment; `./.env` by default. |
+| `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. At `DEBUG`, a failure also logs its full traceback. |
 
 ### `extract`
 
 ```sh
 # The 50 earliest indicators from 1 November 2026 (UTC) onwards
-uv run crowdstrike-indicators-cli extract --from 2026-11-01T00:00:00Z --max 50
+cs-cli extract --from 2026-11-01T00:00:00Z --max 50
 
 # Same, written to a file instead of standard output, to read it later
-uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 50 \
-    --output raw-dumps/2026-11-01.json
+cs-cli extract --from 2026-11-01 --max 50 --output raw-dumps/2026-11-01.json
 
 # Credentials from another file, with debug logs
-uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 10 \
-    --env-file ~/secrets/crowdstrike.env --log-level DEBUG
+uv run connector-cli --factory crowdstrike_indicators.factory:CrowdStrikeConnectorFactory \
+    --env-file ~/secrets/crowdstrike.env --log-level DEBUG \
+    extract --from 2026-11-01 --max 10
 ```
 
 | Option | |
 |---|---|
 | `--from DATETIME` | required. ISO 8601. Without a timezone, it is read as UTC. |
-| `--max N` | required. Maximum number of indicators, 1 or more. |
-| `--env-file PATH` | configuration file, `./.env` by default. Also accepted by `transform`. |
+| `--max N` | required. Maximum number of items, 1 or more. |
 | `--output FILE` | write the result, the same JSON array as on standard output, to `FILE` instead, only when the extraction succeeds. Missing parent directories are created and an existing file is replaced. `raw-dumps/` and `*.raw.json` are git-ignored. |
-| `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. |
 
-Standard output holds a single JSON array, so it can be piped (`| jq ...`).
-Logs and errors go to standard error.
+Standard output holds a single JSON array, one object per pair the extractor
+returns, so it can be piped (`| jq ...`). Logs and errors go to standard
+error. For CrowdStrike, each `item` is an indicator with its API field names:
 
 ```json
 [
   {
     "datetime": "2026-11-01T00:00:03+00:00",
-    "indicator": {
+    "item": {
       "id": "domain_evil.example",
       "indicator": "evil.example",
       "type": "domain",
       "_marker": "1793491203a1b2c3",
       "last_updated": "2026-11-01T00:00:03Z",
       "actors": ["SALTYSPIDER"],
-      "...": "every other field returned by the API, declared or not",
+      "...": "every other field of the model, and every undeclared field returned by the API",
       "actor_objects_list": [
-        {"id": 123, "name": "SALTY SPIDER", "slug": "salty-spider", "...": "the other requested actor fields"}
+        {"id": 123, "name": "SALTY SPIDER", "slug": "salty-spider", "...": "every other actor field"}
       ]
     }
   }
 ]
 ```
 
-Fields the API did not return are left out. Fields the model does not declare
+The item holds every field of the model, including those the API did not
+return (at their default, `null` or `[]`). Fields the model does not declare
 yet (`reports`, `relations`, ...) are printed as received. Every indicator
 holds `actor_objects_list`, `[]` when it names no actor or none resolves.
 
 ### `transform`
 
-`transform` reads **one** indicator as a JSON object, in the API shape (one
-element of an API page's `resources`, such as a row of
-`tests/fixtures/indicators_sample.json`, or the `indicator` object of an
-`extract` output element, with its `actor_objects_list`), from a file or from
-standard input,
-runs it through the chain of transformers, and prints every step's result as
-JSON:
+`transform` reads **one** JSON value, from a file or from standard input, and
+validates it as the input of the chain's first transformer. For CrowdStrike,
+that is one indicator in the API shape: one element of an API page's
+`resources`, such as a row of `tests/fixtures/indicators_sample.json`, or the
+`item` of one element of the `extract` output, with its `actor_objects_list`
+(`jq '.[0].item'`). It then runs the chain, each step taking the previous
+output. The CrowdStrike chain is:
 
 1. `CrowdStrikeIndicatorTransformer`: the STIX 2.1 indicator;
 2. `CrowdStrikeAddMalware`: the bundle of that indicator, its Malware objects
    and its `indicates` relationships;
-3. with a dataset only, given by `--attack-data PATH` or by
-   `CROWDSTRIKE_ATTACK_DATA` (the option wins), `CrowdStrikeAddAttackPatterns`:
-   the same bundle with the MITRE ATT&CK AttackPatterns its labels name,
-   resolved against that local ATT&CK dataset (see [Attack patterns](#attack-patterns));
+3. with a dataset only, set by `CROWDSTRIKE_ATTACK_DATA`,
+   `CrowdStrikeAddAttackPatterns`: the same bundle with the MITRE ATT&CK
+   AttackPatterns its labels name, resolved against that local ATT&CK dataset
+   (see [Attack patterns](#attack-patterns));
 4. always last, `MakeStixBundle`: the standard STIX 2.1 bundle of all those
    objects, ready for a STIX consumer (see [STIX bundle](#stix-bundle)).
 
-The chain is therefore three steps without a dataset and four with one. It is
-the one `CrowdStrikeConnectorFactory.create_transformers()` returns, so what
-`transform` shows is what a connector built from the same configuration runs.
-
-`transform` never looks actors up: it keeps the `actor_objects_list` it is
-given, and an indicator without one converts as having no resolved actor.
+It is the chain `CrowdStrikeConnectorFactory.create_transformers()` returns,
+so what `transform` shows is what a connector built from the same
+configuration runs. `transform` never looks actors up: it keeps the
+`actor_objects_list` it is given, and an indicator without one converts as
+having no resolved actor.
 
 ```sh
 # transform never contacts CrowdStrike: placeholder credentials are enough
@@ -694,80 +709,76 @@ export CROWDSTRIKE_CLIENT_ID=FAKE_CLIENT_ID CROWDSTRIKE_CLIENT_SECRET=FAKE_CLIEN
 uv run python -c "import json; rows = json.load(open('tests/fixtures/indicators_sample.json'))['resources']; print(json.dumps(next(r for r in rows if r['type'] == 'domain')))" > indicator.json
 
 # From a file
-uv run crowdstrike-indicators-cli transform indicator.json
+cs-cli transform indicator.json
 
 # From standard input
-uv run crowdstrike-indicators-cli transform < indicator.json
+cs-cli transform < indicator.json
 
 # With attack patterns: a row with ATT&CK labels, and a local ATT&CK dataset
 # (the test extract here, or a downloaded enterprise-attack-17.1.json)
 uv run python -c "import json; print(json.dumps(json.load(open('tests/fixtures/indicators_sample.json'))['resources'][0]))" > indicator-attack.json
-uv run crowdstrike-indicators-cli transform indicator-attack.json \
-    --attack-data tests/fixtures/attack_extract.json
+CROWDSTRIKE_ATTACK_DATA=tests/fixtures/attack_extract.json cs-cli transform indicator-attack.json
 ```
 
 Without a dataset, the attack pattern step is skipped and the bundle's
 `attack_patterns` is empty. A missing or invalid dataset file exits with status
 2 before any step runs; the dataset is never downloaded.
 
-Standard output is one JSON array, one entry per step, so it can be piped
-(`| jq '.[-1].output'` gives the STIX bundle alone). STIX objects appear as their STIX JSON, with
-the native properties first, then the CrowdStrike fields no native property
-holds, in `x_crowdstrike_*` properties:
+Each step is printed as soon as it finishes: a `Step N - TYPE` line, the
+step's output as indented JSON, then an empty line. If a step fails, the steps
+before it stay on standard output and the error goes to standard error.
 
-```json
-[
-  {
-    "step": 1,
-    "transformer": "CrowdStrikeIndicatorTransformer",
-    "output": {
-      "type": "indicator",
-      "id": "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b",
-      "name": "malicious-7.example",
-      "pattern": "[domain-name:value = 'malicious-7.example']",
-      "...": "...",
-      "x_crowdstrike_malware_families": ["ExampleFamily4", "ExampleFamily6", "ExampleFamily7"]
-    }
-  },
-  {
-    "step": 2,
-    "transformer": "CrowdStrikeAddMalware",
-    "output": {
-      "indicator": {"...": "the indicator of step 1, unchanged"},
-      "malware": [
-        {"type": "malware", "id": "malware--06d31b08-d590-5298-8440-23b86775f679", "name": "ExampleFamily4", "is_family": true, "...": "..."}
-      ],
-      "attack_patterns": [],
-      "relationships": [
-        {"type": "relationship", "relationship_type": "indicates", "source_ref": "indicator--f975582d-...", "target_ref": "malware--06d31b08-...", "...": "..."}
-      ]
-    }
-  },
-  {
-    "step": 3,
-    "transformer": "MakeStixBundle",
-    "output": {
-      "type": "bundle",
-      "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
-      "objects": [{"type": "indicator", "...": "..."}, {"type": "malware", "...": "..."}, {"type": "relationship", "...": "..."}]
-    }
-  }
-]
+```
+Step 1 - CrowdStrikeIndicatorTransformer
+{
+  "type": "indicator",
+  "id": "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b",
+  "name": "malicious-7.example",
+  "pattern": "[domain-name:value = 'malicious-7.example']",
+  "...": "...",
+  "x_crowdstrike_malware_families": ["ExampleFamily4", "ExampleFamily6", "ExampleFamily7"]
+}
+
+Step 2 - CrowdStrikeAddMalware
+{
+  "indicator": {"...": "the indicator of step 1, unchanged"},
+  "malware": [
+    {"type": "malware", "id": "malware--06d31b08-d590-5298-8440-23b86775f679", "name": "ExampleFamily4", "is_family": true, "...": "..."}
+  ],
+  "attack_patterns": [],
+  "relationships": [
+    {"type": "relationship", "relationship_type": "indicates", "source_ref": "indicator--f975582d-...", "target_ref": "malware--06d31b08-...", "...": "..."}
+  ]
+}
+
+Step 3 - MakeStixBundle
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [{"type": "indicator", "...": "..."}, {"type": "malware", "...": "..."}, {"type": "relationship", "...": "..."}]
+}
 ```
 
-Every step runs before anything is printed: if one fails, standard output
-stays empty and the error goes to standard error.
+### How values are printed
 
-`transform` accepts one object only: a JSON array, such as the `extract`
-output, is rejected. It takes `--log-level` too.
+Values JSON cannot write directly are converted, nested ones included:
+
+| Value | Printed as |
+|---|---|
+| STIX object (stix2, custom ones included) | its STIX JSON: STIX timestamps (`2015-01-30T14:05:48.000Z`), STIX property order, then the `x_crowdstrike_*` properties |
+| Pydantic model | every field, under its alias (`_marker`, not `marker`) |
+| dataclass (`CrowdStrikeIndicatorBundle`) | an object of its fields, in declaration order |
+| date, datetime | ISO 8601 |
+
+Any other type is an error (status 1) naming it, and its step gets no header.
 
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | success, including an empty result (`[]`) for `extract` |
-| 1 | `extract`: API error (status and message on standard error), or an indicator that does not match the model (its `id`, the validation errors and the raw indicator on standard error). `transform`: input that is not valid JSON or not one JSON object, an indicator that does not match the model (reported as for `extract`), or an indicator that cannot be converted (unsupported type, `published_date` after `last_updated`) |
-| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing or invalid configuration key (every one is named, for `transform` too), missing `--env-file`, missing `transform` input file, missing or invalid ATT&CK dataset (`--attack-data` or `CROWDSTRIKE_ATTACK_DATA`) |
+| 1 | a component failed or the input could not be read: `error: <message>` on standard error, with the full traceback at `--log-level DEBUG`. For CrowdStrike: an API error (its status and message), an indicator that does not match the model (its `id` and each failing field), an indicator that cannot be converted (unsupported type, `published_date` after `last_updated`). For `transform`: input that is not valid JSON, or that fails validation |
+| 2 | usage or configuration error: missing or unusable `--factory`, no or unknown subcommand, bad argument, missing or invalid configuration key (every one is named, for `transform` too), missing `--env-file`, missing `transform` input file, missing or invalid ATT&CK dataset (`CROWDSTRIKE_ATTACK_DATA`) |
 
 ## Tests
 
