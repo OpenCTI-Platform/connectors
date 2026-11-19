@@ -6,9 +6,14 @@ with ``uv run`` from the proof of concept folder::
     uv run crowdstrike-indicators-cli extract --from 2026-11-01T00:00:00Z --max 50
     uv run crowdstrike-indicators-cli transform indicator.json
 
+Both subcommands get their components from ``CrowdStrikeConnectorFactory``,
+configured by ``CROWDSTRIKE_*`` variables from the environment, then from
+``./.env`` or ``--env-file``. ``transform`` never contacts CrowdStrike, but
+still needs a complete configuration: placeholder credentials are enough.
+
 Exit codes: 0 on success, 1 when the extraction or the transformation fails
 (API, validation or conversion error, unreadable input), 2 on a usage or
-configuration error.
+configuration error, every missing or invalid parameter being named.
 """
 
 import argparse

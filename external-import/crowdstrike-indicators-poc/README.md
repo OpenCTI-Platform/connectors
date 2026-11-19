@@ -58,7 +58,6 @@ src/
       bundle.py               MakeStixBundle
   crowdstrike_indicators_cli/ command line
     cli.py                    the crowdstrike-indicators-cli command
-    dotenv.py                 minimal .env reader
 tests/                        pytest, no network
 ```
 
@@ -584,7 +583,12 @@ The install is editable: changes under `src/` apply without reinstalling.
 | `CROWDSTRIKE_BASE_URL` | no | `https://api.crowdstrike.com` (US-1). Other regions: `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`, ... |
 | `CROWDSTRIKE_ATTACK_DATA` | no | none. Path of a local MITRE ATT&CK Enterprise STIX bundle; when set, `transform` adds the AttackPatterns (see [Attack patterns](#attack-patterns)). |
 
-An empty value counts as unset. Keys that are not in this table are ignored.
+Both subcommands read this configuration through the
+[CrowdStrike factory](#the-crowdstrike-factory) and stop with status 2, naming
+every missing or invalid key, before doing anything. An empty value counts as
+unset. Keys that are not in this table are ignored. A `${NAME}` reference in a
+value, quoted or not, is replaced by the value of `NAME`; a value that must
+hold `${` literally goes in the process environment instead.
 
 The API client needs the **Indicators (Falcon Intelligence): Read** scope, and
 the **Actors (Falcon Intelligence): Read** scope to resolve actors. Without
@@ -600,7 +604,10 @@ the project is installed. The examples below use `uv run`. The command has two
 subcommands:
 
 - `extract` calls the CrowdStrike API and prints the indicators;
-- `transform` converts one indicator into STIX, without credentials or network.
+- `transform` converts one indicator into STIX, without contacting
+  CrowdStrike. It still needs a complete configuration: placeholder
+  credentials are enough, for example
+  `CROWDSTRIKE_CLIENT_ID=FAKE_CLIENT_ID CROWDSTRIKE_CLIENT_SECRET=FAKE_CLIENT_SECRET`.
 
 ### `extract`
 
@@ -621,7 +628,7 @@ uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 10 \
 |---|---|
 | `--from DATETIME` | required. ISO 8601. Without a timezone, it is read as UTC. |
 | `--max N` | required. Maximum number of indicators, 1 or more. |
-| `--env-file PATH` | credentials file, `./.env` by default. |
+| `--env-file PATH` | configuration file, `./.env` by default. Also accepted by `transform`. |
 | `--output FILE` | write the result, the same JSON array as on standard output, to `FILE` instead, only when the extraction succeeds. Missing parent directories are created and an existing file is replaced. `raw-dumps/` and `*.raw.json` are git-ignored. |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. |
 
@@ -665,18 +672,24 @@ JSON:
 1. `CrowdStrikeIndicatorTransformer`: the STIX 2.1 indicator;
 2. `CrowdStrikeAddMalware`: the bundle of that indicator, its Malware objects
    and its `indicates` relationships;
-3. with `--attack-data PATH` only, `CrowdStrikeAddAttackPatterns`: the same
-   bundle with the MITRE ATT&CK AttackPatterns its labels name, resolved
-   against the local ATT&CK dataset in `PATH` (see [Attack patterns](#attack-patterns));
+3. with a dataset only, given by `--attack-data PATH` or by
+   `CROWDSTRIKE_ATTACK_DATA` (the option wins), `CrowdStrikeAddAttackPatterns`:
+   the same bundle with the MITRE ATT&CK AttackPatterns its labels name,
+   resolved against that local ATT&CK dataset (see [Attack patterns](#attack-patterns));
 4. always last, `MakeStixBundle`: the standard STIX 2.1 bundle of all those
    objects, ready for a STIX consumer (see [STIX bundle](#stix-bundle)).
 
-The chain is therefore three steps without `--attack-data` and four with it.
+The chain is therefore three steps without a dataset and four with one. It is
+the one `CrowdStrikeConnectorFactory.create_transformers()` returns, so what
+`transform` shows is what a connector built from the same configuration runs.
 
 `transform` never looks actors up: it keeps the `actor_objects_list` it is
 given, and an indicator without one converts as having no resolved actor.
 
 ```sh
+# transform never contacts CrowdStrike: placeholder credentials are enough
+export CROWDSTRIKE_CLIENT_ID=FAKE_CLIENT_ID CROWDSTRIKE_CLIENT_SECRET=FAKE_CLIENT_SECRET
+
 # Take a domain row of the committed sample as input
 uv run python -c "import json; rows = json.load(open('tests/fixtures/indicators_sample.json'))['resources']; print(json.dumps(next(r for r in rows if r['type'] == 'domain')))" > indicator.json
 
@@ -693,7 +706,7 @@ uv run crowdstrike-indicators-cli transform indicator-attack.json \
     --attack-data tests/fixtures/attack_extract.json
 ```
 
-Without `--attack-data`, the attack pattern step is skipped and the bundle's
+Without a dataset, the attack pattern step is skipped and the bundle's
 `attack_patterns` is empty. A missing or invalid dataset file exits with status
 2 before any step runs; the dataset is never downloaded.
 
@@ -754,7 +767,7 @@ output, is rejected. It takes `--log-level` too.
 |---|---|
 | 0 | success, including an empty result (`[]`) for `extract` |
 | 1 | `extract`: API error (status and message on standard error), or an indicator that does not match the model (its `id`, the validation errors and the raw indicator on standard error). `transform`: input that is not valid JSON or not one JSON object, an indicator that does not match the model (reported as for `extract`), or an indicator that cannot be converted (unsupported type, `published_date` after `last_updated`) |
-| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing credential, missing `--env-file`, missing `transform` input file, missing or invalid `--attack-data` file |
+| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing or invalid configuration key (every one is named, for `transform` too), missing `--env-file`, missing `transform` input file, missing or invalid ATT&CK dataset (`--attack-data` or `CROWDSTRIKE_ATTACK_DATA`) |
 
 ## Tests
 
