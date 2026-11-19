@@ -8,14 +8,9 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
+from accenture_connector.run_errors import report_run_errors
 from botocore.exceptions import ClientError
-from connectors_sdk import (
-    ConnectorError,
-    DataConversionError,
-    DataNotFoundError,
-    ErrorStore,
-    UnknownError,
-)
+from connectors_sdk import DataConversionError, DataNotFoundError, ErrorStore
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -431,31 +426,14 @@ class ConnectorAccenture:
             self.helper.api.work.to_processed(work_id, message)
         return bundles_sent
 
-    @staticmethod
-    def _return_run_error_list(
-        run_error: Optional[ConnectorError] = None,
-    ) -> List[Dict[str, Any]]:
-        """Return the errors of the run in the pycti format.
-
-        :param run_error: The error that stopped the run, if any
-        :return: The error that stopped the run, if any, then the errors recorded in
-            the ErrorStore (items skipped during the run)
-        """
-        errors = [run_error] if run_error is not None else []
-        errors.extend(ErrorStore().get_errors())
-        return [error.convert_to_pycti_format() for error in errors]
-
-    def process_message(self) -> List[Dict[str, Any]]:
+    @report_run_errors
+    def process_message(self) -> None:
         """
         Connector main process to collect intelligence
-        :return: The errors of the run, in the pycti format, reported to OpenCTI
-            with the connector's ping: the error that stopped the run, if any, then
-            the items skipped during the run. Empty when nothing failed.
+        :return: None. report_run_errors returns instead the errors of the run,
+            reported to OpenCTI with the connector's ping: the error that stopped
+            the run, re-raised here, comes after the errors recorded during the run.
         """
-        # A run starts with an empty store: the errors of the previous run are not
-        # reported again
-        ErrorStore().clear()
-
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
@@ -544,7 +522,6 @@ class ConnectorAccenture:
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name} connector successfully run, storing last_run as {current_state_datetime}"
             )
-            return self._return_run_error_list()
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -552,14 +529,11 @@ class ConnectorAccenture:
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
-        except ConnectorError as connector_err:
-            self.helper.connector_logger.error(
-                f"[ERROR] Connector failed: {connector_err}"
-            )
-            return self._return_run_error_list(connector_err)
         except Exception as err:
-            self.helper.connector_logger.error(f"[ERROR] Connector failed: {err}")
-            return self._return_run_error_list(UnknownError(str(err)))
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Connector failed", {"error": str(err)}
+            )
+            raise
 
     def run(self) -> None:
         """

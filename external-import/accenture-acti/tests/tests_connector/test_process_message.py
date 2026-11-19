@@ -14,7 +14,8 @@ from pycti.utils.opencti_logger import logger
 
 @pytest.fixture(autouse=True)
 def empty_error_store():
-    """ErrorStore is a singleton: each test ends with an empty store."""
+    """ErrorStore is a singleton: each test starts and ends with an empty store."""
+    ErrorStore().clear()
     yield
     ErrorStore().clear()
 
@@ -71,7 +72,7 @@ def test_process_message_returns_the_skipped_items(connector):
     connector._send_bundle.assert_called_once()
 
 
-def test_process_message_returns_the_run_error_then_the_skipped_items(connector):
+def test_process_message_returns_the_skipped_items_then_the_run_error(connector):
     def get_reports(since, until):
         ErrorStore().record_error(DataConversionError("bad image"))
         raise ProviderApiAuthenticationError("bad credentials")
@@ -81,22 +82,9 @@ def test_process_message_returns_the_run_error_then_the_skipped_items(connector)
     errors = connector.process_message()
 
     assert [error["code"] for error in errors] == [
-        "api.authentication",
         "data.conversion",
+        "api.authentication",
     ]
-
-
-def test_process_message_does_not_report_the_previous_run_errors_on_failure(
-    connector,
-):
-    ErrorStore().record_error(DataConversionError("from the previous run"))
-    connector.client.get_reports.side_effect = ProviderApiAuthenticationError(
-        "bad credentials"
-    )
-
-    errors = connector.process_message()
-
-    assert [error["code"] for error in errors] == ["api.authentication"]
 
 
 def test_process_message_returns_the_connector_error(connector):
@@ -113,9 +101,6 @@ def test_process_message_returns_the_connector_error(connector):
             "criticity": int(Criticity.CRITICAL),
         }
     ]
-    connector.helper.connector_logger.error.assert_called_once_with(
-        "[ERROR] Connector failed: bad credentials"
-    )
 
 
 def test_process_message_returns_an_unknown_error_for_other_exceptions(connector):
@@ -126,10 +111,34 @@ def test_process_message_returns_an_unknown_error_for_other_exceptions(connector
     assert errors == [
         {
             "code": "other.unknown",
-            "message": "boom",
+            "message": "[RuntimeError] boom",
             "criticity": int(Criticity.CRITICAL),
         }
     ]
+
+
+def test_process_message_logs_the_run_error_once(connector):
+    connector.client.get_reports.side_effect = RuntimeError("boom")
+
+    connector.process_message()
+
     connector.helper.connector_logger.error.assert_called_once_with(
-        "[ERROR] Connector failed: boom"
+        "[CONNECTOR] Connector failed", {"error": "boom"}
     )
+
+
+def test_process_message_re_raises_the_run_error(connector):
+    run_error = ProviderApiAuthenticationError("bad credentials")
+    connector.client.get_reports.side_effect = run_error
+
+    with pytest.raises(ProviderApiAuthenticationError) as raised:
+        ConnectorAccenture.process_message.__wrapped__(connector)
+
+    assert raised.value is run_error
+
+
+def test_process_message_stops_the_connector_on_keyboard_interrupt(connector):
+    connector.client.get_reports.side_effect = KeyboardInterrupt
+
+    with pytest.raises(SystemExit):
+        connector.process_message()
