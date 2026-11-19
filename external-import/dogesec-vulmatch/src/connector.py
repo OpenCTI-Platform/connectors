@@ -41,7 +41,7 @@ class VulmatchConnector:
 
         self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
-        self.base_url = self.config.vulmatch.base_url.strip("/") + "/"
+        self.base_url = str(self.config.vulmatch.base_url).strip("/") + "/"
         self.api_key = self.config.vulmatch.api_key.get_secret_value()
         self.sbom_only = self.config.vulmatch.sbom_only
         self.cvss_v2_score_min = parse_number(self.config.vulmatch.cvss_v2_score_min)
@@ -196,7 +196,7 @@ class VulmatchConnector:
         self.helper.log_info("Starting Vulmatch")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=int(self.config.connector.duration_period.total_seconds()),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
     def transform_bundle_objects(self, bundle_objects):

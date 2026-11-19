@@ -93,7 +93,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["vulmatch"]
     assert settings.connector.log_level == "error"
     assert settings.connector.duration_period == timedelta(days=1)
-    assert settings.vulmatch.base_url == "https://api.vulmatch.com/"
+    assert str(settings.vulmatch.base_url) == "https://api.vulmatch.com/"
     assert settings.vulmatch.api_key.get_secret_value() == "test-api-key"
     assert settings.vulmatch.sbom_only is False
     assert settings.vulmatch.cvss_v2_score_min == -1
@@ -234,3 +234,18 @@ def test_settings_should_prefer_duration_period_over_interval_days():
         )
 
     assert settings.connector.duration_period == timedelta(hours=6)
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["api.example.com", "ftp://api.example.com", "not a url"],
+)
+def test_settings_should_reject_invalid_base_url(base_url):
+    """`vulmatch.base_url` must be an absolute HTTP(S) URL."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "vulmatch": {**MINIMAL_VALID_SETTINGS_DICT["vulmatch"], "base_url": base_url},
+    }
+
+    with pytest.raises(ConfigValidationError):
+        build_settings(settings_dict)

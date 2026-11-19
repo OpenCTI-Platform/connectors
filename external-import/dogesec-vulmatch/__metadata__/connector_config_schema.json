@@ -57,6 +57,9 @@
     "VULMATCH_BASE_URL": {
       "default": "https://api.vulmatch.com/",
       "description": "The Vulmatch API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "VULMATCH_API_KEY": {

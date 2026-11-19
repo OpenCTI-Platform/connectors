@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class VulmatchConnectorConfig(BaseExternalImportConnectorConfig):
@@ -36,9 +36,9 @@ class VulmatchConnectorConfig(BaseExternalImportConnectorConfig):
 class VulmatchConfig(BaseConfigModel):
     """Settings specific to the Vulmatch connector."""
 
-    base_url: str = Field(
+    base_url: HttpUrl = Field(
         description="The Vulmatch API base URL.",
-        default="https://api.vulmatch.com/",
+        default=HttpUrl("https://api.vulmatch.com/"),
     )
     api_key: SecretStr = Field(
         description="The Vulmatch API key used for authentication.",
