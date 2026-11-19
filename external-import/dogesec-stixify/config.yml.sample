@@ -3,12 +3,10 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Stixify'
   scope: 'stixify'
   confidence_level: 70
-  update_existing_data: false
   log_level: 'info'
   queue_protocol: 'api'
   auto_create_service_account: true
