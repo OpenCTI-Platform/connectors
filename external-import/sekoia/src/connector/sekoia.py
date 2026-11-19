@@ -245,16 +245,13 @@ class SekoiaConnector(object):
             references_count = len(external_references)
             if references_count <= self.max_external_references:
                 continue
-            sekoia_references = [
-                ref
-                for ref in external_references
-                if ref.get("source_name") == SEKOIA_SOURCE_NAME
-            ]
-            other_references = [
-                ref
-                for ref in external_references
-                if ref.get("source_name") != SEKOIA_SOURCE_NAME
-            ]
+            sekoia_references = []
+            other_references = []
+            for ref in external_references:
+                if ref.get("source_name") == SEKOIA_SOURCE_NAME:
+                    sekoia_references.append(ref)
+                else:
+                    other_references.append(ref)
             item["external_references"] = (sekoia_references + other_references)[
                 : self.max_external_references
             ]
