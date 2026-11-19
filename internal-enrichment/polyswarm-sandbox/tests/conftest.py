@@ -35,6 +35,19 @@ def _ensure_stix21_schemas():
     return os.path.join(_SCHEMA_CACHE, "schemas")
 
 
+@pytest.fixture(autouse=True)
+def _stub_account_quota_read(monkeypatch):
+    """Keep the account quota read off the live API.
+
+    Tests of the quota reader build their own fake API.
+    """
+
+    def _offline(_self, **_kwargs):
+        raise ConnectionError("offline")
+
+    monkeypatch.setattr("polyswarm_api.api.PolyswarmAPI.account_features", _offline)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _patch_stix_validator_schema_dir():
     try:

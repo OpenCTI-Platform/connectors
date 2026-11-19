@@ -23,7 +23,9 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Artifact"
+        "Artifact",
+        "StixFile",
+        "Url"
       ],
       "description": "The scope of the connector.",
       "items": {
@@ -82,6 +84,11 @@
       "description": "PolySwarm community (default or private).",
       "type": "string"
     },
+    "POLYSWARM_ALLOW_PUBLIC_COMMUNITY": {
+      "default": false,
+      "description": "Allow file uploads to the public PolySwarm community ('default'). Uploaded files become visible to the PolySwarm community, so this is off by default: set POLYSWARM_COMMUNITY to your private community, or set this to true to submit publicly.",
+      "type": "boolean"
+    },
     "POLYSWARM_TIMEOUT": {
       "default": 30,
       "description": "HTTP timeout for PolySwarm API calls in seconds.",
@@ -131,6 +138,49 @@
     "POLYSWARM_SANDBOX_TIMEOUT": {
       "default": 600,
       "description": "Maximum wait time for sandbox results in seconds.",
+      "type": "integer"
+    },
+    "POLYSWARM_SANDBOX_URL_SEND_QUERY": {
+      "default": false,
+      "description": "Send a Url observable's query string and fragment to PolySwarm for detonation. Off by default: only scheme, host and path are submitted, so tokens in a query string never leave OpenCTI.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS": {
+      "default": 0,
+      "description": "Hash lookup (StixFile observables) and report reuse (Artifacts): an existing PolySwarm sandbox report older than this many days is treated as missing. 0 means a report of any age is used.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_SANDBOX_REUSE_REPORT": {
+      "default": false,
+      "description": "For an Artifact, look for an existing PolySwarm sandbox report by SHA-256 before uploading. When every configured provider has a usable report, it is used and the file is not uploaded again (the scan result is also taken from the latest existing scan of the hash).",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_DETONATE_BY_HASH": {
+      "default": false,
+      "description": "For a StixFile observable with no usable existing report, detonate the sample PolySwarm already holds for that hash. Nothing is uploaded from OpenCTI, but each detonation spends sandbox credits and runs in the community set in POLYSWARM_COMMUNITY. Off by default.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_MAX_DROPPED_FILES": {
+      "default": 25,
+      "description": "Maximum dropped files per detonation to create as File observables related to the detonated observable (0 turns it off). Uses data already in the sandbox report.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "POLYSWARM_SANDBOX_C2_INDICATORS": {
+      "default": true,
+      "description": "Create Indicators (valid 30 days) for command and control addresses the sandbox report lists in an extracted malware configuration. Observables are created either way; needs create_indicators.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_ATTACH_PCAP": {
+      "default": false,
+      "description": "Download the sandbox network capture (pcap) and attach it to the observable. Off by default: it is an extra download per detonation.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_PCAP_MAX_SIZE": {
+      "default": 26214400,
+      "description": "Largest pcap in bytes to attach (default 25MB). Larger captures are skipped.",
+      "minimum": 1,
       "type": "integer"
     },
     "POLYSWARM_POLL_INTERVAL": {
@@ -187,6 +237,12 @@
       "default": true,
       "description": "Download file artifacts from OpenCTI for scanning.",
       "type": "boolean"
+    },
+    "POLYSWARM_QUOTA_WARN_BELOW": {
+      "default": 100,
+      "description": "Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (0 = no warnings). Accounts with no cap are never warned.",
+      "minimum": 0,
+      "type": "integer"
     },
     "POLYSWARM_POLYKG_API_URL": {
       "default": null,

@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'PolySwarm Sandbox'
-  scope: 'Artifact'
+  scope: 'Artifact,StixFile,Url'
   auto: false
   log_level: 'error'
   max_tlp: 'TLP:AMBER'
@@ -15,6 +15,7 @@ polyswarm:
   api_key: 'ChangeMe'
   api_url: 'https://api.polyswarm.network'
   community: 'default'
+  allow_public_community: false # uploads to the public 'default' community are refused unless true
   replace_with_lower_score: true
   timeout: 300
 
@@ -25,6 +26,14 @@ polyswarm:
   sandbox_vm_triage: 'windows11-21h2-x64'
   sandbox_network_enabled: true
   sandbox_timeout: 600
+  sandbox_url_send_query: false         # Url observables: also send query string and fragment
+  sandbox_lookup_max_age_days: 0        # StixFile lookup / Artifact reuse: older reports count as missing (0 = any age)
+  sandbox_reuse_report: false           # Artifacts: use existing reports instead of uploading again
+  sandbox_detonate_by_hash: false       # StixFile with no report: detonate the sample PolySwarm holds (spends credits)
+  sandbox_max_dropped_files: 25         # Dropped files to create as File observables (0 = off)
+  sandbox_c2_indicators: true           # Indicators for C2 in an extracted malware config
+  sandbox_attach_pcap: false            # Download and attach the sandbox pcap (extra download)
+  sandbox_pcap_max_size: 26214400       # Largest pcap to attach, in bytes
 
   # Polling
   poll_interval: 30
@@ -40,6 +49,9 @@ polyswarm:
   min_polyscore: 50
   create_indicators: true
   create_observables: true
+
+  # Account quota (read-only): warn when remaining quota is below this, 0 = no warnings
+  # quota_warn_below: 100
 
   # File handling
   max_file_size: 33554432               # 32MB
