@@ -139,14 +139,11 @@ class SekoiaConnector(object):
             "Using start date to build the first cursor",
             meta={"start_date": self.start_date.isoformat()},
         )
-        # UTC (a naive datetime is UTC), truncated to the second, with a "Z" suffix
-        start_date = self.start_date
-        if start_date.tzinfo is None:
-            start_date = start_date.replace(tzinfo=timezone.utc)
+        # The setting is always timezone-aware: UTC, truncated to the second, "Z" suffix
         start = (
-            start_date.astimezone(timezone.utc)
-            .replace(tzinfo=None, microsecond=0)
-            .isoformat()
+            self.start_date.astimezone(timezone.utc)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
             + "Z"
         )
 

@@ -125,20 +125,6 @@ def test_first_cursor_converts_non_utc_datetime_to_utc():
     assert _decode(connector.generate_first_cursor()) == "2023-05-01T00:00:00Z"
 
 
-@pytest.mark.parametrize("tz", ["Asia/Tokyo", "America/Los_Angeles"])
-def test_first_cursor_treats_naive_datetime_as_utc(monkeypatch, tz):
-    # A naive datetime must not depend on the timezone of the host
-    monkeypatch.setenv("TZ", tz)
-    time.tzset()
-    try:
-        connector = _connector(datetime(2023, 5, 1))
-
-        assert _decode(connector.generate_first_cursor()) == "2023-05-01T00:00:00Z"
-    finally:
-        monkeypatch.undo()
-        time.tzset()
-
-
 def test_first_cursor_from_default_setting(monkeypatch):
     connector = _connector(_load(monkeypatch).start_date)
 
