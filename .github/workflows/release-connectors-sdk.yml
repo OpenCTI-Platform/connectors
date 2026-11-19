@@ -4,22 +4,29 @@ run-name: >-
   ${{
     github.event_name == 'push'
       && format('📦 {0}', github.ref_name)
-      || format('📦 connectors-sdk@{0} → {1}', inputs.version, inputs.repository)
+      || format('📦 connectors-sdk@{0} → testpypi', inputs.version)
   }}
 
 # Builds the connectors-sdk package (sdist + wheel) and publishes it to PyPI.
 #
 # Triggers:
-#   1. Automatic: push a tag `connectors-sdk/{version}`, published to PyPI.
-#      e.g.  git tag connectors-sdk/7.261117.0 && git push origin connectors-sdk/7.261117.0
-#      (release-connector.yml already excludes `connectors-sdk/*` tags.)
-#   2. Manual: workflow_dispatch with a version, published to TestPyPI (to
-#      try a release) or PyPI.
+#   1. Automatic: the platform release tags, the same ones that trigger
+#      release-bulk-connectors.yml, published to PyPI. The SDK ships with
+#      every platform release, and its version follows its pycti pin:
+#        7.261117.0        → 7.261117.0
+#        7.260811.0-lts.2  → 7.260811.0.2  (as pycti: `-lts.N` is not PEP 440)
+#      The tagged commit, or its parent (the release process tags a commit
+#      that only pins the connectors to the tag), must be on `master`, or on
+#      `lts/<base>` for an LTS tag, and the SDK must be identical in both.
+#   2. Manual: workflow_dispatch with a version, published to TestPyPI only,
+#      from any branch, to try a release. PyPI releases go through tags.
 #
 # Authentication uses PyPI Trusted Publishing (OIDC): no API token is stored
 # in the repository. Each index must declare a trusted publisher for
 # owner `OpenCTI-Platform`, repository `connectors`, workflow
 # `release-connectors-sdk.yml` and environment `pypi` (or `testpypi`).
+# The `pypi` environment should only allow the release tags as deployment
+# refs, so that no branch run can reach it, even if this file is edited.
 #
 # The version lives only in the tag: `tool.poetry.version` stays `0.0.0` in
 # the repository and is replaced in the CI checkout before the build.
@@ -27,22 +34,16 @@ run-name: >-
 on:
   push:
     tags:
-      - 'connectors-sdk/*'
+      # Platform CalVer tags: 7.261117.0 and 7.260811.0-lts.2. Per-connector
+      # tags (`{name}/{version}`) never match: glob `*` does not match `/`.
+      - '[0-9]*.[0-9]*.[0-9]*'
   workflow_dispatch:
     inputs:
       version:
         description: >
-          Version to publish (PEP 440, e.g. 7.261117.0 or 7.261117.0rc1).
+          Version to publish to TestPyPI (PEP 440, e.g. 7.261117.0rc1).
         required: true
         type: string
-      repository:
-        description: Package index to publish to.
-        required: true
-        type: choice
-        options:
-          - testpypi
-          - pypi
-        default: testpypi
 
 permissions:
   contents: read
@@ -65,6 +66,35 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # the provenance check needs master and lts/* history
+
+      - name: Check the tagged commit comes from a release branch
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-lts\.[0-9]+$ ]]; then
+            branch="lts/${BASH_REMATCH[1]}"
+          else
+            branch="master"
+          fi
+          git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null \
+            || { echo "::error::Branch $branch not found for tag $REF_NAME"; exit 1; }
+          # The release process tags a commit that only pins the connectors to
+          # the tag, on top of the release commit: accept the tagged commit or
+          # its parent, as long as the SDK is the same in both.
+          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch"; then
+            base="$GITHUB_SHA"
+          elif git merge-base --is-ancestor "$GITHUB_SHA^" "origin/$branch" 2>/dev/null; then
+            base="$(git rev-parse "$GITHUB_SHA^")"
+          else
+            echo "::error::Tag $REF_NAME ($GITHUB_SHA) is not on $branch, nor is its parent"
+            exit 1
+          fi
+          git diff --quiet "$base" "$GITHUB_SHA" -- connectors-sdk \
+            || { echo "::error::Tag $REF_NAME changes connectors-sdk compared with $branch ($base)"; exit 1; }
+          echo "Tag $REF_NAME: SDK identical to $branch at $base" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
@@ -76,14 +106,21 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_REPOSITORY: ${{ inputs.repository }}
         run: |
           if [ "$EVENT_NAME" = "push" ]; then
-            version="${REF_NAME#connectors-sdk/}"
+            if [[ "$REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              version="$REF_NAME"
+            elif [[ "$REF_NAME" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-lts\.([0-9]+)$ ]]; then
+              # Same mapping as pycti: 7.260811.0-lts.2 → 7.260811.0.2
+              version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            else
+              echo "::error::Tag $REF_NAME is not a release tag (X.Y.Z or X.Y.Z-lts.N)"
+              exit 1
+            fi
             repository="pypi"
           else
             version="$INPUT_VERSION"
-            repository="$INPUT_REPOSITORY"
+            repository="testpypi"
           fi
           python -m pip install --quiet packaging
           # Fail on a version that is not valid PEP 440, or not in canonical form
