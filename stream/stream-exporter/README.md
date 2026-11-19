@@ -4,7 +4,7 @@
 |--------|------|---------|
 | Community | -    | -       |
 
-The Stream Exporter connector exports OpenCTI live stream events to MinIO object storage for asynchronous synchronization between OpenCTI instances.
+The Stream Exporter connector exports OpenCTI live stream events to an S3-compatible bucket (RustFS, AWS S3, ...) for asynchronous synchronization between OpenCTI instances.
 
 ## Table of Contents
 
@@ -27,10 +27,10 @@ The Stream Exporter connector exports OpenCTI live stream events to MinIO object
 
 ## Introduction
 
-This connector listens to an OpenCTI live stream and exports events to MinIO object storage. It is designed to work with the [stream-importer](../../external-import/stream-importer/) connector for synchronizing OpenCTI instances that don't have direct network access to each other.
+This connector listens to an OpenCTI live stream and exports events to an S3-compatible bucket. It is designed to work with the [stream-importer](../../external-import/stream-importer/) connector for synchronizing OpenCTI instances that don't have direct network access to each other.
 
 Key features:
-- Export live stream events to MinIO bucket
+- Export live stream events to an S3 bucket
 - Bulk writing for performance optimization
 - State management for reliable synchronization
 - Configurable write intervals
@@ -41,8 +41,8 @@ Key features:
 ### Requirements
 
 - OpenCTI Platform >= 6.3.4
-- MinIO or S3-compatible object storage
-- Network access to MinIO endpoint
+- S3-compatible object storage (RustFS, AWS S3, ...)
+- Network access to the S3 endpoint
 
 ## Configuration variables
 
@@ -68,17 +68,21 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter        | config.yml        | Docker environment variable | Default | Mandatory | Description                                                |
-|------------------|-------------------|-----------------------------|---------|-----------|------------------------------------------------------------|
-| MinIO Endpoint   | minio.endpoint    | `MINIO_ENDPOINT`            |         | Yes       | MinIO server endpoint.                                     |
-| MinIO Port       | minio.port        | `MINIO_PORT`                |         | Yes       | MinIO server port.                                         |
-| MinIO Bucket     | minio.bucket      | `MINIO_BUCKET`              |         | Yes       | MinIO bucket name (created if not exists).                 |
-| MinIO Folder     | minio.folder      | `MINIO_FOLDER`              |         | Yes       | Folder within bucket for messages.                         |
-| MinIO Access Key | minio.access_key  | `MINIO_ACCESS_KEY`          |         | Yes       | MinIO access key.                                          |
-| MinIO Secret Key | minio.secret_key  | `MINIO_SECRET_KEY`          |         | Yes       | MinIO secret key.                                          |
-| MinIO Secure     | minio.secure      | `MINIO_SECURE`              | false   | No        | Whether to use SSL.                                        |
-| MinIO Cert Check | minio.cert_check  | `MINIO_CERT_CHECK`          | true    | No        | Whether to verify SSL certificate.                         |
-| Write Interval   | write_every_sec   | `WRITE_EVERY_SEC`           | 60      | No        | Seconds between MinIO writes.                              |
+| Parameter      | config.yml                    | Docker environment variable     | Default | Mandatory | Description                             |
+|----------------|-------------------------------|---------------------------------|---------|-----------|-----------------------------------------|
+| S3 Endpoint    | stream_exporter.s3_endpoint   | `STREAM_EXPORTER_S3_ENDPOINT`   |         | Yes       | S3 server endpoint.                     |
+| S3 Port        | stream_exporter.s3_port       | `STREAM_EXPORTER_S3_PORT`       |         | Yes       | S3 server port.                         |
+| S3 Bucket      | stream_exporter.s3_bucket     | `STREAM_EXPORTER_S3_BUCKET`     |         | Yes       | S3 bucket name (created if not exists). |
+| S3 Folder      | stream_exporter.s3_folder     | `STREAM_EXPORTER_S3_FOLDER`     |         | Yes       | Folder within bucket for messages.      |
+| S3 Access Key  | stream_exporter.s3_access_key | `STREAM_EXPORTER_S3_ACCESS_KEY` |         | Yes       | S3 access key.                          |
+| S3 Secret Key  | stream_exporter.s3_secret_key | `STREAM_EXPORTER_S3_SECRET_KEY` |         | Yes       | S3 secret key.                          |
+| S3 Secure      | stream_exporter.s3_secure     | `STREAM_EXPORTER_S3_SECURE`     | false   | No        | Whether to use SSL.                     |
+| S3 Cert Check  | stream_exporter.s3_cert_check | `STREAM_EXPORTER_S3_CERT_CHECK` | true    | No        | Whether to verify SSL certificate.      |
+| Write Interval | write.every_sec               | `WRITE_EVERY_SEC`               | 900     | No        | Seconds between S3 writes.              |
+
+The names carry the connector's section because pycti already reads `S3_*` and the `s3` section of `config.yml` for `CONNECTOR_SEND_TO_S3`, which this connector does not use.
+
+The new names are read from version 7.26XXXX.0 of the connector. The former names, `MINIO_*` variables and the `minio` section of `config.yml`, are read too, with a deprecation warning in the logs. Earlier images read only the former names: keep them as long as you may run or go back to such an image. An environment variable wins over `config.yml`, whatever its name. Within the environment, or within `config.yml`, the new name wins over the former one. A variable set to an empty value counts as set and hides the other names: a text setting then takes its default, an empty port stops the connector at startup.
 
 ## Deployment
 
@@ -102,13 +106,13 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=Stream Exporter
       - CONNECTOR_SCOPE=stream-exporter
       - CONNECTOR_LOG_LEVEL=info
-      - MINIO_ENDPOINT=minio.example.com
-      - MINIO_PORT=9000
-      - MINIO_BUCKET=opencti-export
-      - MINIO_FOLDER=stream
-      - MINIO_ACCESS_KEY=ChangeMe
-      - MINIO_SECRET_KEY=ChangeMe
-      - MINIO_SECURE=true
+      - STREAM_EXPORTER_S3_ENDPOINT=s3.example.com
+      - STREAM_EXPORTER_S3_PORT=9000
+      - STREAM_EXPORTER_S3_BUCKET=opencti-export
+      - STREAM_EXPORTER_S3_FOLDER=stream
+      - STREAM_EXPORTER_S3_ACCESS_KEY=ChangeMe
+      - STREAM_EXPORTER_S3_SECRET_KEY=ChangeMe
+      - STREAM_EXPORTER_S3_SECURE=true
       - WRITE_EVERY_SEC=60
     restart: always
 ```
@@ -137,7 +141,7 @@ python3 main.py
 
 ## Usage
 
-1. Set up MinIO or S3-compatible storage
+1. Set up an S3-compatible storage
 2. Create a Live Stream in OpenCTI (Data Management -> Data Sharing -> Live Streams)
 3. Configure the stream with appropriate filters
 4. Start the connector
@@ -145,7 +149,7 @@ python3 main.py
 
 ## Behavior
 
-The connector listens to OpenCTI live stream events and batches them for export to MinIO.
+The connector listens to OpenCTI live stream events and batches them for export to S3.
 
 ### Data Flow
 
@@ -164,9 +168,9 @@ graph LR
         Write[Batch Writer]
     end
 
-    subgraph MinIO
+    subgraph S3[S3 storage]
         direction TB
-        API[MinIO API]
+        API[S3 API]
         Bucket[Object Storage]
     end
 
@@ -184,14 +188,14 @@ graph LR
 |------|----------------------------------------------------------|
 | 1    | Listen to live stream events                             |
 | 2    | Buffer events in memory                                  |
-| 3    | Write to MinIO at configured interval                    |
+| 3    | Write to S3 at configured interval                       |
 | 4    | Update state with last written message ID                |
 
 ### State Management
 
 The connector maintains two state values:
 - `start_from`: Updated on each received message
-- `last_written_msg_id`: Updated only after successful MinIO write
+- `last_written_msg_id`: Updated only after successful S3 write
 
 On restart, the connector uses `last_written_msg_id` to resume from the last successfully written position.
 
@@ -207,10 +211,10 @@ CONNECTOR_LOG_LEVEL=debug
 
 | Issue                          | Solution                                              |
 |--------------------------------|-------------------------------------------------------|
-| Connection refused             | Verify MinIO endpoint and port                        |
+| Connection refused             | Verify S3 endpoint and port                           |
 | Authentication failed          | Verify access key and secret key                      |
-| Bucket not created             | Check MinIO permissions for bucket creation           |
-| SSL errors                     | Set `MINIO_CERT_CHECK=false` for testing              |
+| Bucket not created             | Check S3 permissions for bucket creation              |
+| SSL errors                     | Set `STREAM_EXPORTER_S3_CERT_CHECK=false` for testing |
 
 ## Additional information
 
