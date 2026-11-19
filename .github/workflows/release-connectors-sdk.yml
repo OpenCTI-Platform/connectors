@@ -123,8 +123,10 @@ jobs:
             repository="testpypi"
           fi
           python -m pip install --quiet packaging
-          # Fail on a version that is not valid PEP 440, or not in canonical form
-          VERSION="$version" python - <<'EOF'
+          # The SDK pins pycti exactly, and the release commit sets that pin
+          # to the release version
+          pycti_pin="$(sed -nE 's/^ *"pycti==([^"]+)".*/\1/p' pyproject.toml)"
+          VERSION="$version" PYCTI_PIN="$pycti_pin" python - <<'EOF'
           import os, sys
           from packaging.version import InvalidVersion, Version
           raw = os.environ["VERSION"]
@@ -134,12 +136,20 @@ jobs:
               sys.exit(f"::error::'{raw}' is not a valid PEP 440 version")
           if str(parsed) != raw:
               sys.exit(f"::error::Use the canonical form '{parsed}' instead of '{raw}'")
+          if parsed.local:
+              sys.exit(f"::error::'{raw}' has a local part (+{parsed.local}), which PyPI refuses")
+          try:
+              pin = Version(os.environ["PYCTI_PIN"])
+          except InvalidVersion:
+              sys.exit("::error::No valid exact pycti pin (pycti==X) found in pyproject.toml")
+          if os.environ["EVENT_NAME"] == "push":
+              # Release tag: the SDK version must be the pycti pin
+              if parsed != pin:
+                  sys.exit(f"::error::Version {raw} does not match the pycti pin ({pin})")
+          elif Version(parsed.base_version) != pin:
+              # Manual run to TestPyPI: pre-releases (7.261119.0rc1) are expected
+              print(f"::warning::Version {raw} is not based on the pycti pin ({pin})")
           EOF
-          # The SDK pins pycti exactly, so its version is expected to follow the platform one
-          pycti_pin="$(sed -nE 's/^ *"pycti==([^"]+)".*/\1/p' pyproject.toml)"
-          if [ "${version%%[a-z]*}" != "$pycti_pin" ]; then
-            echo "::warning::Version $version does not match the pycti pin ($pycti_pin)"
-          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "repository=$repository" >> "$GITHUB_OUTPUT"
           echo "Publishing connectors-sdk $version to $repository" >> "$GITHUB_STEP_SUMMARY"
