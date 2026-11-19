@@ -559,7 +559,7 @@ class HatchingTriageSandboxConnector:
                 file_contents = self.triage_client.sample_task_file(
                     sample_id, task_id, filename
                 )
-            except RequestException as err:
+            except (json.JSONDecodeError, ServerError, RequestException) as err:
                 response = getattr(err, "response", None)
                 if response is not None:
                     status = response.status_code
@@ -593,30 +593,63 @@ class HatchingTriageSandboxConnector:
         return None
 
     def _search_for_analysis(self, search_query):
-        sample_id = None
+        if not self.use_existing_analysis:
+            return None
 
-        if self.use_existing_analysis:
+        sample_id = None
+        search_paginator = None
+
+        for attempt in range(1, self.max_attempts + 1):
+            status = None
             try:
-                search_paginator = self.triage_client.search(query=search_query, max=1)
-                for search in search_paginator:
-                    existing_status = search["status"]
-                    if existing_status == "reported":
-                        sample_id = search["id"]
-                        self.helper.connector_logger.info(
-                            f"Found existing analysis with id {sample_id} and status {existing_status}."
-                        )
-                    elif existing_status == "pending":
-                        sample_id = search["id"]
-                        self.helper.connector_logger.info(
-                            f"Found existing analysis with id {sample_id} and status {existing_status}."
-                        )
-                        self._wait_for_analysis(sample_id)
-                    break
-            except ServerError as e:
-                self.helper.connector_logger.warning(
-                    f"Search API returned an error for query '{search_query}': {e}. "
-                    "Falling back to submitting a new sample."
+                # Consume paginator to force API call
+                search_paginator = list(
+                    self.triage_client.search(query=search_query, max=1)
                 )
+            except (json.JSONDecodeError, ServerError, RequestException) as err:
+                response = getattr(err, "response", None)
+                if response is not None:
+                    status = response.status_code
+                if status is not None and status < 500:
+                    self.helper.connector_logger.warning(
+                        "Search API returned an error, skipping search and falling back to "
+                        "submitting a new sample.",
+                        meta={
+                            "search_query": search_query,
+                            "status": status,
+                        },
+                    )
+                    return None
+                elif attempt == self.max_attempts:
+                    raise
+            else:
+                break
+            self.helper.connector_logger.warning(
+                "Search API request failed, retrying...",
+                meta={
+                    "search_query": search_query,
+                    "status": status,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+
+        for search in search_paginator:
+            existing_status = search["status"]
+            if existing_status == "reported":
+                sample_id = search["id"]
+                self.helper.connector_logger.info(
+                    f"Found existing analysis with id {sample_id} and status {existing_status}."
+                )
+            elif existing_status == "pending":
+                sample_id = search["id"]
+                self.helper.connector_logger.info(
+                    f"Found existing analysis with id {sample_id} and status {existing_status}."
+                )
+                self._wait_for_analysis(sample_id)
+            break
 
         return sample_id
 
