@@ -1,135 +1,72 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia client module."""
 
-import json
-import time
 from typing import Any
-from urllib.parse import urljoin
 
-import requests
-from pycti import OpenCTIConnectorHelper
-
-from .constants import URLS_MAPPING
+from connectors_sdk import ApiClientError, BaseClientApi
 
 
-class MalpediaClient:
-    """Malpedia client."""
+class MalpediaClient(BaseClientApi):
+    """Malpedia API client.
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, api_key: str | None = None
-    ) -> None:
-        """Initialize Malpedia api client."""
-        self.helper = helper
-        self.api_key = api_key
-        self.api_url = URLS_MAPPING["default_api_url"]
+    The client does not catch errors. HTTP errors raise the connectors-sdk
+    client errors (`ApiForbiddenError`, `ApiNotFoundError`, ...). Network errors
+    raise `requests.RequestException`. The connector decides what to do with them.
 
-        if self.api_key == "" or self.api_key is None:
-            self.unauthenticated = True
-        else:
-            self.unauthenticated = False
-            if not self.token_check():
-                raise ValueError(
-                    "The API request failed because the token is invalid. "
-                    "Please enter a valid auth_key or "
-                    "run the connector in unauthenticated mode (no value)."
-                )
+    Malpedia answers authentication errors with 403, not 401.
+    """
 
-    def api_response(self, url: str, retry_delay: int):
-        if self.unauthenticated:
-            response = requests.get(url, timeout=30)
-        else:
-            prepared_headers = {"Authorization": "apitoken " + self.api_key}
-            response = requests.get(url, headers=prepared_headers, timeout=30)
+    API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
-        if (
-            response.status_code == 403
-            and response.text == '{"detail": "Invalid token."}'
-        ):
-            self.helper.connector_logger.error(
-                "[ERROR-API] The API request failed because the token is invalid.",
-                {
-                    "status_code": response.status_code,
-                    "reason": response.reason,
-                    "error": response.text,
-                },
+    def __init__(self, api_key: str | None = None) -> None:
+        """Initialize Malpedia API client."""
+        self._api_key = api_key or None
+        super().__init__(self.API_URL, timeout=30)
+
+    @property
+    def unauthenticated(self) -> bool:
+        """Tell whether the client runs without an API key."""
+        return self._api_key is None
+
+    @property
+    def session_headers(self) -> dict[str, str]:
+        """Send the API key, if any, with every request."""
+        if self._api_key is None:
+            return {}
+        return {"Authorization": f"apitoken {self._api_key}"}
+
+    def check_api_key(self) -> None:
+        """Check that Malpedia accepts the API key.
+
+        Raises:
+            ApiForbiddenError: Malpedia rejects the API key.
+            ApiClientError: Malpedia sends an unexpected answer.
+        """
+        response = self._get("check/apikey")
+        detail = response.get("detail", "") if isinstance(response, dict) else ""
+        if "Valid token" not in detail:
+            raise ApiClientError(
+                "Unexpected answer from Malpedia to the API key check",
+                status_code=200,
+                response_body=response,
             )
-            self.helper.metric.inc("client_error_count")
-            return response.json()
 
-        elif response.status_code == 404 and response.reason == "Not Found":
-            detail = json.loads(response.text).get("detail", None)
-            self.helper.connector_logger.info(
-                "[API] The API request failed because the URL name does not exist for the identified actor :",
-                {
-                    "status_code": response.status_code,
-                    "reason": response.reason,
-                    "url": url,
-                    "detail": detail,
-                },
-            )
-            self.helper.metric.inc("client_error_count")
-            return response.json()
-        elif response.status_code == 429:
-            available_in = json.loads(response.text).get("available_in", "0 seconds")
-            delay, unit = available_in.split()
+    def get_version(self) -> int:
+        """Get the current Malpedia version (commit number)."""
+        return int(self._get("get/version")["version"])
 
-            self.helper.connector_logger.info(
-                "[API] You have exceeded the speed or frequency limit allowed by the server, "
-                "your request will automatically retry in seconds. "
-                "If the value of available_in is greater than the value of retry_delay, "
-                "we use the latter as the delay time.",
-                {
-                    "status_code": response.status_code,
-                    "reason": response.reason,
-                    "retry_delay_in_seconds": retry_delay,
-                    "available_in": available_in,
-                },
-            )
-            if retry_delay < int(delay):
-                time.sleep(int(delay))
-            else:
-                time.sleep(retry_delay)
-            return None
-        elif response.status_code == 200:
-            return response.json()
-        else:
-            self.helper.metric.inc("client_error_count")
-            response.raise_for_status()
-            return None
+    def get_families(self) -> dict[str, Any]:
+        """Get the metadata of all families, by family ID."""
+        return self._get("get/families")
 
-    def query(self, url_path: str) -> Any:
-        url = urljoin(URLS_MAPPING["default_api_url"], url_path)
-        try:
+    def get_yara_rules(self, family_id: str) -> dict[str, Any]:
+        """Get the YARA rules of a family, grouped by TLP level."""
+        return self._get(f"get/yara/{family_id}")
 
-            max_retries = 3
-            retry_delay = 65  # in second
+    def get_samples(self, family_id: str) -> list[dict[str, Any]]:
+        """Get the samples of a family. Needs an API key."""
+        return self._get(f"list/samples/{family_id}")
 
-            for _ in range(max_retries):
-                data = self.api_response(url, retry_delay)
-                if data is None:
-                    continue
-                return data
-
-        except requests.exceptions.RequestException as e:
-            self.helper.connector_logger.error(
-                "[ERROR-API] Error in Malpedia query:", {"error": str(e)}
-            )
-            self.helper.metric.inc("client_error_count")
-            return None
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[ERROR-API] Some error occurred during a query with API",
-                {"error": str(err)},
-            )
-            return None
-
-    def token_check(self) -> bool:
-        response_json = self.query("check/apikey")
-        if response_json and "Valid token" in response_json["detail"]:
-            return True
-        else:
-            return False
-
-    def current_version(self) -> int:
-        response_json = self.query("get/version")
-        return int(response_json["version"])
+    def get_actor(self, actor_id: str) -> dict[str, Any]:
+        """Get the metadata of an actor."""
+        return self._get(f"get/actor/{actor_id}")

@@ -5,7 +5,6 @@ LAST_RUN: str = "last_run"
 LAST_VERSION: str = "last_version"
 
 URLS_MAPPING: dict[str, str] = {
-    "default_api_url": "https://malpedia.caad.fkie.fraunhofer.de/api/",
     "base_url_actor": "https://malpedia.caad.fkie.fraunhofer.de/actor/",
 }
 

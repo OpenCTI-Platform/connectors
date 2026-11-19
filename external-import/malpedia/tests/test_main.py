@@ -25,7 +25,7 @@ def mock_malpedia_client(monkeypatch):
     """Mock authentication request of MalpediaClient."""
 
     monkeypatch.setattr(
-        "malpedia_services.client.MalpediaClient.token_check", MagicMock()
+        "malpedia_services.client.MalpediaClient.check_api_key", MagicMock()
     )
 
 

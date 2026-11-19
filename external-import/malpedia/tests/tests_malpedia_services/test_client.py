@@ -1,147 +1,146 @@
-from unittest.mock import Mock, patch
+import json
+from unittest.mock import patch
 
 import pytest
 import requests
+from connectors_sdk import (
+    ApiClientError,
+    ApiForbiddenError,
+    ApiNotFoundError,
+    ApiServerError,
+)
 from malpedia_services import MalpediaClient
 
+API_URL = "https://malpedia.caad.fkie.fraunhofer.de/api/"
 
-class MockMalpediaClient(MalpediaClient):
-    """Skip real authentication request for tests."""
 
-    def token_check(self) -> bool:
-        return self.api_key is not None
+def make_response(status_code: int, body) -> requests.Response:
+    """Build a JSON response, as Malpedia sends them."""
+    response = requests.Response()
+    response.status_code = status_code
+    response.headers["Content-Type"] = "application/json"
+    response._content = json.dumps(body).encode()
+    return response
+
+
+@pytest.fixture
+def mock_request():
+    """Mock the HTTP layer of the client session."""
+    with patch.object(requests.Session, "request") as mock:
+        yield mock
 
 
 class TestMalpediaClient:
 
-    @pytest.fixture(scope="class")
-    def mock_helper(self):
-        """Mock `OpenCTIConnectorHelper` instance as it's used only for logs."""
-        return Mock()
+    def test_client_with_api_key(self):
+        client = MalpediaClient(api_key="test-api-key")
+
+        assert client.unauthenticated is False
+        assert client._session.headers["Authorization"] == "apitoken test-api-key"
+
+    @pytest.mark.parametrize("api_key", [None, ""], ids=["--None", "--Empty"])
+    def test_client_without_api_key(self, api_key):
+        client = MalpediaClient(api_key=api_key)
+
+        assert client.unauthenticated is True
+        assert "Authorization" not in client._session.headers
+
+    def test_client_timeout(self, mock_request):
+        mock_request.return_value = make_response(200, {"version": 1})
+
+        MalpediaClient().get_version()
+
+        assert mock_request.call_args.kwargs["timeout"] == 30
+
+    def test_check_api_key_valid(self, mock_request):
+        mock_request.return_value = make_response(200, {"detail": "Valid token."})
+
+        MalpediaClient(api_key="test-api-key").check_api_key()
+
+        mock_request.assert_called_once()
+        assert mock_request.call_args.args == ("GET", API_URL + "check/apikey")
+
+    def test_check_api_key_rejected(self, mock_request):
+        # Real Malpedia answer to an invalid key: 403, not 401.
+        mock_request.return_value = make_response(403, {"detail": "Invalid token."})
+
+        with pytest.raises(ApiForbiddenError):
+            MalpediaClient(api_key="test-api-key").check_api_key()
+
+    def test_check_api_key_unexpected_answer(self, mock_request):
+        mock_request.return_value = make_response(200, {"detail": "Something else"})
+
+        with pytest.raises(ApiClientError):
+            MalpediaClient(api_key="test-api-key").check_api_key()
 
     @pytest.mark.parametrize(
-        "query_response, expected_result",
+        "method, args, path, body, expected",
         [
-            ({"detail": "Invalid token."}, False),
-            ({"detail": "Valid token."}, True),
+            ("get_version", (), "get/version", {"version": 26649}, 26649),
+            (
+                "get_families",
+                (),
+                "get/families",
+                {"win.emotet": {"uuid": "1"}},
+                {"win.emotet": {"uuid": "1"}},
+            ),
+            (
+                "get_yara_rules",
+                ("win.emotet",),
+                "get/yara/win.emotet",
+                {"tlp_white": {"rule.yar": "rule a {}"}},
+                {"tlp_white": {"rule.yar": "rule a {}"}},
+            ),
+            (
+                "get_samples",
+                ("win.emotet",),
+                "list/samples/win.emotet",
+                [{"sha256": "a" * 64}],
+                [{"sha256": "a" * 64}],
+            ),
+            (
+                "get_actor",
+                ("apt28",),
+                "get/actor/apt28",
+                {"value": "APT28"},
+                {"value": "APT28"},
+            ),
         ],
-        ids=[
-            "--Token--Invalid",
-            "--Token--Valid",
-        ],
+        ids=["--Version", "--Families", "--Yara", "--Samples", "--Actor"],
     )
-    def test_token_check(self, mock_helper, query_response, expected_result):
-        # Create an instance of `MalpediaClient` without api key (to skip validation)
-        malpedia_client = MalpediaClient(mock_helper, api_key=None)
+    def test_getters(self, mock_request, method, args, path, body, expected):
+        mock_request.return_value = make_response(200, body)
 
-        with patch.object(malpedia_client, "query") as mock_query:
-            # Add api_key and mock authentication request's response
-            malpedia_client.api_key = "test-api-key"
-            mock_query.return_value = query_response
+        result = getattr(MalpediaClient(), method)(*args)
 
-            assert malpedia_client.token_check() == expected_result
+        assert result == expected
+        assert mock_request.call_args.args == ("GET", API_URL + path)
 
     @pytest.mark.parametrize(
-        "api_key, response_data, expected_result",
+        "status_code, body, expected_error",
         [
-            (
-                "test-api-key",
-                {"data": "fake_data_unauthenticated"},
-                {"data": "fake_data_unauthenticated"},
-            ),
-            (
-                None,
-                {"data": "fake_data_authenticated"},
-                {"data": "fake_data_authenticated"},
-            ),
-            (
-                "test-api-key",
-                requests.exceptions.RequestException(),
-                None,
-            ),
-            (
-                None,
-                requests.exceptions.RequestException(),
-                None,
-            ),
+            (404, {"detail": "No Actor matches the given query."}, ApiNotFoundError),
+            (500, {"detail": "Server error"}, ApiServerError),
         ],
-        ids=[
-            "--Unauthenticated--Success",
-            "--Authenticated--Success",
-            "--Unauthenticated--RequestException",
-            "--Authenticated--RequestException",
-        ],
+        ids=["--404-Not-Found", "--500-Server-Error"],
     )
-    def test_query(self, mock_helper, api_key, response_data, expected_result):
-        malpedia_client = MockMalpediaClient(mock_helper, api_key=api_key)
+    def test_http_errors_raise(self, mock_request, status_code, body, expected_error):
+        mock_request.return_value = make_response(status_code, body)
 
-        with patch.object(malpedia_client, "api_response") as mock_api_response:
-            mock_api_response.return_value = response_data
-
-            result = malpedia_client.query("fake_endpoint")
-            if isinstance(result, requests.exceptions.RequestException):
-                assert expected_result is None
-            else:
-                assert result == expected_result
+        with pytest.raises(expected_error):
+            MalpediaClient().get_actor("unknown")
 
     @pytest.mark.parametrize(
-        "api_key, status_code, expected_result",
+        "network_error",
         [
-            ("test-api-key", 403, {"detail": "Invalid token."}),
-            (None, 403, {"detail": "Invalid token."}),
-            ("test-api-key", 404, None),
-            (None, 404, None),
-            ("test-api-key", 429, {"available_in": "16 seconds"}),
-            (None, 429, {"available_in": "16 seconds"}),
-            ("test-api-key", 200, {"data": "fake_data"}),
-            (None, 200, {"data": "fake_data"}),
-            ("test-api-key", 500, None),
-            (None, 500, None),
+            requests.exceptions.ProxyError("Unable to connect to proxy"),
+            requests.exceptions.ConnectTimeout("Connection timed out"),
+            requests.exceptions.ConnectionError("Name or service not known"),
         ],
-        ids=[
-            "--Authenticated--403-Invalid-token",
-            "--Unauthenticated--403-Invalid-token",
-            "--Authenticated--404-Invalid-token",
-            "--Unauthenticated--404-Invalid-token",
-            "--Authenticated--429-Too-Many-Requests",
-            "--Unauthenticated--429-Too-Many-Requests",
-            "--Authenticated--200-Ok",
-            "--Unauthenticated--200-Ok",
-            "--Authenticated--500-Internal-Server-Error",
-            "--Unauthenticated--500-Internal-Server-Error",
-        ],
+        ids=["--Proxy", "--Timeout", "--DNS"],
     )
-    def test_api_response(self, mock_helper, api_key, status_code, expected_result):
-        malpedia_client = MockMalpediaClient(mock_helper, api_key=api_key)
+    def test_network_errors_raise(self, mock_request, network_error):
+        mock_request.side_effect = network_error
 
-        with patch("requests.get") as mock_get, patch("time.sleep") as mock_sleep:
-            mock_get.return_value.status_code = status_code
-
-            if status_code == 403:
-                mock_get.return_value.text = '{"detail": "Invalid token."}'
-                mock_get.return_value.json.return_value = expected_result
-            elif status_code == 404:
-                mock_get.return_value.reason = "No Found"
-            elif status_code == 429:
-                mock_get.return_value.text = '{"available_in": "16 seconds"}'
-            elif status_code == 200:
-                mock_get.return_value.json.return_value = expected_result
-            else:
-                pass
-
-            result = malpedia_client.api_response("fake_url", 0)
-
-            # Check if time.sleep was called if status code is 429
-            if status_code == 429:
-                mock_sleep.assert_called_once()
-                assert result is None
-            else:
-                mock_sleep.assert_not_called()
-                assert result == expected_result
-
-    def test_current_version(self, mock_helper):
-        malpedia_client = MockMalpediaClient(mock_helper)
-
-        with patch.object(malpedia_client, "query", return_value={"version": 10}):
-            result = malpedia_client.current_version()
-            assert result == 10
+        with pytest.raises(type(network_error)):
+            MalpediaClient(api_key="test-api-key").check_api_key()
