@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'CHANGEME'
-  type: 'EXTERNAL_IMPORT'
   name: 'SIEM Rules'
   scope: 'siemrules'
   confidence_level: 70
