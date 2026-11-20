@@ -36,8 +36,20 @@ This connector fetches the recent URL additions from URLhaus and imports them as
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- Internet access to the URLhaus API (`urlhaus-api.abuse.ch`)
-- An abuse.ch Auth-Key, free from the [abuse.ch Authentication Portal](https://auth.abuse.ch)
+- Internet access to the URLhaus API: `urlhaus-api.abuse.ch` (community mode) or `api.spamhaus.com` (commercial mode)
+- One of the two authentication modes below
+
+### Authentication modes
+
+| Mode | Variables | Host | Data |
+|------|-----------|------|------|
+| Community | `URLHAUS_AUTH_KEY`: abuse.ch Auth-Key, free from the [abuse.ch Authentication Portal](https://auth.abuse.ch) | `urlhaus-api.abuse.ch`, `Auth-Key` in the export URL | `recent.csv` export (last 30 days) |
+| Commercial | `URLHAUS_SPAMHAUS_USERNAME` and `URLHAUS_SPAMHAUS_PASSWORD`: Spamhaus abuse.ch API account, from the [Spamhaus Customer Portal](https://portal.spamhaus.com) | `api.spamhaus.com`, JWT in the `Authorization` header | `GET /urlhaus/v1/urls` since the last checkpoint, no daily export limit |
+
+- At least one mode is required: the configuration is rejected at startup otherwise.
+- When both are set, the commercial mode is used. If it cannot be used (network error, HTTP 5xx, rejected credentials), the connector logs a warning, which holds no secret, and falls back to the community export. With commercial credentials only, the run fails with a message asking to check the Spamhaus credentials.
+- `URLHAUS_SPAMHAUS_USERNAME` and `URLHAUS_SPAMHAUS_PASSWORD` go together. The password is never logged nor written in a work message.
+- `URLHAUS_SPAMHAUS_IMPORT_FROM` (ISO-8601 date or duration, default `P30D`) sets where the first commercial run starts. Later runs start from the last imported URL, and follow every page of results.
 
 ## Configuration variables
 
@@ -69,7 +81,11 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_INTERVAL=3
+      # Community mode (and fallback of the commercial mode)
       - URLHAUS_AUTH_KEY=ChangeMe
+      # Commercial mode, instead of or in addition to the Auth-Key
+      # - URLHAUS_SPAMHAUS_USERNAME=ChangeMe
+      # - URLHAUS_SPAMHAUS_PASSWORD=ChangeMe
       - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true
@@ -108,7 +124,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 ## Behavior
 
-The connector fetches the recent CSV export from URLhaus and creates URL observables and indicators in OpenCTI.
+The connector fetches the recent URLs from URLhaus and creates URL observables and indicators in OpenCTI. In community mode it downloads the recent CSV export. In commercial mode it queries `GET /urlhaus/v1/urls` with `since` set to the last checkpoint (`URLHAUS_SPAMHAUS_IMPORT_FROM` on the first run) and follows the cursor pagination (`page_size` and `after`). The JWT obtained from `POST /v1/login` is reused until it is close to its expiry, and renewed once when the API answers 401. Every request carries the User-Agent `OpenCTI-urlhaus/rolling`.
 
 ### Data Flow
 
@@ -148,6 +164,24 @@ graph LR
 | tags                 | Observable.labels       | Malware family tags                              |
 | urlhaus_link         | External Reference      | Link to URLhaus entry                            |
 | reporter             | Indicator.description   | Reporter username                                |
+
+### Commercial API fields
+
+The JSON records of the commercial API are mapped to the same columns as the CSV export:
+
+| Commercial API field | CSV column |
+|----------------------|------------|
+| `id` | `id` |
+| `first_seen` | `dateadded` |
+| `url` | `url` |
+| `url_status` (`online`, `offline`, `unknown`) | `url_status` |
+| `last_online` (omitted while the URL is online) | `last_online` |
+| `threat` | `threat` |
+| `tags` (list) | `tags` (comma-separated) |
+| `urlhaus_reference` | `urlhaus_link` |
+| `reporter` | `reporter` |
+
+A record without `id`, `url`, `url_status`, `first_seen` or `urlhaus_reference` is skipped with a warning.
 
 ### CSV Schema
 
@@ -195,12 +229,13 @@ CONNECTOR_LOG_LEVEL=debug
 ```
 
 Log output includes:
-- CSV download status
+- CSV download status, or the Spamhaus login and page requests (never the password nor the JWT)
 - URL processing progress
 - Threat relationship creation
 
 ## Additional information
 
+- **Spamhaus rate limits**: the connector logs in once and reuses the JWT (valid 24 hours). Spamhaus throttles or blocks clients that log in for each request.
 - **Auth-Key**: abuse.ch requires an Auth-Key to download URLhaus exports. Create an account on the [abuse.ch Authentication Portal](https://auth.abuse.ch) to get one. The same key works for ThreatFox and MalwareBazaar. The export endpoint only accepts the key in the URL path, so the connector builds `https://urlhaus-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv` from `URLHAUS_AUTH_KEY` and never logs it.
 - **Retired public feed**: the former default `URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/` answers 410 Gone. It is ignored when `URLHAUS_AUTH_KEY` is set; remove it from your configuration.
 - **Recent export**: the export holds the URLs added in the last 30 days
