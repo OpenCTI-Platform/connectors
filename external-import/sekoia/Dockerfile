@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 WORKDIR /opt/opencti-connector-sekoia
 
