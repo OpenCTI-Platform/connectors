@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from unittest.mock import MagicMock, call
 
 import freezegun
@@ -17,7 +18,7 @@ def test_connector_init(
     assert connector.base_url == "https://test-ctx-url/"
     assert connector.api_key == "test-api-key"
     assert connector.feed_ids == ["feed-1", "feed-2"]
-    assert connector.interval_hours == 1
+    assert connector.config.connector.duration_period == timedelta(hours=1)
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
 
@@ -577,14 +578,3 @@ def test_run_in_work_failure(connector: CyberThreatExchangeConnector) -> None:
     assert call_kwargs["in_error"] is True
     assert "[CyberThreatExchange] Work failed" in call_kwargs["message"]
     assert "ValueError: Test error" in call_kwargs["message"]
-
-
-@freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_get_param(connector: CyberThreatExchangeConnector) -> None:
-    """Test _get_param method"""
-    result = connector._get_param("base_url")
-    assert result == "https://test-ctx-url/"
-
-    result = connector._get_param("interval_hours", is_number=True)
-    assert result == 1
-    assert isinstance(result, int)

@@ -56,29 +56,35 @@ The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds
 
 ### Configuration Variables
 
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+
+They are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
 #### OpenCTI Parameters
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+| Parameter | Docker envvar | config.yml | Mandatory | Description |
+|-----------|---------------|------------|-----------|-------------|
+| OpenCTI URL | `OPENCTI_URL` | `opencti.url` | Yes | The URL of the OpenCTI platform |
+| OpenCTI Token | `OPENCTI_TOKEN` | `opencti.token` | Yes | The default admin token configured in the OpenCTI platform |
 
 #### Base Connector Parameters
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
+|-----------|---------------|------------|-----------|---------|-------------|
+| Connector ID | `CONNECTOR_ID` | `connector.id` | No | `b51736f7-7ed8-4c41-b247-eadd836f4f6c` | A unique `UUIDv4` for this connector |
+| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `CyberThreatExchange` | Name displayed in OpenCTI |
+| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `cyberthreatexchange` | The scope of the connector |
+| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
+| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `PT1H` | Polling interval as an ISO 8601 duration. The connector polls Cyber Threat Exchange for new Reports in the Feed(s) at this schedule. The minimum and recommended value is `PT1H` |
 
 #### Connector Extra Parameters
 
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | Yes | `https://api.cyberthreatexchange.com/` | Cyber Threat Exchange API URL |
+| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
+|-----------|---------------|------------|-----------|---------|-------------|
+| Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | No | `https://api.cyberthreatexchange.com/` | Cyber Threat Exchange API URL |
 | API Key | `CYBERTHREATEXCHANGE_API_KEY` | `cyberthreatexchange.api_key` | Yes | - | API key for authentication |
-| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
-| Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | Yes | `1` | Polling interval in hours. The connector with poll Cyber Threat Exchange for new Reports in the Feed(s) at this schedule. The minimum value allowed and recommended value is `1` |
+| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. The connector stops at startup when no Feed ID is set |
+| Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | No | - | **Deprecated**: use `CONNECTOR_DURATION_PERIOD` instead. Polling interval in hours, still honoured when `CONNECTOR_DURATION_PERIOD` is not set |
 
 ---
 
@@ -98,10 +104,10 @@ services:
       - CONNECTOR_ID=${CONNECTOR_CYBERTHREATEXCHANGE_ID}
       - CONNECTOR_NAME=CyberThreatExchange
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - CYBERTHREATEXCHANGE_BASE_URL=https://api.cyberthreatexchange.com/
       - CYBERTHREATEXCHANGE_API_KEY=${CYBERTHREATEXCHANGE_API_KEY}
       - CYBERTHREATEXCHANGE_FEED_IDS=feed1-uuid,feed2-uuid
-      - CYBERTHREATEXCHANGE_INTERVAL_HOURS=12
     restart: always
     depends_on:
       - opencti
@@ -191,7 +197,7 @@ graph LR
    - All historical intelligence from reports is ingested
    - New intelligence added to feeds is imported on schedule
 3. **Incremental Updates**:
-   - Polls at configured interval (default: 12 hours)
+   - Polls at the interval set by `CONNECTOR_DURATION_PERIOD` (default: 1 hour)
    - Only fetches new/updated intelligence since last run
 
 ---

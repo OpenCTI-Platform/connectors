@@ -18,12 +18,12 @@ def config_dict() -> dict[str, Any]:
             "name": "CyberThreatExchange",
             "scope": "cyberthreatexchange",
             "log_level": "info",
+            "duration_period": "PT1H",
         },
         "cyberthreatexchange": {
             "base_url": "https://test-ctx-url/",
             "api_key": "test-api-key",
             "feed_ids": "feed-1,feed-2",
-            "interval_hours": "1",
         },
     }
 
