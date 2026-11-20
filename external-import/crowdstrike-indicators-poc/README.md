@@ -19,6 +19,8 @@ contracts that do not depend on OpenCTI:
      their `indicates` relationships, from a local ATT&CK dataset;
    - the whole turned into a standard STIX 2.1 bundle, ready for a STIX
      consumer;
+   - that bundle credited to the CrowdStrike organization, as the existing
+     CrowdStrike connector does;
 3. a loader: each STIX bundle delivered to a destination, for now a JSON file
    per bundle;
 4. a generic connector assembling the three, running them on a schedule.
@@ -57,6 +59,7 @@ src/
       add_malware.py          CrowdStrikeAddMalware
       add_attack_patterns.py  AttackPatternCatalog, CrowdStrikeAddAttackPatterns
       make_bundle.py          MakeStixBundle
+      add_identity.py         CrowdStrikeAddIdentity
 tests/                        pytest, no network
 ```
 
@@ -573,6 +576,47 @@ such as OpenCTI takes.
   naming an object the bundle does not hold makes the step raise
   `ItemConversionError`, naming the indicator and the missing id. OpenCTI
   rejects such bundles, so the gap is caught here.
+
+### Author identity
+
+`CrowdStrikeAddIdentity` follows `MakeStixBundle`: it takes the STIX bundle and
+returns it credited to CrowdStrike, as the existing CrowdStrike connector
+credits what it imports.
+
+```json
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [
+    {
+      "type": "identity",
+      "id": "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed",
+      "created": "1970-01-01T00:00:00.000Z",
+      "modified": "1970-01-01T00:00:00.000Z",
+      "name": "CrowdStrike",
+      "identity_class": "organization",
+      "...": "..."
+    },
+    {"type": "indicator", "created_by_ref": "identity--f29f12ba-...", "...": "..."},
+    {"type": "malware", "created_by_ref": "identity--f29f12ba-...", "...": "..."}
+  ]
+}
+```
+
+- The identity is the `CrowdStrike` organization, with the id the existing
+  connector gives its author: pycti's
+  `Identity.generate_id("CrowdStrike", "organization")`, computed here without
+  pycti. It comes first, has no `created_by_ref` of its own, and is not
+  repeated if the bundle already holds it.
+- Its `created` and `modified` are fixed at 1970-01-01, since CrowdStrike gives
+  no date for itself: the same input always gives the same bundle.
+- Every other object gets a `created_by_ref` to the identity, except an object
+  that already has one, which keeps it. Nothing else changes: the bundle keeps
+  its id, the objects their order and their properties, `x_crowdstrike_*`
+  included.
+- An object that cannot hold a `created_by_ref`, such as a STIX
+  cyber-observable, makes the step raise `ItemConversionError`, naming the
+  bundle.
 
 ## Setup
 
