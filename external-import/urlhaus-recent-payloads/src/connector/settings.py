@@ -3,7 +3,6 @@ from datetime import timedelta
 from typing import ClassVar
 
 from connectors_sdk import (
-    AbuseChAuthConfigMixin,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
@@ -12,6 +11,7 @@ from connectors_sdk import (
 )
 from connectors_sdk.settings.deprecations import DeprecatedField
 from pydantic import ConfigDict, Field, SecretStr, model_validator
+from spamhaus_client import AbuseChAuthConfigMixin
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):

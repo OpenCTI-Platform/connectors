@@ -11,14 +11,14 @@ from connector.payloads_client import (
     to_utc_iso,
 )
 from connector.settings import ConnectorSettings
-from connectors_sdk import (
-    ApiNotFoundError,
+from connectors_sdk import ApiNotFoundError
+from pycti import OpenCTIConnectorHelper
+from pycti import __version__ as pycti_version
+from spamhaus_client import (
     SpamhausAuthenticationError,
     SpamhausClient,
     SpamhausCommercialError,
 )
-from pycti import OpenCTIConnectorHelper
-from pycti import __version__ as pycti_version
 
 CONNECTOR_SLUG = "urlhaus-recent-payloads"
 STATE_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"

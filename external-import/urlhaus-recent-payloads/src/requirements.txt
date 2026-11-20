@@ -4,3 +4,4 @@ python-magic-bin~=0.4.14; sys_platform == 'win32'
 pydantic==2.14.0
 pyzipper~=0.4.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+spamhaus-client @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=shared/spamhaus_client

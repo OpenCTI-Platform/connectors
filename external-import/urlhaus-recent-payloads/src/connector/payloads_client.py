@@ -1,6 +1,6 @@
 """Helpers for the Spamhaus commercial URLhaus payloads endpoints.
 
-Authentication, pagination and retries are handled by `connectors_sdk.SpamhausClient`.
+Authentication, pagination and retries are handled by `spamhaus_client.SpamhausClient`.
 This module only maps the JSON of ``GET /urlhaus/v1/payloads`` and opens the sample
 archives of ``GET /urlhaus/v1/files/samples/{sha256_hash}``.
 """

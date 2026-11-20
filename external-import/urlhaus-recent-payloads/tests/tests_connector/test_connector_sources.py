@@ -9,11 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 import pyzipper
 from connector import ConnectorSettings, URLHausRecentPayloads
-from connectors_sdk import (
-    ApiNotFoundError,
-    SpamhausAuthenticationError,
-    SpamhausUnavailableError,
-)
+from connectors_sdk import ApiNotFoundError
 from helpers import (
     AUTH_KEY,
     BOTH,
@@ -23,12 +19,13 @@ from helpers import (
     USERNAME,
     make_settings,
 )
+from spamhaus_client import SpamhausAuthenticationError, SpamhausUnavailableError
 
 SPAMHAUS_SHA = "a" * 64
 
 
 class FakeSpamhausClient:
-    """Stands in for `connectors_sdk.SpamhausClient`; records how it is used."""
+    """Stands in for `spamhaus_client.SpamhausClient`; records how it is used."""
 
     instances: list["FakeSpamhausClient"] = []
 
