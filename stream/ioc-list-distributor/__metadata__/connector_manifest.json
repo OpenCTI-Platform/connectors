@@ -1,0 +1,26 @@
+{
+  "title": "IOC List Distributor",
+  "slug": "ioc-list-distributor",
+  "description": "Listens to an OpenCTI live stream, keeps the current IP, domain, URL and hash indicators in a local SQLite database (added on create and update, removed on revoke and delete) and publishes them as plain-text lists (one entry per line) over HTTP and/or HTTPS, for any client to pull. Two services share one image: connector (stream to database) and feed-distributor (database to files to HTTP).",
+  "short_description": "Turns an OpenCTI live stream into plain-text IP, domain, URL and hash feeds.",
+  "logo": null,
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Free",
+  "contact": "alex.su@filigran.io",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261023.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/ioc-list-distributor",
+  "manager_supported": false,
+  "container_version": "1.0.0",
+  "container_image": "opencti/connector-ioc-list-distributor",
+  "container_type": "STREAM"
+}

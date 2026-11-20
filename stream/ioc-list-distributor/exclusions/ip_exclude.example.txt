@@ -1,0 +1,8 @@
+# IP exclude list: never exported to ip.txt, and URLs whose host is one of these IPs are
+# never exported to url.txt. One IP or CIDR per line; blank lines and # comments are ignored.
+# To use it: copy to ip_exclude.txt, set EXPORT_IP_EXCLUDE_FILE=/config/ip_exclude.txt
+# in .env, and restart the feed-distributor.
+#
+# 8.8.8.8              # Google DNS
+# 1.1.1.0/24           # Cloudflare DNS
+# 2001:4860:4860::8888
