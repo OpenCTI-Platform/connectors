@@ -4,7 +4,6 @@ from typing import ClassVar, Optional
 from urllib.parse import quote, urlparse
 
 from connectors_sdk import (
-    AbuseChAuthConfigMixin,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
@@ -12,6 +11,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from pydantic import Field, SecretStr, field_validator, model_validator
+from spamhaus_client import AbuseChAuthConfigMixin
 
 EXPORT_URL_TEMPLATE = (
     "https://urlhaus-api.abuse.ch/v2/files/exports/{auth_key}/recent.csv"

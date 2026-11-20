@@ -4,10 +4,10 @@ from io import StringIO
 from typing import Generator
 
 import requests
-from connectors_sdk import SpamhausClient, SpamhausCommercialError
 from connectors_sdk.exceptions.error import DataRetrievalError
 from dateutil.parser import parse
 from external_import_connector.spamhaus_urls import SpamhausUrlsClient
+from spamhaus_client import SpamhausClient, SpamhausCommercialError
 
 # Seconds to wait for the server; the recent export is about 30 MB.
 REQUEST_TIMEOUT = 300
@@ -33,7 +33,7 @@ class ConnectorClient:
             f"OpenCTI-{USER_AGENT_NAME}/{USER_AGENT_VERSION}"
         )
 
-        # Commercial mode: the SDK client logs in and reuses the JWT
+        # Commercial mode: the `spamhaus_client` package logs in and reuses the JWT
         self.spamhaus = None
         if self.config.urlhaus.use_commercial:
             self.spamhaus = SpamhausClient(

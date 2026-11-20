@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk import SpamhausUnavailableError
 from external_import_connector.connector import ConnectorState
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.spamhaus_urls import (
@@ -10,6 +9,7 @@ from external_import_connector.spamhaus_urls import (
     SpamhausUrlsClient,
     item_to_row,
 )
+from spamhaus_client import SpamhausUnavailableError
 
 FIRST_SEEN = "2026-10-30T14:53:12Z"
 FIRST_SEEN_TS = datetime(2026, 10, 30, 14, 53, 12, tzinfo=timezone.utc).timestamp()

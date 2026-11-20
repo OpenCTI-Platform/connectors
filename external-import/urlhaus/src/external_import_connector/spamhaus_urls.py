@@ -49,7 +49,7 @@ def _format_since(moment: datetime) -> str:
 class SpamhausUrlsClient:
     """Read the URLs added to URLhaus since the checkpoint, page by page.
 
-    `spamhaus` is the SDK `SpamhausClient`: it logs in, reuses the JWT, renews it
+    `spamhaus` is the `spamhaus_client.SpamhausClient`: it logs in, reuses the JWT, renews it
     once on a 401, and follows the cursor pagination (`paginate`).
     """
 
