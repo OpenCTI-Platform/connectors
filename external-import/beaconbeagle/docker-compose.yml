@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=BEACONBEAGLE
       - CONNECTOR_SCOPE=beaconbeagle
       - CONNECTOR_LOG_LEVEL=error
