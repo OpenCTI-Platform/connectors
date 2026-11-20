@@ -159,6 +159,7 @@ docker compose up -d connector-ctm360-cyberblindspot
 | `CONNECTOR_SCOPE` | Connector scope identifier | `CTM360-CyberBlindSpot` | No |
 | `CONNECTOR_TYPE` | Connector type (must be `EXTERNAL_IMPORT`) | `EXTERNAL_IMPORT` | No |
 | `CONNECTOR_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error` | `error` | No |
+| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration to wait between two import cycles, for example `PT24H` | `PT24H` | No |
 
 ### CTM360 CyberBlindSpot Variables
 
@@ -166,7 +167,7 @@ docker compose up -d connector-ctm360-cyberblindspot
 |----------|-------------|---------|----------|
 | `CTM360_CBS_API_KEY` | API key for CyberBlindSpot authentication | — | Yes |
 | `CTM360_CBS_API_BASE_URL` | CyberBlindSpot API base URL | `https://cbs.ctm360.com` | No |
-| `CTM360_CBS_IMPORT_INTERVAL` | Interval in seconds between imports | `86400` (24h) | No |
+| `CTM360_CBS_IMPORT_INTERVAL` | **Deprecated**, use `CONNECTOR_DURATION_PERIOD`. Interval in seconds between imports, only read when `CONNECTOR_DURATION_PERIOD` is not set | — | No |
 | `CTM360_CBS_IMPORT_INCIDENTS` | Enable importing incidents | `true` | No |
 | `CTM360_CBS_IMPORT_MALWARE_LOGS` | Enable importing malware logs | `true` | No |
 | `CTM360_CBS_IMPORT_BREACHED_CREDENTIALS` | Enable importing breached credentials | `true` | No |
@@ -299,7 +300,7 @@ before failing.
 
 - The connector is configured with a 512 MB memory limit (`mem_limit: 512m`).
 - If large data volumes (> 10,000 records per category) cause memory pressure,
-  reduce `CTM360_CBS_IMPORT_INTERVAL` to import more frequently in smaller
+  reduce `CONNECTOR_DURATION_PERIOD` to import more frequently in smaller
   batches.
 
 ### Debug logging

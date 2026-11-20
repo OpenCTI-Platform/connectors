@@ -47,6 +47,12 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
     "CTM360_CBS_API_BASE_URL": {
       "default": "https://cbs.ctm360.com",
       "description": "CyberBlindSpot API base URL.",
@@ -62,9 +68,9 @@
       "writeOnly": true
     },
     "CTM360_CBS_IMPORT_INTERVAL": {
-      "default": 86400,
-      "description": "Interval in seconds between imports (default: 24h).",
-      "exclusiveMinimum": 0,
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_DURATION_PERIOD instead.",
       "type": "integer"
     },
     "CTM360_CBS_IMPORT_INCIDENTS": {
