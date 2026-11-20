@@ -159,7 +159,6 @@ docker compose up -d connector-ctm360-cyberblindspot
 | `CONNECTOR_SCOPE` | Connector scope identifier | `CTM360-CyberBlindSpot` | No |
 | `CONNECTOR_TYPE` | Connector type (must be `EXTERNAL_IMPORT`) | `EXTERNAL_IMPORT` | No |
 | `CONNECTOR_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error` | `error` | No |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration required by the SDK base config (runtime scheduling actually uses `CTM360_CBS_IMPORT_INTERVAL`) | `PT24H` | No |
 
 ### CTM360 CyberBlindSpot Variables
 

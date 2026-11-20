@@ -13,7 +13,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | string | `["CTM360-CyberBlindSpot"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
-| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P1D"` | The period of time to await between two runs of the connector. |
 | CTM360_CBS_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://cbs.ctm360.com"` | CyberBlindSpot API base URL. |
 | CTM360_CBS_IMPORT_INTERVAL | `integer` |  | `0 < x ` | `86400` | Interval in seconds between imports (default: 24h). |
 | CTM360_CBS_IMPORT_INCIDENTS | `boolean` |  | boolean | `true` | Enable importing incidents. |

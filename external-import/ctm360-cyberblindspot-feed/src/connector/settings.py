@@ -7,6 +7,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
+from pydantic.json_schema import SkipJsonSchema
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -19,7 +20,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default=["CTM360-CyberBlindSpot"],
     )
     name: str = Field(default="CTM360-CyberBlindSpot")
-    duration_period: timedelta = Field(
+    # Required by the SDK base config but not used for scheduling: the connector
+    # polls every `ctm360_cbs.import_interval` seconds, so it is hidden from the
+    # schema to avoid advertising a setting that has no effect.
+    duration_period: SkipJsonSchema[timedelta] = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=24),
     )
