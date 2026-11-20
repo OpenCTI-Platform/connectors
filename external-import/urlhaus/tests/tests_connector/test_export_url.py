@@ -47,7 +47,7 @@ def test_legacy_csv_url_is_ignored_when_auth_key_is_set():
 @pytest.mark.parametrize(
     "values, expected_message",
     [
-        pytest.param({}, "abuse.ch requires an Auth-Key", id="nothing_set"),
+        pytest.param({}, "No authentication configured", id="nothing_set"),
         pytest.param(
             {"csv_url": LEGACY_URL}, "retired public download", id="legacy_csv_url"
         ),
@@ -60,7 +60,7 @@ def test_missing_auth_key_is_rejected(values, expected_message):
 
 @pytest.mark.parametrize("blank", ["", "   "])
 def test_blank_auth_key_is_rejected(blank):
-    with pytest.raises(ValueError, match="abuse.ch requires an Auth-Key"):
+    with pytest.raises(ValueError, match="No authentication configured"):
         UrlhausConfig(auth_key=blank)
 
 
@@ -107,6 +107,9 @@ def test_untyped_settings_loader_accepts_raw_csv_url(csv_url, expected_legacy):
     config = untyped_config(
         auth_key="raw-key",
         csv_url=csv_url,
+        spamhaus_username=None,
+        spamhaus_password=None,
+        spamhaus_import_from="P30D",
         default_x_opencti_score="80",
         import_offline="true",
         interval="3",
@@ -123,6 +126,9 @@ def test_untyped_settings_loader_accepts_raw_csv_url_without_auth_key():
     config = untyped_config(
         auth_key=None,
         csv_url="https://mirror.example/key/recent.csv",
+        spamhaus_username=None,
+        spamhaus_password=None,
+        spamhaus_import_from="P30D",
         default_x_opencti_score="80",
         import_offline="true",
         interval="3",
