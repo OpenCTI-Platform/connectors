@@ -80,20 +80,22 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 
 #### Base Connector Parameters
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
+|-----------|---------------|------------|-----------|---------|-------------|
+| Connector ID | `CONNECTOR_ID` | `connector.id` | No | `773ede4d-ae39-4bbb-a656-f67951f2fcee` | A unique `UUIDv4` for this connector. Set your own value when running several instances |
+| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `Stixify` | Name displayed in OpenCTI |
+| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `stixify` | The scope of the connector |
+| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
+| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `PT1H` | ISO-8601 duration between two runs. The connector polls Stixify for new Reports in the Dossier(s) at this schedule. The minimum value allowed and recommended value is `PT1H` |
 
 #### Connector Extra Parameters
 
 | Parameter | Docker envvar | config.yml | Required | Default | Description |
 |-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | Yes | `https://api.stixify.com/` | Stixify API URL |
+| Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | No | `https://api.stixify.com/` | Stixify API URL |
 | API Key | `STIXIFY_API_KEY` | `stixify.api_key` | Yes | - | API key for authentication |
-| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | - | Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
-| Interval Hours | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | Yes | `1` | Polling interval in hours. The connector with poll Stixify for new Reports in the Dossier(s) at this schedule. The minimum value allowed and recommended value is `1` |
+| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | `[]` | At least one ID is needed: the connector stops at startup when none is set. Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
+| Interval Hours (deprecated) | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | No | - | Deprecated: use `CONNECTOR_DURATION_PERIOD` instead. When set alone, its value (in hours) is migrated to `CONNECTOR_DURATION_PERIOD` |
 
 ---
 
@@ -113,10 +115,10 @@ services:
       - CONNECTOR_ID=${CONNECTOR_STIXIFY_ID}
       - CONNECTOR_NAME=Stixify
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - STIXIFY_BASE_URL=https://api.stixify.com/
       - STIXIFY_API_KEY=${STIXIFY_API_KEY}
       - STIXIFY_DOSSIER_IDS=dossier1-uuid,dossier2-uuid
-      - STIXIFY_INTERVAL_HOURS=12
     restart: always
     depends_on:
       - opencti
@@ -251,7 +253,7 @@ All other supported STIX objects in the bundle will import successfully and rema
    - New intelligence added to dossiers is imported on schedule
 
 3. **Incremental Updates**:
-   - Polls at configured interval (default: 12 hours)
+   - Polls at the configured `CONNECTOR_DURATION_PERIOD` (default: 1 hour)
    - Only fetches new/updated intelligence since last run
 
 ---
