@@ -71,6 +71,14 @@ def test_identity_is_the_crowdstrike_organization():
     assert "created_by_ref" not in identity
 
 
+def test_identity_dates_are_fixed():
+    result = add(chain(DOMAIN_7))
+
+    identity = json.loads(result.objects[0].serialize())
+    assert identity["created"] == "1970-01-01T00:00:00.000Z"
+    assert identity["modified"] == "1970-01-01T00:00:00.000Z"
+
+
 @pytest.mark.parametrize(
     "name", ["CrowdStrike", "crowdstrike", "  CROWDSTRIKE ", "CrowdStrike\n"]
 )
