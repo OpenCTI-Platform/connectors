@@ -311,17 +311,48 @@ class SpamhausClient(BaseClientApi):
             if body["items"]:
                 yield body["items"]
 
-            meta = body.get("meta")
-            meta = meta if isinstance(meta, dict) else {}
-            if not meta.get("next_page"):
+            cursor = self._next_cursor(body.get("meta"), path)
+            if cursor is None:
                 return
-            cursor = meta.get("next_cursor") or self._cursor_from(meta["next_page"])
-            if not cursor or cursor in seen_cursors:
+            if cursor in seen_cursors:
                 raise SpamhausInvalidResponseError(
                     f"Spamhaus returned no usable next cursor for {path}"
                 )
             seen_cursors.add(cursor)
             page_params = {**page_params, "after": cursor}
+
+    def _next_cursor(self, meta: Any, path: str) -> str | None:
+        """Return the cursor of the next page, or ``None`` on the last page.
+
+        A missing ``meta`` or ``next_page`` means the last page. Any other shape is
+        refused, so a malformed page cannot end an import early as if it had finished.
+
+        Raises:
+            SpamhausInvalidResponseError: If ``meta``, ``next_page`` or ``next_cursor``
+                has the wrong type, or no cursor can be read.
+        """
+        if meta is None:
+            return None
+        if not isinstance(meta, dict):
+            raise SpamhausInvalidResponseError(
+                f"Spamhaus returned an unexpected page metadata for {path}"
+            )
+        next_page = meta.get("next_page")
+        if next_page is None or next_page == "":
+            return None
+        next_cursor = meta.get("next_cursor")
+        if not isinstance(next_page, str) or not (
+            next_cursor is None or isinstance(next_cursor, str)
+        ):
+            raise SpamhausInvalidResponseError(
+                f"Spamhaus returned an unexpected next page for {path}"
+            )
+        cursor = next_cursor or self._cursor_from(next_page)
+        if not cursor:
+            raise SpamhausInvalidResponseError(
+                f"Spamhaus returned no usable next cursor for {path}"
+            )
+        return cursor
 
     @staticmethod
     def _cursor_from(next_page: str) -> str | None:

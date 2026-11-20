@@ -461,6 +461,39 @@ class TestPaginate:
             with pytest.raises(SpamhausInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
 
+    @pytest.mark.parametrize(
+        "meta",
+        [
+            [],
+            "next",
+            42,
+            {"next_page": 42, "next_cursor": "c"},
+            {"next_page": ["x"], "next_cursor": "c"},
+            {"next_page": "/threatfox/v1/iocs?after=c", "next_cursor": {"bad": "c"}},
+            {"next_page": "/threatfox/v1/iocs?after=c", "next_cursor": 7},
+        ],
+    )
+    def test_malformed_pagination_metadata_is_an_invalid_response(self, client, meta):
+        """It must map to a commercial error, so a connector can fall back on it."""
+        broken = _response(200, {"items": [{"id": 1}], "meta": meta})
+        with patch.object(
+            client,
+            "_raw_request",
+            side_effect=[_login_ok(expires=self._expires()), broken],
+        ):
+            with pytest.raises(SpamhausInvalidResponseError):
+                list(client.paginate("/threatfox/v1/iocs"))
+
+    @pytest.mark.parametrize("meta", [None, {}, {"next_page": None}, {"next_page": ""}])
+    def test_absent_or_empty_next_page_means_last_page(self, client, meta):
+        page = _response(200, {"items": [{"id": 1}], "meta": meta})
+        with patch.object(
+            client,
+            "_raw_request",
+            side_effect=[_login_ok(expires=self._expires()), page],
+        ):
+            assert list(client.paginate("/threatfox/v1/iocs")) == [[{"id": 1}]]
+
     def test_missing_meta_means_last_page(self, client):
         with patch.object(
             client,
