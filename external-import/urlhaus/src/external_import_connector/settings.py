@@ -4,13 +4,13 @@ from typing import ClassVar, Optional
 from urllib.parse import quote, urlparse
 
 from connectors_sdk import (
-    AbuseChAuthConfigMixin,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
     DatetimeFromIsoString,
     ListFromString,
 )
+from connectors_sdk.shared.spamhaus import AbuseChAuthConfigMixin
 from pydantic import Field, SecretStr, field_validator, model_validator
 
 EXPORT_URL_TEMPLATE = (

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk import SpamhausUnavailableError
+from connectors_sdk.shared.spamhaus import SpamhausUnavailableError
 from external_import_connector.connector import ConnectorState
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.spamhaus_urls import (

@@ -2,12 +2,12 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from connectors_sdk import (
+from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.shared.spamhaus import (
     SpamhausAuthenticationError,
     SpamhausClient,
     SpamhausUnavailableError,
 )
-from connectors_sdk.exceptions.error import DataRetrievalError
 from external_import_connector.client_api import ConnectorClient
 from external_import_connector.connector import ConnectorState, ConnectorURLhaus
 from external_import_connector.settings import UrlhausConfig

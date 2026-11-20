@@ -5,7 +5,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import requests
-from connectors_sdk import SpamhausClient
+from connectors_sdk.shared.spamhaus import SpamhausClient
 from external_import_connector.client_api import ConnectorClient
 from external_import_connector.connector import ConnectorState, ConnectorURLhaus
 from external_import_connector.converter_to_stix import ConverterToStix

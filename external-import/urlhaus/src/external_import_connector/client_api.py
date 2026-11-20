@@ -4,8 +4,8 @@ from io import StringIO
 from typing import Generator
 
 import requests
-from connectors_sdk import SpamhausClient, SpamhausCommercialError
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.shared.spamhaus import SpamhausClient, SpamhausCommercialError
 from dateutil.parser import parse
 from external_import_connector.spamhaus_urls import SpamhausUrlsClient
 
@@ -33,7 +33,7 @@ class ConnectorClient:
             f"OpenCTI-{USER_AGENT_NAME}/{USER_AGENT_VERSION}"
         )
 
-        # Commercial mode: the SDK client logs in and reuses the JWT
+        # Commercial mode: the `connectors_sdk.shared.spamhaus` client logs in and reuses the JWT
         self.spamhaus = None
         if self.config.urlhaus.use_commercial:
             self.spamhaus = SpamhausClient(
