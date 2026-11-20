@@ -141,6 +141,19 @@ every Defender update re-fetched by the connector upserts the same Case-Incident
   existing Case-Incident only when the connector's user confidence level is at least the Case-Incident's confidence;
   a Case-Incident edited by an analyst with a higher confidence keeps its workflow status. Unknown Defender values
   (e.g. `unknownFutureValue`) are left unmapped.
+- **Case-Incident confidence**: the connector sends no `confidence`. On creation the platform sets it to the
+  connector user's effective max confidence level (the user's own level, else the highest level of its groups, or the
+  Case-Incident override of that level when one is set; 100 for a user with the bypass capability). On upsert a
+  missing confidence keeps the existing one. To change it, set the max confidence level of the connector's user or
+  group (Settings > Security), or a Case-Incident override of it. The same level decides the upsert condition above.
+- **Workflow statuses required**: the mapping only works when the Case-Incident type has workflow statuses defined
+  in Settings > Customization > Case-Incident. With none, names resolve to nothing (a warning per name) and no
+  status is sent. When statuses exist, a Case-Incident created without a mapped status gets the type's first status,
+  a mapped id that is not a Case-Incident status is replaced by that first status on creation and dropped on upsert.
+- **Rights**: no capability beyond the connector's standard role (create and update knowledge) is needed to set
+  `x_opencti_workflow_id` on create or upsert. The platform checks no capability on that field for Case-Incident;
+  its only status-write guards apply to the request access workflow of Case-RFI. The user's max confidence level
+  is the only condition on upsert.
 
 Note on labels after a status change: the platform upsert adds labels to the existing ones, it does not replace
 them. A Case-Incident that moved from `active` to `resolved` in Defender keeps `defender-status:active` next to

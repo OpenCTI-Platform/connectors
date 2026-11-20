@@ -1,4 +1,4 @@
-pycti==7.261117.0
+pycti==7.261119.0
 lxml==6.1.3
 pydantic==2.14.0
 pypdf==7.1.0
