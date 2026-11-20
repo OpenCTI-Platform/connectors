@@ -120,13 +120,19 @@ class ConnectorAbuseIPDB:
             cl = defaultdict(dict)
             for report in data["reports"]:
                 countryN = report.get("reporterCountryCode")
+                reported_at = parse(report["reportedAt"])
                 if countryN in cl:
                     cl[countryN]["count"] += 1
-                    cl[countryN]["firstseen"] = report["reportedAt"]
+                    cl[countryN]["firstseen"] = min(
+                        cl[countryN]["firstseen"], reported_at
+                    )
+                    cl[countryN]["lastseen"] = max(
+                        cl[countryN]["lastseen"], reported_at
+                    )
                 else:
                     cl[countryN]["count"] = 1
-                    cl[countryN]["firstseen"] = report["reportedAt"]
-                    cl[countryN]["lastseen"] = report["reportedAt"]
+                    cl[countryN]["firstseen"] = reported_at
+                    cl[countryN]["lastseen"] = reported_at
 
                 for category in report["categories"]:
                     if category not in found:
@@ -157,13 +163,13 @@ class ConnectorAbuseIPDB:
                     id=StixSightingRelationship.generate_id(
                         stix_entity["id"],
                         country_location.id,
-                        parse(cl[ckey]["firstseen"]),
-                        parse(cl[ckey]["lastseen"]),
+                        cl[ckey]["firstseen"],
+                        cl[ckey]["lastseen"],
                     ),
                     where_sighted_refs=[country_location.id],
                     count=cl[ckey]["count"],
-                    first_seen=parse(cl[ckey]["firstseen"]),
-                    last_seen=parse(cl[ckey]["lastseen"]),
+                    first_seen=cl[ckey]["firstseen"],
+                    last_seen=cl[ckey]["lastseen"],
                     # As SDO are not supported in official STIX, we use a fake ID in ref
                     # Worker will use custom_properties instead
                     sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",  # Fake
