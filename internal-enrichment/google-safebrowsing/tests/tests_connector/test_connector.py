@@ -229,6 +229,19 @@ class TestProcessMessage:
         connector.helper.send_stix2_bundle.assert_not_called()
         connector.helper.connector_logger.warning.assert_called_once()
 
+    def test_entity_with_one_tlp_above_max_tlp_is_skipped(self, connector, mocker):
+        # Every TLP of the entity is checked, not only the last one
+        post = mocker.patch(POST_PATH, return_value=_match_response())
+        observable = _domain_observable(
+            objectMarking=[
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            ]
+        )
+        assert connector.process_message(_enrichment_data(observable)) is None
+        post.assert_not_called()
+        connector.helper.send_stix2_bundle.assert_not_called()
+
     def test_entity_within_max_tlp_is_enriched(self, connector, mocker):
         post = mocker.patch(POST_PATH, return_value=_match_response())
         observable = _domain_observable(

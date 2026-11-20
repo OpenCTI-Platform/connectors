@@ -43,29 +43,41 @@ def _stix_bundle_contains_any(bundle: list, stix_types: list[str]) -> bool:
     return unique_stix_types.issubset(unique_bundle_types)
 
 
+def _settings_dict(max_tlp: str = "amber") -> dict[str, Any]:
+    """Return deterministic connector settings for tests."""
+    return {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-token",
+        },
+        "connector": {
+            "id": "connector-id",
+            "name": "Test Connector",
+            "scope": "StixFile, Artifact, Url, Domain-Name, Hostname",
+            "log_level": "error",
+            "auto": True,
+            "max_tlp": max_tlp,
+        },
+        "hybrid_analysis_sandbox": {
+            "token": "test-api-token",
+        },
+    }
+
+
 class StubConnectorSettings(ConnectorSettings):
     """Provide deterministic connector settings for tests."""
 
     @classmethod
     def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-        return handler(
-            {
-                "opencti": {
-                    "url": "http://localhost:8080",
-                    "token": "test-token",
-                },
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "StixFile, Artifact, Url, Domain-Name, Hostname",
-                    "log_level": "error",
-                    "auto": True,
-                },
-                "hybrid_analysis_sandbox": {
-                    "token": "test-api-token",
-                },
-            }
-        )
+        return handler(_settings_dict())
+
+
+class StubConnectorSettingsClearTlp(ConnectorSettings):
+    """Provide the test settings with a TLP:CLEAR max TLP."""
+
+    @classmethod
+    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        return handler(_settings_dict(max_tlp="clear"))
 
 
 @pytest.fixture
@@ -227,6 +239,25 @@ def test_get_report_raises_when_state_is_error(stub_connector):
     stub_connector.client.get_report_summary.assert_not_called()
 
 
+def test_process_message_ignores_entity_with_one_tlp_above_max_tlp(
+    dummy_connector, file_message
+):
+    """_process_message checks every TLP of the entity, not only the last one."""
+    # Given a StixFile message with a TLP:RED marking before its TLP:AMBER marking
+    data = file_message
+    data["enrichment_entity"]["objectMarking"].insert(
+        0, {"definition_type": "TLP", "definition": "TLP:RED"}
+    )
+
+    # When _process_message is called
+    dummy_connector._process_message(data)
+
+    # Then nothing is sent to Hybrid Analysis
+    dummy_connector._search_hash.assert_not_called()
+    dummy_connector._trigger_sandbox.assert_not_called()
+    dummy_connector._send_bundle.assert_called_with(data["stix_objects"])
+
+
 def test_process_message_ignores_entity_exceeding_max_tlp(
     dummy_connector, file_message
 ):
@@ -234,8 +265,8 @@ def test_process_message_ignores_entity_exceeding_max_tlp(
     # Given a StixFile message fixture
     data = file_message
 
-    # And the connector's max TLP is set to CLEAR
-    dummy_connector.max_tlp = "TLP:CLEAR"
+    # And the connector's max TLP is set to CLEAR (the settings are frozen)
+    dummy_connector.config = StubConnectorSettingsClearTlp()
 
     # When _process_message is called
     dummy_connector._process_message(data)

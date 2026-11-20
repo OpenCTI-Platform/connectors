@@ -6,6 +6,7 @@ import pytest
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from shodan_internetdb.connector import ShodanInternetDBConnector
+from shodan_internetdb.exceptions import ShodanInternetDbExtractAndCheckMarkingsError
 from shodan_internetdb.settings import ConnectorSettings
 
 
@@ -169,3 +170,18 @@ def test_wrong_marking(
         == "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
         "the connector does not has access to this observable, please check the group of the connector user"
     )
+
+
+def test_extract_and_check_markings_checks_every_tlp(
+    config: ConnectorSettings, helper: OpenCTIConnectorHelper
+) -> None:
+    connector = ShodanInternetDBConnector(helper=helper, config=config)
+    observable = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+    }
+
+    with pytest.raises(ShodanInternetDbExtractAndCheckMarkingsError):
+        connector.extract_and_check_markings(observable)

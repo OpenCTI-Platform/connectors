@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from zetalytics_dns.client import ZetalyticsClient
 from zetalytics_dns.converter import Converter
@@ -373,23 +374,20 @@ class Connector:
     # ------------------------------------------------------------------
 
     def _check_tlp(self, enrichment_entity: dict[str, Any]) -> str:
-        """Return the observable's TLP, raising TlpError if it exceeds the configured max."""
-        tlp: str = next(
-            (
-                m["definition"]
-                for m in (enrichment_entity.get("objectMarking") or [])
-                if m.get("definition_type") == "TLP"
-            ),
-            "TLP:CLEAR",
-        )
-        if not self.helper.check_max_tlp(
-            tlp=tlp, max_tlp=f"TLP:{self.config.connector.max_tlp.upper()}"
-        ):
+        """Return the observable's first TLP, raising TlpError if any TLP exceeds the max."""
+        tlp_levels = [
+            m["definition"]
+            for m in (enrichment_entity.get("objectMarking") or [])
+            if m.get("definition_type") == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             raise TlpError(
-                f"Observable TLP ({tlp}) exceeds configured maximum "
-                f"(TLP:{self.config.connector.max_tlp.upper()}); skipping enrichment."
+                f"Observable TLP ({', '.join(tlp_levels)}) exceeds configured maximum "
+                f"({max_tlp}); skipping enrichment."
             )
-        return tlp
+        # The first TLP marks the objects created by the converter
+        return tlp_levels[0] if tlp_levels else "TLP:CLEAR"
 
     def _check_scope(self, obs_type: str) -> None:
         """Raise UnsupportedEntityTypeError if the type is outside scope.

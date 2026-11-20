@@ -29,7 +29,7 @@ Appended STIX objects:
 
 ## Behavior and safety
 
-- **Max TLP check** (`OpenCTIConnectorHelper.check_max_tlp`) - observables above `CONNECTOR_MAX_TLP` are skipped.
+- **Max TLP check** (`InternalEnrichmentConnector.is_entity_tlp_allowed` from connectors-sdk) - observables with any TLP above `CONNECTOR_MAX_TLP` are skipped.
 - A `400` from the API (not a MAC address) and an invalid result return the original bundle unchanged.
 - `401` / `403` / `429` / `5xx` are raised so the failure is visible in the OpenCTI UI.
 - Playbook compatible (`playbook_compatible=True`).

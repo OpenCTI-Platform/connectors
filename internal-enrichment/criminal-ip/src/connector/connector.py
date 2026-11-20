@@ -2,6 +2,7 @@ from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.use_cases.enrich_domain import DomainEnricher
 from connector.use_cases.enrich_ipv4 import Ipv4Enricher
+from connectors_sdk import InternalEnrichmentConnector
 from criminalip_client import CriminalIpClient
 from pycti import OpenCTIConnectorHelper
 
@@ -19,7 +20,6 @@ class CriminalIPConnector:
         self.helper = helper
 
         self.token = self.config.criminal_ip.token.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.client = CriminalIpClient(helper=self.helper, token=self.token)
 
         self.domain_enricher = DomainEnricher(
@@ -40,14 +40,15 @@ class CriminalIPConnector:
         If this is true, we can send the data to connector for enrichment.
         :param entity: Dict of observable from OpenCTI
         """
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        is_valid = self.helper.check_max_tlp(tlp, self.max_tlp)
-
-        if not is_valid:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of the connector user"

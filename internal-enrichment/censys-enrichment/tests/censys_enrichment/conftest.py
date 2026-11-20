@@ -54,7 +54,6 @@ def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
     mocked_helper.stix2_create_bundle = MagicMock(
         side_effect=OpenCTIConnectorHelper.stix2_create_bundle
     )
-    mocked_helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
     return mocked_helper
 
 
