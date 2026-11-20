@@ -55,6 +55,8 @@ class ScoutSearchConnectorConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: None
         """
+        # Reset so the TLP of a previous message is never reused
+        self.tlp = None
         if opencti_entity.get("objectMarking"):
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition.get("definition_type") == "TLP":
