@@ -169,8 +169,10 @@ class SpamhausClient(BaseClientApi):
             or time.time() >= self._token_expires_at - self._token_refresh_margin
         ):
             self.login()
-        assert self._token is not None  # noqa: S101  # set by login()
-        return {"Authorization": f"Bearer {self._token.get_secret_value()}"}
+        token = self._token
+        if token is None:
+            raise SpamhausUnavailableError("Spamhaus login did not provide a token")
+        return {"Authorization": f"Bearer {token.get_secret_value()}"}
 
     def _send(self, path: str, params: dict[str, Any] | None, *, binary: bool) -> Any:
         """Send one authenticated GET and map its failures to commercial errors."""

@@ -167,6 +167,14 @@ class TestLogin:
 
 
 @freeze_time("2027-01-15 08:00:00")
+class TestMissingToken:
+    def test_a_login_that_leaves_no_token_is_an_unavailable_error(self, client):
+        """The check must be a real exception: ``assert`` is stripped by ``python -O``."""
+        with patch.object(client, "login"):
+            with pytest.raises(SpamhausUnavailableError, match="did not provide"):
+                client.get_json("/threatfox/v1/iocs")
+
+
 class TestTokenReuse:
     def test_valid_token_is_reused(self, client):
         client._token_refresh_margin = 300
