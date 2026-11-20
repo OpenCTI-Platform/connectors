@@ -251,7 +251,7 @@ class DnsTwistConnector:
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
         if observable["entity_type"] == "Domain-Name":
             tlp_levels = [
-                marking["definition"]
+                marking.get("definition")
                 for marking in observable.get("objectMarking") or []
                 if marking.get("definition_type") == "TLP"
             ]

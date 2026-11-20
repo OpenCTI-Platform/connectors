@@ -55,7 +55,7 @@ class ScoutSearchConnectorConnector:
         :return: None
         """
         tlp_levels = [
-            marking_definition["definition"]
+            marking_definition.get("definition")
             for marking_definition in opencti_entity.get("objectMarking") or []
             if marking_definition.get("definition_type") == "TLP"
         ]

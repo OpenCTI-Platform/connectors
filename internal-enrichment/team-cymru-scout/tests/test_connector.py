@@ -246,3 +246,27 @@ def test_process_message_allows_entity_without_tlp():
     # Then
     assert result == "No intelligence data found"
     connector.client.get_entity.assert_called_once_with("IPv4-Addr", "1.1.1.1")
+
+
+def test_process_message_allows_entity_with_null_object_marking():
+    # Given an entity whose objectMarking is null
+    settings = StubConnectorSettings()
+    helper = FakeHelper()
+    connector = PureSignalScoutConnector(config=settings, helper=helper)
+    connector.client.get_entity = MagicMock(return_value=None)
+
+    # When
+    result = connector.process_message(
+        {
+            "enrichment_entity": {
+                "standard_id": "observable--5",
+                "entity_type": "IPv4-Addr",
+                "value": "1.1.1.1",
+                "objectMarking": None,
+            }
+        }
+    )
+
+    # Then
+    assert result == "No intelligence data found"
+    connector.client.get_entity.assert_called_once_with("IPv4-Addr", "1.1.1.1")

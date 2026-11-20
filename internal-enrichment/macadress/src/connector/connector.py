@@ -43,7 +43,7 @@ class MacadressConnector:
 
     def _extract_and_check_markings(self, entity: dict) -> None:
         tlp_levels = [
-            marking_definition["definition"]
+            marking_definition.get("definition")
             for marking_definition in entity.get("objectMarking", [])
             if marking_definition.get("definition_type") == "TLP"
         ]

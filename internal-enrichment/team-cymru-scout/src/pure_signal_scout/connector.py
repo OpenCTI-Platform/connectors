@@ -53,9 +53,9 @@ class PureSignalScoutConnector:
         :return: None
         """
         tlp_levels = [
-            marking["definition"]
-            for marking in opencti_entity.get("objectMarking", [])
-            if marking["definition_type"] == "TLP"
+            marking.get("definition")
+            for marking in opencti_entity.get("objectMarking") or []
+            if marking.get("definition_type") == "TLP"
         ]
 
         if not InternalEnrichmentConnector.is_entity_tlp_allowed(

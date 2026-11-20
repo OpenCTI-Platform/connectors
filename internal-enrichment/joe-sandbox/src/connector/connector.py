@@ -671,9 +671,9 @@ class JoeSandboxConnector:
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
         tlp_levels = [
-            marking["definition"]
+            marking.get("definition")
             for marking in observable.get("objectMarking") or []
-            if marking["definition_type"] == "TLP"
+            if marking.get("definition_type") == "TLP"
         ]
         if not InternalEnrichmentConnector.is_entity_tlp_allowed(
             tlp_levels, self.config.connector.max_tlp
