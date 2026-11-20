@@ -14,6 +14,7 @@ from crowdstrike_indicators.factory import (
 from crowdstrike_indicators.transform.add_attack_patterns import (
     CrowdStrikeAddAttackPatterns,
 )
+from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
 from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
 from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
 from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
@@ -287,6 +288,7 @@ def test_transformers_without_a_dataset():
         CreateCrowdStrikeIndicator,
         CrowdStrikeAddMalware,
         MakeStixBundle,
+        CrowdStrikeAddIdentity,
     ]
 
 
@@ -300,6 +302,7 @@ def test_transformers_with_a_dataset():
         CrowdStrikeAddMalware,
         CrowdStrikeAddAttackPatterns,
         MakeStixBundle,
+        CrowdStrikeAddIdentity,
     ]
     assert transformers[2].catalog is factory.attack_pattern_catalog
 

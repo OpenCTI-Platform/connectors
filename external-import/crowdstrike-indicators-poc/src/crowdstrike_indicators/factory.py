@@ -12,6 +12,7 @@ from crowdstrike_indicators.transform.add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
+from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
 from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
 from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
 from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
@@ -126,7 +127,8 @@ class CrowdStrikeConnectorFactory(AbstractConnectorFactory[CrowdStrikeSettings])
 
     def create_transformers(self) -> list[AbstractTransformer[Any, Any]]:
         """Return new transformers: the STIX indicator, its Malware, its
-        AttackPatterns when a dataset is set, then the STIX bundle."""
+        AttackPatterns when a dataset is set, the STIX bundle, then its author
+        identity."""
         attack_steps: list[AbstractTransformer[Any, Any]] = (
             []
             if self._catalog is None
@@ -137,4 +139,5 @@ class CrowdStrikeConnectorFactory(AbstractConnectorFactory[CrowdStrikeSettings])
             CrowdStrikeAddMalware(),
             *attack_steps,
             MakeStixBundle(),
+            CrowdStrikeAddIdentity(),
         ]

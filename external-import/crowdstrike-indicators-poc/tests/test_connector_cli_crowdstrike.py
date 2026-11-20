@@ -34,6 +34,7 @@ SAMPLE = load_fixture("indicators_sample.json")["resources"]
 SAMPLE_DOMAIN = next(row for row in SAMPLE if row["type"] == "domain")
 ATTACK_ROW = SAMPLE[0]
 STEP_HEADER = re.compile(r"^Step (\d+) - (\w+)$", re.MULTILINE)
+CROWDSTRIKE_IDENTITY_ID = "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed"
 
 
 @pytest.fixture(autouse=True)
@@ -193,10 +194,10 @@ def test_missing_credentials_are_named(isolated, monkeypatch, capsys):
 # transform
 
 
-def test_transform_prints_the_three_steps(isolated, no_api, capsys):
+def test_transform_prints_the_four_steps(isolated, no_api, capsys):
     assert transform(isolated, SAMPLE_DOMAIN) == 0
 
-    (first, stix), (second, bundle), (third, stix_bundle) = steps(
+    (first, stix), (second, bundle), (third, stix_bundle), (fourth, credited) = steps(
         capsys.readouterr().out
     )
     assert first == "CreateCrowdStrikeIndicator"
@@ -215,6 +216,14 @@ def test_transform_prints_the_three_steps(isolated, no_api, capsys):
         *(m["id"] for m in bundle["malware"]),
         *(r["id"] for r in bundle["relationships"]),
     ]
+    assert fourth == "CrowdStrikeAddIdentity"
+    assert credited["type"] == "bundle"
+    assert credited["id"] == stix_bundle["id"]
+    identity, *objects = credited["objects"]
+    assert identity["id"] == CROWDSTRIKE_IDENTITY_ID
+    assert identity["name"] == "CrowdStrike"
+    assert [o["id"] for o in objects] == [o["id"] for o in stix_bundle["objects"]]
+    assert all(o["created_by_ref"] == CROWDSTRIKE_IDENTITY_ID for o in objects)
 
 
 def test_transform_without_malware(isolated, no_api, capsys):
@@ -223,7 +232,7 @@ def test_transform_without_malware(isolated, no_api, capsys):
     printed = steps(capsys.readouterr().out)
     assert printed[1][1]["malware"] == []
     assert printed[1][1]["relationships"] == []
-    assert [o["type"] for o in printed[-1][1]["objects"]] == ["indicator"]
+    assert [o["type"] for o in printed[-1][1]["objects"]] == ["identity", "indicator"]
 
 
 def test_dataset_from_the_configuration_adds_a_step(
@@ -239,6 +248,7 @@ def test_dataset_from_the_configuration_adds_a_step(
         "CrowdStrikeAddMalware",
         "CrowdStrikeAddAttackPatterns",
         "MakeStixBundle",
+        "CrowdStrikeAddIdentity",
     ]
     patterns = printed[2][1]["attack_patterns"]
     assert patterns[0]["name"] == "Data from Local System"
@@ -273,7 +283,7 @@ def test_extract_item_goes_through_transform(isolated, monkeypatch, capsys):
     item = json.loads(capsys.readouterr().out)[0]["item"]
 
     assert transform(isolated, item) == 0
-    assert len(steps(capsys.readouterr().out)) == 3
+    assert len(steps(capsys.readouterr().out)) == 4
 
 
 # Console command
@@ -297,4 +307,4 @@ def test_installed_console_command(isolated):
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert [name for name, _ in steps(completed.stdout)][-1] == "MakeStixBundle"
+    assert [name for name, _ in steps(completed.stdout)][-1] == "CrowdStrikeAddIdentity"
