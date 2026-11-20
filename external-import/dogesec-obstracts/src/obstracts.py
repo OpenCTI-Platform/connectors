@@ -3,15 +3,14 @@ OBSTRACTS Connector
 """
 
 import json
-import os
 import traceback
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ObstractsException(Exception):
@@ -22,36 +21,17 @@ class ObstractsConnector:
     def __init__(self):
         """Read in config variables"""
 
-        config_file_path = "config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip("/") + "/"
-        self.api_key = self._get_param("api_key")
-        feed_ids = self._get_param("feed_ids")
-        self.feed_ids = feed_ids.split(",") if feed_ids else []
-        self.interval_hours = self._get_param("interval_hours", is_number=True)
-        self.days_to_backfill = self._get_param("days_to_backfill", is_number=True)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.base_url = str(self.config.obstracts.base_url).strip("/") + "/"
+        self.api_key = self.config.obstracts.api_key.get_secret_value()
+        self.feed_ids = self.config.obstracts.feed_ids
+        self.days_to_backfill = self.config.obstracts.days_to_backfill
 
         self.session = requests.Session()
         self.session.headers = {
             "API-KEY": self.api_key,
         }
-
-    def _get_param(
-        self, param_name: str, is_number: bool = False, default_value: str = None
-    ) -> int | str:
-        return get_config_variable(
-            f"OBSTRACTS_{param_name.upper()}",
-            ["obstracts", param_name.lower()],
-            self.helper.config,
-            is_number,
-            default_value,
-        )
 
     def list_feeds(self):
         try:
@@ -183,7 +163,7 @@ class ObstractsConnector:
         self.helper.log_info("Starting Obstracts")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=self.interval_hours * 3600,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 

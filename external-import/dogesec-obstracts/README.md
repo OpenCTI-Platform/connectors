@@ -79,21 +79,22 @@ The OpenCTI Obstracts Connector synchronizes intelligence from the blogs you are
 
 #### Base Connector Parameters
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
+|-----------|---------------|------------|-----------|---------|-------------|
+| Connector ID | `CONNECTOR_ID` | `connector.id` | No | `cdef318a-d5cf-4363-8ea3-b96aa360ab78` | A unique `UUIDv4` for this connector |
+| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `Obstracts` | Name displayed in OpenCTI |
+| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `obstracts` | The scope of the connector |
+| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
+| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `PT1H` | Polling interval as an ISO-8601 duration. The connector polls Obstracts for new posts in your subscriptions at this interval. The minimum (and recommended) value is `PT1H`. Replaces the deprecated `OBSTRACTS_INTERVAL_HOURS`, which is still read (in hours) when `CONNECTOR_DURATION_PERIOD` is not set. |
 
 #### Connector Extra Parameters
 
 | Parameter | Docker envvar | config.yml | Required | Default | Description |
 |-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `OBSTRACTS_BASE_URL` | `obstracts.base_url` | Yes | `https://api.obstracts.com/` | Obstracts API URL |
+| Base URL | `OBSTRACTS_BASE_URL` | `obstracts.base_url` | No | `https://api.obstracts.com/` | Obstracts API URL |
 | API Key | `OBSTRACTS_API_KEY` | `obstracts.api_key` | Yes | - | The Obstracts API key for authentication (steps to generate described earlier in this document) |
 | Feed IDs | `OBSTRACTS_FEED_IDS` | `obstracts.feed_ids` | No | - | It is recommended to leave this property empty. When left blank, the connector will download post content for all feeds your team is subscribed to in Obstracts. If you only want to ingest data into OpenCTI from specific feeds, you can instead provide a comma-separated list of feed IDs (for example: `a0850464-c04e-42cc-9b4f-6e8094ad90ea,87295120-5ac0-4e91-907d-32f50cd50147`). |
-| Interval Hours | `OBSTRACTS_INTERVAL_HOURS` | `obstracts.interval_hours` | Yes | `1` | Polling interval in hours. The connector polls Obstracts for new posts in your subscriptions at this interval. The minimum (and recommended) value is `1`. |
-| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Number of days of historical data to import (maximum: `365`). Uses the `created` value of the report. This setting will be used if any new feed subscriptions are added in Obstracts to backfill the data for that feed. |
+| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | No | `7` | Number of days of historical data to import (maximum: `365`). Uses the `created` value of the report. This setting will be used if any new feed subscriptions are added in Obstracts to backfill the data for that feed. |
 
 ---
 
@@ -113,10 +114,10 @@ services:
       - CONNECTOR_ID=${CONNECTOR_OBSTRACTS_ID}
       - CONNECTOR_NAME=Obstracts
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - OBSTRACTS_BASE_URL=https://api.obstracts.com/
       - OBSTRACTS_API_KEY=${OBSTRACTS_API_KEY}
       - OBSTRACTS_FEED_IDS=
-      - OBSTRACTS_INTERVAL_HOURS=12
       - OBSTRACTS_DAYS_TO_BACKFILL=90
     restart: always
     depends_on:
@@ -253,7 +254,7 @@ All other supported STIX objects in the bundle will import successfully and rema
    - Configurable via `OBSTRACTS_DAYS_TO_BACKFILL`
 
 3. **Incremental Updates**:
-   - Polls at configured interval (default: 12 hours)
+   - Polls at the interval set by `CONNECTOR_DURATION_PERIOD` (default: 1 hour)
    - Only fetches new/updated intelligence since last run
 
 ---
