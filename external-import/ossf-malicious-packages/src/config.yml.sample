@@ -1,0 +1,21 @@
+opencti:
+  url: "http://opencti:8080"
+  token: "ChangeMe"
+  ssl_verify: false
+
+connector:
+  id: "3fda8b20-75f7-424d-ba15-f836b1a5bdfa"
+  type: "EXTERNAL_IMPORT"
+  name: "OSSF Malicious Packages"
+  scope: "file,indicator"
+  confidence_level: 80
+  log_level: "info"
+  live_stream_id: null
+
+ossf:
+  github_repo_url: "https://github.com/ossf/malicious-packages.git"
+  branch: "main"
+  local_repo_path: "/opt/ossf-malicous-packages-repo"
+  run_interval_seconds: 3600
+  default_score: 80
+  source_name: "ossf/malicious-packages"

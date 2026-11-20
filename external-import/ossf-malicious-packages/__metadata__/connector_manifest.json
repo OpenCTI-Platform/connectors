@@ -1,0 +1,26 @@
+{
+  "title": "OSSF Malicious Packages",
+  "slug": "ossf-malicious-packages",
+  "description": "Ingests malicious package data from the OSSF (Open Source Security Foundation) malicious-packages GitHub repository, creating File Observables, hash-based STIX Indicators, and Based-on Relationships in OpenCTI.",
+  "short_description": "Imports malicious open-source package intelligence from the OSSF malicious-packages GitHub repository into OpenCTI as File Observables and Indicators.",
+  "logo": "external-import/ossf-malicious-packages/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ossf-malicious-packages",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ossf-malicious-packages",
+  "container_type": "EXTERNAL_IMPORT"
+}
