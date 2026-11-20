@@ -9,7 +9,7 @@ from crowdstrike_indicators.entities.ids import (
     indicator_id,
     malware_id,
 )
-from crowdstrike_indicators.transform import create_indicator as transformer
+from crowdstrike_indicators.transform import step01_create_indicator as transformer
 
 INDICATOR_ID = "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b"
 MALWARE_ID = "malware--06d31b08-d590-5298-8440-23b86775f679"

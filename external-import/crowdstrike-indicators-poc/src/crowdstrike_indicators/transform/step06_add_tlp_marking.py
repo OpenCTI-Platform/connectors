@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from crowdstrike_indicators.transform.add_identity import author_identity
+from crowdstrike_indicators.transform.step05_add_identity import author_identity
 from stix2.exceptions import STIXError
 from stix2.v21 import (
     TLP_AMBER,

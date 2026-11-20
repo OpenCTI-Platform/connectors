@@ -11,7 +11,7 @@ from typing import Any
 import stix2
 from crowdstrike_indicators.entities.ids import indicates_id
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transform.add_malware import crowdstrike_id
+from crowdstrike_indicators.transform.step02_add_malware import crowdstrike_id
 from stix2.exceptions import STIXError
 from stix2.v21 import AttackPattern, Relationship
 

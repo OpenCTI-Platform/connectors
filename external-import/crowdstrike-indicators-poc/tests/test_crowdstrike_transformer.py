@@ -15,8 +15,10 @@ from crowdstrike_indicators.entities.models import (
     EnrichedCrowdStrikeIndicator,
 )
 from crowdstrike_indicators.entities.stix import CrowdStrikeStix2Indicator
-from crowdstrike_indicators.transform import create_indicator as transformer_module
-from crowdstrike_indicators.transform.create_indicator import (
+from crowdstrike_indicators.transform import (
+    step01_create_indicator as transformer_module,
+)
+from crowdstrike_indicators.transform.step01_create_indicator import (
     CROWDSTRIKE_NAMESPACE,
     NATIVELY_HELD_FIELDS,
     X_EXTRA,

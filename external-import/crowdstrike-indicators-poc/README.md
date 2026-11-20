@@ -57,12 +57,12 @@ src/
       extractor.py            CrowdStrikeIndicatorExtractor (FalconPy)
       actors.py               CrowdStrikeActorEnricher (FalconPy)
     transform/                pure conversions to STIX
-      create_indicator.py     CreateCrowdStrikeIndicator
-      add_malware.py          CrowdStrikeAddMalware
-      add_attack_patterns.py  AttackPatternCatalog, CrowdStrikeAddAttackPatterns
-      make_bundle.py          MakeStixBundle
-      add_identity.py         CrowdStrikeAddIdentity
-      add_tlp_marking.py      TLPLevel, CrowdStrikeAddTlpMarking
+      step01_create_indicator.py     CreateCrowdStrikeIndicator
+      step02_add_malware.py          CrowdStrikeAddMalware
+      step03_add_attack_patterns.py  AttackPatternCatalog, CrowdStrikeAddAttackPatterns
+      step04_make_bundle.py          MakeStixBundle
+      step05_add_identity.py         CrowdStrikeAddIdentity
+      step06_add_tlp_marking.py      TLPLevel, CrowdStrikeAddTlpMarking
 tests/                        pytest, no network
 ```
 

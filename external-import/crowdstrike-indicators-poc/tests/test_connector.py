@@ -8,9 +8,11 @@ from typing import Any
 import pytest
 from conftest import FakeIndicatorsAPI, build_extractor, load_fixture
 from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
-from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
-from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
+from crowdstrike_indicators.transform.step01_create_indicator import (
+    CreateCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.transform.step02_add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.step04_make_bundle import MakeStixBundle
 from pydantic import BaseModel
 from stix2.v21 import Bundle, DomainName
 

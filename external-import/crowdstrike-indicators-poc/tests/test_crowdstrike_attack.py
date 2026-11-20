@@ -16,15 +16,17 @@ from conftest import FIXTURES_DIR, load_fixture, make_indicator
 from crowdstrike_indicators.entities.ids import indicates_id
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transform import add_attack_patterns as attack_module
-from crowdstrike_indicators.transform.add_attack_patterns import (
+from crowdstrike_indicators.transform import step03_add_attack_patterns as attack_module
+from crowdstrike_indicators.transform.step01_create_indicator import (
+    CreateCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.transform.step02_add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.step03_add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
     light_attack_pattern,
     match_key,
 )
-from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
 from stix2.exceptions import InvalidValueError
 from stix2.v21 import Relationship
 

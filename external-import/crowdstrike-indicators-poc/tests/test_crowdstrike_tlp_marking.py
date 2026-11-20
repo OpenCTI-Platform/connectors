@@ -9,21 +9,23 @@ import pytest
 import stix2
 from conftest import load_fixture, make_indicator
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
-from crowdstrike_indicators.transform.add_attack_patterns import (
+from crowdstrike_indicators.transform.step01_create_indicator import (
+    CreateCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.transform.step02_add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.step03_add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
-from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
-from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.add_tlp_marking import (
+from crowdstrike_indicators.transform.step04_make_bundle import (
+    MakeStixBundle,
+    missing_references,
+)
+from crowdstrike_indicators.transform.step05_add_identity import CrowdStrikeAddIdentity
+from crowdstrike_indicators.transform.step06_add_tlp_marking import (
     MARKING_DEFINITIONS,
     CrowdStrikeAddTlpMarking,
     TLPLevel,
-)
-from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
-from crowdstrike_indicators.transform.make_bundle import (
-    MakeStixBundle,
-    missing_references,
 )
 
 CLEAR_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"

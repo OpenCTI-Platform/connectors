@@ -8,9 +8,11 @@ import pytest
 import stix2
 from conftest import load_fixture
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
-from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
-from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
+from crowdstrike_indicators.transform.step01_create_indicator import (
+    CreateCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.transform.step02_add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.step04_make_bundle import MakeStixBundle
 
 from shared.record_to_file import RecordToFile
 

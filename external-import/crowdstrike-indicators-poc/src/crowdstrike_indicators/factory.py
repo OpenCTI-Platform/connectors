@@ -8,18 +8,20 @@ from crowdstrike_indicators.extract.extractor import (
     CrowdStrikeIndicatorExtractor,
     IndicatorsClient,
 )
-from crowdstrike_indicators.transform.add_attack_patterns import (
+from crowdstrike_indicators.transform.step01_create_indicator import (
+    CreateCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.transform.step02_add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.step03_add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
-from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
-from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.add_tlp_marking import (
+from crowdstrike_indicators.transform.step04_make_bundle import MakeStixBundle
+from crowdstrike_indicators.transform.step05_add_identity import CrowdStrikeAddIdentity
+from crowdstrike_indicators.transform.step06_add_tlp_marking import (
     CrowdStrikeAddTlpMarking,
     TLPLevel,
 )
-from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
-from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 from pydantic import Field, FilePath, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
