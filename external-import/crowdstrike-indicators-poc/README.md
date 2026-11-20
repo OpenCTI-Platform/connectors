@@ -21,6 +21,8 @@ contracts that do not depend on OpenCTI:
      consumer;
    - that bundle credited to the CrowdStrike organization, as the existing
      CrowdStrike connector does;
+   - its objects marked with one TLP level, as the existing CrowdStrike
+     connector does;
 3. a loader: each STIX bundle delivered to a destination, for now a JSON file
    per bundle;
 4. a generic connector assembling the three, running them on a schedule.
@@ -60,6 +62,7 @@ src/
       add_attack_patterns.py  AttackPatternCatalog, CrowdStrikeAddAttackPatterns
       make_bundle.py          MakeStixBundle
       add_identity.py         CrowdStrikeAddIdentity
+      add_tlp_marking.py      TLPLevel, CrowdStrikeAddTlpMarking
 tests/                        pytest, no network
 ```
 
@@ -618,6 +621,59 @@ credits what it imports.
 - An object that cannot hold a `created_by_ref`, such as a STIX
   cyber-observable, makes the step raise `ItemConversionError`, naming the
   bundle.
+
+### TLP marking
+
+`CrowdStrikeAddTlpMarking` follows `CrowdStrikeAddIdentity`: it marks the
+objects of the bundle with one TLP level, chosen when the step is built, as
+the existing CrowdStrike connector marks what it imports.
+
+```json
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [
+    {
+      "type": "marking-definition",
+      "id": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+      "created": "2017-01-20T00:00:00.000Z",
+      "definition_type": "statement",
+      "definition": {"statement": "custom"},
+      "x_opencti_definition_type": "TLP",
+      "x_opencti_definition": "TLP:AMBER+STRICT",
+      "...": "..."
+    },
+    {"type": "identity", "name": "CrowdStrike", "...": "..."},
+    {"type": "indicator", "object_marking_refs": ["marking-definition--826578e1-..."], "...": "..."},
+    {"type": "malware", "object_marking_refs": ["marking-definition--826578e1-..."], "...": "..."}
+  ]
+}
+```
+
+The levels are OpenCTI's, accepted in any case (`TLPLevel`); an unknown level
+fails when the step is built, naming it. Each level adds one marking
+definition, under the static id OpenCTI gives that level, so OpenCTI maps it
+to its built-in TLP marking:
+
+| Level | Marking definition | id |
+|---|---|---|
+| `CLEAR`, or `WHITE` | STIX `TLP:WHITE` (OpenCTI shows TLP:CLEAR) | `marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9` |
+| `GREEN` | STIX `TLP:GREEN` | `marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da` |
+| `AMBER` | STIX `TLP:AMBER` | `marking-definition--f88d31f6-486f-44da-b317-01333bde0b82` |
+| `AMBER+STRICT` | OpenCTI's custom TLP marking | `marking-definition--826578e1-40ad-459f-bc73-ede076f81f37` |
+| `RED` | STIX `TLP:RED` | `marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed` |
+
+- STIX 2.1 has no AMBER+STRICT: that level is OpenCTI's custom marking, with
+  `x_opencti_definition_type` and `x_opencti_definition`, the only OpenCTI
+  convention in the output. The other levels are plain STIX.
+- Every marking definition is dated 2017-01-20, the date of STIX's TLP
+  objects: the same input always gives the same bundle.
+- The marking definition comes first. Every other object gets its id appended
+  to `object_marking_refs`, keeping the markings it already has and never
+  repeating it, except the marking definitions and the CrowdStrike author
+  identity, which stay unmarked as in the existing connector. Nothing else
+  changes: the bundle keeps its id, the objects their order and their
+  properties.
 
 ## Setup
 
