@@ -13,10 +13,7 @@ from conftest import (
     make_indicator,
     ok,
 )
-from crowdstrike_indicators.entities.errors import (
-    CrowdStrikeAPIError,
-    IndicatorValidationError,
-)
+from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
 from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
@@ -27,6 +24,8 @@ from crowdstrike_indicators.extract.extractor import (
     first_marker_cursor,
     marker_datetime,
 )
+
+from shared.errors import ItemValidationError
 
 BASE = 1_700_000_000
 FROM_BASE = datetime.fromtimestamp(BASE, tz=UTC)
@@ -224,11 +223,11 @@ def test_validation_failure_stops_the_extraction_with_the_raw_payload():
     bad = make_indicator(2, last_updated="not a timestamp")
     client = ScriptedClient([ok({"resources": [make_indicator(1), bad]})])
 
-    with pytest.raises(IndicatorValidationError) as caught:
+    with pytest.raises(ItemValidationError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
 
     error = caught.value
-    assert error.indicator_id == "ioc-2"
+    assert error.item_id == "ioc-2"
     assert error.raw == bad
     assert [tuple(e["loc"]) for e in error.errors] == [("last_updated",)]
     assert "ioc-2" in str(error) and "last_updated" in str(error)
@@ -238,17 +237,17 @@ def test_validation_failure_without_id():
     bad = {"indicator": "x", "type": "domain"}
     client = ScriptedClient([ok({"resources": [bad]})])
 
-    with pytest.raises(IndicatorValidationError) as caught:
+    with pytest.raises(ItemValidationError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
 
-    assert caught.value.indicator_id is None
+    assert caught.value.item_id is None
     assert caught.value.raw == bad
     assert "<no id>" in str(caught.value)
 
 
 def test_non_dict_resource_fails_validation():
     client = ScriptedClient([ok({"resources": ["oops"]})])
-    with pytest.raises(IndicatorValidationError) as caught:
+    with pytest.raises(ItemValidationError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
     assert caught.value.raw == "oops"
 
@@ -435,7 +434,7 @@ def test_no_lookup_when_validation_fails():
         actors=[SALTY],
     )
 
-    with pytest.raises(IndicatorValidationError):
+    with pytest.raises(ItemValidationError):
         build_extractor(client).extract(FROM_BASE, 10)
 
     assert client.actor_calls == []

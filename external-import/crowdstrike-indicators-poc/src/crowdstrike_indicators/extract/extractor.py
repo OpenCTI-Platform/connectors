@@ -1,13 +1,11 @@
 """Extraction of CrowdStrike Falcon Intelligence indicators."""
 
 import calendar
-import json
 import logging
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from crowdstrike_indicators.entities.errors import IndicatorValidationError
 from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
@@ -21,6 +19,7 @@ from crowdstrike_indicators.extract.api import (  # noqa: F401 - re-exported
 from pydantic import ValidationError
 
 from shared.enricher import AbstractEnricher
+from shared.errors import ItemValidationError
 from shared.extractor import AbstractExtractor
 
 LOGGER = logging.getLogger(__name__)
@@ -70,17 +69,15 @@ def validate_indicator(
 ) -> CrowdStrikeIndicator:
     """Validate one raw indicator as ``model``, a raw API indicator by default.
 
-    :raises IndicatorValidationError: with the id, the JSON-safe validation
-        errors and the raw indicator.
+    :raises ItemValidationError: with the CrowdStrike ``id`` when it is a
+        string, the JSON-safe validation errors and the raw indicator.
     """
     try:
         return model.model_validate(raw)
     except ValidationError as error:
         raw_id = raw.get("id") if isinstance(raw, dict) else None
-        raise IndicatorValidationError(
-            indicator_id=raw_id if isinstance(raw_id, str) else None,
-            errors=json.loads(error.json(include_url=False)),
-            raw=raw,
+        raise ItemValidationError.from_validation_error(
+            error, raw, item_id=raw_id if isinstance(raw_id, str) else None
         ) from error
 
 
