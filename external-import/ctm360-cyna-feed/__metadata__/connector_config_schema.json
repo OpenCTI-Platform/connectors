@@ -47,12 +47,6 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
-    "CONNECTOR_DURATION_PERIOD": {
-      "default": "P1D",
-      "description": "The period of time to await between two runs of the connector.",
-      "format": "duration",
-      "type": "string"
-    },
     "CTM360_CYNA_API_BASE_URL": {
       "default": "https://cyna.ctm360.com",
       "description": "CYNA API base URL.",
