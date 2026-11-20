@@ -28,7 +28,7 @@ from shared.transformer import AbstractTransformer
 
 __all__ = [
     "CROWDSTRIKE_NAMESPACE",
-    "CrowdStrikeIndicatorTransformer",
+    "CreateCrowdStrikeIndicator",
     "build_pattern",
     "indicator_id",
     "x_property_name",
@@ -163,7 +163,7 @@ def _created(item: CrowdStrikeIndicator) -> datetime:
     return created
 
 
-class CrowdStrikeIndicatorTransformer(
+class CreateCrowdStrikeIndicator(
     AbstractTransformer[EnrichedCrowdStrikeIndicator, CrowdStrikeStix2Indicator]
 ):
     """Convert a CrowdStrike indicator into one STIX 2.1 indicator.

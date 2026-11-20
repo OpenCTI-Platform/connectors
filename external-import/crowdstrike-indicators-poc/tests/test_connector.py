@@ -8,9 +8,9 @@ from typing import Any
 import pytest
 from conftest import FakeIndicatorsAPI, build_extractor, load_fixture
 from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
+from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 from pydantic import BaseModel
 from stix2.v21 import Bundle, DomainName
 
@@ -128,7 +128,7 @@ def crowdstrike_extractor() -> CrowdStrikeIndicatorExtractor:
 def test_fitting_crowdstrike_chain_is_accepted(tmp_path):
     Connector(
         crowdstrike_extractor(),
-        [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware(), MakeStixBundle()],
+        [CreateCrowdStrikeIndicator(), CrowdStrikeAddMalware(), MakeStixBundle()],
         RecordToFile(tmp_path),
     )
 
@@ -155,7 +155,7 @@ def test_chain_not_ending_with_a_stix_bundle_is_rejected(tmp_path):
     ):
         Connector(
             crowdstrike_extractor(),
-            [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware()],
+            [CreateCrowdStrikeIndicator(), CrowdStrikeAddMalware()],
             RecordToFile(tmp_path),
         )
 
@@ -319,7 +319,7 @@ def test_run_with_the_crowdstrike_chain_records_one_file_per_indicator(tmp_path)
     sleep = FakeSleep(stop_after=1)
     real = Connector(
         crowdstrike_extractor(),
-        [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware(), MakeStixBundle()],
+        [CreateCrowdStrikeIndicator(), CrowdStrikeAddMalware(), MakeStixBundle()],
         RecordToFile(tmp_path),
         sleep=sleep,
     )

@@ -15,12 +15,12 @@ from crowdstrike_indicators.entities.models import (
     EnrichedCrowdStrikeIndicator,
 )
 from crowdstrike_indicators.entities.stix import CrowdStrikeStix2Indicator
-from crowdstrike_indicators.transform import transformer as transformer_module
-from crowdstrike_indicators.transform.transformer import (
+from crowdstrike_indicators.transform import create_indicator as transformer_module
+from crowdstrike_indicators.transform.create_indicator import (
     CROWDSTRIKE_NAMESPACE,
     NATIVELY_HELD_FIELDS,
     X_EXTRA,
-    CrowdStrikeIndicatorTransformer,
+    CreateCrowdStrikeIndicator,
     x_property_name,
 )
 from stix2.exceptions import InvalidValueError
@@ -58,7 +58,7 @@ def record(**fields: Any) -> EnrichedCrowdStrikeIndicator:
 
 
 def convert(item: EnrichedCrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
-    return CrowdStrikeIndicatorTransformer().convert(item)
+    return CreateCrowdStrikeIndicator().convert(item)
 
 
 # Reverse tables, written independently of the transformer's own tables.

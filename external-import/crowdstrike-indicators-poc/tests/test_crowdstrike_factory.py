@@ -11,10 +11,12 @@ from crowdstrike_indicators.factory import (
     CrowdStrikeConnectorFactory,
     CrowdStrikeSettings,
 )
-from crowdstrike_indicators.transform.attack import CrowdStrikeAddAttackPatterns
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.add_attack_patterns import (
+    CrowdStrikeAddAttackPatterns,
+)
+from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
+from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 
 from shared.connector import Connector
 from shared.factory import ConnectorConfigurationError
@@ -282,7 +284,7 @@ def test_transformers_without_a_dataset():
     transformers = CrowdStrikeConnectorFactory(**CREDENTIALS).create_transformers()
 
     assert _types(transformers) == [
-        CrowdStrikeIndicatorTransformer,
+        CreateCrowdStrikeIndicator,
         CrowdStrikeAddMalware,
         MakeStixBundle,
     ]
@@ -294,7 +296,7 @@ def test_transformers_with_a_dataset():
     transformers = factory.create_transformers()
 
     assert _types(transformers) == [
-        CrowdStrikeIndicatorTransformer,
+        CreateCrowdStrikeIndicator,
         CrowdStrikeAddMalware,
         CrowdStrikeAddAttackPatterns,
         MakeStixBundle,

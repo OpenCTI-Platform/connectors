@@ -8,9 +8,9 @@ import pytest
 import stix2
 from conftest import load_fixture
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
+from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 
 from shared.record_to_file import RecordToFile
 
@@ -20,7 +20,7 @@ BUNDLE_ID = "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23"
 
 
 def stix_bundle(raw: dict[str, Any]) -> stix2.v21.Bundle:
-    indicator = CrowdStrikeIndicatorTransformer().convert(
+    indicator = CreateCrowdStrikeIndicator().convert(
         CrowdStrikeIndicator.model_validate(raw)
     )
     return MakeStixBundle().convert(CrowdStrikeAddMalware().convert(indicator))

@@ -8,13 +8,13 @@ from crowdstrike_indicators.extract.extractor import (
     CrowdStrikeIndicatorExtractor,
     IndicatorsClient,
 )
-from crowdstrike_indicators.transform.attack import (
+from crowdstrike_indicators.transform.add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
-from crowdstrike_indicators.transform.bundle import MakeStixBundle
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
+from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 from pydantic import Field, FilePath, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -133,7 +133,7 @@ class CrowdStrikeConnectorFactory(AbstractConnectorFactory[CrowdStrikeSettings])
             else [CrowdStrikeAddAttackPatterns(self._catalog)]
         )
         return [
-            CrowdStrikeIndicatorTransformer(),
+            CreateCrowdStrikeIndicator(),
             CrowdStrikeAddMalware(),
             *attack_steps,
             MakeStixBundle(),

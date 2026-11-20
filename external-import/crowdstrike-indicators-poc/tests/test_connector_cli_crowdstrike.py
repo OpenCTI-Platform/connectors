@@ -199,7 +199,7 @@ def test_transform_prints_the_three_steps(isolated, no_api, capsys):
     (first, stix), (second, bundle), (third, stix_bundle) = steps(
         capsys.readouterr().out
     )
-    assert first == "CrowdStrikeIndicatorTransformer"
+    assert first == "CreateCrowdStrikeIndicator"
     assert stix["type"] == "indicator"
     assert stix["name"] == SAMPLE_DOMAIN["indicator"]
     assert stix["x_crowdstrike_marker"] == SAMPLE_DOMAIN["_marker"]
@@ -235,7 +235,7 @@ def test_dataset_from_the_configuration_adds_a_step(
 
     printed = steps(capsys.readouterr().out)
     assert [name for name, _ in printed] == [
-        "CrowdStrikeIndicatorTransformer",
+        "CreateCrowdStrikeIndicator",
         "CrowdStrikeAddMalware",
         "CrowdStrikeAddAttackPatterns",
         "MakeStixBundle",

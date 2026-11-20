@@ -11,13 +11,16 @@ import stix2
 from conftest import load_fixture, make_indicator
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transform.attack import (
+from crowdstrike_indicators.transform.add_attack_patterns import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
-from crowdstrike_indicators.transform.bundle import MakeStixBundle, missing_references
-from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
+from crowdstrike_indicators.transform.make_bundle import (
+    MakeStixBundle,
+    missing_references,
+)
 
 from shared.errors import ItemConversionError
 
@@ -29,7 +32,7 @@ CATALOG = AttackPatternCatalog(load_fixture("attack_extract.json"))
 
 def chain(raw: dict[str, Any]) -> CrowdStrikeIndicatorBundle:
     """Run the steps before ``MakeStixBundle``, attack patterns included."""
-    indicator = CrowdStrikeIndicatorTransformer().convert(
+    indicator = CreateCrowdStrikeIndicator().convert(
         CrowdStrikeIndicator.model_validate(raw)
     )
     bundle = CrowdStrikeAddMalware().convert(indicator)

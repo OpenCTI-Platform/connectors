@@ -53,10 +53,10 @@ src/
       extractor.py            CrowdStrikeIndicatorExtractor (FalconPy)
       actors.py               CrowdStrikeActorEnricher (FalconPy)
     transform/                pure conversions to STIX
-      transformer.py          CrowdStrikeIndicatorTransformer
-      malware.py              CrowdStrikeAddMalware
-      attack.py               AttackPatternCatalog, CrowdStrikeAddAttackPatterns
-      bundle.py               MakeStixBundle
+      create_indicator.py     CreateCrowdStrikeIndicator
+      add_malware.py          CrowdStrikeAddMalware
+      add_attack_patterns.py  AttackPatternCatalog, CrowdStrikeAddAttackPatterns
+      make_bundle.py          MakeStixBundle
 tests/                        pytest, no network
 ```
 
@@ -334,7 +334,7 @@ with `CrowdStrikeSettings` as its settings (see [Setup](#setup) for the keys).
   extractor and enricher of a factory shares one FalconPy `Intel` client,
   built on the first API call only: FalconPy authenticates when the client is
   built, and creating components must not contact CrowdStrike.
-- **`create_transformers()`** returns new `CrowdStrikeIndicatorTransformer`,
+- **`create_transformers()`** returns new `CreateCrowdStrikeIndicator`,
   `CrowdStrikeAddMalware`, `CrowdStrikeAddAttackPatterns` when a dataset is
   set, and `MakeStixBundle`.
 
@@ -385,7 +385,7 @@ resolve to.
 
 ### CrowdStrike indicators as STIX
 
-`CrowdStrikeIndicatorTransformer` converts an `EnrichedCrowdStrikeIndicator` into a
+`CreateCrowdStrikeIndicator` converts an `EnrichedCrowdStrikeIndicator` into a
 `CrowdStrikeStix2Indicator`: a stix2 `Indicator` (STIX 2.1) that declares extra
 `x_crowdstrike_*` properties. Two rules apply:
 
@@ -448,7 +448,7 @@ class CrowdStrikeIndicatorBundle:
 
 ```
 CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle
-       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware  |      MakeStixBundle
+       CreateCrowdStrikeIndicator         CrowdStrikeAddMalware  |      MakeStixBundle
                                                 CrowdStrikeAddAttackPatterns
                                                 (only with an ATT&CK dataset)
 ```
@@ -714,7 +714,7 @@ that is one indicator in the API shape: one element of an API page's
 (`jq '.[0].item'`). It then runs the chain, each step taking the previous
 output. The CrowdStrike chain is:
 
-1. `CrowdStrikeIndicatorTransformer`: the STIX 2.1 indicator;
+1. `CreateCrowdStrikeIndicator`: the STIX 2.1 indicator;
 2. `CrowdStrikeAddMalware`: the bundle of that indicator, its Malware objects
    and its `indicates` relationships;
 3. with a dataset only, set by `CROWDSTRIKE_ATTACK_DATA`,
@@ -758,7 +758,7 @@ step's output as indented JSON, then an empty line. If a step fails, the steps
 before it stay on standard output and the error goes to standard error.
 
 ```
-Step 1 - CrowdStrikeIndicatorTransformer
+Step 1 - CreateCrowdStrikeIndicator
 {
   "type": "indicator",
   "id": "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b",
