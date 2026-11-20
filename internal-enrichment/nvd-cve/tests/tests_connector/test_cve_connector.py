@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from src.connector.cve_connector import CVEConnector
 from src.services.converter.vulnerability_to_stix2 import CVEConverter
 from src.services.utils.cve_extractor import extract_cve_ids, extract_cves_from_entity
+
 from tests.conftest import make_cpe_name, make_vulnerability
 
 

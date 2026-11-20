@@ -8,13 +8,13 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_NAME | `string` |  | string | `"NIST NVD CVE Enrichment"` | Name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["Report", "Grouping", "Note", "Observed-Data", "Opinion", "Case-Incident", "Case-Rfi", "Case-Rft", "Task", "Feedback", "Incident", "Vulnerability"]` | The scope of STIX entities the connector enriches (Containers and Vulnerability). |
+| CONNECTOR_NAME | `string` |  | Length: `string >= 1` | `"NIST NVD CVE Enrichment"` | Name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["Report", "Grouping", "Note", "Observed-Data", "Opinion", "Case-Incident", "Case-Rfi", "Case-Rft", "Task", "Feedback", "Incident", "Vulnerability"]` | The scope of STIX entities the connector enriches (Containers and Vulnerability). |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `true` | Enables or disables automatic enrichment when an in-scope entity is ingested. |
 | CONNECTOR_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Maximum TLP level of the entities the connector is allowed to enrich. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
-| CVE_BASE_URL | `string` |  | string | `"https://services.nvd.nist.gov/rest/json/cves"` | URL for the CVE API. |
+| CVE_BASE_URL | `string` |  | Length: `string >= 1` | `"https://services.nvd.nist.gov/rest/json/cves"` | URL for the CVE API. |
 | CVE_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `""` | API Key for the CVE API (optional for low-volume testing, recommended for production rate limits). |
 | CVE_CREATE_UNMATCHED_CVE | `boolean` |  | boolean | `true` | If set to `True`, create a minimal placeholder Vulnerability entity even if NVD has not published data for the extracted CVE ID yet. |
 | CVE_CREATE_RELATIONSHIPS | `boolean` |  | boolean | `true` | If set to `True`, create `related-to` / `targets` relationships when linking extracted CVEs to containers or incidents in addition to `object_refs`. |

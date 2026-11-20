@@ -13,12 +13,14 @@
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "NIST NVD CVE Enrichment",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -38,6 +40,7 @@
       ],
       "description": "The scope of STIX entities the connector enriches (Containers and Vulnerability).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -81,12 +84,14 @@
     "CVE_BASE_URL": {
       "default": "https://services.nvd.nist.gov/rest/json/cves",
       "description": "URL for the CVE API.",
+      "minLength": 1,
       "type": "string"
     },
     "CVE_API_KEY": {
       "default": "",
       "description": "API Key for the CVE API (optional for low-volume testing, recommended for production rate limits).",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },

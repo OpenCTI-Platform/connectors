@@ -15,6 +15,7 @@ from src.services.utils.constants import (
     MAX_CPES_PER_CVE,
     MAX_CVES_PER_ENTITY,
 )
+
 from tests.conftest import make_cpe_name, make_vulnerability
 from tests.tests_connector.test_cve_connector import _make_enrichment_connector
 

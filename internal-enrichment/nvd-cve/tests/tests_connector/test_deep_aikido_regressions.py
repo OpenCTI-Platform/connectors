@@ -8,6 +8,7 @@ import pytest
 from connectors_sdk.exceptions.error import DataRetrievalError, UseCaseError
 from pycti import MarkingDefinition, OpenCTIConnectorHelper
 from src.services.utils.cve_extractor import extract_cve_ids
+
 from tests.conftest import make_vulnerability
 from tests.tests_connector.test_aikido_regressions import payload
 from tests.tests_connector.test_cve_connector import _make_enrichment_connector
