@@ -37,6 +37,8 @@ src/
     factory.py                AbstractConnectorFactory[S: BaseSettings],
                               ConnectorConfigurationError
     type_arguments.py         declared_types, reads a component's type arguments
+    errors.py                 SourceAPIError, ItemValidationError,
+                              ItemConversionError
     cli.py                    the connector-cli command, for any factory
   crowdstrike_indicators/     CrowdStrike implementation
     factory.py                CrowdStrikeSettings, CrowdStrikeConnectorFactory
@@ -285,6 +287,35 @@ connector = Connector(
     factory.create_extractor(), factory.create_transformers(), loader
 )
 ```
+
+### Shared errors
+
+`shared/errors.py` holds three errors any source can raise. They are a
+toolkit: the contracts above require an error that says what failed, not one
+of these types, and the connector and the command line handle them like any
+other error.
+
+| Error | Carries | Message |
+| --- | --- | --- |
+| `SourceAPIError` | `source`, `status_code`, `message` | `<source> API error <status>: <message>` |
+| `ItemValidationError` | `item_id` (or `None`), `errors` (JSON-safe), `raw` | `Item <id> failed validation (<n> error(s)): <field>: <message>; ...` |
+| `ItemConversionError` | `item_id`, `reason` | `Item <id> could not be converted: <reason>` |
+
+`ItemValidationError.from_validation_error` builds the validation error from
+a Pydantic `ValidationError`, chained as its cause. The caller says which
+field identifies a record:
+
+```python
+try:
+    return Model.model_validate(raw)
+except ValidationError as error:
+    raise ItemValidationError.from_validation_error(
+        error, raw, item_id=raw.get("id")
+    ) from error
+```
+
+The meaning of a status code is left to the source: CrowdStrike uses `0` for
+a response without an integer status code.
 
 ### The CrowdStrike factory
 
