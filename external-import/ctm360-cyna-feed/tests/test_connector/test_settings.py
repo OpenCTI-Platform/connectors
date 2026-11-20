@@ -52,10 +52,6 @@ class TestCTM360CynaConfigDefaults:
             == "https://cyna.ctm360.com"
         )
 
-    def test_import_interval_default(self):
-        settings = ConnectorSettings()
-        assert settings.ctm360_cyna.import_interval == 86400
-
     def test_page_size_default(self):
         settings = ConnectorSettings()
         assert settings.ctm360_cyna.page_size == 25
@@ -68,10 +64,24 @@ class TestCTM360CynaConfigDefaults:
 class TestCTM360CynaConfigOverrides:
     """Test that default values can be overridden via env vars."""
 
-    def test_override_import_interval(self, monkeypatch):
-        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", "3600")
+    def test_override_duration_period(self, monkeypatch):
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT6H")
         settings = ConnectorSettings()
-        assert settings.ctm360_cyna.import_interval == 3600
+        assert settings.connector.duration_period == timedelta(hours=6)
+
+    def test_deprecated_import_interval_sets_duration_period(self, monkeypatch):
+        monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
+        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", "3600")
+        with pytest.warns(UserWarning, match="Migrating"):
+            settings = ConnectorSettings()
+        assert settings.connector.duration_period == timedelta(seconds=3600)
+
+    def test_duration_period_wins_over_deprecated_import_interval(self, monkeypatch):
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT6H")
+        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", "3600")
+        with pytest.warns(UserWarning, match="Using only"):
+            settings = ConnectorSettings()
+        assert settings.connector.duration_period == timedelta(hours=6)
 
     def test_override_page_size(self, monkeypatch):
         monkeypatch.setenv("CTM360_CYNA_PAGE_SIZE", "50")
@@ -95,10 +105,17 @@ class TestCTM360CynaConfigOverrides:
 class TestPositiveIntegerValidation:
     """Non-positive scheduling/pagination values must be rejected at load time."""
 
-    @pytest.mark.parametrize("value", ["0", "-1"])
-    def test_import_interval_must_be_positive(self, monkeypatch, value):
-        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", value)
+    @pytest.mark.parametrize("value", ["PT0S", "-PT1S"])
+    def test_duration_period_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", value)
         with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_deprecated_import_interval_must_be_positive(self, monkeypatch, value):
+        monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
+        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", value)
+        with pytest.warns(UserWarning), pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
     @pytest.mark.parametrize("value", ["0", "-10"])

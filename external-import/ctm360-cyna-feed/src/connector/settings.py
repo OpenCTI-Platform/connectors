@@ -4,10 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
-from pydantic.json_schema import SkipJsonSchema
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -20,12 +20,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default=["ctm360-cyna"],
     )
     name: str = Field(default="CTM360-CYNA")
-    # Required by the SDK base config but not used for scheduling: the connector
-    # polls every `ctm360_cyna.import_interval` seconds, so it is hidden from the
-    # schema to avoid advertising a setting that has no effect.
-    duration_period: SkipJsonSchema[timedelta] = Field(
+    duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=24),
+        gt=timedelta(0),
     )
 
 
@@ -35,10 +33,13 @@ class CTM360CynaConfig(BaseConfigModel):
         description="CYNA API base URL.",
     )
     api_key: SecretStr = Field(description="API key for CYNA authentication.")
-    import_interval: int = Field(
-        default=86400,
-        gt=0,
-        description="Interval in seconds between imports (default: 24h).",
+    import_interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(seconds=int(x)),
+        description="Interval in seconds between imports.",
     )
     page_size: int = Field(
         default=25,
