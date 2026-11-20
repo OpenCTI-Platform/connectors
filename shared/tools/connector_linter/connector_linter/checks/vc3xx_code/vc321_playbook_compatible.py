@@ -6,12 +6,19 @@ in a constructor call (avoids false positives from comments/docstrings).
 Sub-check A: ``playbook_compatible=True`` is set (ERROR).
 Sub-check B: ``send_stix2_bundle`` is called (WARNING — bundle-based flow).
 
+Connectors built on connectors-sdk's ``InternalEnrichmentConnector`` pass:
+the SDK creates the helper with ``playbook_compatible=True`` and sends
+exactly one bundle per playbook message.
+
 Scope: INTERNAL_ENRICHMENT only.
 """
 
 import ast
 from pathlib import Path
 
+from connector_linter.checks.vc3xx_code._helpers import (
+    find_sdk_internal_enrichment_connector,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -91,6 +98,18 @@ def check_playbook_compatible(ctx: ConnectorContext) -> list[CheckFinding]:
         return [no_python_sources_finding()]
 
     trees = ctx.python_trees
+
+    # The SDK base connector does it itself
+    sdk_import = find_sdk_internal_enrichment_connector(trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Playbook compatibility delegated to connectors-sdk InternalEnrichmentConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
     results: list[CheckFinding] = []
 
     # ---------------------------------------------------------------------------
