@@ -122,7 +122,7 @@ All variables are required unless a default is listed.
 
 | Variable                    | Description                                              | Default           |
 |-----------------------------|----------------------------------------------------------|-------------------|
-| `CONNECTOR_ID`              | Unique UUIDv4 for this connector instance.               | —                 |
+| `CONNECTOR_ID`              | Unique UUIDv4 for this connector instance.               | `6c7aa0f8-dd1b-419b-bb51-e8502c08c056` |
 | `CONNECTOR_NAME`            | Display name in OpenCTI.                                 | `CTM360-CYNA`     |
 | `CONNECTOR_SCOPE`           | Connector scope label. | `ctm360-cyna` |
 | `CONNECTOR_TYPE`            | Must be `EXTERNAL_IMPORT`.                               | `EXTERNAL_IMPORT` |

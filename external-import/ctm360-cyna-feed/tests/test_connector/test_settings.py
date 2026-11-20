@@ -1,6 +1,7 @@
 """Tests for CTM360 CYNA Feed connector settings."""
 
 from datetime import timedelta
+from uuid import UUID
 
 import pytest
 from connector.settings import ConnectorSettings
@@ -126,10 +127,11 @@ class TestRequiredFieldValidation:
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
-    def test_missing_connector_id(self, monkeypatch):
+    def test_default_connector_id(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_ID")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
+        settings = ConnectorSettings()
+        assert settings.connector.id == "6c7aa0f8-dd1b-419b-bb51-e8502c08c056"
+        assert UUID(settings.connector.id).version == 4
 
     def test_default_connector_scope(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_SCOPE")

@@ -10,6 +10,10 @@ from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="6c7aa0f8-dd1b-419b-bb51-e8502c08c056",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector.",
         default=["ctm360-cyna"],
