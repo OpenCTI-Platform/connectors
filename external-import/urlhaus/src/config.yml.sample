@@ -10,7 +10,11 @@ connector:
   log_level: 'info'
 
 urlhaus:
-  auth_key: 'ChangeMe' # From https://auth.abuse.ch
+  # Authentication: set the community Auth-Key, the Spamhaus commercial credentials, or both
+  auth_key: 'ChangeMe' # Community mode, from https://auth.abuse.ch
+  # spamhaus_username: 'ChangeMe' # Commercial mode, from the Spamhaus Customer Portal
+  # spamhaus_password: 'ChangeMe'
+  # spamhaus_import_from: 'P30D' # Commercial mode, first run only: ISO-8601 date or duration
   default_x_opencti_score: 80  # Optional: Defaults to 80
   import_offline: true
   interval: 3
