@@ -144,7 +144,7 @@ class AbstractLoader(ABC):
 ```
 
 - A loader takes one standard STIX 2.1 bundle, the output of the last
-  transformer (`CrowdStrikeAddIdentity` for CrowdStrike),
+  transformer (`CrowdStrikeAddTlpMarking` for CrowdStrike),
   and returns nothing. A normal return means the whole bundle has been
   delivered.
 - A bundle that cannot be delivered raises an error.
@@ -330,7 +330,10 @@ with `CrowdStrikeSettings` as its settings (see [Setup](#setup) for the keys).
 - **Settings.** `CROWDSTRIKE_CLIENT_ID` and `CROWDSTRIKE_CLIENT_SECRET` are
   required (both `SecretStr`, never displayed), `CROWDSTRIKE_BASE_URL` defaults
   to `https://api.crowdstrike.com`, `CROWDSTRIKE_ATTACK_DATA` is the optional
-  path of a local ATT&CK dataset, which must exist. Empty values count as
+  path of a local ATT&CK dataset, which must exist, and `CROWDSTRIKE_TLP` the
+  TLP level the objects are marked with, `AMBER+STRICT` by default as in the
+  existing connector; an unknown level fails construction, naming the key.
+  Empty values count as
   unset, and keys that are not settings are ignored, so a `.env` shared with
   other tools works.
 - **The ATT&CK dataset is read at construction**, once per factory: a file
@@ -343,7 +346,8 @@ with `CrowdStrikeSettings` as its settings (see [Setup](#setup) for the keys).
   built, and creating components must not contact CrowdStrike.
 - **`create_transformers()`** returns new `CreateCrowdStrikeIndicator`,
   `CrowdStrikeAddMalware`, `CrowdStrikeAddAttackPatterns` when a dataset is
-  set, `MakeStixBundle` and `CrowdStrikeAddIdentity`.
+  set, `MakeStixBundle`, `CrowdStrikeAddIdentity` and
+  `CrowdStrikeAddTlpMarking` with the configured level.
 
 ### CrowdStrike actors
 
@@ -454,8 +458,8 @@ class CrowdStrikeIndicatorBundle:
 ```
 
 ```
-CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle --> stix2 Bundle
-       CreateCrowdStrikeIndicator         CrowdStrikeAddMalware  |      MakeStixBundle  CrowdStrikeAddIdentity
+CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle --> stix2 Bundle --> stix2 Bundle
+       CreateCrowdStrikeIndicator         CrowdStrikeAddMalware  |      MakeStixBundle  CrowdStrikeAddIdentity  CrowdStrikeAddTlpMarking
                                                 CrowdStrikeAddAttackPatterns
                                                 (only with an ATT&CK dataset)
 ```
@@ -554,7 +558,7 @@ the [ATT&CK terms of use](https://attack.mitre.org/resources/legal-and-branding/
 
 ### STIX bundle
 
-`MakeStixBundle` is the step before last: it turns a `CrowdStrikeIndicatorBundle`
+`MakeStixBundle` follows the steps that add objects: it turns a `CrowdStrikeIndicatorBundle`
 into a standard STIX 2.1 bundle (`stix2.v21.Bundle`), the form a STIX consumer
 such as OpenCTI takes.
 
@@ -711,6 +715,7 @@ The install is editable: changes under `src/` apply without reinstalling.
 | `CROWDSTRIKE_CLIENT_SECRET` | yes | |
 | `CROWDSTRIKE_BASE_URL` | no | `https://api.crowdstrike.com` (US-1). Other regions: `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`, ... |
 | `CROWDSTRIKE_ATTACK_DATA` | no | none. Path of a local MITRE ATT&CK Enterprise STIX bundle; when set, the chain adds the AttackPatterns (see [Attack patterns](#attack-patterns)). |
+| `CROWDSTRIKE_TLP` | no | `AMBER+STRICT`. TLP level of the objects: `CLEAR` (or `WHITE`), `GREEN`, `AMBER`, `AMBER+STRICT` or `RED`, in any case (see [TLP marking](#tlp-marking)). |
 
 Both subcommands read this configuration through the
 [CrowdStrike factory](#the-crowdstrike-factory) and stop with status 2, naming
@@ -824,9 +829,13 @@ output. The CrowdStrike chain is:
    (see [Attack patterns](#attack-patterns));
 4. `MakeStixBundle`: the standard STIX 2.1 bundle of all those objects, ready
    for a STIX consumer (see [STIX bundle](#stix-bundle));
-5. always last, `CrowdStrikeAddIdentity`: that bundle with the `CrowdStrike`
+5. `CrowdStrikeAddIdentity`: that bundle with the `CrowdStrike`
    organization first and every object credited to it in `created_by_ref`
-   (see [Author identity](#author-identity)).
+   (see [Author identity](#author-identity));
+6. always last, `CrowdStrikeAddTlpMarking`: that bundle with the TLP marking
+   definition set by `CROWDSTRIKE_TLP` (`AMBER+STRICT` by default) first, and
+   every object but the identity marked with it in `object_marking_refs` (see
+   [TLP marking](#tlp-marking)).
 
 It is the chain `CrowdStrikeConnectorFactory.create_transformers()` returns,
 so what `transform` shows is what a connector built from the same
@@ -900,6 +909,19 @@ Step 4 - CrowdStrikeAddIdentity
     {"type": "indicator", "id": "indicator--f975582d-...", "created_by_ref": "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed", "...": "..."},
     {"type": "malware", "created_by_ref": "identity--f29f12ba-...", "...": "..."},
     {"type": "relationship", "created_by_ref": "identity--f29f12ba-...", "...": "..."}
+  ]
+}
+
+Step 5 - CrowdStrikeAddTlpMarking
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [
+    {"type": "marking-definition", "id": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37", "x_opencti_definition": "TLP:AMBER+STRICT", "...": "..."},
+    {"type": "identity", "id": "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed", "name": "CrowdStrike", "...": "..."},
+    {"type": "indicator", "object_marking_refs": ["marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"], "...": "..."},
+    {"type": "malware", "object_marking_refs": ["marking-definition--826578e1-..."], "...": "..."},
+    {"type": "relationship", "object_marking_refs": ["marking-definition--826578e1-..."], "...": "..."}
   ]
 }
 ```
