@@ -1,13 +1,17 @@
 import warnings
 from datetime import timedelta
+from typing import ClassVar
 
 from connectors_sdk import (
+    AbuseChAuthConfigMixin,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
-from pydantic import Field, SecretStr, model_validator
+from connectors_sdk.settings.deprecations import DeprecatedField
+from pydantic import ConfigDict, Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -34,7 +38,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class UrlhausRecentPayloadsConfig(BaseConfigModel):
+class UrlhausRecentPayloadsConfig(AbuseChAuthConfigMixin, BaseConfigModel):
     """
     Define parameters and/or defaults for the configuration specific to the `UrlhausRecentPayloadsConnector`.
     """
@@ -43,7 +47,22 @@ class UrlhausRecentPayloadsConfig(BaseConfigModel):
         description="The URL of the URLhaus API.",
         default="https://urlhaus-api.abuse.ch/v1/",
     )
-    api_key: SecretStr = Field(description="The API key for the URLhaus API.")
+    auth_env_prefix: ClassVar[str] = "URLHAUS_RECENT_PAYLOADS"
+
+    api_key: SecretStr | None = DeprecatedField(
+        deprecated="Use 'auth_key' (URLHAUS_RECENT_PAYLOADS_AUTH_KEY) instead.",
+        new_namespaced_var="auth_key",
+        description="Deprecated alias of `auth_key`.",
+        default=None,
+    )
+    import_start_date: DatetimeFromIsoString = Field(
+        description=(
+            "Spamhaus commercial API only: how far back to fetch payloads on the first "
+            "run, when the connector has no checkpoint yet. ISO-8601 datetime or "
+            "duration (e.g. `P1D`)."
+        ),
+        default="P1D",  # type: ignore[assignment]
+    )
     include_filetypes: ListFromString = Field(
         description="Only download files if file type matches. (Comma separated)",
         default=[],
@@ -77,6 +96,9 @@ class ConnectorSettings(BaseConnectorSettings):
     """
     Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `UrlhausRecentPayloadsConfig`.
     """
+
+    # Validation errors would otherwise echo the raw input, secrets included.
+    model_config = ConfigDict(hide_input_in_errors=True)
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
