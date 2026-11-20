@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 
 
 class AbuseChAuthConfigMixin(BaseModel):
@@ -23,6 +30,10 @@ class AbuseChAuthConfigMixin(BaseModel):
     At least one mode must be configured. When both are, the commercial mode wins
     (``use_commercial``) and the community key is kept as a fallback.
 
+    Validation errors of this section never echo the raw input (``hide_input_in_errors``).
+    The settings model that contains the section must set the same option, otherwise
+    its own error would show the input again.
+
     Attributes:
         auth_env_prefix: Prefix of the environment variables (e.g. ``THREATFOX``), used
             in the validation message.
@@ -30,6 +41,11 @@ class AbuseChAuthConfigMixin(BaseModel):
         spamhaus_username: Spamhaus abuse.ch API account username (commercial mode).
         spamhaus_password: Spamhaus abuse.ch API account password (commercial mode).
     """
+
+    # A validation error echoes the raw input by default, which here holds the
+    # password in clear text. The outer settings model that embeds this section must
+    # set the same option: pydantic decides on the model that raises the error.
+    model_config = ConfigDict(hide_input_in_errors=True)
 
     auth_env_prefix: ClassVar[str] = ""
 

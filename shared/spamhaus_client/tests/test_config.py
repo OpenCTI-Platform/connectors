@@ -1,5 +1,6 @@
 """Tests for the abuse.ch authentication settings (community and Spamhaus)."""
 
+import traceback
 from typing import ClassVar
 
 import pytest
@@ -158,3 +159,30 @@ class TestErrors:
     def test_commercial_error_is_abstract(self):
         with pytest.raises(TypeError):
             SpamhausCommercialError("abstract")
+
+
+class TestSecretsInValidationErrors:
+    """A failed validation must not echo the raw input, which holds the password."""
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"spamhaus_password": "pw-do-not-leak"},
+            {"spamhaus_password": "pw-do-not-leak", "auth_key": "community-key"},
+            {"spamhaus_username": "user-do-not-leak"},
+            {"spamhaus_username": "user-do-not-leak", "auth_key": "community-key"},
+            {"spamhaus_username": "user-do-not-leak", "spamhaus_password": "  "},
+        ],
+    )
+    def test_no_secret_reaches_the_formatted_exception_chain(self, values):
+        with pytest.raises(ValidationError) as excinfo:
+            _Section(**values)
+
+        formatted = "".join(traceback.format_exception(excinfo.value))
+        for secret in ("pw-do-not-leak", "user-do-not-leak", "community-key"):
+            assert secret not in formatted
+        assert "MYCONN_SPAMHAUS" in formatted  # the message still names the variables
+
+    def test_the_error_still_says_what_is_wrong(self):
+        with pytest.raises(ValidationError, match="MYCONN_SPAMHAUS_USERNAME"):
+            _Section(spamhaus_password="pw-do-not-leak")
