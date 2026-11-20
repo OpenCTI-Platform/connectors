@@ -14,4 +14,4 @@ connector:
 template:
   api_base_url: 'https://api.example.com/v1' # optional (default: 'https://api.example.com/v1')
   api_key: 'ChangeMe'
-  tlp_level: 'clear' # optional, TLP of the created objects, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  create_autonomous_system: true # optional, create the autonomous system of the IP address (default: true)

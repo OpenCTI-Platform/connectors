@@ -94,6 +94,8 @@ def test_transform_should_enrich_the_entity_and_link_new_objects(
     assert enriched_ip.id == ipv4_message.stix_entity.id
     assert enriched_ip.score == 80
     assert enriched_ip.labels == ["scanner"]
+    assert enriched_ip.author == processor.author
+    assert enriched_ip.markings is None  # never change the entity's markings
 
     # Then: the autonomous system is linked to the entity received
     [autonomous_system] = [
@@ -116,4 +118,26 @@ def test_transform_should_not_create_an_autonomous_system_without_asn(
 
     # Then: only the author, the marking and the enriched entity are returned
     assert len(stix_objects) == 3
+    assert not any(isinstance(obj, AutonomousSystem) for obj in stix_objects)
+
+
+def test_transform_should_not_create_an_autonomous_system_when_disabled(
+    connector_settings, ipv4_message
+):
+    """Test that `create_autonomous_system=False` disables the autonomous system."""
+    # Given: the creation of autonomous systems is disabled (settings are frozen:
+    # change a copy)
+    template_config = connector_settings.template.model_copy(
+        update={"create_autonomous_system": False}
+    )
+    settings = connector_settings.model_copy(update={"template": template_config})
+    processor = IPv4Processor()
+    processor.inject_dependencies(settings=settings)
+    processor.post_init()
+    reputation = IPReputation(ip="1.2.3.4", score=80, asn=64496)
+
+    # When: the data is converted
+    stix_objects = processor.transform(data=reputation, message=ipv4_message)
+
+    # Then: no autonomous system is created
     assert not any(isinstance(obj, AutonomousSystem) for obj in stix_objects)

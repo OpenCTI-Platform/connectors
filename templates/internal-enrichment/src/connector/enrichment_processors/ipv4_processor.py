@@ -43,6 +43,7 @@ from connectors_sdk.models import (
     Relationship,
     TLPMarking,
 )
+from connectors_sdk.models.enums import TLPLevel
 from template_client import IPReputation, TemplateClient
 
 
@@ -71,7 +72,9 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
             api_key=self.settings.template.api_key.get_secret_value(),
         )
         self.author = OrganizationAuthor(name="Template Connector")
-        self.tlp_marking = TLPMarking(level=self.settings.template.tlp_level)
+        # The TLP of the data the source provides. It is only applied to the
+        # objects the connector creates, never to the enriched entity.
+        self.tlp_marking = TLPMarking(level=TLPLevel.CLEAR)
 
     def collect(self, message: EnrichmentMessage) -> IPReputation | None:
         """Fetch the reputation of the IP address from the external API.
@@ -112,6 +115,8 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
           same values as the entity (here, the same IP address), so that it
           gets the same id. In the bundle, it replaces the entity received,
           and OpenCTI adds its new properties (score, labels...) to the entity.
+          Do not set a marking on it: OpenCTI would add the marking to the
+          entity, and change who can see it.
         - Link new objects to the entity: use `Reference(id=message.stix_entity.id)`
           as the source or the target of a relationship. A `Reference` only
           points to the entity: it never changes it, and it is never sent.
@@ -133,6 +138,7 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
         enriched_ip = IPV4Address(
             value=message.stix_entity.value,  # same value, so same id
             score=data.score,
+            author=self.author,
             labels=data.tags or None,
             external_references=(
                 [ExternalReference(source_name="Template", url=data.permalink)]
@@ -146,7 +152,7 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
             enriched_ip,
         ]
 
-        if data.asn is not None:
+        if self.settings.template.create_autonomous_system and data.asn is not None:
             autonomous_system = AutonomousSystem(
                 number=data.asn,
                 name=data.as_name,

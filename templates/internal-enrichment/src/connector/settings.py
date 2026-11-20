@@ -79,9 +79,10 @@ class TemplateConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="API key used to authenticate against the external API."
     )
-    tlp_level: TLPLevel = Field(
-        description="TLP marking applied to the objects this connector creates.",
-        default=TLPLevel.CLEAR,
+    create_autonomous_system: bool = Field(
+        description="Whether to create the autonomous system of the IP address, "
+        "with a `belongs-to` relationship from the IP address.",
+        default=True,
     )
 
 

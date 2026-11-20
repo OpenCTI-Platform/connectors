@@ -16,5 +16,5 @@ services:
       # Custom parameters for connector-template
       - TEMPLATE_API_BASE_URL=https://api.example.com/v1 # optional (default: 'https://api.example.com/v1')
       - TEMPLATE_API_KEY=CHANGEME
-      - TEMPLATE_TLP_LEVEL=clear # optional, TLP of the created objects, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - TEMPLATE_CREATE_AUTONOMOUS_SYSTEM=true # optional, create the autonomous system of the IP address (default: true)
     restart: always
