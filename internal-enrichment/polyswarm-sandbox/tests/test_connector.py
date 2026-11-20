@@ -484,6 +484,54 @@ class TestSendErrorNoteExceptionPaths:
         )
 
 
+class TestSendErrorNoteBundle:
+    """The error note's bundle must carry the entity it refers to.
+
+    It is sent with cleanup_inconsistent_bundle=True, which drops refs to objects
+    missing from the bundle, so without the entity the note was attached to nothing.
+    """
+
+    def test_bundle_contains_entity_and_note(self):
+        c = make_connector()
+        entity = {
+            "type": "artifact",
+            "id": "artifact--00000000-0000-0000-0000-000000000001",
+        }
+        note = {
+            "type": "note",
+            "id": "note--test",
+            "object_refs": [entity["id"]],
+        }
+        c.stix_builder.create_error_note = MagicMock(return_value=note)
+        c.stix_builder._create_author = MagicMock(
+            return_value={"type": "identity", "id": "identity--ps"}
+        )
+
+        c._send_error_note(entity, "Test", "detail", [])
+
+        objects = c.helper.stix2_create_bundle.call_args[0][0]
+        ids = {o["id"] for o in objects}
+        assert entity["id"] in ids
+        assert note["id"] in ids
+        assert set(note["object_refs"]) <= ids
+        _, kwargs = c.helper.send_stix2_bundle.call_args
+        assert kwargs.get("cleanup_inconsistent_bundle") is True
+
+    def test_entity_without_id_is_not_added(self):
+        c = make_connector()
+        c.stix_builder.create_error_note = MagicMock(
+            return_value={"type": "note", "id": "note--test"}
+        )
+        c.stix_builder._create_author = MagicMock(
+            return_value={"type": "identity", "id": "identity--ps"}
+        )
+
+        c._send_error_note({}, "Test", "detail", [])
+
+        objects = c.helper.stix2_create_bundle.call_args[0][0]
+        assert [o["id"] for o in objects] == ["identity--ps", "note--test"]
+
+
 # ── Debug sandbox structure ───────────────────────────────────────────────────
 
 
