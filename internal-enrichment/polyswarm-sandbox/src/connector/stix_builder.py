@@ -285,6 +285,10 @@ class StixBuilder:
             default=0,
         )
         score = max(s_score, b_score)
+        # Nothing to score from: a scan with no engine verdicts and no sandbox score
+        score_known = bool(scan_data and scan_data.get("has_verdicts", True)) or any(
+            r for r in sandbox_results.values()
+        )
 
         # Get family — prefer highest-scoring sandbox provider, fallback to scan
         family = None
@@ -484,7 +488,7 @@ class StixBuilder:
 
         artifact_update = self._create_entity_update_enhanced(
             entity,
-            score,
+            score if score_known else None,
             external_refs,
             comprehensive_labels,
             config=config,
@@ -719,7 +723,7 @@ class StixBuilder:
     def _create_entity_update_enhanced(
         self,
         entity: dict,
-        score: int,
+        score: int | None,
         external_refs: list,
         labels: list,
         config: dict | None = None,
@@ -746,9 +750,9 @@ class StixBuilder:
         update["x_opencti_created_by_ref"] = self.author_id
 
         # #39: replace_with_lower_score — protect higher existing scores
-        replace = True
+        replace = score is not None
         replace_with_lower = self._cfg(config, "replace_with_lower_score", True)
-        if config and not replace_with_lower:
+        if replace and config and not replace_with_lower:
             existing = entity.get("x_opencti_score")
             if existing is not None:
                 try:
@@ -767,7 +771,10 @@ class StixBuilder:
             update["external_references"] = external_refs
         # Build score breakdown description with per-provider raw scores
         # OpenCTI renders descriptions as markdown — use double-newline for paragraphs
-        desc_lines = [f"PolySwarm analysis score: {score}%"]
+        if score is None:
+            desc_lines = ["PolySwarm returned no engine verdicts for this file."]
+        else:
+            desc_lines = [f"PolySwarm analysis score: {score}%"]
         if score_details:
             if "polyscore" in score_details:
                 desc_lines.append(f"PolyScore={score_details['polyscore']['raw']}")
@@ -1016,7 +1023,14 @@ class StixBuilder:
         content_parts = ["# PolySwarm Scan Results\n"]
 
         # Detection Summary
-        if scan_data.get("detection_stats"):
+        if not scan_data.get("has_verdicts", True):
+            content_parts.append("## Detection Summary")
+            content_parts.append(
+                "- No engine verdicts were returned for this scan (the scan window "
+                "closed without any engine responses). The score was not changed."
+            )
+            content_parts.append("")
+        elif scan_data.get("detection_stats"):
             stats = scan_data["detection_stats"]
             polyscore = scan_data.get("raw_polyscore", scan_data.get("score", 0) / 100)
             content_parts.append("## Detection Summary")
