@@ -34,9 +34,12 @@ packages = ["spamhaus_client"]
 
 [tool.pytest.ini_options]
 testpaths = ["./tests"]
+# No `--cov-fail-under` here: the CI runs several `shared/` projects in one job with
+# `--cov-append`, so the total would include the coverage of the other projects and
+# fail on code that is not ours. The 100% rule is checked with
+# `--cov-fail-under=100` (see the README).
 addopts = [
     "--cov=spamhaus_client",
-    "--cov-fail-under=100",
 ]
 
 [tool.ruff]

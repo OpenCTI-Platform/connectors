@@ -90,10 +90,13 @@ Run the tests against the local `connectors-sdk` from `shared/spamhaus_client`:
 PYTHONPATH=. uv run --no-project --python 3.12 \
   --with-editable ../../connectors-sdk \
   --with "freezegun>=1.5.5,<2" --with "pytest>=9.0.3,<10" --with "pytest-cov>=7,<8" \
-  python -m pytest
+  python -m pytest --cov-fail-under=100
 ```
 
-Coverage must stay at 100%. `ruff check spamhaus_client` and `mypy -p spamhaus_client`
+Coverage must stay at 100%, hence `--cov-fail-under=100` above. It is not in the
+pytest options of `pyproject.toml` on purpose: the CI runs this package in the same job
+as `pylint_plugins` with `--cov-append`, so a threshold there would be applied to the
+coverage of both. `ruff check spamhaus_client` and `mypy -p spamhaus_client`
 must pass.
 
 The package lists `connectors-sdk` as a git dependency, as the connectors do. That pin
