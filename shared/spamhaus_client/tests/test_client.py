@@ -175,6 +175,42 @@ class TestMissingToken:
                 client.get_json("/threatfox/v1/iocs")
 
 
+class TestOrigin:
+    """The bearer token must only ever go to the configured API origin."""
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "https://another-host.example/resource",
+            "http://api.spamhaus.com/threatfox/v1/iocs",
+            "https://api.spamhaus.com.evil.example/x",
+            "https://user@evil.example/x",
+        ],
+    )
+    @pytest.mark.parametrize("call", ["get_json", "get_bytes", "paginate"])
+    def test_a_foreign_absolute_url_is_refused_before_any_credential_is_sent(
+        self, client, path, call
+    ):
+        with patch.object(client, "_raw_request") as raw:
+            with pytest.raises(ValueError, match="relative to the API base URL"):
+                result = getattr(client, call)(path)
+                if call == "paginate":
+                    list(result)
+
+        raw.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "path", ["/threatfox/v1/iocs", "threatfox/v1/iocs", "//threatfox/v1/iocs"]
+    )
+    def test_a_relative_path_is_still_accepted(self, client, path):
+        with patch.object(
+            client,
+            "_raw_request",
+            side_effect=[_login_ok(expires=int(time.time()) + 86400), _page([])],
+        ):
+            assert client.get_json(path)["items"] == []
+
+
 class TestTokenReuse:
     def test_valid_token_is_reused(self, client):
         client._token_refresh_margin = 300

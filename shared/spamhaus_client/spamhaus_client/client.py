@@ -201,10 +201,28 @@ class SpamhausClient(BaseClientApi):
                 "Spamhaus request failed: the API cannot be reached"
             ) from err
 
+    def _ensure_same_origin(self, path: str) -> None:
+        """Refuse a path that resolves outside the configured API origin.
+
+        ``BaseClientApi`` returns an absolute URL unchanged, so a caller passing one
+        would send the bearer token to another host. Checked before any login or
+        request, so no credential leaves for a foreign origin.
+
+        Raises:
+            ValueError: If the path does not resolve to the API base URL origin.
+        """
+        base = urlparse(self._base_url)
+        target = urlparse(self._build_url(path))
+        if (target.scheme, target.netloc) != (base.scheme, base.netloc):
+            raise ValueError(
+                "Spamhaus requests must use a path relative to the API base URL"
+            )
+
     def _authenticated_get(
         self, path: str, params: dict[str, Any] | None, *, binary: bool
     ) -> Any:
         """GET with the JWT, logging in again once when the API answers 401."""
+        self._ensure_same_origin(path)
         try:
             return self._send(path, params, binary=binary)
         except ApiUnauthorizedError:
@@ -231,6 +249,7 @@ class SpamhausClient(BaseClientApi):
         Raises:
             SpamhausAuthenticationError: If the credentials are rejected.
             SpamhausUnavailableError: If the API cannot answer.
+            ValueError: If ``path`` points outside the API base URL.
         """
         return self._authenticated_get(path, params, binary=False)
 
@@ -250,6 +269,7 @@ class SpamhausClient(BaseClientApi):
         Raises:
             SpamhausAuthenticationError: If the credentials are rejected.
             SpamhausUnavailableError: If the API cannot answer.
+            ValueError: If ``path`` points outside the API base URL.
         """
         content: bytes = self._authenticated_get(path, params, binary=True)
         return content
