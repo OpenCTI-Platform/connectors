@@ -10,7 +10,6 @@ from conftest import (
     make_actor,
     ok,
 )
-from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
 from crowdstrike_indicators.entities.models import CrowdStrikeActor
 from crowdstrike_indicators.extract.actors import (
     ACTOR_FIELDS,
@@ -19,6 +18,8 @@ from crowdstrike_indicators.extract.actors import (
     normalize,
 )
 from crowdstrike_indicators.extract.api import NO_ERROR_MESSAGE
+
+from shared.errors import SourceAPIError
 
 
 def _scripted(*resources_lists: list[dict]) -> ScriptedActorsClient:
@@ -181,7 +182,7 @@ def test_403_raises_with_its_message_and_nothing_is_cached():
     client = ScriptedActorsClient([forbidden, ok({"resources": []})])
     enricher = CrowdStrikeActorEnricher(client)
 
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         enricher.extract("SALTYSPIDER")
     assert caught.value.status_code == 403
     assert caught.value.message == "access denied"
@@ -193,7 +194,7 @@ def test_403_raises_with_its_message_and_nothing_is_cached():
 def test_error_without_a_message_gets_a_placeholder():
     client = ScriptedActorsClient([{"status_code": 500, "headers": {}, "body": {}}])
 
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         CrowdStrikeActorEnricher(client).extract("SALTYSPIDER")
 
     assert caught.value.status_code == 500
@@ -203,7 +204,7 @@ def test_error_without_a_message_gets_a_placeholder():
 def test_status_that_is_not_an_integer_gives_status_zero():
     client = ScriptedActorsClient([{"headers": {}, "body": {"resources": []}}])
 
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         CrowdStrikeActorEnricher(client).extract("SALTYSPIDER")
 
     assert caught.value.status_code == 0

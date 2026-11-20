@@ -130,7 +130,7 @@ def test_api_error_shows_the_status(monkeypatch, credentials, capsys):
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "401" in captured.err and "access denied" in captured.err
+    assert "error: CrowdStrike API error 401: access denied" in captured.err
 
 
 def test_invalid_indicator_names_the_indicator_and_the_field(

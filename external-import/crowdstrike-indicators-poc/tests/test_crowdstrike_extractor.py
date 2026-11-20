@@ -13,7 +13,6 @@ from conftest import (
     make_indicator,
     ok,
 )
-from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
 from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
@@ -25,7 +24,7 @@ from crowdstrike_indicators.extract.extractor import (
     marker_datetime,
 )
 
-from shared.errors import ItemValidationError
+from shared.errors import ItemValidationError, SourceAPIError
 
 BASE = 1_700_000_000
 FROM_BASE = datetime.fromtimestamp(BASE, tz=UTC)
@@ -258,12 +257,15 @@ def test_non_dict_resource_fails_validation():
 def test_permission_denied_raises_with_the_first_error_message(error_403):
     client = ScriptedClient([{"status_code": 403, "headers": {}, "body": error_403}])
 
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
 
+    assert caught.value.source == "CrowdStrike"
     assert caught.value.status_code == 403
     assert caught.value.message == "access denied, authorization failed"
-    assert "403" in str(caught.value)
+    assert str(caught.value) == (
+        "CrowdStrike API error 403: access denied, authorization failed"
+    )
 
 
 @pytest.mark.parametrize(
@@ -284,7 +286,7 @@ def test_server_error_without_message_uses_the_placeholder(body):
         response["body"] = body
     client = ScriptedClient([response])
 
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
 
     assert caught.value.status_code == 500
@@ -293,7 +295,7 @@ def test_server_error_without_message_uses_the_placeholder(body):
 
 def test_missing_status_code_is_an_error():
     client = ScriptedClient([{"body": {"resources": [make_indicator(1)]}}])
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
     assert caught.value.status_code == 0
 
@@ -305,7 +307,7 @@ def test_error_on_a_later_page_stops_the_extraction():
             {"status_code": 429, "body": {"errors": [{"message": "slow down"}]}},
         ]
     )
-    with pytest.raises(CrowdStrikeAPIError) as caught:
+    with pytest.raises(SourceAPIError) as caught:
         build_extractor(client).extract(FROM_BASE, 10)
     assert (caught.value.status_code, caught.value.message) == (429, "slow down")
 
@@ -413,7 +415,7 @@ def test_no_lookup_when_pagination_fails(error_403):
         actors=[SALTY],
     )
 
-    with pytest.raises(CrowdStrikeAPIError):
+    with pytest.raises(SourceAPIError):
         build_extractor(client, page_size=1).extract(FROM_BASE, 10)
 
     assert client.actor_calls == []

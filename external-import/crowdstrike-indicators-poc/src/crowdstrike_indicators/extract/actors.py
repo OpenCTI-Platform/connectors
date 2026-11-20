@@ -77,7 +77,7 @@ class CrowdStrikeActorEnricher(AbstractEnricher[CrowdStrikeActor]):
     def _fetch(self, key: str) -> CrowdStrikeActor | None:
         """Look ``key`` up through the actors API.
 
-        :raises CrowdStrikeAPIError: when the API answers with an error.
+        :raises SourceAPIError: when the API answers with an error.
         """
         response = self.client.query_actor_entities(
             filter=name_filter(key),

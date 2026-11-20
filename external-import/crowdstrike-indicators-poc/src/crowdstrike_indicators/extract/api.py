@@ -2,7 +2,9 @@
 
 from typing import Any
 
-from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
+from shared.errors import SourceAPIError
+
+SOURCE = "CrowdStrike"
 
 NO_ERROR_MESSAGE = "no error message returned by CrowdStrike API"
 
@@ -27,14 +29,15 @@ def response_body(response: Any) -> dict[str, Any]:
     FalconPy returns ``{"status_code": ..., "headers": ..., "body": ...}``.
     A body that is not a dict reads as an empty one.
 
-    :raises CrowdStrikeAPIError: when the status code is 400 or above, or is
-        not an integer (status 0 then: an unexpected shape is never read as
-        an empty success).
+    :raises SourceAPIError: for the source ``CrowdStrike``, when the status
+        code is 400 or above, or is not an integer (status 0 then: an
+        unexpected shape is never read as an empty success).
     """
     status_code = response.get("status_code") if isinstance(response, dict) else None
     body = response.get("body") if isinstance(response, dict) else None
     if not isinstance(status_code, int):
-        raise CrowdStrikeAPIError(0, api_error_message(body))
+        # 0 is CrowdStrike's placeholder: the response had no integer status.
+        raise SourceAPIError(SOURCE, 0, api_error_message(body))
     if status_code >= 400:
-        raise CrowdStrikeAPIError(status_code, api_error_message(body))
+        raise SourceAPIError(SOURCE, status_code, api_error_message(body))
     return body if isinstance(body, dict) else {}
