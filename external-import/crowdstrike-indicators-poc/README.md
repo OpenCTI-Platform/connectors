@@ -140,7 +140,8 @@ class AbstractLoader(ABC):
     def load(self, bundle: stix2.v21.Bundle) -> None: ...
 ```
 
-- A loader takes one standard STIX 2.1 bundle, the output of `MakeStixBundle`,
+- A loader takes one standard STIX 2.1 bundle, the output of the last
+  transformer (`CrowdStrikeAddIdentity` for CrowdStrike),
   and returns nothing. A normal return means the whole bundle has been
   delivered.
 - A bundle that cannot be delivered raises an error.
@@ -339,7 +340,7 @@ with `CrowdStrikeSettings` as its settings (see [Setup](#setup) for the keys).
   built, and creating components must not contact CrowdStrike.
 - **`create_transformers()`** returns new `CreateCrowdStrikeIndicator`,
   `CrowdStrikeAddMalware`, `CrowdStrikeAddAttackPatterns` when a dataset is
-  set, and `MakeStixBundle`.
+  set, `MakeStixBundle` and `CrowdStrikeAddIdentity`.
 
 ### CrowdStrike actors
 
@@ -450,8 +451,8 @@ class CrowdStrikeIndicatorBundle:
 ```
 
 ```
-CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle
-       CreateCrowdStrikeIndicator         CrowdStrikeAddMalware  |      MakeStixBundle
+CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle --> stix2 Bundle
+       CreateCrowdStrikeIndicator         CrowdStrikeAddMalware  |      MakeStixBundle  CrowdStrikeAddIdentity
                                                 CrowdStrikeAddAttackPatterns
                                                 (only with an ATT&CK dataset)
 ```
@@ -550,7 +551,7 @@ the [ATT&CK terms of use](https://attack.mitre.org/resources/legal-and-branding/
 
 ### STIX bundle
 
-`MakeStixBundle` is the last step: it turns a `CrowdStrikeIndicatorBundle`
+`MakeStixBundle` is the step before last: it turns a `CrowdStrikeIndicatorBundle`
 into a standard STIX 2.1 bundle (`stix2.v21.Bundle`), the form a STIX consumer
 such as OpenCTI takes.
 
@@ -765,8 +766,11 @@ output. The CrowdStrike chain is:
    `CrowdStrikeAddAttackPatterns`: the same bundle with the MITRE ATT&CK
    AttackPatterns its labels name, resolved against that local ATT&CK dataset
    (see [Attack patterns](#attack-patterns));
-4. always last, `MakeStixBundle`: the standard STIX 2.1 bundle of all those
-   objects, ready for a STIX consumer (see [STIX bundle](#stix-bundle)).
+4. `MakeStixBundle`: the standard STIX 2.1 bundle of all those objects, ready
+   for a STIX consumer (see [STIX bundle](#stix-bundle));
+5. always last, `CrowdStrikeAddIdentity`: that bundle with the `CrowdStrike`
+   organization first and every object credited to it in `created_by_ref`
+   (see [Author identity](#author-identity)).
 
 It is the chain `CrowdStrikeConnectorFactory.create_transformers()` returns,
 so what `transform` shows is what a connector built from the same
@@ -829,6 +833,18 @@ Step 3 - MakeStixBundle
   "type": "bundle",
   "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
   "objects": [{"type": "indicator", "...": "..."}, {"type": "malware", "...": "..."}, {"type": "relationship", "...": "..."}]
+}
+
+Step 4 - CrowdStrikeAddIdentity
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [
+    {"type": "identity", "id": "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed", "name": "CrowdStrike", "identity_class": "organization", "...": "..."},
+    {"type": "indicator", "id": "indicator--f975582d-...", "created_by_ref": "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed", "...": "..."},
+    {"type": "malware", "created_by_ref": "identity--f29f12ba-...", "...": "..."},
+    {"type": "relationship", "created_by_ref": "identity--f29f12ba-...", "...": "..."}
+  ]
 }
 ```
 
