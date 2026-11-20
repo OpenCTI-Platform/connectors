@@ -9,7 +9,12 @@ services:
       - "CONNECTOR_NAME=URLhaus Recent Payloads"
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_RECENT_PAYLOADS_API_URL=https://urlhaus-api.abuse.ch/v1/
-      - URLHAUS_RECENT_PAYLOADS_API_KEY=ChangeMe # Required, issued for free by URLHaus - https://urlhaus-api.abuse.ch/#auth_key
+      # Authentication: an abuse.ch Auth-Key (community) and/or Spamhaus credentials (commercial).
+      # When both are set, the Spamhaus commercial API is used and the Auth-Key is the fallback.
+      - URLHAUS_RECENT_PAYLOADS_AUTH_KEY=ChangeMe # abuse.ch Auth-Key, issued for free - https://auth.abuse.ch (formerly URLHAUS_RECENT_PAYLOADS_API_KEY)
+      # - URLHAUS_RECENT_PAYLOADS_SPAMHAUS_USERNAME=ChangeMe # Spamhaus abuse.ch API account, from the Spamhaus Customer Portal
+      # - URLHAUS_RECENT_PAYLOADS_SPAMHAUS_PASSWORD=ChangeMe
+      # - URLHAUS_RECENT_PAYLOADS_IMPORT_START_DATE=P1D # Spamhaus commercial API only: how far back to import on the first run
       - URLHAUS_RECENT_PAYLOADS_COOLDOWN_SECONDS=300 # Time to wait in seconds between subsequent requests
       - URLHAUS_RECENT_PAYLOADS_INCLUDE_FILETYPES=exe,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll # (Optional) Only download files if any tag matches. (Comma separated)
       - URLHAUS_RECENT_PAYLOADS_INCLUDE_SIGNATURES= # (Optional) Only download files matching these Yara rules. (Comma separated)
