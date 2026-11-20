@@ -152,6 +152,34 @@ class TestPydanticConfig:
         assert config.connector.type == "INTERNAL_ENRICHMENT"
         assert config.connector.max_tlp == TLPLevel.AMBER
 
+    def test_polykg_url_is_read_from_polyswarm_prefixed_env(self, monkeypatch):
+        """The README documents POLYSWARM_POLYKG_API_URL; the unprefixed name isn't read."""
+        ConnectorSettings = pytest.importorskip(
+            "connector.models.configs.settings", reason="connectors_sdk unavailable"
+        ).ConnectorSettings
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000006")
+        monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+        monkeypatch.setenv("POLYKG_API_URL", "http://ignored:4141")
+
+        assert ConnectorSettings().polyswarm.polykg_api_url is None
+
+        monkeypatch.setenv("POLYSWARM_POLYKG_API_URL", "http://polykg:4141")
+        assert ConnectorSettings().polyswarm.polykg_api_url == "http://polykg:4141"
+
+    def test_default_sandbox_provider_is_cape(self, monkeypatch):
+        """The README's settings table documents cape as the default provider."""
+        ConnectorSettings = pytest.importorskip(
+            "connector.models.configs.settings", reason="connectors_sdk unavailable"
+        ).ConnectorSettings
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000007")
+        monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+
+        assert ConnectorSettings().polyswarm.sandbox_provider == "cape"
+
     def test_deprecated_polyswarm_max_tlp_is_migrated(self, monkeypatch):
         """The deprecated POLYSWARM_MAX_TLP still works and becomes CONNECTOR_MAX_TLP."""
         ConnectorSettings = pytest.importorskip(

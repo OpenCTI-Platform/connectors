@@ -74,7 +74,7 @@ class PolySwarmConfig(BaseConfigModel):
     # Default is empty (disabled) so an out-of-the-box deployment never
     # silently points at a staging environment. Operators who want
     # malware-profile enrichment must supply their production polykg URL
-    # explicitly via ``POLYKG_API_URL`` / the ``polykg.api_url`` YAML key.
+    # explicitly via ``POLYSWARM_POLYKG_API_URL`` / the ``polykg.api_url`` YAML key.
     polykg_api_url: str = Field(
         default="",
         description="polykg REST API URL for malware profile enrichment (empty = disabled).",

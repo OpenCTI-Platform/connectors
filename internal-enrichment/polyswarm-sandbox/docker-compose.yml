@@ -77,7 +77,7 @@ services:
       # Enrichment Settings
       # ═══════════════════════════════════════════════════════════════════════
       # polykg REST API for malware profile enrichment (optional, empty = disabled)
-      # - POLYKG_API_URL=
+      # - POLYSWARM_POLYKG_API_URL=
       # Minimum PolyScore (0-100) to create indicators
       - POLYSWARM_MIN_POLYSCORE=50
       # Create STIX Indicator objects for detected threats
