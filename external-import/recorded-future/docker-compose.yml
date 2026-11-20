@@ -26,7 +26,13 @@ services:
       - RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES=False #optional, can remove. Set to true to also import analyst notes context entities (can be noisy).
       - RECORDED_FUTURE_PULL_RISK_LIST=False #optional, can remove
       - RECORDED_FUTURE_RISKRULES_AS_LABEL=False #optional, can remove
-      - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove
+      - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove. 0 imports all risk list entities.
+      # Optional per risk list thresholds, each overrides RECORDED_FUTURE_RISK_LIST_THRESHOLD for its list
+      # - RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP=70
+      # - RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN=70
+      # - RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL=70
+      # - RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH=70
+      # - RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY=0
       - RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES=Malware,Hash,URL,Threat Actor,MitreAttackIdentifier #required if RECORDED_FUTURE_PULL_RISK_LIST is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove
       - ALERT_ENABLE=False # REQUIRED
