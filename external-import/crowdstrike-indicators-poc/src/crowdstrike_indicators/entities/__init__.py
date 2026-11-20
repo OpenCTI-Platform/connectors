@@ -1,1 +1,1 @@
-"""CrowdStrike records, STIX classes, identifiers and errors."""
+"""CrowdStrike records, STIX classes and identifiers."""

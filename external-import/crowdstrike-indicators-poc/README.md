@@ -42,14 +42,12 @@ src/
     cli.py                    the connector-cli command, for any factory
   crowdstrike_indicators/     CrowdStrike implementation
     factory.py                CrowdStrikeSettings, CrowdStrikeConnectorFactory
-    entities/                 records, STIX classes, ids and errors
+    entities/                 records, STIX classes and ids
       models.py               CrowdStrikeIndicator, CrowdStrikeActor,
                               EnrichedCrowdStrikeIndicator (Pydantic)
       stix.py                 CrowdStrikeStix2Indicator (stix2 Indicator subclass),
                               CrowdStrikeIndicatorBundle
       ids.py                  deterministic STIX ids in the CrowdStrike namespace
-      errors.py               CrowdStrikeAPIError, IndicatorValidationError,
-                              IndicatorConversionError
     extract/                  calls to the CrowdStrike API
       api.py                  FalconPy response checks shared by every call
       extractor.py            CrowdStrikeIndicatorExtractor (FalconPy)
