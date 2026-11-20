@@ -266,7 +266,7 @@ class IsMaliciousConnector:
 
         # Check TLP
         tlp_levels = [
-            marking["definition"]
+            marking.get("definition")
             for marking in opencti_entity.get("objectMarking", [])
             if marking.get("definition_type") == "TLP"
         ]

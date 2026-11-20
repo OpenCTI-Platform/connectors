@@ -54,7 +54,7 @@ class OsintIndustriesConnector:
             be sent to the OSINT Industries API.
         """
         tlp_levels = [
-            marking["definition"]
+            marking.get("definition")
             for marking in observable.get("objectMarking") or []
             if marking.get("definition_type") == "TLP"
         ]
