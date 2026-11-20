@@ -14,6 +14,10 @@ from crowdstrike_indicators.transform.add_attack_patterns import (
 )
 from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
 from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.add_tlp_marking import (
+    CrowdStrikeAddTlpMarking,
+    TLPLevel,
+)
 from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
 from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 from pydantic import Field, FilePath, SecretStr
@@ -31,7 +35,8 @@ class CrowdStrikeSettings(BaseSettings):
 
     Read from ``CROWDSTRIKE_*`` variables. Keys that are not settings are
     ignored, and so are empty values: an empty credential is reported missing,
-    an empty ``CROWDSTRIKE_ATTACK_DATA`` means no dataset.
+    an empty ``CROWDSTRIKE_ATTACK_DATA`` means no dataset, an empty
+    ``CROWDSTRIKE_TLP`` means ``AMBER+STRICT``.
     """
 
     model_config = SettingsConfigDict(
@@ -42,6 +47,7 @@ class CrowdStrikeSettings(BaseSettings):
     client_secret: SecretStr = Field(min_length=1)
     base_url: str = Field(default=DEFAULT_BASE_URL, min_length=1)
     attack_data: FilePath | None = None
+    tlp: TLPLevel = TLPLevel.AMBER_STRICT
 
 
 class IntelClient(IndicatorsClient, ActorsClient, Protocol):
@@ -127,8 +133,8 @@ class CrowdStrikeConnectorFactory(AbstractConnectorFactory[CrowdStrikeSettings])
 
     def create_transformers(self) -> list[AbstractTransformer[Any, Any]]:
         """Return new transformers: the STIX indicator, its Malware, its
-        AttackPatterns when a dataset is set, the STIX bundle, then its author
-        identity."""
+        AttackPatterns when a dataset is set, the STIX bundle, its author
+        identity, then its TLP marking at the configured level."""
         attack_steps: list[AbstractTransformer[Any, Any]] = (
             []
             if self._catalog is None
@@ -140,4 +146,5 @@ class CrowdStrikeConnectorFactory(AbstractConnectorFactory[CrowdStrikeSettings])
             *attack_steps,
             MakeStixBundle(),
             CrowdStrikeAddIdentity(),
+            CrowdStrikeAddTlpMarking(self.settings.tlp),
         ]

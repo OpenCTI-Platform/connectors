@@ -16,6 +16,10 @@ from crowdstrike_indicators.transform.add_attack_patterns import (
 )
 from crowdstrike_indicators.transform.add_identity import CrowdStrikeAddIdentity
 from crowdstrike_indicators.transform.add_malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.add_tlp_marking import (
+    CrowdStrikeAddTlpMarking,
+    TLPLevel,
+)
 from crowdstrike_indicators.transform.create_indicator import CreateCrowdStrikeIndicator
 from crowdstrike_indicators.transform.make_bundle import MakeStixBundle
 
@@ -31,6 +35,7 @@ VARIABLES = (
     "CROWDSTRIKE_CLIENT_SECRET",
     "CROWDSTRIKE_BASE_URL",
     "CROWDSTRIKE_ATTACK_DATA",
+    "CROWDSTRIKE_TLP",
 )
 
 
@@ -82,6 +87,7 @@ def test_defaults():
     assert isinstance(factory.settings, CrowdStrikeSettings)
     assert factory.settings.base_url == "https://api.crowdstrike.com"
     assert factory.settings.attack_data is None
+    assert factory.settings.tlp is TLPLevel.AMBER_STRICT
     assert factory.attack_pattern_catalog is None
 
 
@@ -158,6 +164,25 @@ def test_dataset_path_that_does_not_exist_is_named(isolated):
 
     ((name, _),) = caught.value.problems
     assert name == "CROWDSTRIKE_ATTACK_DATA"
+
+
+@pytest.mark.parametrize("value", ["green", "GREEN", "Green"])
+def test_tlp_level_in_any_case(monkeypatch, value):
+    monkeypatch.setenv("CROWDSTRIKE_TLP", value)
+
+    factory = CrowdStrikeConnectorFactory(**CREDENTIALS)
+
+    assert factory.settings.tlp is TLPLevel.GREEN
+
+
+def test_unknown_tlp_level_is_named(monkeypatch):
+    monkeypatch.setenv("CROWDSTRIKE_TLP", "PURPLE")
+
+    with pytest.raises(ConnectorConfigurationError) as caught:
+        CrowdStrikeConnectorFactory(**CREDENTIALS)
+
+    ((name, _),) = caught.value.problems
+    assert name == "CROWDSTRIKE_TLP"
 
 
 def test_secret_is_not_in_the_settings_text():
@@ -289,6 +314,7 @@ def test_transformers_without_a_dataset():
         CrowdStrikeAddMalware,
         MakeStixBundle,
         CrowdStrikeAddIdentity,
+        CrowdStrikeAddTlpMarking,
     ]
 
 
@@ -303,8 +329,21 @@ def test_transformers_with_a_dataset():
         CrowdStrikeAddAttackPatterns,
         MakeStixBundle,
         CrowdStrikeAddIdentity,
+        CrowdStrikeAddTlpMarking,
     ]
     assert transformers[2].catalog is factory.attack_pattern_catalog
+
+
+def test_configured_tlp_level_reaches_the_step(monkeypatch):
+    monkeypatch.setenv("CROWDSTRIKE_TLP", "RED")
+
+    marking_step = CrowdStrikeConnectorFactory(**CREDENTIALS).create_transformers()[-1]
+
+    assert marking_step.level is TLPLevel.RED
+    assert (
+        marking_step.marking.id
+        == "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+    )
 
 
 def test_each_call_returns_new_transformers():

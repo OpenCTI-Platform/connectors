@@ -27,7 +27,13 @@ SECRET = "s3cr3t-value-never-shown"
 CLIENT_ID = "CROWDSTRIKE_CLIENT_ID"
 CLIENT_SECRET = "CROWDSTRIKE_CLIENT_SECRET"
 ATTACK_DATA = "CROWDSTRIKE_ATTACK_DATA"
-CONFIGURATION_KEYS = (CLIENT_ID, CLIENT_SECRET, "CROWDSTRIKE_BASE_URL", ATTACK_DATA)
+CONFIGURATION_KEYS = (
+    CLIENT_ID,
+    CLIENT_SECRET,
+    "CROWDSTRIKE_BASE_URL",
+    ATTACK_DATA,
+    "CROWDSTRIKE_TLP",
+)
 FROM = "2023-11-14T22:13:20Z"
 ATTACK_FILE = FIXTURES_DIR / "attack_extract.json"
 SAMPLE = load_fixture("indicators_sample.json")["resources"]
@@ -35,6 +41,7 @@ SAMPLE_DOMAIN = next(row for row in SAMPLE if row["type"] == "domain")
 ATTACK_ROW = SAMPLE[0]
 STEP_HEADER = re.compile(r"^Step (\d+) - (\w+)$", re.MULTILINE)
 CROWDSTRIKE_IDENTITY_ID = "identity--f29f12ba-3980-5642-9b3e-d11e9b296aed"
+AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
 
 @pytest.fixture(autouse=True)
@@ -194,12 +201,16 @@ def test_missing_credentials_are_named(isolated, monkeypatch, capsys):
 # transform
 
 
-def test_transform_prints_the_four_steps(isolated, no_api, capsys):
+def test_transform_prints_the_five_steps(isolated, no_api, capsys):
     assert transform(isolated, SAMPLE_DOMAIN) == 0
 
-    (first, stix), (second, bundle), (third, stix_bundle), (fourth, credited) = steps(
-        capsys.readouterr().out
-    )
+    (
+        (first, stix),
+        (second, bundle),
+        (third, stix_bundle),
+        (fourth, credited),
+        (fifth, marked),
+    ) = steps(capsys.readouterr().out)
     assert first == "CreateCrowdStrikeIndicator"
     assert stix["type"] == "indicator"
     assert stix["name"] == SAMPLE_DOMAIN["indicator"]
@@ -224,6 +235,17 @@ def test_transform_prints_the_four_steps(isolated, no_api, capsys):
     assert identity["name"] == "CrowdStrike"
     assert [o["id"] for o in objects] == [o["id"] for o in stix_bundle["objects"]]
     assert all(o["created_by_ref"] == CROWDSTRIKE_IDENTITY_ID for o in objects)
+    assert fifth == "CrowdStrikeAddTlpMarking"
+    assert marked["type"] == "bundle"
+    assert marked["id"] == credited["id"]
+    marking, *marked_objects = marked["objects"]
+    assert marking["id"] == AMBER_STRICT_ID
+    assert marking["x_opencti_definition"] == "TLP:AMBER+STRICT"
+    assert [o["id"] for o in marked_objects] == [o["id"] for o in credited["objects"]]
+    assert marked_objects[0] == identity
+    assert all(
+        o["object_marking_refs"] == [AMBER_STRICT_ID] for o in marked_objects[1:]
+    )
 
 
 def test_transform_without_malware(isolated, no_api, capsys):
@@ -232,7 +254,11 @@ def test_transform_without_malware(isolated, no_api, capsys):
     printed = steps(capsys.readouterr().out)
     assert printed[1][1]["malware"] == []
     assert printed[1][1]["relationships"] == []
-    assert [o["type"] for o in printed[-1][1]["objects"]] == ["identity", "indicator"]
+    assert [o["type"] for o in printed[-1][1]["objects"]] == [
+        "marking-definition",
+        "identity",
+        "indicator",
+    ]
 
 
 def test_dataset_from_the_configuration_adds_a_step(
@@ -249,6 +275,7 @@ def test_dataset_from_the_configuration_adds_a_step(
         "CrowdStrikeAddAttackPatterns",
         "MakeStixBundle",
         "CrowdStrikeAddIdentity",
+        "CrowdStrikeAddTlpMarking",
     ]
     patterns = printed[2][1]["attack_patterns"]
     assert patterns[0]["name"] == "Data from Local System"
@@ -283,7 +310,7 @@ def test_extract_item_goes_through_transform(isolated, monkeypatch, capsys):
     item = json.loads(capsys.readouterr().out)[0]["item"]
 
     assert transform(isolated, item) == 0
-    assert len(steps(capsys.readouterr().out)) == 4
+    assert len(steps(capsys.readouterr().out)) == 5
 
 
 # Console command
@@ -307,4 +334,6 @@ def test_installed_console_command(isolated):
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert [name for name, _ in steps(completed.stdout)][-1] == "CrowdStrikeAddIdentity"
+    assert [name for name, _ in steps(completed.stdout)][
+        -1
+    ] == "CrowdStrikeAddTlpMarking"
