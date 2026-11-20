@@ -17,6 +17,7 @@ The ThreatFox connector imports indicators of compromise (IOCs) from abuse.ch Th
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
     - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Authentication modes](#authentication-modes)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -36,7 +37,8 @@ This connector fetches the recent IOC export from ThreatFox and imports them int
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- Internet access to ThreatFox CSV feed (publicly available)
+- Internet access to the ThreatFox source: the abuse.ch community API (`threatfox-api.abuse.ch`) or the Spamhaus commercial API (`api.spamhaus.com`)
+- An abuse.ch Auth-Key (community) or a Spamhaus abuse.ch API account (commercial), see [Authentication modes](#authentication-modes)
 
 ## Configuration variables
 
@@ -62,8 +64,10 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter            | config.yml                    | Docker environment variable         | Default                                       | Mandatory | Description                                                                 |
 |----------------------|-------------------------------|-------------------------------------|-----------------------------------------------|-----------|-----------------------------------------------------------------------------|
-| Auth-Key             | threatfox.auth_key            | `THREATFOX_AUTH_KEY`                |                                               | Yes       | abuse.ch Auth-Key, from https://auth.abuse.ch. Not needed if `THREATFOX_CSV_URL` is set. |
-| CSV URL              | threatfox.csv_url             | `THREATFOX_CSV_URL`                 | https://threatfox-api.abuse.ch/v2/files/exports/`<AUTH-KEY>`/recent.csv | No        | Override of the ThreatFox CSV export URL. Takes precedence over `THREATFOX_AUTH_KEY`, except the retired public URL (`https://threatfox.abuse.ch/export/...`), which is ignored. |
+| Auth-Key             | threatfox.auth_key            | `THREATFOX_AUTH_KEY`                |                                               | See below | abuse.ch Auth-Key (community mode), from https://auth.abuse.ch. Not needed if `THREATFOX_CSV_URL` or the Spamhaus credentials are set. |
+| Spamhaus username    | threatfox.spamhaus_username   | `THREATFOX_SPAMHAUS_USERNAME`       |                                               | See below | Username of the Spamhaus abuse.ch API account (commercial mode), from the Spamhaus Customer Portal. Needs `THREATFOX_SPAMHAUS_PASSWORD`. |
+| Spamhaus password    | threatfox.spamhaus_password   | `THREATFOX_SPAMHAUS_PASSWORD`       |                                               | See below | Password of the Spamhaus abuse.ch API account (commercial mode). Needs `THREATFOX_SPAMHAUS_USERNAME`. |
+| CSV URL              | threatfox.csv_url             | `THREATFOX_CSV_URL`                 | https://threatfox-api.abuse.ch/v2/files/exports/`<AUTH-KEY>`/recent.csv | No        | Override of the ThreatFox CSV export URL (community mode). Takes precedence over `THREATFOX_AUTH_KEY`, except the retired public URL (`https://threatfox.abuse.ch/export/...`), which is ignored. |
 | Import Offline       | threatfox.import_offline      | `THREATFOX_IMPORT_OFFLINE`          | true                                          | No        | Import IOCs marked as offline.                                              |
 | Create Indicators    | threatfox.create_indicators   | `THREATFOX_CREATE_INDICATORS`       | true                                          | No        | Create indicators in addition to observables.                               |
 | Default Score        | threatfox.default_x_opencti_score | `THREATFOX_DEFAULT_X_OPENCTI_SCORE` | 50                                        | No        | Default x_opencti_score for observables.                                    |
@@ -73,6 +77,23 @@ There are a number of configuration options, which are set either in `docker-com
 | Hash Score           | threatfox.x_opencti_score_hash | `THREATFOX_X_OPENCTI_SCORE_HASH`   | (uses default)                                | No        | x_opencti_score for Hash observables.                                       |
 | IOC Types            | threatfox.ioc_to_import       | `THREATFOX_IOC_TO_IMPORT`           | all_types                                     | No        | IOC types to import: `all_types`, `ip:port`, `domain`, `url`, `md5_hash`, `sha1_hash`, `sha256_hash`. |
 | Interval             | threatfox.interval            | `THREATFOX_INTERVAL`                | 3                                             | Yes       | Interval in days between connector runs.                                    |
+
+## Authentication modes
+
+The connector gets ThreatFox data in one of two ways. At least one must be configured: with neither, the connector fails at startup with a message naming both options.
+
+| Mode | Configuration | Data source |
+|------|---------------|-------------|
+| Community | `THREATFOX_AUTH_KEY` (abuse.ch Auth-Key) | CSV export `recent.csv` on `threatfox-api.abuse.ch`. |
+| Commercial | `THREATFOX_SPAMHAUS_USERNAME` and `THREATFOX_SPAMHAUS_PASSWORD` | `GET /threatfox/v1/iocs` on `api.spamhaus.com`, with a JWT. |
+
+- **Both modes configured**: the commercial mode is used, and the Auth-Key is kept as a fallback.
+- **Fallback**: if the commercial mode fails (login refused, network error, HTTP 5xx or 429, unusable response) and an Auth-Key is configured, the run uses the community export instead and logs a warning. The warning never holds a secret.
+- **Commercial credentials only**: if they fail, the run fails, and the work message asks to check the Spamhaus credentials.
+- **JWT**: the connector logs in once (`POST https://api.spamhaus.com/v1/login`, realm `abusech`), reuses the token (valid 24 hours) until shortly before its expiry, and logs in again once when the API answers HTTP 401. It never logs in for each request.
+- **Incremental import**: with a JWT, the connector requests only the IOCs with `since` set to the last checkpoint (`last_processed_entry`, or the last 2 days on a first run), and follows every page of results.
+- **User-Agent**: every request to Spamhaus sends `OpenCTI-threatfox/<version>`. Spamhaus rejects the default Python User-Agent.
+- **Secrets**: the password, the JWT and the login response are never written to the logs or to the work messages.
 
 ## Deployment
 
@@ -96,7 +117,12 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=ThreatFox
       - CONNECTOR_SCOPE=threatfox
       - CONNECTOR_LOG_LEVEL=error
+      # Community mode: abuse.ch Auth-Key
       - THREATFOX_AUTH_KEY=ChangeMe
+      # Commercial mode: Spamhaus credentials (wins over the Auth-Key, which then
+      # stays as a fallback). Set at least one of the two modes.
+      # - THREATFOX_SPAMHAUS_USERNAME=ChangeMe
+      # - THREATFOX_SPAMHAUS_PASSWORD=ChangeMe
       - THREATFOX_INTERVAL=3 # In days
       - THREATFOX_IMPORT_OFFLINE=true
       - THREATFOX_CREATE_INDICATORS=true
@@ -137,7 +163,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 ## Behavior
 
-The connector fetches the ThreatFox CSV export and creates observables and indicators in OpenCTI.
+The connector fetches the ThreatFox IOCs (the community CSV export, or the Spamhaus commercial API in commercial mode) and creates observables and indicators in OpenCTI. Both sources give the same STIX objects.
 
 ### Data Flow
 
@@ -145,7 +171,7 @@ The connector fetches the ThreatFox CSV export and creates observables and indic
 graph LR
     subgraph ThreatFox
         direction TB
-        CSV[CSV Export]
+        CSV[CSV Export or Spamhaus API]
     end
 
     subgraph OpenCTI
@@ -214,6 +240,7 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
+- **Spamhaus API**: the JSON of the commercial API differs from the CSV, but the IOC types and fields are mapped to the same entities. See the [API reference](https://abusech-docs.spamhaus.com/api-reference).
 - **Auth-Key**: abuse.ch requires an Auth-Key to download ThreatFox exports. Create an account on [abuse.ch Authentication Portal](https://auth.abuse.ch) to get one. The same key works for URLhaus. The export endpoint only accepts the key in the URL path, so the connector builds the URL from `THREATFOX_AUTH_KEY` and never logs it.
 - **Failed runs**: if the run fails, the work is marked as failed and `last_run` is kept. The next attempt waits 1 minute, then 2, 4, 8... minutes after each new failure, up to the interval. A successful run resets the delay.
 - **IOC Freshness**: The `csv_recent` endpoint provides IOCs from the last 7 days
