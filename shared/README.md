@@ -12,3 +12,5 @@ This directory is structured to provide common utilities that can be leveraged b
 
 - **tools/**: This directory is intended for scripts and utilities that support development, code quality, and maintenance tasks across the repository.
   - **composer/**: A custom script to generate a `manifest.json` containing all connector configurations for XTM composer manager with an updated version when a new release is triggered. 
+
+- **spamhaus_client/**: A Python package (`spamhaus-client`, import name `spamhaus_client`) with the Spamhaus commercial API client (JWT login, token reuse, cursor pagination) and the authentication settings shared by the abuse.ch connectors (ThreatFox, URLhaus, MalwareBazaar). It depends on `connectors-sdk`. Refer to the [dedicated README](./spamhaus_client/README.md) for its installation and public API.
