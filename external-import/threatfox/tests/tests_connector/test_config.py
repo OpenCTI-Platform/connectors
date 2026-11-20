@@ -1,3 +1,5 @@
+import traceback
+
 import pytest
 from pydantic import ValidationError
 from src.models.configs.config_loader import ConfigLoader
@@ -158,3 +160,49 @@ def test_legacy_csv_url_does_not_count_as_community_with_commercial_credentials(
 def test_username_without_password_is_rejected():
     with pytest.raises(ValidationError, match="THREATFOX_SPAMHAUS_PASSWORD"):
         _ConfigLoaderThreatFox(auth_key="k", spamhaus_username="analyst@example.com")
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {"THREATFOX_SPAMHAUS_PASSWORD": "pw-do-not-leak"},
+        {
+            "THREATFOX_SPAMHAUS_PASSWORD": "pw-do-not-leak",
+            "THREATFOX_AUTH_KEY": "community-key-do-not-leak",
+        },
+        {"THREATFOX_SPAMHAUS_USERNAME": "user-do-not-leak"},
+        {
+            "THREATFOX_SPAMHAUS_USERNAME": "user-do-not-leak",
+            "THREATFOX_AUTH_KEY": "community-key-do-not-leak",
+        },
+    ],
+)
+def test_partial_credentials_never_reach_the_startup_traceback(monkeypatch, env):
+    """The whole formatted chain (section and loader) must not echo the raw input."""
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "00000000-0000-4000-8000-000000000000")
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+
+    with pytest.raises(ValidationError) as excinfo:
+        ConfigLoader()
+
+    formatted = "".join(traceback.format_exception(excinfo.value))
+    for secret in (
+        "pw-do-not-leak",
+        "user-do-not-leak",
+        "community-key-do-not-leak",
+        "00000000-0000-4000-8000-000000000000",
+    ):
+        assert secret not in formatted
+    assert "THREATFOX_SPAMHAUS" in formatted  # the message still names the variables
+
+
+def test_the_section_alone_does_not_echo_its_input():
+    # Passed through a variable: the traceback prints the source line of the call.
+    values = {"spamhaus_password": "pw-do-not-leak"}
+
+    with pytest.raises(ValidationError) as excinfo:
+        _ConfigLoaderThreatFox(**values)
+
+    assert "pw-do-not-leak" not in "".join(traceback.format_exception(excinfo.value))
