@@ -43,7 +43,7 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "urlhaus_recent_payloads": {
                     "api_url": "https://urlhaus-api.abuse.ch/v1/",
-                    "api_key": "test-api-key",
+                    "auth_key": "test-auth-key",
                     "cooldown_seconds": 300,
                     "include_filetypes": "exe,zip,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll",
                     "include_signatures": "",
