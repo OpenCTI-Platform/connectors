@@ -1,6 +1,7 @@
 """Tests for CTM360 CyberBlindSpot Feed connector settings."""
 
 from datetime import timedelta
+from uuid import UUID
 
 import pytest
 from connector.settings import ConnectorSettings
@@ -136,10 +137,11 @@ class TestRequiredFieldValidation:
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
-    def test_missing_connector_id(self, monkeypatch):
+    def test_default_connector_id(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_ID")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
+        settings = ConnectorSettings()
+        assert settings.connector.id == "d601481f-81dc-4146-995b-15af01187c02"
+        assert UUID(settings.connector.id).version == 4
 
     def test_default_connector_scope(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_SCOPE")

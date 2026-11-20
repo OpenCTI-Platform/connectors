@@ -154,7 +154,7 @@ docker compose up -d connector-ctm360-cyberblindspot
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `CONNECTOR_ID` | Unique UUID for this connector instance | — | Yes |
+| `CONNECTOR_ID` | Unique UUID for this connector instance | `d601481f-81dc-4146-995b-15af01187c02` | No |
 | `CONNECTOR_NAME` | Display name shown in the OpenCTI UI | `CTM360-CyberBlindSpot` | No |
 | `CONNECTOR_SCOPE` | Connector scope identifier | `CTM360-CyberBlindSpot` | No |
 | `CONNECTOR_TYPE` | Connector type (must be `EXTERNAL_IMPORT`) | `EXTERNAL_IMPORT` | No |
