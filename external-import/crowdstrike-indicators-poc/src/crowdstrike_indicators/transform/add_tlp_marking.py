@@ -4,7 +4,19 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from stix2.v21 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
+from crowdstrike_indicators.transform.add_identity import author_identity
+from stix2.exceptions import STIXError
+from stix2.v21 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
+    Bundle,
+    MarkingDefinition,
+)
+
+from shared.errors import ItemConversionError
+from shared.transformer import AbstractTransformer
 
 
 class TLPLevel(StrEnum):
@@ -58,3 +70,59 @@ MARKING_DEFINITIONS: dict[TLPLevel, Any] = {
     TLPLevel.AMBER_STRICT: TLP_AMBER_STRICT,
     TLPLevel.RED: TLP_RED,
 }
+
+
+class CrowdStrikeAddTlpMarking(AbstractTransformer[Bundle, Bundle]):
+    """Mark the objects of a STIX bundle with one TLP level.
+
+    Runs after :class:`CrowdStrikeAddIdentity`. The returned bundle has the
+    same id, holds the level's marking definition first, then every object of
+    the input bundle, in order. Each object gets the marking id appended to
+    its ``object_marking_refs``, except the marking definitions and the
+    CrowdStrike author identity, which are left unmarked as in the existing
+    CrowdStrike connector. Existing markings are kept, and the id is never
+    repeated. Nothing else changes: custom properties are kept. The same
+    input always gives the same output. No network call is made.
+    """
+
+    def __init__(self, level: TLPLevel | str) -> None:
+        """Build the step for ``level``.
+
+        :raises ValueError: if ``level`` is not a TLP level, naming it.
+        """
+        self.level = TLPLevel(level)
+        self.marking = MARKING_DEFINITIONS[self.level]
+        self._unmarked_id = author_identity().id
+
+    def _marked(self, obj: Any) -> Any:
+        if obj.type == "marking-definition" or obj.id == self._unmarked_id:
+            return obj
+        refs = list(obj.get("object_marking_refs", []))
+        if self.marking.id in refs:
+            return obj
+        properties = {
+            name: value for name, value in obj.items() if name != "object_marking_refs"
+        }
+        return type(obj)(
+            **properties,
+            object_marking_refs=[*refs, self.marking.id],
+            allow_custom=obj.has_custom,
+        )
+
+    def convert(self, item: Bundle) -> Bundle:
+        """Return ``item`` with the marking definition added and referenced.
+
+        :raises ItemConversionError: if stix2 rejects an object or the
+            bundle.
+        """
+        try:
+            objects = [
+                self._marked(obj)
+                for obj in item.get("objects", [])
+                if obj.id != self.marking.id
+            ]
+            return Bundle(
+                id=item.id, objects=[self.marking, *objects], allow_custom=True
+            )
+        except STIXError as error:
+            raise ItemConversionError(item.id, str(error)) from error
