@@ -9,7 +9,7 @@ import traceback
 from collections.abc import Mapping
 from typing import Dict, List, Optional
 
-from pymisp import MISPAttribute, MISPEvent, MISPObject, PyMISP
+from pymisp import MISPAttribute, MISPEvent, MISPEventReport, MISPObject, PyMISP
 
 
 class MispApiHandlerError(Exception):
@@ -39,6 +39,23 @@ def _tag_names(tags) -> List[str]:
         if name:
             names.append(name)
     return names
+
+
+def _report_field(report, field: str):
+    """
+    Read a field of an event report.
+
+    Entries can be MISPEventReport objects (as returned by MISPEvent.to_dict()
+    or by PyMISP) or plain dicts.
+
+    :param report: Event report (MISPEventReport or dict)
+    :param field: Name of the field to read
+    :return: Value of the field, or None when it is not set
+    """
+    # Objects can lack optional fields (e.g. deleted): read them with getattr
+    if isinstance(report, dict):
+        return report.get(field)
+    return getattr(report, field, None)
 
 
 class MispApiHandler:
@@ -132,6 +149,161 @@ class MispApiHandler:
                     "trace": traceback.format_exc(),
                 },
             )
+
+    def _find_hidden_event_report(self, report_uuid, meta: Dict):
+        """
+        Look up an event report by UUID when it is missing from its event.
+
+        Soft-deleted reports are normally returned with the event (flagged
+        deleted), but the event payload may omit one. Its UUID stays taken, so
+        adding the report again would be rejected: the report found here, which
+        can be flagged deleted, is restored by the caller instead.
+
+        :param report_uuid: UUID of the event report
+        :param meta: Logging context
+        :return: The MISPEventReport, or None when it does not exist
+        """
+        try:
+            found = self.misp.get_event_report(str(report_uuid), pythonify=True)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Failed to look up MISP event report",
+                meta={**meta, "error": str(e)},
+            )
+            return None
+        if isinstance(found, MISPEventReport):
+            return found
+        return None
+
+    def _restore_event_report(self, event_id, report, meta: Dict) -> bool:
+        """
+        Restore a soft-deleted MISP event report.
+
+        eventReports/edit ignores the "deleted" field (the call succeeds but the
+        report stays deleted) and PyMISP has no wrapper for the restore
+        endpoint, hence the direct call, which takes the numeric report id.
+
+        :param event_id: ID or UUID of the MISP event
+        :param report: Soft-deleted event report (MISPEventReport or dict)
+        :param meta: Logging context
+        :return: True when the report was restored, False otherwise
+        """
+        report_id = _report_field(report, "id")
+        meta = {**meta, "report_id": report_id}
+        try:
+            if report_id is None:
+                raise ValueError("The deleted event report has no id")
+            response = self.misp.direct_call(f"eventReports/restore/{report_id}", {})
+            # direct_call may return a raw string on a 2xx non-JSON response
+            # (e.g. a proxy page): only an explicit success counts
+            if not isinstance(response, dict):
+                raise ValueError(f"Unexpected response type: {type(response).__name__}")
+            if response.get("success") is not True:
+                raise ValueError(str(response.get("errors") or response))
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Failed to restore MISP event report",
+                meta={**meta, "error": str(e)},
+            )
+            return False
+        self.helper.connector_logger.info(
+            "Successfully synced MISP event report",
+            meta={**meta, "action": "restore"},
+        )
+        return True
+
+    def _sync_event_reports(
+        self,
+        event_id,
+        report_data_list: Optional[List],
+        existing_reports: Optional[List] = None,
+    ) -> None:
+        """
+        Create or update the event reports of a MISP event.
+
+        create_event and update_event rebuild the event from the converter dict
+        and only copy its Tag, Attribute and Object entries, so reports are
+        pushed with the dedicated event report endpoints, which also make the
+        sync idempotent by UUID. A report is matched by UUID against the
+        existing reports of the event: a missing report is added, a report whose
+        name or content changed is updated in place, an identical report
+        triggers no call. A soft-deleted report is first restored through the
+        dedicated restore endpoint (eventReports/edit ignores "deleted"), then
+        updated only if its name or content differ. When updating an event, a
+        report absent from the fetched event is looked up by UUID and handled
+        the same way instead of being added again. A failure is logged and
+        never prevents the event itself from being returned.
+
+        :param event_id: ID or UUID of the MISP event
+        :param report_data_list: Event reports to sync (MISPEventReport or dict)
+        :param existing_reports: Event reports already present in the MISP event,
+            None when the event was just created
+        """
+        is_update = existing_reports is not None
+        existing_by_uuid = {}
+        for existing in existing_reports or []:
+            existing_uuid = _report_field(existing, "uuid")
+            if existing_uuid:
+                existing_by_uuid[str(existing_uuid)] = existing
+
+        for report_data in report_data_list or []:
+            report_uuid = _report_field(report_data, "uuid")
+            # pymisp strips surrounding whitespace when it serializes a report
+            name = (_report_field(report_data, "name") or "").strip()
+            content = (_report_field(report_data, "content") or "").strip()
+            meta = {"event_id": event_id, "report_uuid": report_uuid}
+
+            try:
+                existing = existing_by_uuid.get(str(report_uuid))
+                if existing is None and is_update:
+                    existing = self._find_hidden_event_report(report_uuid, meta)
+                if existing is None:
+                    report = MISPEventReport(
+                        name=name,
+                        content=content,
+                        uuid=report_uuid,
+                        distribution=_report_field(report_data, "distribution"),
+                    )
+                    response = self.misp.add_event_report(event_id, report)
+                    action = "add"
+                else:
+                    is_deleted = _report_field(existing, "deleted") in (
+                        True,
+                        1,
+                        "1",
+                        "true",
+                    )
+                    # eventReports/edit ignores "deleted": a soft-deleted report
+                    # is brought back with the dedicated restore endpoint.
+                    if is_deleted and not self._restore_event_report(
+                        event_id, existing, meta
+                    ):
+                        continue
+                    if (_report_field(existing, "name") or "").strip() == name and (
+                        _report_field(existing, "content") or ""
+                    ).strip() == content:
+                        continue
+                    existing.name = name
+                    existing.content = content
+                    response = self.misp.update_event_report(existing)
+                    action = "update"
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "Failed to sync MISP event report",
+                    meta={**meta, "error": str(e)},
+                )
+                continue
+
+            if isinstance(response, dict) and "errors" in response:
+                self.helper.connector_logger.warning(
+                    "MISP rejected the event report",
+                    meta={**meta, "action": action, "errors": response["errors"]},
+                )
+            else:
+                self.helper.connector_logger.info(
+                    "Successfully synced MISP event report",
+                    meta={**meta, "action": action},
+                )
 
     def create_event(self, event_data: Dict) -> Optional[Dict]:
         """
@@ -227,6 +399,13 @@ class MispApiHandler:
                     },
                 )
 
+                # Push the reports with the dedicated endpoints (idempotent by
+                # UUID), before publishing so the published event contains them
+                self._sync_event_reports(
+                    event.get("id") or event.get("uuid"),
+                    event_data.get("EventReport"),
+                )
+
                 # Publish the event if configured
                 if self.config.misp.publish_on_create:
                     self._publish_event(event)
@@ -268,6 +447,9 @@ class MispApiHandler:
                     f"Event with UUID {event_uuid} not found"
                 )
                 return None
+
+            # Keep the reports of the fetched event: they are synced by UUID
+            existing_reports = list(existing_event.event_reports)
 
             # Update event properties
             existing_event.info = event_data.get("info", existing_event.info)
@@ -376,6 +558,14 @@ class MispApiHandler:
                         "event_uuid": event.get("uuid"),
                         "event_info": event.get("info"),
                     },
+                )
+
+                # Sync the reports with the dedicated endpoints (idempotent by
+                # UUID), before publishing so the published event contains them
+                self._sync_event_reports(
+                    event.get("id") or event.get("uuid"),
+                    event_data.get("EventReport"),
+                    existing_reports,
                 )
 
                 # Publish the event if configured
