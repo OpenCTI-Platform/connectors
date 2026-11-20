@@ -8,7 +8,9 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
+from accenture_connector.run_errors import report_run_errors
 from botocore.exceptions import ClientError
+from connectors_sdk import DataConversionError, DataNotFoundError, ErrorStore
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -79,7 +81,11 @@ class ConnectorAccenture:
     def _process_base64_image(
         self, mime_type: str, base64_data: str
     ) -> Optional[Dict[str, Any]]:
-        """Convert base64 data to file object."""
+        """Convert base64 data to file object.
+
+        A failure is recorded in the ErrorStore as a DataConversionError, and the
+        image is skipped: None is returned.
+        """
         try:
             image_data = base64.b64decode(base64_data)
 
@@ -95,13 +101,18 @@ class ConnectorAccenture:
                 "embedded": True,
             }
         except Exception as e:
-            self.helper.connector_logger.warning(
-                f"[PROCESS] Failed to process base64 image: {e}"
-            )
+            error_msg = f"Failed to process base64 {mime_type} image: {e}"
+            ErrorStore().record_error(DataConversionError(error_msg))
+            self.helper.connector_logger.warning(f"[PROCESS] {error_msg}")
             return None
 
     def _download_image_from_s3(self, hash_value: str) -> Optional[Dict[str, Any]]:
-        """Download image from S3 bucket using hash value."""
+        """Download image from S3 bucket using hash value.
+
+        A DataNotFoundError is recorded in the ErrorStore for each S3 error other than
+        NoSuchKey (e.g. AccessDenied), and when no extension matches. The image is
+        then skipped: None is returned.
+        """
         for ext in IMAGE_EXTENSIONS:
             file_key = f"document-images/{hash_value}{ext}"
             try:
@@ -122,14 +133,14 @@ class ConnectorAccenture:
             except ClientError as e:
                 error_code = e.response["Error"]["Code"]
                 if error_code != "NoSuchKey":
-                    self.helper.connector_logger.warning(
-                        f"[S3] Error accessing {file_key}: {error_code}"
-                    )
+                    error_msg = f"Error accessing {file_key}: {error_code}"
+                    ErrorStore().record_error(DataNotFoundError(error_msg))
+                    self.helper.connector_logger.warning(f"[S3] {error_msg}")
                 continue
 
-        self.helper.connector_logger.warning(
-            f"[S3] Image not found in S3 for any extension. Hash: {hash_value}"
-        )
+        error_msg = f"Image not found in S3 for any extension. Hash: {hash_value}"
+        ErrorStore().record_error(DataNotFoundError(error_msg))
+        self.helper.connector_logger.warning(f"[S3] {error_msg}")
         return None
 
     def _process_description(
@@ -385,6 +396,22 @@ class ConnectorAccenture:
 
         return stix_bundle
 
+    def _close_work_in_error(self, work_id: str, err: Exception) -> None:
+        """Close a work in error, so that it does not stay in progress in OpenCTI.
+
+        A failure to close the work is logged, never raised: the caller re-raises
+        the error that made the work fail.
+        """
+        try:
+            self.helper.api.work.to_processed(
+                work_id, "Failed to send the bundle", in_error=True
+            )
+        except Exception as close_err:  # noqa: BLE001
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Failed to close the work in error",
+                {"work_id": work_id, "error": str(err), "close_error": str(close_err)},
+            )
+
     def _send_bundle(
         self, current_timestamp: int, stix_bundle: Dict[str, Any]
     ) -> List[Any]:
@@ -397,11 +424,15 @@ class ConnectorAccenture:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            bundles_sent = self.helper.send_stix2_bundle(
-                json.dumps(stix_bundle),
-                work_id=work_id,
-                cleanup_inconsistent_bundle=True,
-            )
+            try:
+                bundles_sent = self.helper.send_stix2_bundle(
+                    json.dumps(stix_bundle),
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
+                )
+            except Exception as err:
+                self._close_work_in_error(work_id, err)
+                raise
             self.helper.connector_logger.info(
                 f"Sending {len(stix_bundle['objects'])} STIX objects to OpenCTI..."
             )
@@ -415,10 +446,13 @@ class ConnectorAccenture:
             self.helper.api.work.to_processed(work_id, message)
         return bundles_sent
 
+    @report_run_errors
     def process_message(self) -> None:
         """
         Connector main process to collect intelligence
-        :return: None
+        :return: None. report_run_errors returns instead the errors of the run,
+            reported to OpenCTI with the connector's ping: the error that stopped
+            the run, re-raised here, comes after the errors recorded during the run.
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
@@ -517,8 +551,9 @@ class ConnectorAccenture:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(
-                f"[ERROR] Connector failed: {err}", exc_info=True
+                "[CONNECTOR] Connector failed", {"error": str(err)}
             )
+            raise
 
     def run(self) -> None:
         """
