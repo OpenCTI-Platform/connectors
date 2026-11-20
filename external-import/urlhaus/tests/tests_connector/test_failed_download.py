@@ -13,6 +13,7 @@ def _client(get_side_effect=None, get_return=None):
         "https://urlhaus-api.abuse.ch/v2/files/exports/key/recent.csv"
     )
     config.urlhaus.import_offline = True
+    config.urlhaus.use_commercial = False
     client = ConnectorClient(MagicMock(), config, ConnectorState())
     client.session = MagicMock()
     if get_side_effect is not None:
