@@ -1,5 +1,7 @@
 """Tests for CTM360 CyberBlindSpot Feed connector settings."""
 
+from datetime import timedelta
+
 import pytest
 from connector.settings import ConnectorSettings
 from connectors_sdk import ConfigValidationError
@@ -139,17 +141,15 @@ class TestRequiredFieldValidation:
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
-    def test_missing_connector_scope(self, monkeypatch):
+    def test_default_connector_scope(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_SCOPE")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
+        assert ConnectorSettings().connector.scope == ["CTM360-CyberBlindSpot"]
 
     def test_missing_api_key(self, monkeypatch):
         monkeypatch.delenv("CTM360_CBS_API_KEY")
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
-    def test_missing_duration_period(self, monkeypatch):
+    def test_default_duration_period(self, monkeypatch):
         monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
+        assert ConnectorSettings().connector.duration_period == timedelta(hours=24)
