@@ -6,19 +6,14 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
 
-from connectors_sdk.exceptions.connector_errors import Criticity, LegacyError
 
-
-class ApiClientError(LegacyError):
+class ApiClientError(Exception):
     """Base exception for API client errors.
 
     Attributes:
         status_code: HTTP status code (if available).
         response_body: Raw response body (if available).
     """
-
-    code = "api.unknown.legacy"
-    criticity = Criticity.ERROR
 
     status_code: int | None = None
 
@@ -39,23 +34,17 @@ class ApiClientError(LegacyError):
 class ApiUnauthorizedError(ApiClientError):
     """Raised on 401 responses."""
 
-    code = "api.authentication.legacy"
-
     status_code: int | None = 401
 
 
 class ApiForbiddenError(ApiClientError):
     """Raised on 403 responses."""
 
-    code = "api.authorization.legacy"
-
     status_code: int | None = 403
 
 
 class ApiNotFoundError(ApiClientError):
     """Raised on 404 responses."""
-
-    code = "api.not_found.legacy"
 
     status_code: int | None = 404
 
@@ -66,8 +55,6 @@ class ApiRateLimitError(ApiClientError):
     Attributes:
         retry_after: Number of seconds to wait before retrying (from Retry-After header).
     """
-
-    code = "api.rate_limit.legacy"
 
     status_code: int | None = 429
 
@@ -108,5 +95,3 @@ class ApiRateLimitError(ApiClientError):
 
 class ApiServerError(ApiClientError):
     """Raised on 5xx responses."""
-
-    code = "api.server.legacy"
