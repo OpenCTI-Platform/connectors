@@ -66,6 +66,25 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert settings.eset.password.get_secret_value() == "test-password"
 
 
+def test_settings_should_accept_null_collections():
+    """An explicit null keeps the APT-reports-only mode supported."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "eset": {
+                        **MINIMAL_VALID_SETTINGS_DICT["eset"],
+                        "collections": None,
+                    },
+                }
+            )
+
+    assert FakeConnectorSettings().eset.collections is None
+
+
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [

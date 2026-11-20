@@ -51,8 +51,11 @@ class EsetConfig(BaseConfigModel):
     )
     username: str = Field(description="ESET Threat Intelligence username.")
     password: SecretStr = Field(description="ESET Threat Intelligence password.")
-    collections: ListFromString = Field(
-        description="Comma-separated list of ESET TAXII collections to import.",
+    collections: ListFromString | None = Field(
+        description=(
+            "Comma-separated list of ESET TAXII collections to import. "
+            "Set it to null to skip the collections and only import the APT reports."
+        ),
         default=["ei.misp", "ei.cc", "ei.urls"],
     )
     import_apt_reports: bool = Field(

@@ -80,7 +80,7 @@
         "ei.cc",
         "ei.urls"
       ],
-      "description": "Comma-separated list of ESET TAXII collections to import.",
+      "description": "Comma-separated list of ESET TAXII collections to import. Set it to null to skip the collections and only import the APT reports.",
       "items": {
         "type": "string"
       },

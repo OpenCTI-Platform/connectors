@@ -17,7 +17,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | CONNECTOR_UPDATE_EXISTING_DATA | `boolean` |  | boolean | `false` | Whether to update data already present in OpenCTI. |
 | ESET_API_URL | `string` |  | string | `"eti.eset.com"` | Hostname of the ESET Threat Intelligence TAXII service. |
-| ESET_COLLECTIONS | `array` |  | string | `["ei.misp", "ei.cc", "ei.urls"]` | Comma-separated list of ESET TAXII collections to import. |
+| ESET_COLLECTIONS | `array` |  | string | `["ei.misp", "ei.cc", "ei.urls"]` | Comma-separated list of ESET TAXII collections to import. Set it to null to skip the collections and only import the APT reports. |
 | ESET_IMPORT_APT_REPORTS | `boolean` |  | boolean | `true` | Whether to import ESET APT reports. |
 | ESET_IMPORT_START_DATE | `string` |  | string | `"2022-04-01"` | Date from which data is imported on the first run (e.g. 2022-04-01). |
 | ESET_CREATE_OBSERVABLES | `boolean` |  | boolean | `true` | Whether to create observables from imported indicators. |
