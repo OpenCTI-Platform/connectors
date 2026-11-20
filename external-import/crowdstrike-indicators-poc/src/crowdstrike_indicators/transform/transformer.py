@@ -5,7 +5,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.ids import (
     CROWDSTRIKE_NAMESPACE,
     indicator_id,
@@ -24,6 +23,7 @@ from stix2 import (
 )
 from stix2.exceptions import STIXError
 
+from shared.errors import ItemConversionError
 from shared.transformer import AbstractTransformer
 
 __all__ = [
@@ -79,13 +79,13 @@ NATIVELY_HELD_FIELDS = frozenset(
 def build_pattern(item: CrowdStrikeIndicator) -> str:
     """Return the STIX pattern of ``item``, quoted and escaped by stix2.
 
-    :raises IndicatorConversionError: if the type has no pattern mapping.
+    :raises ItemConversionError: if the type has no pattern mapping.
     """
     if item.type == IP_ADDRESS_TYPE:
         try:
             version = ipaddress.ip_address(item.indicator).version
         except ValueError as error:
-            raise IndicatorConversionError(
+            raise ItemConversionError(
                 item.id, f"not an IP address: {item.indicator!r}"
             ) from error
         object_type = "ipv6-addr" if version == 6 else "ipv4-addr"
@@ -93,9 +93,7 @@ def build_pattern(item: CrowdStrikeIndicator) -> str:
     elif item.type in PATTERN_PATHS:
         object_type, path = PATTERN_PATHS[item.type]
     else:
-        raise IndicatorConversionError(
-            item.id, f"unsupported indicator type {item.type!r}"
-        )
+        raise ItemConversionError(item.id, f"unsupported indicator type {item.type!r}")
     comparison = EqualityComparisonExpression(
         ObjectPath(object_type, path), StringConstant(item.indicator)
     )
@@ -157,7 +155,7 @@ def _kill_chain_phases(item: CrowdStrikeIndicator) -> list[KillChainPhase]:
 def _created(item: CrowdStrikeIndicator) -> datetime:
     created = item.published_date or item.last_updated
     if created > item.last_updated:
-        raise IndicatorConversionError(
+        raise ItemConversionError(
             item.id,
             f"published_date {created.isoformat()} is after "
             f"last_updated {item.last_updated.isoformat()}",
@@ -179,7 +177,7 @@ class CrowdStrikeIndicatorTransformer(
     def convert(self, item: EnrichedCrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
         """Return the STIX indicator of ``item``.
 
-        :raises IndicatorConversionError: if the type has no pattern mapping,
+        :raises ItemConversionError: if the type has no pattern mapping,
             if ``published_date`` is after ``last_updated``, or if stix2
             rejects the object.
         """
@@ -208,4 +206,4 @@ class CrowdStrikeIndicatorTransformer(
         try:
             return CrowdStrikeStix2Indicator(id=indicator_id(item.id), **properties)
         except STIXError as error:
-            raise IndicatorConversionError(item.id, str(error)) from error
+            raise ItemConversionError(item.id, str(error)) from error

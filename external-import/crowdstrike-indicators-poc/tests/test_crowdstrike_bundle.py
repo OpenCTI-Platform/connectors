@@ -9,7 +9,6 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import load_fixture, make_indicator
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
 from crowdstrike_indicators.transform.attack import (
@@ -19,6 +18,8 @@ from crowdstrike_indicators.transform.attack import (
 from crowdstrike_indicators.transform.bundle import MakeStixBundle, missing_references
 from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
 from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+
+from shared.errors import ItemConversionError
 
 SAMPLE_ROWS = load_fixture("indicators_sample.json")["resources"]
 SAMPLE_IDS = [f"{row['type']}-{i}" for i, row in enumerate(SAMPLE_ROWS)]
@@ -119,10 +120,10 @@ def test_missing_target_is_rejected():
     removed = item.malware[0]
     broken = dataclasses.replace(item, malware=item.malware[1:])
 
-    with pytest.raises(IndicatorConversionError) as caught:
+    with pytest.raises(ItemConversionError) as caught:
         make(broken)
 
-    assert caught.value.indicator_id == DOMAIN_7["id"]
+    assert caught.value.item_id == DOMAIN_7["id"]
     assert removed.id in str(caught.value)
 
 
@@ -138,7 +139,7 @@ def test_any_ref_property_is_checked():
         created_by_ref="identity--00000000-0000-5000-8000-000000000001",
     )
 
-    with pytest.raises(IndicatorConversionError, match="identity--00000000"):
+    with pytest.raises(ItemConversionError, match="identity--00000000"):
         make(dataclasses.replace(item, malware=[orphan]))
 
 

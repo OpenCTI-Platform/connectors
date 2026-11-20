@@ -419,7 +419,7 @@ Native properties:
 | `external_references` | `source_name` `CrowdStrike`, `external_id` the CrowdStrike `id` |
 
 Supported types: `domain`, `url`, `ip_address` (IPv4 and IPv6), `hash_md5`,
-`hash_sha1` and `hash_sha256`. Any other type raises `IndicatorConversionError`,
+`hash_sha1` and `hash_sha256`. Any other type raises `ItemConversionError`,
 and so does a `published_date` later than `last_updated`.
 
 The STIX `id` is derived from the CrowdStrike id alone: `indicator--` followed
@@ -573,7 +573,7 @@ such as OpenCTI takes.
   the CrowdStrike namespace: the same input always gives the same bundle.
 - Every reference must resolve inside the bundle: a `*_ref` or `*_refs` value
   naming an object the bundle does not hold makes the step raise
-  `IndicatorConversionError`, naming the indicator and the missing id. OpenCTI
+  `ItemConversionError`, naming the indicator and the missing id. OpenCTI
   rejects such bundles, so the gap is caught here.
 
 ## Setup

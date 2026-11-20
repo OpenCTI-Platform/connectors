@@ -13,7 +13,6 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import FIXTURES_DIR, load_fixture, make_indicator
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.ids import indicates_id
 from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
@@ -28,6 +27,8 @@ from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
 from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 from stix2.exceptions import InvalidValueError
 from stix2.v21 import Relationship
+
+from shared.errors import ItemConversionError
 
 ATTACK_DATA = load_fixture("attack_extract.json")
 ATTACK_FILE = FIXTURES_DIR / "attack_extract.json"
@@ -338,10 +339,10 @@ def test_same_input_same_output_whatever_the_time(catalog):
 def test_stix2_failure_is_wrapped_with_its_cause(catalog):
     failure = InvalidValueError(Relationship, "source_ref", "forced")
     with mock.patch.object(attack_module, "Relationship", side_effect=failure):
-        with pytest.raises(IndicatorConversionError) as caught:
+        with pytest.raises(ItemConversionError) as caught:
             add_attack_patterns(bundle_of(FIRST_ROW), catalog)
 
-    assert caught.value.indicator_id == FIRST_ROW["id"]
+    assert caught.value.item_id == FIRST_ROW["id"]
     assert caught.value.__cause__ is failure
 
 

@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import Any
 
 import stix2
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.ids import indicates_id
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
 from crowdstrike_indicators.transform.malware import crowdstrike_id
 from stix2.exceptions import STIXError
 from stix2.v21 import AttackPattern, Relationship
 
+from shared.errors import ItemConversionError
 from shared.transformer import AbstractTransformer
 
 LOGGER = logging.getLogger(__name__)
@@ -176,7 +176,7 @@ class CrowdStrikeAddAttackPatterns(
     def convert(self, item: CrowdStrikeIndicatorBundle) -> CrowdStrikeIndicatorBundle:
         """Return ``item`` with its AttackPatterns and their relationships added.
 
-        :raises IndicatorConversionError: if stix2 rejects a relationship.
+        :raises ItemConversionError: if stix2 rejects a relationship.
         """
         indicator = item.indicator
         known = {pattern.id for pattern in item.attack_patterns}
@@ -194,9 +194,7 @@ class CrowdStrikeAddAttackPatterns(
                 for pattern in patterns
             ]
         except STIXError as error:
-            raise IndicatorConversionError(
-                crowdstrike_id(indicator), str(error)
-            ) from error
+            raise ItemConversionError(crowdstrike_id(indicator), str(error)) from error
         return dataclasses.replace(
             item,
             attack_patterns=[*item.attack_patterns, *patterns],

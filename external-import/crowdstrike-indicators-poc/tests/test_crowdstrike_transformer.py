@@ -10,7 +10,6 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import load_fixture, make_actor, make_indicator
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.models import (
     CrowdStrikeIndicator,
     EnrichedCrowdStrikeIndicator,
@@ -25,6 +24,8 @@ from crowdstrike_indicators.transform.transformer import (
     x_property_name,
 )
 from stix2.exceptions import InvalidValueError
+
+from shared.errors import ItemConversionError
 
 SAMPLE_ROWS = load_fixture("indicators_sample.json")["resources"]
 SAMPLE_IDS = [f"{row['type']}-{i}" for i, row in enumerate(SAMPLE_ROWS)]
@@ -132,10 +133,10 @@ def comparable(item: CrowdStrikeIndicator) -> dict[str, Any]:
 
 
 def test_conversion_error_names_the_indicator_and_the_reason():
-    error = IndicatorConversionError("email_address_a@b.example", "unsupported")
+    error = ItemConversionError("email_address_a@b.example", "unsupported")
 
     assert str(error) == (
-        "Indicator email_address_a@b.example could not be converted: unsupported"
+        "Item email_address_a@b.example could not be converted: unsupported"
     )
 
 
@@ -174,15 +175,15 @@ def test_quote_and_backslash_are_escaped():
 def test_unsupported_type_fails_naming_id_and_type():
     item = record(id="email_address_a@b.example", type="email_address")
 
-    with pytest.raises(IndicatorConversionError) as caught:
+    with pytest.raises(ItemConversionError) as caught:
         convert(item)
 
-    assert caught.value.indicator_id == "email_address_a@b.example"
+    assert caught.value.item_id == "email_address_a@b.example"
     assert "'email_address'" in str(caught.value)
 
 
 def test_invalid_ip_address_fails():
-    with pytest.raises(IndicatorConversionError, match="not an IP address"):
+    with pytest.raises(ItemConversionError, match="not an IP address"):
         convert(record(type="ip_address", indicator="not-an-ip"))
 
 
@@ -246,7 +247,7 @@ def test_published_after_last_update_fails():
         id="late", published_date=int(T2.timestamp()), last_updated=int(T1.timestamp())
     )
 
-    with pytest.raises(IndicatorConversionError, match="is after last_updated"):
+    with pytest.raises(ItemConversionError, match="is after last_updated"):
         convert(item)
 
 
@@ -472,10 +473,10 @@ def test_stix2_failure_is_wrapped_with_its_cause():
     with mock.patch.object(
         transformer_module, "CrowdStrikeStix2Indicator", side_effect=failure
     ):
-        with pytest.raises(IndicatorConversionError) as caught:
+        with pytest.raises(ItemConversionError) as caught:
             convert(record(id="forced-id"))
 
-    assert caught.value.indicator_id == "forced-id"
+    assert caught.value.item_id == "forced-id"
     assert caught.value.__cause__ is failure
 
 

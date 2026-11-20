@@ -3,13 +3,13 @@
 from collections.abc import Iterable, Iterator
 from typing import Any
 
-from crowdstrike_indicators.entities.errors import IndicatorConversionError
 from crowdstrike_indicators.entities.ids import bundle_id
 from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
 from crowdstrike_indicators.transform.malware import crowdstrike_id
 from stix2.exceptions import STIXError
 from stix2.v21 import Bundle
 
+from shared.errors import ItemConversionError
 from shared.transformer import AbstractTransformer
 
 
@@ -47,7 +47,7 @@ class MakeStixBundle(AbstractTransformer[CrowdStrikeIndicatorBundle, Bundle]):
     def convert(self, item: CrowdStrikeIndicatorBundle) -> Bundle:
         """Return the STIX bundle of ``item``.
 
-        :raises IndicatorConversionError: if an object references an id
+        :raises ItemConversionError: if an object references an id
             missing from the bundle, or if stix2 rejects the bundle.
         """
         objects = [
@@ -58,7 +58,7 @@ class MakeStixBundle(AbstractTransformer[CrowdStrikeIndicatorBundle, Bundle]):
         ]
         missing = missing_references(objects)
         if missing:
-            raise IndicatorConversionError(
+            raise ItemConversionError(
                 crowdstrike_id(item.indicator),
                 "reference to an object missing from the bundle: " + ", ".join(missing),
             )
@@ -67,6 +67,6 @@ class MakeStixBundle(AbstractTransformer[CrowdStrikeIndicatorBundle, Bundle]):
                 id=bundle_id(item.indicator.id), objects=objects, allow_custom=True
             )
         except STIXError as error:
-            raise IndicatorConversionError(
+            raise ItemConversionError(
                 crowdstrike_id(item.indicator), str(error)
             ) from error
