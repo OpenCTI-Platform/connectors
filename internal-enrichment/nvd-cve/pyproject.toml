@@ -1,0 +1,8 @@
+[project]
+name = "nvd-cve"
+version = "0.1.0"
+description = "OpenCTI NIST NVD CVE Internal Enrichment Connector"
+requires-python = "~=3.12.0"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

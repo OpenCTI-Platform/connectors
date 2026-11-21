@@ -1,0 +1,3 @@
+# Install AFTER requirements.txt with --upgrade --no-deps.
+# pycti currently pins setuptools~=82.0.0; override that pin for security fixes.
+setuptools>=84.1.0,<85
