@@ -100,3 +100,25 @@ def get_hash_algorithm(hash: str) -> Literal["SHA-256", "SHA-1", "MD5"] | None:
         return "SHA-1"
     elif len(hash) == 32:
         return "MD5"
+
+
+def get_file_hash_pattern(hash_algorithm: str | None, hash_value: str) -> str:
+    """
+    Build the STIX pattern of a file hash indicator.
+
+    The hash key is quoted only when it is not a plain identifier (e.g. 'SHA-256'),
+    so the pattern, and thus the indicator id, matches the form OpenCTI normalizes
+    patterns to.
+
+    Args:
+        hash_algorithm (str | None): The hash algorithm, as returned by `get_hash_algorithm`
+        hash_value (str): The hash value
+
+    Returns:
+        str: The STIX pattern
+    """
+    if hash_algorithm and re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", hash_algorithm):
+        hash_key = hash_algorithm
+    else:
+        hash_key = f"'{hash_algorithm}'"
+    return f"[file:hashes.{hash_key} = '{hash_value}']"

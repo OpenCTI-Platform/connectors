@@ -52,22 +52,6 @@ class RFEnrichmentConnector:
             case _:
                 return None
 
-    @staticmethod
-    def generate_pattern(ioc: str, data_type: str, algorithm: str = None) -> str:
-        """
-        Generates the appropiate STIX2 pattern for an IOC
-
-        Args:
-            ioc (str): the indicator being enriched
-            data_type (str): the OpenCTI data type of the indicator
-            algorithm (str): The hash algorithm, if data_type is hash
-
-        Returns the STIX2 pattern as a string
-        """
-        if data_type == "StixFile":
-            return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
-        return f"[{data_type.lower()}:value = '{ioc}']"
-
     def enrich_observable(self, octi_entity: dict) -> list[BaseIdentifiedEntity]:
         observable_type = octi_entity["entity_type"]
         observable_value = octi_entity["observable_value"]
