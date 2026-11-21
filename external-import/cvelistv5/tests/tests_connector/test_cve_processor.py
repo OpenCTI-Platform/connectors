@@ -143,9 +143,7 @@ class TestFormatVersion:
 class TestExtractFixedVersions:
     def test_less_than_upper_bound_is_a_fix(self):
         product = {
-            "versions": [
-                {"version": "1.0", "status": "affected", "lessThan": "1.25.5"}
-            ]
+            "versions": [{"version": "1.0", "status": "affected", "lessThan": "1.25.5"}]
         }
         assert CVEProcessor._extract_fixed_versions(product) == ["1.25.5"]
 
