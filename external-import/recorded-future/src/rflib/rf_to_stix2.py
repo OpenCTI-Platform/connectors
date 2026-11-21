@@ -247,26 +247,15 @@ class Indicator(RFStixEntity):
             if (
                 related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
             ):  # Sometimes, hits is not empty but sections is
-                rf_related_entities = []
-                rf_related_entities_sections = related_entities_hits[0]["sections"]
-
-                for section in rf_related_entities_sections:
-                    # Handle indicators and TTP & Tools
-                    if "Indicators" or "TTP" in section["section_id"]["name"]:
-                        rf_related_entities += section["lists"]
-
-                    for element in rf_related_entities:
-                        if element["type"]["name"] in handled_related_entities_types:
-                            for rf_related_element in element["entities"]:
-                                type_ = element["type"]["name"]
-                                name_ = rf_related_element["name"]
-                                cls = _resolve_entity_class(
-                                    type_,
-                                    enabled=ta_to_intrusion_set,
-                                )
-                                related_element = cls(name_, type_, self.author, tlp)
-                                stix_objs = related_element.to_stix_objects()
-                                self.related_entities.extend(stix_objs)
+                self.related_entities.extend(
+                    _related_entities_from_sections(
+                        related_entities_hits[0]["sections"],
+                        handled_related_entities_types,
+                        self.author,
+                        tlp,
+                        ta_to_intrusion_set,
+                    )
+                )
 
     def build_bundle(self, stix_name):
         """
@@ -924,26 +913,15 @@ class Vulnerability(RFStixEntity):
                 related_entities_links
                 and len(related_entities_links[0]["sections"]) > 0
             ):  # Sometimes, hits is not empty but sections is
-                rf_related_entities = []
-                rf_related_entities_sections = related_entities_links[0]["sections"]
-
-                for section in rf_related_entities_sections:
-                    # Handle indicators and TTP & Tools
-                    if "Indicators" or "TTP" in section["section_id"]["name"]:
-                        rf_related_entities += section["lists"]
-
-                    for element in rf_related_entities:
-                        if element["type"]["name"] in handled_related_entities_types:
-                            for rf_related_element in element["entities"]:
-                                type_ = element["type"]["name"]
-                                name_ = rf_related_element["name"]
-                                cls = _resolve_entity_class(
-                                    type_,
-                                    enabled=ta_to_intrusion_set,
-                                )
-                                related_element = cls(name_, type_, self.author, tlp)
-                                stix_objs = related_element.to_stix_objects()
-                                self.related_entities.extend(stix_objs)
+                self.related_entities.extend(
+                    _related_entities_from_sections(
+                        related_entities_links[0]["sections"],
+                        handled_related_entities_types,
+                        self.author,
+                        tlp,
+                        ta_to_intrusion_set,
+                    )
+                )
 
     def build_bundle(self, stix_name):
         """
@@ -1109,6 +1087,33 @@ def _resolve_entity_class(type_: str, enabled: bool = False):
     if enabled and type_ == "Threat Actor":
         return IntrusionSet
     return ENTITY_TYPE_MAPPER[type_]
+
+
+def _related_entities_from_sections(
+    sections, handled_types, author, tlp, ta_to_intrusion_set=False
+):
+    """Return the STIX objects of the related entities listed in the sections.
+
+    Each list of each section is processed once, and an object that appears in
+    several sections (same deterministic id) is only returned once. Lists of
+    every section are used: the previous section filter
+    (``if "Indicators" or "TTP" in ...``) was always true.
+    """
+    stix_objects = []
+    seen_ids = set()
+    for section in sections:
+        for element in section["lists"]:
+            type_ = element["type"]["name"]
+            if type_ not in handled_types:
+                continue
+            cls = _resolve_entity_class(type_, enabled=ta_to_intrusion_set)
+            for rf_related_element in element["entities"]:
+                related_element = cls(rf_related_element["name"], type_, author, tlp)
+                for stix_object in related_element.to_stix_objects():
+                    if stix_object.id not in seen_ids:
+                        seen_ids.add(stix_object.id)
+                        stix_objects.append(stix_object)
+    return stix_objects
 
 
 # STIX types that justify a directional relationship (indicates / targets)
