@@ -12,6 +12,7 @@
 - [Configuration](#configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
+  - [FIPS Image](#fips-image)
   - [Manual Deployment](#manual-deployment)
 - [Usage](#usage)
 - [Behavior](#behavior)
@@ -80,6 +81,17 @@ services:
       - IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD=true
     restart: always
 ```
+
+### FIPS Image
+
+The image tagged `<version>-fips` (amd64 only) is built from `Dockerfile_fips`, on the Filigran Alpine FIPS base image. Its browser never connects to the network: the connector fetches every request of the page from Python, through the system OpenSSL and its FIPS provider, and hands the responses to the browser. A request the browser would still send itself fails.
+
+It behaves as the default image, except that:
+
+- the server certificate of every request is verified, so a page served with an invalid certificate is not imported;
+- the requests are sent with HTTP/1.1, from Python rather than from the browser, which bot protections may tell apart;
+- the redirects of a resource or of a frame are followed before the browser receives the response, so a page opened through such a redirect keeps the URL it was requested with;
+- service workers and WebSockets are not available to the page.
 
 ### Manual Deployment
 
