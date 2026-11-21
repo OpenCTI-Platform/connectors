@@ -1,0 +1,241 @@
+name: "Release connectors-sdk"
+
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('📦 {0}', github.ref_name)
+      || format('📦 connectors-sdk@{0} → testpypi', inputs.version)
+  }}
+
+# Builds the connectors-sdk package (sdist + wheel) and publishes it to PyPI.
+#
+# Triggers:
+#   1. Automatic: the platform release tags, the same ones that trigger
+#      release-bulk-connectors.yml, published to PyPI. The SDK ships with
+#      every platform release, and its version follows its pycti pin:
+#        7.261117.0        → 7.261117.0
+#        7.260811.0-lts.2  → 7.260811.0.2  (as pycti: `-lts.N` is not PEP 440)
+#      The tagged commit, or its parent (the release process tags a commit
+#      that only pins the connectors to the tag), must be on `master`, or on
+#      `lts/<base>` for an LTS tag, and the SDK must be identical in both.
+#   2. Manual: workflow_dispatch with a version, published to TestPyPI only,
+#      from any branch, to try a release. PyPI releases go through tags.
+#
+# Authentication uses PyPI Trusted Publishing (OIDC): no API token is stored
+# in the repository. Each index must declare a trusted publisher for
+# owner `OpenCTI-Platform`, repository `connectors`, workflow
+# `release-connectors-sdk.yml` and environment `pypi` (or `testpypi`).
+# The `pypi` environment should only allow the release tags as deployment
+# refs, so that no branch run can reach it, even if this file is edited.
+#
+# The version lives only in the tag: `tool.poetry.version` stays `0.0.0` in
+# the repository and is replaced in the CI checkout before the build.
+
+on:
+  push:
+    tags:
+      # Platform CalVer tags: 7.261117.0 and 7.260811.0-lts.2. Per-connector
+      # tags (`{name}/{version}`) never match: glob `*` does not match `/`.
+      - '[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >
+          Version to publish to TestPyPI (PEP 440, e.g. 7.261117.0rc1).
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-connectors-sdk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      repository: ${{ steps.version.outputs.repository }}
+    defaults:
+      run:
+        working-directory: connectors-sdk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the provenance check needs master and lts/* history
+
+      - name: Check the tagged commit comes from a release branch
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-lts\.[0-9]+$ ]]; then
+            branch="lts/${BASH_REMATCH[1]}"
+          else
+            branch="master"
+          fi
+          git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null \
+            || { echo "::error::Branch $branch not found for tag $REF_NAME"; exit 1; }
+          # The release process tags a commit that only pins the connectors to
+          # the tag, on top of the release commit: accept the tagged commit or
+          # its parent, as long as the SDK is the same in both.
+          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch"; then
+            base="$GITHUB_SHA"
+          elif git merge-base --is-ancestor "$GITHUB_SHA^" "origin/$branch" 2>/dev/null; then
+            base="$(git rev-parse "$GITHUB_SHA^")"
+          else
+            echo "::error::Tag $REF_NAME ($GITHUB_SHA) is not on $branch, nor is its parent"
+            exit 1
+          fi
+          git diff --quiet "$base" "$GITHUB_SHA" -- connectors-sdk \
+            || { echo "::error::Tag $REF_NAME changes connectors-sdk compared with $branch ($base)"; exit 1; }
+          echo "Tag $REF_NAME: SDK identical to $branch at $base" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Resolve version and target index
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            if [[ "$REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              version="$REF_NAME"
+            elif [[ "$REF_NAME" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-lts\.([0-9]+)$ ]]; then
+              # Same mapping as pycti: 7.260811.0-lts.2 → 7.260811.0.2
+              version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            else
+              echo "::error::Tag $REF_NAME is not a release tag (X.Y.Z or X.Y.Z-lts.N)"
+              exit 1
+            fi
+            repository="pypi"
+          else
+            version="$INPUT_VERSION"
+            repository="testpypi"
+          fi
+          python -m pip install --quiet packaging
+          # The SDK pins pycti exactly, and the release commit sets that pin
+          # to the release version
+          pycti_pin="$(sed -nE 's/^ *"pycti==([^"]+)".*/\1/p' pyproject.toml)"
+          VERSION="$version" PYCTI_PIN="$pycti_pin" python - <<'EOF'
+          import os, sys
+          from packaging.version import InvalidVersion, Version
+          raw = os.environ["VERSION"]
+          try:
+              parsed = Version(raw)
+          except InvalidVersion:
+              sys.exit(f"::error::'{raw}' is not a valid PEP 440 version")
+          if str(parsed) != raw:
+              sys.exit(f"::error::Use the canonical form '{parsed}' instead of '{raw}'")
+          if parsed.local:
+              sys.exit(f"::error::'{raw}' has a local part (+{parsed.local}), which PyPI refuses")
+          try:
+              pin = Version(os.environ["PYCTI_PIN"])
+          except InvalidVersion:
+              sys.exit("::error::No valid exact pycti pin (pycti==X) found in pyproject.toml")
+          if os.environ["EVENT_NAME"] == "push":
+              # Release tag: the SDK version must be the pycti pin
+              if parsed != pin:
+                  sys.exit(f"::error::Version {raw} does not match the pycti pin ({pin})")
+          elif Version(parsed.base_version) != pin:
+              # Manual run to TestPyPI: pre-releases (7.261119.0rc1) are expected
+              print(f"::warning::Version {raw} is not based on the pycti pin ({pin})")
+          EOF
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
+          echo "Publishing connectors-sdk $version to $repository" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set package version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i -E "s/^version = \"0\.0\.0\"/version = \"$VERSION\"/" pyproject.toml
+          grep -q "^version = \"$VERSION\"" pyproject.toml \
+            || { echo "::error::Could not set the version in pyproject.toml"; exit 1; }
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --quiet build twine
+          python -m build --outdir dist .
+          twine check --strict dist/*
+
+      - name: Smoke test the wheel and the sdist
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for dist in dist/*.whl dist/*.tar.gz; do
+            echo "::group::Smoke test $dist"
+            venv="$RUNNER_TEMP/smoke-$(basename "$dist")"
+            python -m venv "$venv"
+            "$venv/bin/pip" install --quiet "$dist"
+            # -I (isolated mode) keeps the current directory, this checkout,
+            # out of sys.path: the SDK is imported from the installed package.
+            "$venv/bin/python" -I - <<'EOF'
+          import os
+          import sys
+          from importlib.metadata import distribution, entry_points
+          from importlib.resources import files
+          from importlib.util import find_spec
+
+          import connectors_sdk
+          import connectors_sdk.models
+
+          expected = os.environ["VERSION"]
+          dist = distribution("connectors-sdk")
+          assert connectors_sdk.__file__.startswith(sys.prefix), f"SDK imported from {connectors_sdk.__file__}"
+          assert dist.version == expected, f"Package version {dist.version}, expected {expected}"
+          assert connectors_sdk.__version__ == expected, f"__version__ {connectors_sdk.__version__}, expected {expected}"
+          assert files("connectors_sdk").joinpath("py.typed").is_file(), "py.typed is missing"
+          assert find_spec("_connectors_sdk_plugins.pytest_plugin"), "The pytest plugin module is missing"
+          assert entry_points(group="pytest11", name="connectors_sdk"), "The pytest11 entry point is missing"
+          readme = dist.read_text("METADATA").partition("\n\n")[2]
+          assert dist.metadata["Description-Content-Type"] == "text/markdown" and readme.strip(), "The README is missing"
+          print(f"connectors-sdk {dist.version}: OK")
+          EOF
+            echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: connectors-sdk-dist
+          path: connectors-sdk/dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to ${{ needs.build.outputs.repository }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.build.outputs.repository }}
+      url: >-
+        ${{
+          needs.build.outputs.repository == 'pypi'
+            && format('https://pypi.org/project/connectors-sdk/{0}/', needs.build.outputs.version)
+            || format('https://test.pypi.org/project/connectors-sdk/{0}/', needs.build.outputs.version)
+        }}
+    permissions:
+      id-token: write # Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: connectors-sdk-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        if: needs.build.outputs.repository == 'pypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+      - name: Publish to TestPyPI
+        if: needs.build.outputs.repository == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
