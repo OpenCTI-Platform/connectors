@@ -145,3 +145,11 @@ class TestMalpediaClient:
         with patch.object(malpedia_client, "query", return_value={"version": 10}):
             result = malpedia_client.current_version()
             assert result == 10
+
+    @pytest.mark.parametrize("method", ["current_version", "token_check"])
+    def test_unreachable_api_raises_connection_error(self, mock_helper, method):
+        malpedia_client = MockMalpediaClient(mock_helper)
+
+        with patch.object(malpedia_client, "query", return_value=None):
+            with pytest.raises(ConnectionError, match="unreachable"):
+                getattr(MalpediaClient, method)(malpedia_client)
