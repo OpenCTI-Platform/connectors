@@ -26,7 +26,7 @@ class CTM360CynaConnector:
             api_key=config.ctm360_cyna.api_key.get_secret_value(),
         )
         self.converter = ConverterToStix(self.helper)
-        self._interval = config.ctm360_cyna.import_interval
+        self._interval = config.connector.duration_period.total_seconds()
         self._page_size = config.ctm360_cyna.page_size
         self._max_pages = config.ctm360_cyna.max_pages
 
