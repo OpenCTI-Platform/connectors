@@ -1,0 +1,17 @@
+# Only src/ is copied into the image; keep secrets and local files out of the build context.
+.env
+# Local settings for running without Docker (may hold the token)
+src/config.yml
+certs/
+exclusions/
+tests/
+*.md
+.git
+__pycache__/
+*.pyc
+**/__pycache__/
+**/*.pyc
+.DS_Store
+**/.DS_Store
+dist/
+*.sh

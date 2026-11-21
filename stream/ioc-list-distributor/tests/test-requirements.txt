@@ -1,0 +1,3 @@
+# Main dependencies need to be installed (pycti is installed by the Dockerfile; the tests fake it)
+-r ../src/requirements.txt
+pytest==9.1.1

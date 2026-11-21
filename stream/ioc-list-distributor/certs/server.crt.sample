@@ -1,0 +1,22 @@
+# SAMPLE ONLY - not a real certificate.
+#
+# Feed server TLS certificate, used when FEED_DISTRIBUTOR_HTTPS_ENABLED=true.
+#
+# What to do:
+#   1. Put your certificate in this folder as "server.crt" (no ".sample").
+#      The folder is mounted read-only at /certs, so the default setting
+#      FEED_DISTRIBUTOR_TLS_CERT_FILE=/certs/server.crt finds it.
+#   2. Make it readable by UID 10001 (the container user).
+#   3. Delete this sample file if you like; it is never read.
+#
+# Format: PEM text (Base64 between BEGIN/END CERTIFICATE lines), as the full
+# chain in this order:
+#   - the server certificate (its subject or SAN matches the hostname
+#     the clients use in the feed URL)
+#   - then each intermediate CA certificate
+#   - the root CA is optional
+#
+# Use a certificate from an internal or public CA: most clients validate it
+# and reject a self-signed one unless its CA is imported.
+#
+# Check the file:  openssl x509 -in server.crt -noout -subject -issuer -enddate
