@@ -91,22 +91,35 @@
       "description": "Google SecOps SIEM project region (e.g. 'us', 'eu', 'apac').",
       "type": "string"
     },
+    "SECOPS_SIEM_AUTH_METHOD": {
+      "default": "service_account",
+      "description": "Authentication method: 'service_account' (JSON key fields below) or 'adc' (Application Default Credentials / Workload Identity). The service account key fields are only required for 'service_account'.",
+      "enum": [
+        "service_account",
+        "adc"
+      ],
+      "type": "string"
+    },
     "SECOPS_SIEM_PRIVATE_KEY_ID": {
-      "description": "Service account private key ID.",
+      "default": null,
+      "description": "Service account private key ID. Required when auth_method is 'service_account'.",
       "type": "string"
     },
     "SECOPS_SIEM_PRIVATE_KEY": {
-      "description": "Service account private key (PEM format).",
+      "default": null,
+      "description": "Service account private key (PEM format). Required when auth_method is 'service_account'.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "SECOPS_SIEM_CLIENT_EMAIL": {
-      "description": "Service account client email.",
+      "default": null,
+      "description": "Service account client email. Required when auth_method is 'service_account'.",
       "type": "string"
     },
     "SECOPS_SIEM_CLIENT_ID": {
-      "description": "Service account client ID.",
+      "default": null,
+      "description": "Service account client ID. Required when auth_method is 'service_account'.",
       "type": "string"
     },
     "SECOPS_SIEM_AUTH_URI": {
@@ -134,7 +147,8 @@
       "type": "string"
     },
     "SECOPS_SIEM_CLIENT_CERT_URL": {
-      "description": "Client x509 certificate URL.",
+      "default": null,
+      "description": "Client x509 certificate URL. Required when auth_method is 'service_account'.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
@@ -146,12 +160,7 @@
     "OPENCTI_TOKEN",
     "CONNECTOR_LIVE_STREAM_ID",
     "SECOPS_SIEM_PROJECT_ID",
-    "SECOPS_SIEM_PROJECT_INSTANCE",
-    "SECOPS_SIEM_PRIVATE_KEY_ID",
-    "SECOPS_SIEM_PRIVATE_KEY",
-    "SECOPS_SIEM_CLIENT_EMAIL",
-    "SECOPS_SIEM_CLIENT_ID",
-    "SECOPS_SIEM_CLIENT_CERT_URL"
+    "SECOPS_SIEM_PROJECT_INSTANCE"
   ],
   "additionalProperties": true
 }
