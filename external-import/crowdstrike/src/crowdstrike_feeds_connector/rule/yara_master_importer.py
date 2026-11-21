@@ -17,6 +17,7 @@ from crowdstrike_feeds_services.utils.rule_file import (
     extract_rule_file,
 )
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
+from pycti import Indicator as PyCTIIndicator
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.exceptions import STIXError
@@ -243,6 +244,15 @@ class YaraMasterImporter(BaseImporter):
         """Try updating YARA rule if it already exists in the OpenCTI."""
         name = yara_rule.name
 
+        # The standard ID of an Indicator comes from its pattern only. If an
+        # Indicator already holds this exact rule, the rule is up to date, even
+        # when another Indicator with the same name holds an older version of
+        # it. Updating the pattern of that other Indicator would give it the
+        # same standard ID, and OpenCTI rejects such an update as a duplicate.
+        if self._fetch_indicator_by_pattern(yara_rule.rule) is not None:
+            self._info("Rule '{0}' already up to date", name)
+            return False
+
         existing_rule = self._find_rule_by_name(name)
         if existing_rule is None:
             return None
@@ -346,6 +356,9 @@ class YaraMasterImporter(BaseImporter):
             return None
 
         return indicator_id, rules[0]
+
+    def _fetch_indicator_by_pattern(self, pattern: str) -> Optional[Mapping[str, Any]]:
+        return self.helper.api.indicator.read(id=PyCTIIndicator.generate_id(pattern))
 
     def _fetch_indicator_by_name(self, name: str) -> Optional[Mapping[str, Any]]:
         values = [name]
