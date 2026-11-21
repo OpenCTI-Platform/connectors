@@ -95,7 +95,7 @@ standalone while pointing `OPENCTI_URL` at your running platform:
 ```yaml
 services:
   connector-ctm360-hackerview-feed:
-    image: opencti/connector-ctm360-hackerview:latest
+    image: opencti/connector-ctm360-hackerview-feed:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
