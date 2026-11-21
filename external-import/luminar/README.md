@@ -85,6 +85,7 @@ This connector integrates with the Luminar TAXII 2 server to import three distin
 | Client Secret        | client_secret       | `LUMINAR_CLIENT_SECRET`      |                              | Yes       | Luminar API Client Secret                    |
 | Initial Fetch Date   | initial_fetch_date  | `LUMINAR_INITIAL_FETCH_DATE` |                              | Yes       | Start date for import (YYYY-MM-DD format)    |
 | Create Observable    | create_observable   | `LUMINAR_CREATE_OBSERVABLE`  | True                         | No        | Create observables from indicators           |
+| Mask Credentials     | mask_credentials    | `LUMINAR_MASK_CREDENTIALS`   | False                        | No        | Store leaked credentials masked, keeping only the first and last character (`changeme` → `c******e`) |
 
 ---
 
@@ -119,6 +120,7 @@ services:
       - LUMINAR_CLIENT_SECRET=ChangeMe
       - LUMINAR_INITIAL_FETCH_DATE=2024-01-01
       - LUMINAR_CREATE_OBSERVABLE=true
+      - LUMINAR_MASK_CREDENTIALS=false
     restart: always
 ```
 
@@ -136,10 +138,10 @@ docker compose up -d
 cd external-import/luminar/src
 ```
 
-2. Install dependencies:
+2. Install dependencies (in a virtual environment):
 
 ```bash
-pip3 install -r requirements.txt
+python3 -m venv ../.venv && ../.venv/bin/pip install -r requirements.txt
 ```
 
 3. Create a `config.yml` from `config.yml.sample` and configure variables
@@ -148,6 +150,12 @@ pip3 install -r requirements.txt
 ```bash
 python3 main.py
 ```
+
+When the connector runs on the host while OpenCTI runs in Docker, the RabbitMQ
+host name advertised by the platform (e.g. `rabbitmq`) is not resolvable from the
+host. Publish the AMQP port and set `MQ_HOST` (and `MQ_PORT` if needed), e.g.
+`MQ_HOST=localhost python3 main.py`. Set `CONNECTOR_DURATION_PERIOD=0` to run once
+and exit.
 
 ---
 
@@ -211,6 +219,8 @@ flowchart LR
 
 ### Entity Mapping
 
+The tables list the typical content of each collection. Any supported STIX 2.1 object type found in any collection is ingested (see Processing Details).
+
 #### IOC Collection
 
 | Luminar Data         | OpenCTI Entity Type | Notes                                    |
@@ -247,49 +257,98 @@ flowchart LR
 
 ### Processing Details
 
-1. **Authentication**:
-   - OAuth 2.0 client credentials flow
-   - Automatic token refresh on 401 errors
+The connector runs an Extract → Transform → Load pipeline per feed, one bounded
+batch at a time (by default 10 TAXII pages per batch); a feed is never loaded
+entirely into memory.
 
-2. **Collection Fetching**:
-   - Pagination support with `next` parameter
-   - Retry logic for transient failures
-   - Filters records by `created` date
+1. **Extract** (`luminar_manager.py`):
+   - OAuth 2.0 client credentials flow, automatic token refresh on 401
+   - TAXII pagination with `next` cursors and `added_after` checkpoints
+   - Retries on 429/5xx and network errors; expired cursors (HTTP 410) are rebuilt
+     from the last `X-TAXII-Date-Added-Last` header
+   - Objects referenced by a batch (`*_ref`/`*_refs`) but delivered in another batch
+     are attached to it (neighbouring batches, cache, or `match[id]` lookup), together
+     with the objects they reference in turn (author identity, markings, endpoints)
 
-3. **IOC Processing**:
-   - Creates parent entity (Malware/Threat Actor)
-   - Extracts indicators from relationships
-   - Creates observables when `create_observable=true`
-   - Parses STIX patterns for observable creation
+2. **Transform** (`converter_to_stix.py`):
+   - Every supported STIX 2.1 object is considered on its own (SDOs, observables,
+     relationships, sightings, marking definitions), not only objects linked by a
+     relationship. Unsupported types (e.g. `extension-definition`) are skipped and counted.
+   - Luminar STIX ids are preserved; objects whose content is identical apart from id
+     and timestamps (Luminar issues one id per occurrence, e.g. software "Exploit",
+     location `{country: "US"}`) are collapsed to one object per batch with references
+     rewritten (relationships and markings are never collapsed)
+   - Duplicates within a batch are resolved by `modified`
+   - Expired objects are removed (see below), then each object is validated with the
+     `stix2` library; a malformed object is skipped without affecting the others
+   - Observables are derived from indicator `=` comparisons when `create_observable=true`
+     (linked with `based-on`)
+   - References are made consistent: relationships/sightings with a missing endpoint are
+     dropped, containers keep only resolvable `object_refs` (reports/groupings are kept
+     even if none remain), unresolvable markings are
+     removed (standard TLP markings are always resolvable), and objects without a
+     resolvable author are attributed to "Cognyte Luminar"
+   - Relationship types are checked against the connected OpenCTI platform's
+     relationship schema (`schemaRelationsTypesMapping`); a type the platform does not
+     allow between the two entity types is downgraded to `related-to` (direction is
+     never changed)
 
-4. **Leaked Records Processing**:
-   - Creates Incident with source "Cognyte Luminar"
-   - Links Malware and User Account entities
-   - Preserves custom Luminar extensions (threat score, monitoring terms)
+3. **Expiration filtering** (`expiration.py`):
+   - Only indicators expire: an indicator is excluded when `valid_until <= now` (UTC)
+   - Indicators without `valid_until` and all other object types never expire
+   - `created`/`modified`/`valid_from` are never used to exclude objects
 
-5. **Cyberfeeds Processing**:
-   - Validates and normalizes relationship types
-   - Creates Report SDOs with object references
-   - Generates PyCTI-compatible IDs
+4. **Load** (`connector.py`):
+   - One OpenCTI work per run; each batch is sent in three phases (entities and
+     markings → relationships/sightings → reports/groupings), each phase only after
+     OpenCTI has ingested the previous one (work progress), so referenced objects are
+     stored before the objects referencing them (the wait gives up only if ingestion
+     makes no progress for 15 minutes)
+   - The feed checkpoint is saved after each successfully sent batch, unless a
+     referenced-object lookup failed for that batch (the feed then stops and the
+     batch is re-read on the next run)
+
+#### Enrichments
+
+| Object | Addition (only when the property is absent) |
+|--------|---------------------------------------------|
+| Indicator | `x_opencti_score` = Luminar's own indicator `score` (0-100) when provided, else 90 for "Known Malicious IPs", otherwise 80; `description` = name |
+| Vulnerability | CVSS v3.x from the Luminar extension → `x_opencti_cvss_base_score`, `x_opencti_cvss_base_severity`, `x_opencti_cvss_vector_string` (other Luminar attributes as labels, see above) |
+| Every object | label `luminar.feed:<feed>` (`iocs`, `leakedrecords`, `cyberfeeds`) recording which Luminar feed delivered it; an object delivered by several feeds carries one label per feed (author identity and markings excluded) |
+| Any object with Luminar extension attributes | every attribute not mapped natively becomes a label `luminar.<key>:<value>` (key without its `luminar_` prefix; one label per list element; booleans `true`/`false`). Near-unique attributes (`collection_date`, `computer_name`, `resolving_domains`, `url`), long or structured values are appended to the description as a `Luminar attributes:` block instead (labels are entities in OpenCTI; one per unique value would flood the platform). `extension_type` and `luminar_tenant_id` are not exported |
+| Incident (leakedrecords) | `source` "Cognyte Luminar", `incident_type` compromise, `severity` high |
+| User Account | score 100; **one object per leaked credential**: the Luminar record id is set as `user_id` (OpenCTI identifies User-Accounts by `account_type` + `user_id` + `account_login`, and Luminar often sends placeholder logins such as `[unknown]`); `credential` masked when `mask_credentials` is true |
+| Other observables | score 80 |
+| Reports, cyberfeeds SDOs | score 80 |
+| SDOs | feed-specific default description ("Luminar IOC", "Luminar Leaked Credentials", "Luminar Cyberfeeds") |
 
 ### Relationships Created
 
-| Source Entity     | Relationship Type | Target Entity    | Collection     |
-|-------------------|------------------|------------------|----------------|
-| Indicator         | indicates        | Malware          | iocs           |
-| Indicator         | indicates        | Threat Actor     | iocs           |
-| Indicator         | based-on         | Observable       | iocs           |
-| Malware           | related-to       | Incident         | leakedrecords  |
-| User Account      | related-to       | Incident         | leakedrecords  |
-| Various           | various          | Various          | cyberfeeds     |
+Relationships delivered by Luminar are ingested as delivered (subject to the schema
+check above). The connector itself only creates:
+
+| Source Entity | Relationship Type | Target Entity | Condition |
+|---------------|-------------------|---------------|-----------|
+| Indicator     | based-on          | Observable    | `create_observable=true` |
 
 ### State Management
 
-| State Key   | Description                           |
-|-------------|---------------------------------------|
-| `last_run`  | Timestamp of last successful run      |
+| State Key      | Description                                                             |
+|----------------|-------------------------------------------------------------------------|
+| `feeds.<alias>`| `X-TAXII-Date-Added-Last` of the last ingested batch, used as `added_after` |
+| `last_run_end` | Time the last run finished (informational)                              |
 
-The connector uses `added_after` parameter to fetch only new records since `last_run`.
+A legacy `last_run` value is migrated once into every feed checkpoint.
+
+Checkpoints only move forward and are pushed to OpenCTI immediately after each
+batch (not only at the next connector ping), so a crash loses no ingested progress.
+Luminar does not return objects strictly ordered by `date_added` (sub-millisecond
+inversions were measured), so a feed resumes from its checkpoint minus 1 second;
+re-delivered objects are upserted by OpenCTI.
+
+Note: OpenCTI only stores attributes of its own schema. Luminar extension fields
+are therefore exported as `luminar.<key>:<value>` labels or a description block
+(see Enrichments); see `CHANGELOG_IMPLEMENTATION.md` for the coverage analysis.
 
 ---
 
