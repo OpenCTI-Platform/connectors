@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'MISP Enrichment' # optional (default: 'MISP Enrichment')
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr,Indicator' # optional
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  max_tlp: 'TLP:AMBER+STRICT' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER+STRICT')
+
+misp:
+  url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  ssl_verify: true # optional (default: true)
+  import_attribute_tags_as_labels: true # optional (default: true)
+  import_associated_events_tags_as_labels: false # optional (default: false)
+  event_filter_creator_orgs: '' # optional, comma-separated names or UUIDs of creator organisations (Event.Orgc) to include
+  event_filter_creator_orgs_not: '' # optional, comma-separated names or UUIDs of creator organisations (Event.Orgc) to exclude
+  event_filter_owner_orgs: '' # optional, comma-separated names or UUIDs of owner organisations (Event.Org) to include
+  event_filter_owner_orgs_not: '' # optional, comma-separated names or UUIDs of owner organisations (Event.Org) to exclude
+  event_filter_name_regex: '' # optional, regex searched in the event name (Event.info)
+  attribute_comment_filter_regex: '' # optional, regex the attribute comment must match to be written in the Note
+  import_events: false # optional, create one Report per matched MISP event (default: false)
