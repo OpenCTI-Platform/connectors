@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/eset_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "ESET Cyber Threat Intelligence",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "eset"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": false,
+      "description": "Whether to update data already present in OpenCTI.",
+      "type": "boolean"
+    },
+    "ESET_API_URL": {
+      "default": "eti.eset.com",
+      "description": "Hostname of the ESET Threat Intelligence TAXII service.",
+      "type": "string"
+    },
+    "ESET_USERNAME": {
+      "description": "ESET Threat Intelligence username.",
+      "type": "string"
+    },
+    "ESET_PASSWORD": {
+      "description": "ESET Threat Intelligence password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ESET_COLLECTIONS": {
+      "default": [
+        "ei.misp",
+        "ei.cc",
+        "ei.urls"
+      ],
+      "description": "Comma-separated list of ESET TAXII collections to import. Set it to null to skip the collections and only import the APT reports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "ESET_IMPORT_APT_REPORTS": {
+      "default": true,
+      "description": "Whether to import ESET APT reports.",
+      "type": "boolean"
+    },
+    "ESET_IMPORT_START_DATE": {
+      "default": "2022-04-01",
+      "description": "Date from which data is imported on the first run (e.g. 2022-04-01).",
+      "type": "string"
+    },
+    "ESET_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables from imported indicators.",
+      "type": "boolean"
+    },
+    "ESET_INTERVAL": {
+      "default": 60,
+      "description": "Interval, in minutes, between two runs of the connector.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ESET_USERNAME",
+    "ESET_PASSWORD"
+  ],
+  "additionalProperties": true
+}

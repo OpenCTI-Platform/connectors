@@ -14,9 +14,6 @@ The ESET connector imports threat intelligence data from ESET Threat Intelligenc
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -41,28 +38,9 @@ ESET Threat Intelligence provides advanced threat intelligence feeds including A
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### OpenCTI environment variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default | Mandatory | Description                                                                 |
-|-------------------|-----------------|-------------------------------|---------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              | ESET    | No        | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | eset    | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter   | config.yml     | Docker environment variable | Default | Mandatory | Description                                      |
-|-------------|----------------|----------------------------|---------|-----------|--------------------------------------------------|
-| API Key     | eset.api_key   | `ESET_API_KEY`             |         | Yes       | ESET Threat Intelligence API key.                |
-| Interval    | eset.interval  | `ESET_INTERVAL`            | 60      | Yes       | Interval in minutes between connector runs.      |
+> **Note:** CONNECTOR_DURATION_PERIOD is listed there, but the connector does not use it: the interval between two runs is set with `ESET_INTERVAL` (in minutes).
 
 ## Deployment
 
