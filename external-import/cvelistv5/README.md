@@ -45,6 +45,20 @@ relationships between them (`software has vulnerability`,
 organizations exposed to a given vulnerability by relying on existing
 `Software` observables.
 
+When an `affected` entry names the release that fixes the CVE, the connector
+also creates a `Software` object for that release and a
+`software remediates vulnerability` relationship. A release is read as a fix
+when it is:
+
+- the exclusive upper bound of an affected range (`lessThan`);
+- the `at` of a change to `unaffected` inside an affected range (`changes`);
+- the version of an entry with status `unaffected` (`0` excluded).
+
+Inclusive bounds (`lessThanOrEqual`) are still affected and name no fix;
+wildcard values and `git` commit identifiers are skipped. The affected range
+itself is still written as one `Software` whose version is the range text
+(for example `<1.25.5`) linked by `has`.
+
 ### Requirements
 
 - OpenCTI Platform version 6.6 or higher
