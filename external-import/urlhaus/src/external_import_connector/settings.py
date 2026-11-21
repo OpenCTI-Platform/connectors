@@ -1,15 +1,17 @@
 import warnings
 from datetime import timedelta
-from typing import Optional
+from typing import ClassVar, Optional
 from urllib.parse import quote, urlparse
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from pydantic import Field, SecretStr, field_validator, model_validator
+from spamhaus_client import AbuseChAuthConfigMixin
 
 EXPORT_URL_TEMPLATE = (
     "https://urlhaus-api.abuse.ch/v2/files/exports/{auth_key}/recent.csv"
@@ -44,16 +46,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class UrlhausConfig(BaseConfigModel):
+class UrlhausConfig(AbuseChAuthConfigMixin, BaseConfigModel):
     """
     Define parameters and/or defaults for the configuration specific to the `UrlhausConnector`.
     """
 
-    auth_key: Optional[SecretStr] = Field(
-        description="abuse.ch Auth-Key, available at https://auth.abuse.ch. "
-        "Required unless `csv_url` is set.",
-        default=None,
-    )
+    auth_env_prefix: ClassVar[str] = "URLHAUS"
+
     # Secret: the export URL contains the Auth-Key.
     csv_url: Optional[SecretStr] = Field(
         description="Override of the URLhaus CSV export URL. "
@@ -61,6 +60,11 @@ class UrlhausConfig(BaseConfigModel):
         "built from `auth_key`. The retired public URL "
         "(https://urlhaus.abuse.ch/downloads/...) is ignored.",
         default=None,
+    )
+    spamhaus_import_from: DatetimeFromIsoString = Field(
+        description="With the commercial API, where the first run starts, as an "
+        "ISO-8601 date or duration. Later runs start from the last imported URL.",
+        default="P30D",
     )
     default_x_opencti_score: int = Field(
         description="Default x_opencti_score for imported indicators.", default=80
@@ -79,7 +83,7 @@ class UrlhausConfig(BaseConfigModel):
         default=True,
     )
 
-    @field_validator("auth_key", "csv_url", mode="before")
+    @field_validator("csv_url", mode="before")
     @classmethod
     def _blank_to_none(cls, value):
         """Treat a blank value, such as an empty `${VAR}` in compose, as unset."""
@@ -89,19 +93,32 @@ class UrlhausConfig(BaseConfigModel):
         return value
 
     @model_validator(mode="after")
-    def _require_auth_key_or_csv_url(self) -> "UrlhausConfig":
-        if self.auth_key is None and self.has_legacy_csv_url:
+    def _check_auth_modes(self) -> "UrlhausConfig":
+        """Require a complete mode: an Auth-Key (or a usable `csv_url`), or a
+        Spamhaus username with a password."""
+        no_spamhaus_value = self.spamhaus_username is None and (
+            self.spamhaus_password is None
+        )
+        if self.has_legacy_csv_url and self.auth_key is None and no_spamhaus_value:
             raise ValueError(
                 "URLHAUS_AUTH_KEY is required: URLHAUS_CSV_URL points to the "
                 "retired public download, which abuse.ch no longer serves. Get an "
-                "Auth-Key at https://auth.abuse.ch and remove URLHAUS_CSV_URL."
+                "Auth-Key at https://auth.abuse.ch and remove URLHAUS_CSV_URL, or "
+                "set the Spamhaus commercial API credentials "
+                "URLHAUS_SPAMHAUS_USERNAME and URLHAUS_SPAMHAUS_PASSWORD."
             )
-        if self.auth_key is None and self.csv_url is None:
-            raise ValueError(
-                "URLHAUS_AUTH_KEY is required: abuse.ch requires an Auth-Key to "
-                "download URLhaus exports. Get one at https://auth.abuse.ch."
-            )
-        return self
+        if self.community_configured and no_spamhaus_value and self.auth_key is None:
+            # `csv_url` alone: a mirror of the export, no Auth-Key needed
+            return self
+        return super()._check_auth_modes()
+
+    @property
+    def community_configured(self) -> bool:
+        """Whether the community export can be downloaded: an Auth-Key is set, or
+        `csv_url` overrides the export URL."""
+        return self.auth_key is not None or (
+            self.csv_url is not None and not self.has_legacy_csv_url
+        )
 
     @property
     def has_legacy_csv_url(self) -> bool:

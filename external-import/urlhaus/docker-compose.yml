@@ -10,7 +10,11 @@ services:
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_INTERVAL=3
-      - URLHAUS_AUTH_KEY=ChangeMe # From https://auth.abuse.ch
+      # Authentication: set the community Auth-Key, the Spamhaus commercial credentials, or both
+      - URLHAUS_AUTH_KEY=ChangeMe # Community mode, from https://auth.abuse.ch
+      # - URLHAUS_SPAMHAUS_USERNAME=ChangeMe # Commercial mode, from the Spamhaus Customer Portal
+      # - URLHAUS_SPAMHAUS_PASSWORD=ChangeMe
+      # - URLHAUS_SPAMHAUS_IMPORT_FROM=P30D # Commercial mode, first run only
       - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80 # Optional: Defaults to 80.
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true
