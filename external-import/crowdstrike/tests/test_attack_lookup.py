@@ -97,7 +97,10 @@ def test_versioned_dataset_is_used_when_available(mock_get):
 
     assert requested_urls(mock_get) == [VERSIONED_URL]
     assert lookup.enterprise_attack_url == VERSIONED_URL
-    assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert (
+        lookup.lookup_technique_by_name("Command and Scripting Interpreter").mitre_id
+        == "T1059"
+    )
     assert lookup.retrieval_errors == []
 
 
@@ -108,7 +111,10 @@ def test_missing_versioned_dataset_falls_back_to_generic_dataset(mock_get):
 
     assert requested_urls(mock_get) == [VERSIONED_URL, DEFAULT_ATTACK_URL]
     assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
-    assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert (
+        lookup.lookup_technique_by_name("Command and Scripting Interpreter").mitre_id
+        == "T1059"
+    )
     assert len(lookup.retrieval_errors) == 1
     assert VERSIONED_URL in lookup.retrieval_errors[0]
     assert "HTTP 404" in lookup.retrieval_errors[0]
@@ -185,7 +191,10 @@ def test_payload_that_is_not_a_bundle_falls_back_to_next_url(mock_get):
     lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
-    assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert (
+        lookup.lookup_technique_by_name("Command and Scripting Interpreter").mitre_id
+        == "T1059"
+    )
     assert len(lookup.retrieval_errors) == 1
     assert f"Payload from {VERSIONED_URL} is not a STIX bundle" in (
         lookup.retrieval_errors[0]
