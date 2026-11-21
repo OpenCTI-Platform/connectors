@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spamhaus-client"
+version = "0.1.0"
+description = "Spamhaus commercial API client (JWT authentication) for the abuse.ch OpenCTI connectors."
+readme = "README.md"
+requires-python = ">=3.11, <3.13"
+
+dependencies = [
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "pydantic>=2.8.2,<3",  # ISO connectors-sdk
+    "requests>=2.31.0,<3",
+]
+
+[project.optional-dependencies]
+test = [
+    "freezegun>=1.5.5,<2",
+    "mypy>=1.15.0,<2",
+    "pytest>=9.0.3,<10",
+    "pytest-cov>=7,<8",
+    "ruff>=0.14.0,<1",
+    "types-requests>=2.31.0,<3",
+]
+
+[tool.hatch.metadata]
+# `connectors-sdk` is installed from this repository, as the connectors do.
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["spamhaus_client"]
+
+[tool.pytest.ini_options]
+testpaths = ["./tests"]
+# No `--cov-fail-under` here: the CI runs several `shared/` projects in one job with
+# `--cov-append`, so the total would include the coverage of the other projects and
+# fail on code that is not ours. The 100% rule is checked with
+# `--cov-fail-under=100` (see the README).
+addopts = [
+    "--cov=spamhaus_client",
+]
+
+[tool.ruff]
+target-version = "py312"
+exclude = ["tests", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+# Same rules as connectors-sdk. `I001` (isort is run directly), `E501` (black) and the
+# docstring rules that conflict with the Google convention used here are ignored.
+ignore = ["S101", "I001", "D203", "E501", "F821", "D205", "D213", "D211", "G004", "TRY003", "D407", "D408", "D409"]
+select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+strict = true
+exclude = ['^tests', '^build', '^dist', '^\.venv']
+plugins = ['pydantic.mypy']
+
+[[tool.mypy.overrides]]
+module = ["pycti.*", "requests.*", "limits.*"]
+ignore_missing_imports = true  # no stubs / py.typed for these
+
+[[tool.mypy.overrides]]
+module = ["connectors_sdk.*"]
+follow_untyped_imports = true  # connectors-sdk ships no py.typed marker

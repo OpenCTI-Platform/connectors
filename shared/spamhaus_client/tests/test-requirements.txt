@@ -1,0 +1,3 @@
+# Installed from the repository root by run_test.sh (hack to be detected as a tested
+# module, like connectors-sdk/tests/test-requirements.txt).
+./shared/spamhaus_client/.[test]
