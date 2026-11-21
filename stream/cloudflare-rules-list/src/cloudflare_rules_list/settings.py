@@ -27,7 +27,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import AwareDatetime, Field, HttpUrl, SecretStr
 
 
 class _StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -49,6 +49,26 @@ class _StreamConnectorConfig(BaseStreamConnectorConfig):
     scope: ListFromString = Field(
         default=["cloudflare"],
         description="Connector scope (comma-separated).",
+    )
+    live_stream_recover: bool = Field(
+        default=True,
+        description=(
+            "Whether to replay historical stream events on first start. "
+            "It only controls the stream replay: the connector always runs a full "
+            "sync of the existing IPv4 indicators and observables at startup, "
+            "whatever this value. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+    live_stream_recover_iso_date: AwareDatetime | None = Field(
+        default=None,
+        description=(
+            "ISO 8601 date up to which historical stream events are replayed when "
+            "recover is enabled. Leave empty to replay all existing events. "
+            "Ignored when recover is disabled, and it does not limit the startup "
+            "full sync. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
     )
 
 
