@@ -10,9 +10,10 @@ from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
-    # `id` is intentionally not given a default — it is required (inherited
-    # from the SDK base) so each deployment must set a unique CONNECTOR_ID and
-    # multiple instances cannot collide on the same connector identity.
+    id: str = Field(
+        default="a9424db4-ebdf-4090-a52e-f505794cdd4c",
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
     name: str = Field(
         default="CTM360-HackerView",
         description="Name of the connector.",
