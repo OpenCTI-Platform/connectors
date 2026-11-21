@@ -36,7 +36,8 @@ This connector fetches the recent URL additions from URLhaus and imports them as
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- Internet access to URLhaus CSV feed (publicly available)
+- Internet access to the URLhaus API (`urlhaus-api.abuse.ch`)
+- An abuse.ch Auth-Key, free from the [abuse.ch Authentication Portal](https://auth.abuse.ch)
 
 ## Configuration variables
 
@@ -68,7 +69,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_INTERVAL=3
-      - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
+      - URLHAUS_AUTH_KEY=ChangeMe
       - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true
@@ -107,7 +108,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 ## Behavior
 
-The connector fetches the recent CSV feed from URLhaus and creates URL observables and indicators in OpenCTI.
+The connector fetches the recent CSV export from URLhaus and creates URL observables and indicators in OpenCTI.
 
 ### Data Flow
 
@@ -200,10 +201,9 @@ Log output includes:
 
 ## Additional information
 
-- **Public Feed**: URLhaus data is publicly available without authentication
-- **CSV Variants**: 
-  - `csv_recent/` - Recent 30 days (recommended)
-  - `csv/` - Full database (very large)
+- **Auth-Key**: abuse.ch requires an Auth-Key to download URLhaus exports. Create an account on the [abuse.ch Authentication Portal](https://auth.abuse.ch) to get one. The same key works for ThreatFox and MalwareBazaar. The export endpoint only accepts the key in the URL path, so the connector builds `https://urlhaus-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv` from `URLHAUS_AUTH_KEY` and never logs it.
+- **Retired public feed**: the former default `URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/` answers 410 Gone. It is ignored when `URLHAUS_AUTH_KEY` is set; remove it from your configuration.
+- **Recent export**: the export holds the URLs added in the last 30 days
 - **Update Frequency**: URLhaus updates frequently; 3-hour polling is recommended
 - **Offline URLs**: Set `URLHAUS_IMPORT_OFFLINE=false` to skip inactive URLs
 - **High Score**: Default score of 80 reflects high confidence in URLhaus data
