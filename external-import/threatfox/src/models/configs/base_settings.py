@@ -15,4 +15,7 @@ class ConfigBaseSettings(BaseSettings):
         # Allow both alias and field name for input
         validate_by_name=True,
         validate_by_alias=True,
+        # A validation error echoes the raw input by default, which holds the Spamhaus
+        # password, the Auth-Key and the OpenCTI token in clear text.
+        hide_input_in_errors=True,
     )

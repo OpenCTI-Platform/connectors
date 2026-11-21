@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import ClassVar, Optional
 from urllib.parse import quote, urlparse
 
 from pydantic import Field, SecretStr, model_validator
+from spamhaus_client import AbuseChAuthConfigMixin
 from src.models.configs.base_settings import ConfigBaseSettings
 
 EXPORT_URL_TEMPLATE = (
@@ -13,21 +14,18 @@ LEGACY_EXPORT_HOST = "threatfox.abuse.ch"
 LEGACY_EXPORT_PATH_PREFIX = "/export/"
 
 
-class _ConfigLoaderThreatFox(ConfigBaseSettings):
+class _ConfigLoaderThreatFox(AbuseChAuthConfigMixin, ConfigBaseSettings):
     """Interface for loading Threat Fox dedicated configuration."""
 
     # Config Loader
-    auth_key: Optional[SecretStr] = Field(
-        default=None,
-        description="abuse.ch Auth-Key, available at https://auth.abuse.ch. "
-        "Required unless `csv_url` is set.",
-    )
+    auth_env_prefix: ClassVar[str] = "THREATFOX"
+
     # Secret: setups that predate `auth_key` put the key in this URL.
     csv_url: Optional[SecretStr] = Field(
         default=None,
         description="Override of the ThreatFox CSV export URL. "
         "Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, "
-        "built from `auth_key`. The retired public URL "
+        "built from `auth_key`. Only used in community mode. The retired public URL "
         "(https://threatfox.abuse.ch/export/...) is ignored.",
     )
     import_offline: bool = Field(
@@ -68,19 +66,28 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
     )
 
     @model_validator(mode="after")
-    def _require_auth_key_or_csv_url(self) -> "_ConfigLoaderThreatFox":
-        if self.auth_key is None and self.has_legacy_csv_url:
+    def _check_auth_modes(self) -> "_ConfigLoaderThreatFox":
+        """Report the retired export URL first, then check the auth modes."""
+        if (
+            self.auth_key is None
+            and not self.commercial_configured
+            and self.has_legacy_csv_url
+        ):
             raise ValueError(
                 "THREATFOX_AUTH_KEY is required: THREATFOX_CSV_URL points to the "
                 "retired public export, which abuse.ch no longer serves. Get an "
-                "Auth-Key at https://auth.abuse.ch and remove THREATFOX_CSV_URL."
+                "Auth-Key at https://auth.abuse.ch (or set the Spamhaus credentials "
+                "THREATFOX_SPAMHAUS_USERNAME and THREATFOX_SPAMHAUS_PASSWORD) and "
+                "remove THREATFOX_CSV_URL."
             )
-        if self.auth_key is None and self.csv_url is None:
-            raise ValueError(
-                "THREATFOX_AUTH_KEY is required: abuse.ch requires an Auth-Key to "
-                "download ThreatFox exports. Get one at https://auth.abuse.ch."
-            )
-        return self
+        return super()._check_auth_modes()
+
+    @property
+    def community_configured(self) -> bool:
+        """Whether the community mode is usable: an Auth-Key or a current CSV URL."""
+        return self.auth_key is not None or (
+            self.csv_url is not None and not self.has_legacy_csv_url
+        )
 
     @property
     def has_legacy_csv_url(self) -> bool:
@@ -93,11 +100,14 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         )
 
     @property
-    def export_url(self) -> str:
-        """URL of the CSV export: `csv_url` if set (and not a retired public
-        export), otherwise built from `auth_key`."""
+    def export_url(self) -> Optional[str]:
+        """URL of the community CSV export: `csv_url` if set (and not a retired
+        public export), otherwise built from `auth_key`. None without a
+        community setup (Spamhaus credentials only)."""
         if self.csv_url is not None and not self.has_legacy_csv_url:
             return self.csv_url.get_secret_value()
+        if self.auth_key is None:
+            return None
         # Encode the key so `/`, `?`, `#` or `%` cannot change the URL path.
         return EXPORT_URL_TEMPLATE.format(
             auth_key=quote(self.auth_key.get_secret_value(), safe="")
