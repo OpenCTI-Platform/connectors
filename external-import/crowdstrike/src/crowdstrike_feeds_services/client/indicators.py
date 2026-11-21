@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from .base_api import BaseCrowdstrikeClient
 
@@ -16,7 +16,7 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         self,
         limit: int,
         sort: str,
-        fql_filter: str,
+        fql_filter: Optional[str],
     ) -> dict:
         """Get info about indicators that match provided FQL filters.
 
@@ -35,12 +35,14 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
 
         :param limit: Maximum number of records to return (max: 5000).
         :param sort: The property to sort by (e.g. ``_marker.asc``).
-        :param fql_filter: FQL query expression used to filter the results.
+        :param fql_filter: FQL query expression used to filter the results;
+            ``None`` sends no ``filter`` parameter.
         :return: Parsed response body (``response["body"]``).
         """
-        response = self.cs_intel.query_indicator_entities(
-            limit=limit, sort=sort, filter=fql_filter
-        )
+        kwargs = {"limit": limit, "sort": sort}
+        if fql_filter:
+            kwargs["filter"] = fql_filter
+        response = self.cs_intel.query_indicator_entities(**kwargs)
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined indicator entities...")

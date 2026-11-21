@@ -631,3 +631,65 @@ def test_run_keeps_previous_marker_when_last_indicator_lacks_marker():
     )
 
     assert new_state["latest_indicator_marker"] == persisted_marker
+
+
+@pytest.mark.parametrize(
+    ("exclude_types", "expected_filter"),
+    [
+        ([], None),
+        (["hash_md5", "hash_sha1"], "type:!['hash_md5', 'hash_sha1']"),
+    ],
+)
+def test_fql_filter_omits_marker_clause_when_start_timestamp_is_zero(
+    exclude_types, expected_filter
+):
+    """``indicator_start_timestamp=0`` means ALL indicators: no ``_marker`` clause.
+
+    The API rejects ``_marker:>='0'`` (the markers are 10+ character
+    strings), so the first request must not carry it; with nothing left
+    to filter on, no filter is sent at all.
+    The cursor clause is added again once the first page has advanced it.
+    """
+    importer = _build_importer(exclude_types=exclude_types)
+    indicators = [_fake_indicator(0), _fake_indicator(1)]
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page(indicators, total=2),
+        _make_page([], total=0),
+    ]
+
+    fetched = importer._paginated_query_indicators(limit=1000, fetch_timestamp=0)
+
+    assert fetched == indicators
+    calls = importer.indicators_api_cs.get_combined_indicator_entities.call_args_list
+    assert calls[0].kwargs["fql_filter"] == expected_filter
+    assert (
+        calls[1]
+        .kwargs["fql_filter"]
+        .startswith(f"_marker:>='{indicators[-1]['_marker']}'")
+    )
+
+
+@pytest.mark.parametrize(
+    ("fql_filter", "expected_kwargs"),
+    [
+        (None, {"limit": 10, "sort": "_marker.asc"}),
+        (
+            "_marker:>='1'",
+            {"limit": 10, "sort": "_marker.asc", "filter": "_marker:>='1'"},
+        ),
+    ],
+)
+def test_client_omits_filter_parameter_when_none(fql_filter, expected_kwargs):
+    from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+
+    client = IndicatorsAPI.__new__(IndicatorsAPI)
+    client.cs_intel = MagicMock()
+    client.cs_intel.query_indicator_entities.return_value = {"body": {}}
+    client.helper = MagicMock()
+    client.handle_api_error = MagicMock()
+
+    client.get_combined_indicator_entities(
+        limit=10, sort="_marker.asc", fql_filter=fql_filter
+    )
+
+    client.cs_intel.query_indicator_entities.assert_called_once_with(**expected_kwargs)

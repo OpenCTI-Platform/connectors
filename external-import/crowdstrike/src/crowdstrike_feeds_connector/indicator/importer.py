@@ -234,7 +234,7 @@ class IndicatorImporter(BaseImporter):
             fetch_marker=fetch_marker,
         )
 
-    def _build_fql_filter(self, marker: str) -> str:
+    def _build_fql_filter(self, marker: str) -> Optional[str]:
         """Build the FQL filter used for a single indicator API call.
 
         The base clause is ``_marker:>='<marker>'`` — CrowdStrike's
@@ -252,10 +252,17 @@ class IndicatorImporter(BaseImporter):
         exact boundary indicator instead of all indicators that share
         the same second.
         """
-        fql_filter = f"_marker:>='{marker}'"
+        clauses = []
+        # ``indicator_start_timestamp=0`` means "import everything". The
+        # ``_marker`` values are 10+ character strings, and the API rejects
+        # ``_marker:>='0'`` (HTTP 400): leave the clause out and let the
+        # first page start from the beginning of ``_marker.asc``.
+        if marker != "0":
+            clauses.append(f"_marker:>='{marker}'")
         if self.exclude_types:
-            fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
-        return fql_filter
+            clauses.append(f"type:!{self.exclude_types}")
+        # ``None`` (no ``filter`` parameter at all) rather than an empty string.
+        return "+".join(clauses) or None
 
     def _paginated_query_indicators(
         self,
