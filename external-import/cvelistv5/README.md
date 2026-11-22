@@ -79,10 +79,10 @@ Below are the generic connector parameters:
 
 | Parameter               | config.yml          | Docker environment variable    | Default                              | Mandatory | Description                                                                                       |
 |-------------------------|---------------------|--------------------------------|--------------------------------------|-----------|---------------------------------------------------------------------------------------------------|
-| Connector ID            | `id`                | `CONNECTOR_ID`                 | /                                    | Yes       | A unique `UUIDv4` identifier for this connector instance.                                         |
+| Connector ID            | `id`                | `CONNECTOR_ID`                 | a fixed `UUIDv4` (see `settings.py`) | No        | A unique `UUIDv4` identifier for this connector instance. Set your own when you run several.      |
 | Connector Name          | `name`              | `CONNECTOR_NAME`               | `CVEProject cvelistV5`               | No        | Name of the connector as displayed in the OpenCTI UI.                                             |
 | Connector Scope         | `scope`             | `CONNECTOR_SCOPE`              | `identity,vulnerability,software`    | No        | The scope of data produced by the connector.                                                      |
-| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `info`                               | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
+| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `error`                              | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
 | Duration Period         | `duration_period`   | `CONNECTOR_DURATION_PERIOD`    | `PT1H`                               | No        | ISO 8601 duration between two runs (e.g. `PT1H` for hourly, `P1D` for daily).                     |
 
 Below are the connector specific parameters:
