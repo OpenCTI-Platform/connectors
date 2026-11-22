@@ -85,7 +85,7 @@
         "3",
         "4"
       ],
-      "description": "Comma-separated list of TLP levels to import (0=WHITE, 1=GREEN, 2=AMBER, 3=RED, 4=AMBER+STRICT).",
+      "description": "Comma-separated list of TLP levels to import (0=WHITE, 1=GREEN, 2=AMBER, 3=AMBER+STRICT, 4=RED).",
       "items": {
         "type": "string"
       },

@@ -16,7 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes). |
 | CROWDSTRIKE_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.crowdstrike.com/"` | CrowdStrike API base URL. |
-| CROWDSTRIKE_TLP | `string` |  | `red` `amber+strict` `amber` `green` `clear` `white` |  | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
+| CROWDSTRIKE_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
 | CROWDSTRIKE_CREATE_OBSERVABLES | `boolean` |  | boolean |  | `true` | Whether to create observables in OpenCTI. |
 | CROWDSTRIKE_CREATE_INDICATORS | `boolean` |  | boolean |  | `true` | Whether to create indicators in OpenCTI. |
 | CROWDSTRIKE_SCOPES | `array` |  | string |  | `["actor", "report", "indicator", "malware", "yara_master", "snort_suricata_master"]` | Comma-separated list of scopes to enable. Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master. |

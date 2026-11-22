@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector import MicrosoftDefenderIncidentsConnector
+from connector.client_api import IncidentsFetchError
+from connector.utils import format_date
 
 # ---------------------------------------------------------------------------
 # Shared test data
@@ -292,6 +294,99 @@ def test_process_message_with_incidents_sends_bundle(connector):
     connector.helper.api.work.initiate_work.assert_called_once()
     connector.helper.send_stix2_bundle.assert_called_once()
     connector.helper.api.work.to_processed.assert_called_once()
+
+
+def _incident(incident_id: str, last_update: str) -> dict:
+    return {**_BASE_INCIDENT, "id": incident_id, "lastUpdateDateTime": last_update}
+
+
+def _ready_for_bundle(connector):
+    connector.helper.get_state.return_value = {"last_incident_timestamp": 1704067200}
+    connector.helper.api.work.initiate_work.return_value = "work-id-123"
+    connector.helper.stix2_create_bundle.return_value = '{"type":"bundle"}'
+
+
+def test_process_message_incomplete_fetch_keeps_state(connector):
+    # Page 1 (newest incidents, Graph default order) fetched, page 2 failed with a 500
+    _ready_for_bundle(connector)
+    connector.client.get_incidents.side_effect = IncidentsFetchError(
+        "500 Server Error",
+        [
+            _incident("inc-2", "2024-01-15T14:00:00Z"),
+            _incident("inc-1", "2024-01-15T13:00:00Z"),
+        ],
+    )
+
+    connector.process_message()
+
+    # What was fetched is still sent, but the state does not move
+    connector.helper.send_stix2_bundle.assert_called_once()
+    connector.helper.set_state.assert_not_called()
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert connector.helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+
+
+def test_process_message_incomplete_fetch_with_nothing_fetched_keeps_state(
+    connector,
+):
+    _ready_for_bundle(connector)
+    connector.client.get_incidents.side_effect = IncidentsFetchError("timeout", [])
+
+    connector.process_message()
+
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.set_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "order",
+    ["newest_first", "oldest_first", "mixed"],
+)
+def test_process_message_state_is_max_last_update(connector, order):
+    incidents = {
+        "a": _incident("inc-a", "2024-01-15T13:00:00Z"),
+        "b": _incident("inc-b", "2024-01-15T15:30:00Z"),
+        "c": _incident("inc-c", "2024-01-15T14:00:00Z"),
+    }
+    sequence = {
+        "newest_first": ["b", "c", "a"],
+        "oldest_first": ["a", "c", "b"],
+        "mixed": ["c", "b", "a"],
+    }[order]
+    _ready_for_bundle(connector)
+    connector.client.get_incidents.return_value = [incidents[k] for k in sequence]
+
+    connector.process_message()
+
+    connector.helper.set_state.assert_called_once_with(
+        {"last_incident_timestamp": format_date("2024-01-15T15:30:00Z")}
+    )
+
+
+def test_process_message_sub_second_update_is_not_skipped(connector):
+    _ready_for_bundle(connector)
+    connector.client.get_incidents.return_value = [
+        _incident("inc-1", "2024-01-15T12:00:00.6Z")
+    ]
+
+    connector.process_message()
+
+    saved = connector.helper.set_state.call_args.args[0]["last_incident_timestamp"]
+    # 2024-01-15T12:00:00Z: the next "gt" query still returns an incident updated at 12:00:00.7Z
+    assert saved <= 1705320000
+
+
+def test_process_message_interrupt_before_work_stops_cleanly(connector):
+    connector.helper.get_state.return_value = {"last_incident_timestamp": 1704067200}
+    connector.client.get_incidents.side_effect = KeyboardInterrupt()
+
+    with pytest.raises(SystemExit) as exc_info:
+        connector.process_message()
+
+    assert exc_info.value.code == 0
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+    connector.helper.set_state.assert_not_called()
 
 
 def test_process_message_exception_is_caught_and_logged(connector):

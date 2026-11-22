@@ -7,6 +7,10 @@ from pycti import OpenCTIConnectorHelper
 from urlscan_enrichment_services.constants import UrlscanConstants
 
 
+class UrlscanUnresolvableDomainError(Exception):
+    """urlscan.io refused the submission: the domain does not resolve."""
+
+
 class UrlscanClient:
     """
     Working with URLScan API
@@ -51,6 +55,12 @@ class UrlscanClient:
 
         except requests.exceptions.RequestException as err:
             error_text = json.loads(err.response.text)
+            # urlscan.io answers 400 "DNS Error - Could not resolve domain"
+            # for a domain that does not resolve: a scan result, not a failure.
+            if err.response.status_code == 400 and str(
+                error_text.get("message", "")
+            ).startswith("DNS Error"):
+                raise UrlscanUnresolvableDomainError(error_text["message"]) from err
             error_msg = "[API-SUBMISSION] Error while fetching data: "
             raise ValueError(
                 error_msg,

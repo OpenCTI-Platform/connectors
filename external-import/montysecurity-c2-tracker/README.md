@@ -1,4 +1,10 @@
-# Monty Security C2 Tracker
+# Monty Security C2 Tracker (Deprecated)
+
+> [!CAUTION]
+> **This connector is DEPRECATED.** It will be removed in a future release.
+> It no longer imports data because the upstream C2-Tracker data was removed.
+> No replacement connector is available.
+> See the [deprecation notice](#deprecation-notice) and [DEPRECATION.md](./DEPRECATION.md).
 
 ## Verification status
 
@@ -8,7 +14,8 @@
 
 ## Table of Contents
 
-- [Monty Security C2 Tracker](#monty-security-c2-tracker)
+- [Monty Security C2 Tracker (Deprecated)](#monty-security-c2-tracker-deprecated)
+  - [Deprecation notice](#deprecation-notice)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -23,6 +30,18 @@
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+
+## Deprecation notice
+
+| Item | Value |
+|------|-------|
+| Status | Deprecated since 2026-11-17 |
+| Reason | The upstream `montysecurity/C2-Tracker` repository is archived and its `data` directory was removed (issue #8169) |
+| Planned removal | Not scheduled yet, announced in advance |
+| Recommended alternative | None available |
+
+At runtime the connector logs a `[DEPRECATED]` warning at startup and at every
+run. The cleanup steps are in [DEPRECATION.md](./DEPRECATION.md).
 
 ## Introduction
 The MontySecurity C2-Tracker connector imports a free, community-driven IOC feed into OpenCTI, creating Malware and 

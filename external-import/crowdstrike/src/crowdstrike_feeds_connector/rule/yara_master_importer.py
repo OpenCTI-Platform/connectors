@@ -1,9 +1,7 @@
 """OpenCTI CrowdStrike YARA master importer module."""
 
 import itertools
-import zipfile
 from datetime import datetime
-from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict, Mapping, NamedTuple, Optional, Tuple, cast
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
@@ -13,6 +11,11 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike_feeds_services.utils.rule_file import (
+    RuleFileFormatError,
+    describe_download,
+    extract_rule_file,
+)
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition
@@ -41,6 +44,7 @@ class YaraMasterImporter(BaseImporter):
 
     _E_TAG = "yara_master_e_tag"
     _LAST_MODIFIED = "yara_master_last_modified"
+    _RULE_FILE_NAME = "crowdstrike_intel_yara.yara"
 
     _KEY_ID = "id"
     _KEY_INDICATOR_PATTERN = "pattern"
@@ -174,9 +178,9 @@ class YaraMasterImporter(BaseImporter):
             )
             return None
 
-        download_converted = BytesIO(download)
+        rules = self._parse_download(download)
         return YaraMaster(
-            rules=self._parse_download(download_converted),
+            rules=rules,
             e_tag=None,
             last_modified=None,
         )
@@ -197,16 +201,16 @@ class YaraMasterImporter(BaseImporter):
             self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
         )
 
-    def _parse_download(self, download) -> list[YaraRule]:
-        yara_str = self._unzip_content(download)
-        return self._parse_yara_rules(yara_str)
-
-    @staticmethod
-    def _unzip_content(compressed_content: BytesIO) -> str:
-        yara_master_filename = "crowdstrike_intel_yara.yara"
-        with zipfile.ZipFile(compressed_content) as z:
-            with z.open(yara_master_filename) as yara_master:
-                return yara_master.read().decode("utf-8")
+    def _parse_download(self, download: bytes) -> list[YaraRule]:
+        yara_str = extract_rule_file(download, self._RULE_FILE_NAME)
+        rules = self._parse_yara_rules(yara_str)
+        if not rules:
+            # An empty body or a proxy error page decodes as text but holds
+            # no rule: fail the work instead of reporting an empty success.
+            raise RuleFileFormatError(
+                f"No YARA rule in the download ({describe_download(download)})"
+            )
+        return rules
 
     @staticmethod
     def _parse_yara_rules(yara_rules: str) -> list[YaraRule]:

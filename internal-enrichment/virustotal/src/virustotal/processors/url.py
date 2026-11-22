@@ -67,8 +67,7 @@ class URLProcessor(EntityProcessor):
             f"The URL {url} was not found in VirusTotal repositories. "
             "Beginning upload and analysis."
         )
-        self.helper.api.work.to_received(self.helper.work_id, message)
-        self.helper.log_debug(message)
+        self._report_progress(message)
 
         try:
             analysis_id = self.client.upload_url(url)

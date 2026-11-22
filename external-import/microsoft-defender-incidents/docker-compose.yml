@@ -29,4 +29,5 @@ services:
       # - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=
       # - MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL=https://graph.microsoft.com/v1.0
       # - MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH=/security/incidents
+      # - MICROSOFT_DEFENDER_INCIDENTS_STATUS_MAPPING=active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,resolved:CLOSED,redirected:CLOSED
     restart: always

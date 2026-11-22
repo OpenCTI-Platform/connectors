@@ -3,7 +3,7 @@
 import hashlib
 import json
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -119,11 +119,21 @@ class RansomLookConnector:
         self._leak_cache: tuple[list[dict[str, Any]], bool] | None = None
 
     @staticmethod
-    def _deduplicate(objects: list[Any]) -> list[Any]:
+    def _deduplicate(
+        objects: list[Any],
+        on_divergent: Callable[[Any, Any], None] | None = None,
+    ) -> list[Any]:
         """Deduplicate STIX objects by ID while retaining the latest value.
+
+        Two objects with one ID and one ``modified`` value but different
+        content cannot both be delivered. Instead of aborting the whole cycle,
+        one version is kept deterministically (the greater serialization, so
+        the choice does not depend on the order the API returned them) and
+        ``on_divergent`` is told which object was kept and which was dropped.
 
         Args:
             objects: STIX objects with an ``id`` attribute.
+            on_divergent: Optional callback receiving ``(kept, dropped)``.
 
         Returns:
             Objects in stable first-ID order, with duplicate values updated.
@@ -136,16 +146,43 @@ class RansomLookConnector:
             ):
                 previous_modified = getattr(previous, "modified", None)
                 current_modified = getattr(obj, "modified", None)
-                if (
-                    previous_modified is not None
-                    and previous_modified == current_modified
-                    and previous.serialize() != obj.serialize()
-                ):
-                    raise ValueError(
-                        "RansomLook produced divergent content at one STIX version"
-                    )
+                same_version = previous_modified is not None and (
+                    previous_modified == current_modified
+                )
+                if same_version:
+                    previous_content = previous.serialize(sort_keys=True)
+                    current_content = obj.serialize(sort_keys=True)
+                    if previous_content != current_content:
+                        kept, dropped = (
+                            (obj, previous)
+                            if current_content > previous_content
+                            else (previous, obj)
+                        )
+                        if on_divergent is not None:
+                            on_divergent(kept, dropped)
+                        result[obj.id] = kept
+                        continue
             result[obj.id] = obj
         return list(result.values())
+
+    def _deduplicate_objects(self, objects: list[Any]) -> list[Any]:
+        """Deduplicate STIX objects, logging any divergent version resolved."""
+        return RansomLookConnector._deduplicate(objects, self._log_divergent_version)
+
+    def _log_divergent_version(self, kept: Any, dropped: Any) -> None:
+        """Log a divergent STIX version with the identifiers needed to debug it."""
+        self.helper.connector_logger.warning(
+            "RansomLook produced divergent content at one STIX version; "
+            "keeping one version and continuing the cycle",
+            {
+                "id": kept.id,
+                "type": getattr(kept, "type", None),
+                "modified": str(getattr(kept, "modified", None)),
+                "dropped_sha256": hashlib.sha256(
+                    dropped.serialize(sort_keys=True).encode()
+                ).hexdigest()[:16],
+            },
+        )
 
     def _window(self, now: datetime) -> tuple[datetime, datetime]:
         """Calculate a replay-safe import window.
@@ -204,7 +241,7 @@ class RansomLookConnector:
         objects = list(cycle.claims)
         for enrichment in cycle.enrichments:
             objects.extend(enrichment.objects)
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _collect_cycle(
         self,
@@ -1081,7 +1118,7 @@ class RansomLookConnector:
         result: dict[str, list[Any]] = {}
         for group_key in matched_groups:
             group = self.converter.create_group(related_groups[group_key], {})
-            result[group_key] = self._deduplicate(
+            result[group_key] = self._deduplicate_objects(
                 [
                     *shared,
                     self.converter.create_profile_relationship(
@@ -1096,7 +1133,7 @@ class RansomLookConnector:
             return []
         # Source Identity and marking must precede the objects that reference
         # them when a logical delivery is divided into bounded bundles.
-        return self._deduplicate(
+        return self._deduplicate_objects(
             [self.converter.author, self.converter.marking, *objects]
         )
 
@@ -1256,7 +1293,7 @@ class RansomLookConnector:
                 ]
             )
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
-        return self._deduplicate(objects), complete
+        return self._deduplicate_objects(objects), complete
 
     def _try_create_group_wallets(
         self, group_name: str, group_id: str
@@ -1303,7 +1340,7 @@ class RansomLookConnector:
                         ),
                     ]
                 )
-        return self._deduplicate(objects), True
+        return self._deduplicate_objects(objects), True
 
     @staticmethod
     def _explicit_relation_values(
@@ -1586,8 +1623,8 @@ class RansomLookConnector:
             )
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
         return (
-            self._deduplicate(profile),
-            {key: self._deduplicate(value) for key, value in claims.items()},
+            self._deduplicate_objects(profile),
+            {key: self._deduplicate_objects(value) for key, value in claims.items()},
             complete,
         )
 
@@ -1660,8 +1697,8 @@ class RansomLookConnector:
                 profile.extend(converted)
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
         return (
-            self._deduplicate(profile),
-            {key: self._deduplicate(value) for key, value in claims.items()},
+            self._deduplicate_objects(profile),
+            {key: self._deduplicate_objects(value) for key, value in claims.items()},
             complete,
         )
 
@@ -1756,7 +1793,7 @@ class RansomLookConnector:
                     ),
                 )
             )
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _create_group_infrastructure(
         self, metadata: dict[str, Any], group_id: str, group_name: str | None = None
@@ -1803,7 +1840,7 @@ class RansomLookConnector:
                         self.converter._optional_timestamp(location.get("lastscrape")),
                     )
                 )
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _create_claim_graph(
         self,
@@ -1870,7 +1907,7 @@ class RansomLookConnector:
         else:
             accepted_evidence = []
             evidence_objects = []
-        direct_objects = self._deduplicate(
+        direct_objects = self._deduplicate_objects(
             [*(direct_leak_objects or []), *(direct_analysis_objects or [])]
         )
 
@@ -1879,7 +1916,7 @@ class RansomLookConnector:
             payloads: list[EvidencePayload],
             direct: list[Any],
         ) -> list[Any]:
-            objects = self._deduplicate([*base_objects, *evidence, *direct])
+            objects = self._deduplicate_objects([*base_objects, *evidence, *direct])
             report_refs = [group.id, *(obj.id for obj in objects)]
             return [
                 *objects,

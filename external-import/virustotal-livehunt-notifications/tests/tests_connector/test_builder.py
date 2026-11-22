@@ -459,3 +459,78 @@ class TestExtractMalwareConfig:
         assert len(relationships) == 2
         sources = {r.source_ref for r in relationships}
         assert incident_id in sources
+
+
+class TestProcessSkipsNonFileNotifications:
+    """``process`` must skip Livehunt notifications that are not files.
+
+    A hunting ruleset with ``target_entity = "domain"`` (or url, ip)
+    yields non-file objects in ``/ioc_stream``. They have no ``size``,
+    so the default file-size filters used to raise ``AttributeError``
+    and abort the whole cycle (issue #8262).
+    """
+
+    def _builder(self) -> LivehuntBuilder:
+        builder = _make_builder()
+        builder.helper.connector_logger = MagicMock()
+        builder.tag = None
+        builder.limit = None
+        builder.delete_notification = True
+        builder.delete_livehunt_notification = MagicMock()
+        builder.upload_artifact = False
+        builder.extensions = []
+        builder.min_positives = 1
+        builder.min_file_size = 1000
+        builder.max_file_size = 52428800
+        builder.max_age_days = None
+        return builder
+
+    def test_domain_notification_is_skipped_and_files_still_read(self) -> None:
+        builder = self._builder()
+        # ``SimpleNamespace`` has no ``size``: reaching the size filter
+        # with the domain object would raise ``AttributeError``.
+        domain = SimpleNamespace(id="domain-notification", type="domain")
+        small_file = SimpleNamespace(
+            id="file-notification",
+            type="file",
+            sha256="d" * 64,
+            size=10,
+            last_analysis_stats={"malicious": 5},
+        )
+        builder.client.iterator.return_value = iter([domain, small_file])
+
+        builder.process("1700000000", 1700000000)
+
+        # The domain notification is left in VirusTotal; the file one
+        # after it in the stream is still processed (then dropped by
+        # the min size filter, so no Work is opened).
+        builder.delete_livehunt_notification.assert_called_once_with(
+            "file-notification"
+        )
+        builder.helper.api.work.to_processed.assert_not_called()
+        skip_logs = [
+            c
+            for c in builder.helper.connector_logger.info.call_args_list
+            if c.args and c.args[0].startswith("Skipping a non-file")
+        ]
+        assert len(skip_logs) == 1
+        assert skip_logs[0].args[1] == {
+            "object_id": "domain-notification",
+            "type": "domain",
+        }
+
+    def test_object_without_type_is_still_read_as_a_file(self) -> None:
+        builder = self._builder()
+        legacy = SimpleNamespace(
+            id="legacy-notification",
+            sha256="e" * 64,
+            size=10,
+            last_analysis_stats={"malicious": 5},
+        )
+        builder.client.iterator.return_value = iter([legacy])
+
+        builder.process("1700000000", 1700000000)
+
+        builder.delete_livehunt_notification.assert_called_once_with(
+            "legacy-notification"
+        )
