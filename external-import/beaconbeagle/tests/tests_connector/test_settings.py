@@ -170,3 +170,35 @@ def test_settings_should_prefer_duration_period_when_interval_is_also_set():
         )()
 
     assert settings.connector.duration_period == timedelta(hours=12)
+
+
+def test_settings_should_prefer_marking_when_marking_definition_is_also_set():
+    """`marking` MUST win over the deprecated `marking_definition`."""
+    with pytest.warns(UserWarning, match="Using only"):
+        settings = _settings_class(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "beaconbeagle": {
+                    "marking": "TLP:AMBER",
+                    "marking_definition": "TLP:RED",
+                },
+            }
+        )()
+
+    assert settings.beaconbeagle.marking == "TLP:AMBER"
+
+
+def test_settings_should_prefer_link_watermark_txt_when_link_watermark_is_also_set():
+    """`link_watermark_txt` MUST win over the deprecated `link_watermark`."""
+    with pytest.warns(UserWarning, match="Using only"):
+        settings = _settings_class(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "beaconbeagle": {
+                    "link_watermark_txt": " [new]",
+                    "link_watermark": " [old]",
+                },
+            }
+        )()
+
+    assert settings.beaconbeagle.link_watermark_txt == " [new]"
