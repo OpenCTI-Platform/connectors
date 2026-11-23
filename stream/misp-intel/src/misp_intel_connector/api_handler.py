@@ -58,6 +58,21 @@ def _report_field(report, field: str):
     return getattr(report, field, None)
 
 
+def _to_int(value) -> Optional[int]:
+    """
+    Convert a distribution level to an int.
+
+    MISP may return distribution levels as strings (e.g. "2").
+
+    :param value: Distribution level (int, str or None)
+    :return: The level as an int, or None when it is missing or not numeric
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class MispApiHandler:
     """
     Handler for MISP API operations
@@ -226,13 +241,14 @@ class MispApiHandler:
         pushed with the dedicated event report endpoints, which also make the
         sync idempotent by UUID. A report is matched by UUID against the
         existing reports of the event: a missing report is added, a report whose
-        name or content changed is updated in place, an identical report
-        triggers no call. A soft-deleted report is first restored through the
-        dedicated restore endpoint (eventReports/edit ignores "deleted"), then
-        updated only if its name or content differ. When updating an event, a
-        report absent from the fetched event is looked up by UUID and handled
-        the same way instead of being added again. A failure is logged and
-        never prevents the event itself from being returned.
+        name, content or distribution changed is updated in place, an identical
+        report triggers no call. A soft-deleted report is first restored through
+        the dedicated restore endpoint (eventReports/edit ignores "deleted"),
+        then updated only if its name, content or distribution differ. When
+        updating an event, a report absent from the fetched event is looked up
+        by UUID and handled the same way instead of being added again. A
+        failure is logged and never prevents the event itself from being
+        returned.
 
         :param event_id: ID or UUID of the MISP event
         :param report_data_list: Event reports to sync (MISPEventReport or dict)
@@ -279,12 +295,26 @@ class MispApiHandler:
                         event_id, existing, meta
                     ):
                         continue
-                    if (_report_field(existing, "name") or "").strip() == name and (
-                        _report_field(existing, "content") or ""
-                    ).strip() == content:
+                    desired_distribution = _to_int(
+                        _report_field(report_data, "distribution")
+                    )
+                    # A missing desired distribution never triggers an update
+                    distribution_changed = (
+                        desired_distribution is not None
+                        and _to_int(_report_field(existing, "distribution"))
+                        != desired_distribution
+                    )
+                    if (
+                        (_report_field(existing, "name") or "").strip() == name
+                        and (_report_field(existing, "content") or "").strip()
+                        == content
+                        and not distribution_changed
+                    ):
                         continue
                     existing.name = name
                     existing.content = content
+                    if desired_distribution is not None:
+                        existing.distribution = desired_distribution
                     response = self.misp.update_event_report(existing)
                     action = "update"
             except Exception as e:

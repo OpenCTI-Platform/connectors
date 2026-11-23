@@ -97,13 +97,15 @@ def _existing_event(reports=()):
     return event
 
 
-def _existing_report(content=DESCRIPTION, name=REPORT_NAME, **kwargs):
+def _existing_report(content=DESCRIPTION, name=REPORT_NAME, distribution=2, **kwargs):
+    # distribution defaults to the one set by the config fixture
     report = MISPEventReport()
     report.from_dict(
         id=7,
         name=name,
         content=content,
         uuid=description_report_uuid(EVENT_UUID),
+        distribution=distribution,
         **kwargs,
     )
     return report
@@ -460,6 +462,84 @@ def test_update_event_makes_no_report_call_when_only_whitespace_differs(
 
     api_handler.misp.add_event_report.assert_not_called()
     api_handler.misp.update_event_report.assert_not_called()
+
+
+def test_update_event_updates_the_report_when_only_distribution_differs(
+    api_handler, helper, config
+):
+    """The report follows MISP_DISTRIBUTION_LEVEL (e.g. 0 -> 2)."""
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(api_handler, _existing_event([_existing_report(distribution=0)]))
+    api_handler.misp.update_event_report.return_value = {"EventReport": {"id": "7"}}
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.add_event_report.assert_not_called()
+    api_handler.misp.update_event_report.assert_called_once()
+    (report,) = api_handler.misp.update_event_report.call_args[0]
+    assert report.id == 7
+    assert report.distribution == 2
+    assert report.name == REPORT_NAME
+    assert report.content == DESCRIPTION
+    helper.connector_logger.warning.assert_not_called()
+
+
+@pytest.mark.parametrize("existing_distribution", [2, "2"])
+def test_update_event_makes_no_report_call_when_distribution_is_identical(
+    api_handler, helper, config, existing_distribution
+):
+    event_data = _event_data_with_description(helper, config)
+    report = _existing_report()
+    # MISPEventReport casts the distribution to int: force a raw string
+    report.distribution = existing_distribution
+    _prepare_update(api_handler, _existing_event([report]))
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.add_event_report.assert_not_called()
+    api_handler.misp.update_event_report.assert_not_called()
+
+
+def test_sync_event_reports_ignores_a_missing_desired_distribution(api_handler):
+    existing = _existing_report(distribution=0)
+
+    api_handler._sync_event_reports(
+        "1",
+        [
+            {
+                "name": REPORT_NAME,
+                "content": DESCRIPTION,
+                "uuid": description_report_uuid(EVENT_UUID),
+            }
+        ],
+        existing_reports=[existing],
+    )
+
+    api_handler.misp.update_event_report.assert_not_called()
+    assert existing.distribution == 0
+
+
+def test_update_event_restores_then_updates_a_deleted_report_with_new_distribution(
+    api_handler, helper, config
+):
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(
+        api_handler,
+        _existing_event([_existing_report(distribution=0, deleted=True)]),
+    )
+    api_handler.misp.direct_call.return_value = RESTORE_OK
+    api_handler.misp.update_event_report.return_value = {"EventReport": {"id": "7"}}
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.direct_call.assert_called_once_with(RESTORE_URL, {})
+    api_handler.misp.add_event_report.assert_not_called()
+    api_handler.misp.update_event_report.assert_called_once()
+    (report,) = api_handler.misp.update_event_report.call_args[0]
+    assert report.distribution == 2
+    method_calls = _method_calls(api_handler)
+    assert method_calls.index("direct_call") < method_calls.index("update_event_report")
+    helper.connector_logger.warning.assert_not_called()
 
 
 def test_update_event_ignores_reports_with_another_uuid(api_handler, helper, config):
