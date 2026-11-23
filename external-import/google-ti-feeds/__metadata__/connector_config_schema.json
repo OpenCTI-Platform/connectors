@@ -246,6 +246,17 @@
         ""
       ],
       "items": {
+        "enum": [
+          "resolutions",
+          "subdomains",
+          "siblings",
+          "downloaded",
+          "communicating",
+          "contacted",
+          "serving_ip",
+          "embedded",
+          "referrer"
+        ],
         "type": "string"
       },
       "type": "array"

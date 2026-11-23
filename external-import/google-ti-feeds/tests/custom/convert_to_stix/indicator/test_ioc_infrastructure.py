@@ -9,6 +9,7 @@ from connector.src.custom.convert_to_stix.indicator.convert_to_stix_indicator im
     ConvertToSTIXIndicator,
 )
 from connector.src.custom.mappers.gti_iocs.ioc_infrastructure import (
+    ALLOWED_INFRASTRUCTURE_CATEGORIES,
     INFRASTRUCTURE_RULES,
     related_value,
 )
@@ -220,3 +221,12 @@ def test_no_description_by_default() -> None:
     (relationship,) = _relationships(converter.convert(entry))
     # Then the relationship has no description
     assert relationship.get("description") is None  # noqa: S101
+
+
+def test_every_category_has_a_rule() -> None:
+    """The allowed categories and the rules cannot drift apart."""
+    # Given the categories declared for GTI_INDICATOR_INFRASTRUCTURE
+    # When the categories of the rules are collected
+    rule_categories = {rule.category for rule in INFRASTRUCTURE_RULES}
+    # Then every allowed category enables at least one rule, and no rule uses another
+    assert rule_categories == set(ALLOWED_INFRASTRUCTURE_CATEGORIES)  # noqa: S101

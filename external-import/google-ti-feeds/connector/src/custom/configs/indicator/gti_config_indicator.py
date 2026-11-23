@@ -15,8 +15,8 @@ from connector.src.custom.exceptions.gti_configuration_error import (
 )
 from connector.src.custom.mappers.gti_iocs.ioc_infrastructure import (
     ALLOWED_INFRASTRUCTURE_CATEGORIES,
+    InfrastructureCategory,
 )
-from connectors_sdk import ListFromString
 from connectors_sdk.settings.annotated_types import parse_comma_separated_list
 from pydantic import Field, field_validator
 
@@ -84,7 +84,7 @@ class GTIIndicatorConfig(GTIBaseConfig):
         ],
     )
 
-    indicator_infrastructure: ListFromString = Field(
+    indicator_infrastructure: ListOfFromString[InfrastructureCategory] = Field(
         default=[],
         description="Comma-separated list of infrastructure relationships of the IOC "
         "delta entries to import as observables linked to the IOC observable "
@@ -143,9 +143,9 @@ class GTIIndicatorConfig(GTIBaseConfig):
             v, "indicator subentity", ALLOWED_INDICATOR_SUBENTITIES
         )
 
-    @field_validator("indicator_infrastructure", mode="after")
+    @field_validator("indicator_infrastructure", mode="before")
     @classmethod
-    def validate_indicator_infrastructure(cls, v: list[str]) -> list[str]:
+    def validate_indicator_infrastructure(cls, v: str | list[str]) -> list[str]:
         """Validate infrastructure categories against allowed values."""
         return validate_subentities_list(
             v, "indicator infrastructure", ALLOWED_INFRASTRUCTURE_CATEGORIES

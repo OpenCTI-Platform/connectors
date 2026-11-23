@@ -9,9 +9,25 @@ import ipaddress
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 RelatedType = Literal["domain", "ip", "file"]
+
+# GTI_INDICATOR_INFRASTRUCTURE values. As a `Literal`, the allowed values are
+# declared in the config schema (`items.enum`), like the other list options.
+# See: https://github.com/OpenCTI-Platform/connectors/issues/8098
+InfrastructureCategory = Literal[
+    "resolutions",
+    "subdomains",
+    "siblings",
+    "downloaded",
+    "communicating",
+    "contacted",
+    "serving_ip",
+    "embedded",
+    "referrer",
+]
+ALLOWED_INFRASTRUCTURE_CATEGORIES = list(get_args(InfrastructureCategory))
 
 SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 
@@ -20,7 +36,7 @@ SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 class InfrastructureRule:
     """How a relationship list of a delta entry becomes linked observables."""
 
-    category: str  # GTI_INDICATOR_INFRASTRUCTURE value enabling the rule
+    category: InfrastructureCategory  # GTI_INDICATOR_INFRASTRUCTURE value
     ioc_type: str  # GTI type of the delta entry
     field: str  # relationship list of the delta entry
     related_type: RelatedType
@@ -165,10 +181,6 @@ INFRASTRUCTURE_RULES = (
         ioc_is_source=False,
         reason="GTI lists the file {related} as containing a reference to {ioc}.",
     ),
-)
-
-ALLOWED_INFRASTRUCTURE_CATEGORIES = list(
-    dict.fromkeys(rule.category for rule in INFRASTRUCTURE_RULES)
 )
 
 

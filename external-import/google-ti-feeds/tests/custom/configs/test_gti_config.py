@@ -44,6 +44,9 @@ from connector.src.custom.configs.vulnerability.gti_config_vulnerability import 
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
+from connector.src.custom.mappers.gti_iocs.ioc_infrastructure import (
+    ALLOWED_INFRASTRUCTURE_CATEGORIES,
+)
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
@@ -375,6 +378,7 @@ def test_gti_config_enable_option_first_in_each_collection(
         ("software_toolkit_subentities", ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES),
         ("indicator_types", ALLOWED_IOC_TYPES),
         ("indicator_subentities", ALLOWED_INDICATOR_SUBENTITIES),
+        ("indicator_infrastructure", ALLOWED_INFRASTRUCTURE_CATEGORIES),
         ("campaign_origins", ALLOWED_ORIGINS),
         ("campaign_subentities", ALLOWED_CAMPAIGN_SUBENTITIES),
         ("vulnerability_origins", ALLOWED_ORIGINS),
@@ -445,6 +449,12 @@ def test_gti_connector_invalid_malware_family_subentities(  # type: ignore
             "GTI_INDICATOR_SUBENTITIES",
             "Invalid indicator subentity: unknown. Allowed values: malware_families, "
             "threat_actors, software_toolkits, attack_techniques.",
+        ),
+        (
+            "GTI_INDICATOR_INFRASTRUCTURE",
+            "Invalid indicator infrastructure: unknown. Allowed values: resolutions, "
+            "subdomains, siblings, downloaded, communicating, contacted, serving_ip, "
+            "embedded, referrer.",
         ),
         (
             "GTI_CAMPAIGN_ORIGINS",
