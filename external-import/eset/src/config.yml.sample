@@ -8,7 +8,6 @@ connector:
   # scope: 'eset'
   # log_level: 'error'
   # duration_period: 'PT1H'
-  # update_existing_data: false
 
 eset:
   # api_url: 'eti.eset.com'

@@ -34,7 +34,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "scope": "eset",
                     "log_level": "error",
                     "duration_period": "PT1H",
-                    "update_existing_data": True,
                 },
                 "eset": {
                     "api_url": "eti.eset.com",

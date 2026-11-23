@@ -38,7 +38,6 @@ class Eset:
         self.eset_import_apt_reports = self.config.eset.import_apt_reports
         self.eset_import_start_date = self.config.eset.import_start_date
         self.eset_create_observables = self.config.eset.create_observables
-        self.update_existing_data = self.config.connector.update_existing_data
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="ESET",
@@ -111,7 +110,6 @@ class Eset:
                     self.helper.log_debug("Objects to be sent " + str(bundle_objects))
                     self.helper.send_stix2_bundle(
                         self.helper.stix2_create_bundle(bundle_objects),
-                        update=self.update_existing_data,
                         bypass_split=True,
                         work_id=work_id,
                     )
@@ -235,7 +233,6 @@ class Eset:
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(
                         json.dumps(parsed_content),
-                        update=self.update_existing_data,
                         work_id=work_id,
                     )
             except Exception as e:

@@ -54,11 +54,6 @@
       "format": "duration",
       "type": "string"
     },
-    "CONNECTOR_UPDATE_EXISTING_DATA": {
-      "default": false,
-      "description": "Whether to update data already present in OpenCTI.",
-      "type": "boolean"
-    },
     "ESET_API_URL": {
       "default": "eti.eset.com",
       "description": "Hostname of the ESET Threat Intelligence TAXII service.",

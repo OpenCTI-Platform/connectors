@@ -90,4 +90,3 @@ def test_connector_is_instantiated(
     assert connector.eset_import_apt_reports is True
     assert connector.eset_create_observables is True
     assert connector.get_interval() == 3600
-    assert connector.update_existing_data is False
