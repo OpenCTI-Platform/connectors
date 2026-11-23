@@ -152,3 +152,21 @@ def test_vulnerability_to_stix2_cvss_30_secondary_selected_when_no_primary():
     # First Secondary entry should be selected
     assert stix_dict["x_opencti_base_score"] == 6.1
     assert stix_dict["x_opencti_base_severity"] == "MEDIUM"
+
+
+def test_converter_marks_nvd_objects_tlp_clear():
+    from src.services.converter.vulnerability_to_stix2 import nvd_marking
+
+    from tests.conftest import make_cpe_name
+
+    clear_id = nvd_marking().id
+    assert clear_id == "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+    converter = _build_converter_for_unit()
+    vulnerability = converter._vulnerability_to_stix2(
+        make_vulnerability("CVE-2024-3400")
+    )
+    placeholder = converter._placeholder_vulnerability_to_stix2("CVE-2024-3401")
+    software = converter._create_software(make_cpe_name())
+    relationship = converter._create_relationship(software.id, vulnerability.id, "has")
+    for obj in (vulnerability, placeholder, software, relationship):
+        assert obj.object_marking_refs == [clear_id]

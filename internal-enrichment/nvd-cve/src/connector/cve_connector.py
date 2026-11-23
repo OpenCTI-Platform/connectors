@@ -9,6 +9,7 @@ from connectors_sdk.models import TLPMarking
 from pycti import MarkingDefinition, OpenCTIConnectorHelper, StixCoreRelationship
 from src import ConfigLoader
 from src.services import CVEConverter
+from src.services.converter.vulnerability_to_stix2 import nvd_marking
 from src.services.utils import extract_cves_from_entity
 from src.services.utils.constants import CVES_PER_CHUNK, MAX_CVES_PER_ENTITY
 
@@ -279,23 +280,8 @@ class CVEConnector:
 
     @staticmethod
     def _nvd_marking_definition() -> dict[str, Any]:
-        """TLP:CLEAR marking definition applied to objects built from NVD data."""
-        return json.loads(TLPMarking(level="clear").to_stix2_object().serialize())
-
-    @classmethod
-    def _apply_nvd_marking(cls, enriched_objects: list[dict[str, Any]]) -> None:
-        """Mark objects built from public NVD data as TLP:CLEAR.
-
-        Vulnerabilities, Software and their `has` relationships are shared
-        entities, so they must not inherit the triggering entity's markings:
-        that would hide them from users who cannot see the source entity.
-        Source markings are only applied to the relationships linking these
-        objects to the source entity, and to the container itself.
-        """
-        clear_id = cls._nvd_marking_definition()["id"]
-        for obj in enriched_objects:
-            if isinstance(obj, dict) and obj.get("type") != "identity":
-                obj["object_marking_refs"] = [clear_id]
+        """TLP:CLEAR marking definition the converter applies to NVD objects."""
+        return json.loads(nvd_marking().serialize())
 
     def _build_entity_relationships(
         self,
@@ -528,9 +514,6 @@ class CVEConnector:
 
         if not enriched_objects:
             return [], [], []
-
-        # Objects built from public NVD data are TLP:CLEAR
-        self._apply_nvd_marking(enriched_objects)
 
         author_dict = json.loads(self.converter.author.serialize())
         is_container = self._is_container(stix_entity, enrichment_entity)
