@@ -36,6 +36,9 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
     def __init__(self, config: "GTIConfig", logger: "logging.Logger", tlp_level: str):
         super().__init__(config, logger, tlp_level)
 
+        # Attack techniques skipped for lack of a name since the last reset
+        self.skipped_attack_techniques_without_name = 0
+
         self._converter = {
             "domain": self._convert_domain,
             "file": self._convert_file,
@@ -502,8 +505,17 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         attack_technique_id = attack_technique_data.id
 
+        # The attack pattern ID only depends on the MITRE ID: it merges with the
+        # MITRE ATT&CK technique, so it must never be named after its own ID.
+        attack_technique_name = getattr(attack_technique_data.attributes, "name", None)
+        if not attack_technique_name or not attack_technique_name.strip():
+            # Counted, not logged: the IOC delta feed never carries technique names,
+            # so the orchestrator logs one warning per package from this counter.
+            self.skipped_attack_techniques_without_name += 1
+            return []
+
         attack_pattern = AttackPattern(
-            name=attack_technique_id.upper(),
+            name=attack_technique_name,
             mitre_id=attack_technique_id.upper(),
             author=self.organization,
             markings=[self.tlp_marking],
