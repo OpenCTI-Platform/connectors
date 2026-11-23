@@ -38,7 +38,6 @@ class Eset:
         self.eset_import_apt_reports = self.config.eset.import_apt_reports
         self.eset_import_start_date = self.config.eset.import_start_date
         self.eset_create_observables = self.config.eset.create_observables
-        self.eset_interval = self.config.eset.interval
         self.update_existing_data = self.config.connector.update_existing_data
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -57,7 +56,7 @@ class Eset:
             os.makedirs(TMP_DIR, exist_ok=True)
 
     def get_interval(self):
-        return int(self.eset_interval) * 60
+        return int(self.config.connector.duration_period.total_seconds())
 
     def _download_all_report_stuff(self, connection, report, base_path):
         """Download xml, pdf and adds (if available) from given *report* into paths starting with *base_path*."""

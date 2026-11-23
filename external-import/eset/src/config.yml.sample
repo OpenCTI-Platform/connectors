@@ -7,6 +7,7 @@ connector:
   # name: 'ESET Cyber Threat Intelligence'
   # scope: 'eset'
   # log_level: 'error'
+  # duration_period: 'PT1H'
   # update_existing_data: false
 
 eset:
@@ -17,4 +18,3 @@ eset:
   # import_apt_reports: true
   # import_start_date: 'P30D'
   # create_observables: true
-  # interval: 60 # In minutes

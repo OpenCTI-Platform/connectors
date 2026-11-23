@@ -44,7 +44,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "import_apt_reports": True,
                     "import_start_date": "2022-04-01",
                     "create_observables": True,
-                    "interval": 60,
                 },
             },
             id="full_valid_settings_dict",
@@ -179,3 +178,42 @@ def test_settings_should_default_import_start_date_to_30_days_ago():
         abs(FakeConnectorSettings().eset.import_start_date - expected).total_seconds()
         < 60
     )
+
+
+def test_settings_should_migrate_deprecated_interval_to_duration_period():
+    """The legacy ESET_INTERVAL (minutes) alone must set duration_period."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "eset": {**MINIMAL_VALID_SETTINGS_DICT["eset"], "interval": 30},
+                }
+            )
+
+    with pytest.warns(UserWarning):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(minutes=30)
+
+
+def test_settings_should_prefer_duration_period_over_deprecated_interval():
+    """When both are set, duration_period wins."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {"duration_period": "PT2H"},
+                    "eset": {**MINIMAL_VALID_SETTINGS_DICT["eset"], "interval": 30},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="Using only 'connector.duration_period'"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=2)

@@ -103,9 +103,10 @@
       "type": "boolean"
     },
     "ESET_INTERVAL": {
-      "default": 60,
-      "description": "Interval, in minutes, between two runs of the connector.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [

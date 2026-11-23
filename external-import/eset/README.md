@@ -40,7 +40,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-> **Note:** CONNECTOR_DURATION_PERIOD is listed there, but the connector does not use it: the interval between two runs is set with `ESET_INTERVAL` (in minutes).
+> **Note:** `ESET_INTERVAL` (in minutes) is deprecated: use `CONNECTOR_DURATION_PERIOD` (ISO 8601 duration, e.g. `PT1H`) instead. When both are set, `CONNECTOR_DURATION_PERIOD` wins.
 
 ## Deployment
 
@@ -65,7 +65,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=eset
       - CONNECTOR_LOG_LEVEL=info
       - ESET_API_KEY=ChangeMe
-      - ESET_INTERVAL=60 # In minutes
+      - CONNECTOR_DURATION_PERIOD=PT1H
     restart: always
 ```
 
@@ -93,7 +93,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `ESET_INTERVAL`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

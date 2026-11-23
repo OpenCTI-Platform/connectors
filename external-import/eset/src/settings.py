@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
     DatetimeFromIsoString,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -13,9 +14,8 @@ from pydantic import Field, SecretStr
 class EsetConnectorConfig(BaseExternalImportConnectorConfig):
     """Connector-level configuration for the ESET connector.
 
-    Provides a default for the SDK's structural ``duration_period`` field. The
-    connector keeps its own ``eset.interval`` scheduling loop, so this value is
-    only used to satisfy the manager-supported contract.
+    Provides a default for the SDK's ``duration_period`` field, which drives the
+    sleep between two runs of the connector's own loop.
     """
 
     id: str = Field(
@@ -74,9 +74,11 @@ class EsetConfig(BaseConfigModel):
         description="Whether to create observables from imported indicators.",
         default=True,
     )
-    interval: int = Field(
-        description="Interval, in minutes, between two runs of the connector.",
-        default=60,
+    interval: int | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda minutes: timedelta(minutes=int(minutes)),
     )
 
 

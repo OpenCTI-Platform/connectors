@@ -9,6 +9,7 @@ services:
       #- "CONNECTOR_NAME=ESET Cyber Threat Intelligence"
       #- CONNECTOR_SCOPE=eset
       #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=PT1H
       #- CONNECTOR_UPDATE_EXISTING_DATA=false
       #- ESET_API_URL=eti.eset.com
       - ESET_USERNAME=ChangeMe
@@ -17,5 +18,4 @@ services:
       #- ESET_IMPORT_APT_REPORTS=true
       #- ESET_IMPORT_START_DATE=P30D
       #- ESET_CREATE_OBSERVABLES=true
-      #- ESET_INTERVAL=60 # In minutes
     restart: always
