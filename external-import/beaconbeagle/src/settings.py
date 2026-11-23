@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -104,12 +105,15 @@ class BeaconBeagleConfig(BaseConfigModel):
         new_namespaced_var="duration_period",
         new_value_factory=lambda x: timedelta(hours=int(x)),
     )
-    marking: str = Field(
-        description=(
-            "Marking definition applied on every produced object "
-            "(TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, "
-            "TLP:RED)."
-        ),
+    marking: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description="Marking definition applied on every produced object.",
         default="TLP:GREEN",
     )
 

@@ -23,7 +23,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | BEACONBEAGLE_SEARCH_BGPAS | `boolean` |  | boolean |  | `false` | Fall back to 'whois -h bgp.tools' when the BeaconBeagle payload is missing the AS / country fields. Generates outbound traffic to bgp.tools. |
 | BEACONBEAGLE_LINK_WATERMARK_TXT | `string` |  | string |  | `""` | Suffix appended to the Text observable that tracks CobaltStrike licence watermarks. Leave empty to disable. |
 | BEACONBEAGLE_LINKS_DURATION | `integer` |  | integer |  | `24` | Duration in hours used as the indicator valid_from-valid_until window when BeaconBeagle does not provide a lasttime for a C2 entry. |
-| BEACONBEAGLE_MARKING | `string` |  | string |  | `"TLP:GREEN"` | Marking definition applied on every produced object (TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED). |
+| BEACONBEAGLE_MARKING | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` |  | `"TLP:GREEN"` | Marking definition applied on every produced object. |
 | BEACONBEAGLE_INTERVAL | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
 | BEACONBEAGLE_MARKING_DEFINITION | `string` |  | string | ⛔️ | `null` | Use BEACONBEAGLE_MARKING instead. |
 | BEACONBEAGLE_LINK_WATERMARK | `string` |  | string | ⛔️ | `null` | Use BEACONBEAGLE_LINK_WATERMARK_TXT instead. |

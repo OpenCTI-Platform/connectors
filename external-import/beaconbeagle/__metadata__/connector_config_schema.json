@@ -112,7 +112,15 @@
     },
     "BEACONBEAGLE_MARKING": {
       "default": "TLP:GREEN",
-      "description": "Marking definition applied on every produced object (TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED).",
+      "description": "Marking definition applied on every produced object.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "BEACONBEAGLE_MARKING_DEFINITION": {

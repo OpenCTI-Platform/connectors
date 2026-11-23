@@ -99,6 +99,11 @@ def test_settings_should_apply_defaults_on_minimal_input():
             "connector.id",
             id="invalid_connector_id",
         ),
+        pytest.param(
+            {**MINIMAL_VALID_SETTINGS_DICT, "beaconbeagle": {"marking": "TLP:PINK"}},
+            "beaconbeagle.marking",
+            id="unknown_marking",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
