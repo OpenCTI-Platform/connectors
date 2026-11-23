@@ -51,9 +51,9 @@ class EsetConfig(BaseConfigModel):
     collections: ListFromString | None = Field(
         description=(
             "Comma-separated list of ESET TAXII collections to import. "
-            "Set it to null to skip the collections and only import the APT reports."
+            "When unset (null), no collection is imported and only the APT reports are."
         ),
-        default=["ei.misp", "ei.cc", "ei.urls"],
+        default=None,
     )
     import_apt_reports: bool = Field(
         description="Whether to import ESET APT reports.",
@@ -68,7 +68,7 @@ class EsetConfig(BaseConfigModel):
     )
     create_observables: bool = Field(
         description="Whether to create observables from imported indicators.",
-        default=True,
+        default=False,
     )
     interval: int | None = DeprecatedField(
         deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",

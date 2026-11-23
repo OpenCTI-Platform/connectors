@@ -70,12 +70,8 @@
       "writeOnly": true
     },
     "ESET_COLLECTIONS": {
-      "default": [
-        "ei.misp",
-        "ei.cc",
-        "ei.urls"
-      ],
-      "description": "Comma-separated list of ESET TAXII collections to import. Set it to null to skip the collections and only import the APT reports.",
+      "default": null,
+      "description": "Comma-separated list of ESET TAXII collections to import. When unset (null), no collection is imported and only the APT reports are.",
       "items": {
         "type": "string"
       },
@@ -93,7 +89,7 @@
       "type": "string"
     },
     "ESET_CREATE_OBSERVABLES": {
-      "default": true,
+      "default": false,
       "description": "Whether to create observables from imported indicators.",
       "type": "boolean"
     },
