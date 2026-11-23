@@ -1,6 +1,7 @@
 import warnings
 
 import connectors_sdk.models.enums as enums
+import pycti
 import pytest
 
 OCTI_ENUMS = {
@@ -35,6 +36,8 @@ ENUMS = OCTI_ENUMS | {
     "CaseSeverity",
     "CaseIncidentResponseType",
     "ChannelType",
+    "ExtensionDefinitionId",
+    "ExtensionType",
     "IncidentSeverity",
     "IncidentType",
     "InfrastructureType",
@@ -92,3 +95,9 @@ def test_tlp_level_rejects_unknown_levels(value: object) -> None:
     """Test that TLPLevel still rejects unknown levels."""
     with pytest.raises(ValueError):
         enums.TLPLevel(value)
+
+
+def test_extension_definition_ids_are_pycti_constants() -> None:
+    """Test that the extension definition ids are the ones pycti uses."""
+    assert enums.ExtensionDefinitionId.OCTI == pycti.STIX_EXT_OCTI
+    assert enums.ExtensionDefinitionId.OCTI_SCO == pycti.STIX_EXT_OCTI_SCO

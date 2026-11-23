@@ -84,11 +84,68 @@ def test_api_key_and_successful_request():
     )
 
 
-def test_request_404_is_allowed():
+def test_connector_user_agent_stays_constant_for_the_session():
     client = RansomLookAPIClient(MagicMock(), "https://example.test/api")
+    first = client.session.prepare_request(requests.Request("GET", client.base_url))
+    client.begin_run()
+    second = client.session.prepare_request(requests.Request("GET", client.base_url))
+    user_agent = first.headers["User-Agent"]
+    assert user_agent.startswith("OpenCTI-Connector-RansomLook/")
+    assert user_agent.partition("/")[2].partition(" ")[0]
+    assert "https://github.com/OpenCTI-Platform/connectors" in user_agent
+    assert second.headers["User-Agent"] == first.headers["User-Agent"]
+
+
+@pytest.mark.parametrize("optional_capability", [None, "notes"])
+def test_request_404_is_allowed(optional_capability):
+    helper = MagicMock()
+    client = RansomLookAPIClient(helper, "https://example.test/api")
     response = streaming_response([], status=404)
     client.session.get = MagicMock(return_value=response)
-    assert client._get("missing", allow_404=True) == []
+    assert (
+        client._get(
+            "notes/group/missing",
+            allow_404=True,
+            optional_capability=optional_capability,
+        )
+        == []
+    )
+    response.close.assert_called_once()
+    assert client.request_attempts == 1
+    helper.connector_logger.debug.assert_not_called()
+
+
+def test_unexpected_optional_404_still_logs_and_raises():
+    helper = MagicMock()
+    client = RansomLookAPIClient(helper, "https://example.test/api")
+    response = streaming_response([], status=404)
+    client.session.get = MagicMock(return_value=response)
+
+    with pytest.raises(RansomLookCapabilityUnavailable):
+        client._get("notes/group/missing", optional_capability="notes")
+
+    helper.connector_logger.debug.assert_any_call(
+        "RansomLook request received an error response",
+        meta={"endpoint": "notes", "status_code": 404, "request_attempts": 1},
+    )
+    response.close.assert_called_once()
+
+
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_torrent_capability_and_endpoint_diagnostics_match(status):
+    helper = MagicMock()
+    client = RansomLookAPIClient(helper, "https://example.test/api")
+    response = streaming_response([], status=status)
+    client.session.get = MagicMock(return_value=response)
+
+    with pytest.raises(RansomLookCapabilityUnavailable) as exc:
+        client.get_torrents()
+
+    assert exc.value.capability == "torrents"
+    helper.connector_logger.debug.assert_any_call(
+        "RansomLook request received an error response",
+        meta={"endpoint": "torrents", "status_code": status, "request_attempts": 1},
+    )
     response.close.assert_called_once()
 
 
@@ -99,7 +156,8 @@ def test_transport_errors_are_logged_and_wrapped():
 
     with pytest.raises(RansomLookAPIError, match="Unable to query"):
         client._get("posts")
-    helper.connector_logger.error.assert_called_once()
+    helper.connector_logger.warning.assert_called()
+    helper.connector_logger.error.assert_not_called()
 
 
 def test_invalid_json_is_rejected_logged_and_closed():
@@ -257,7 +315,10 @@ def test_post_normalizes_supported_response(payload):
     expected = {} if payload == [] else ({"description": "claim"})
     assert client.get_post("space group", "victim/name") == expected
     client._get.assert_called_once_with(
-        "post/space%20group/victim%2Fname", allow_404=True, log_errors=False
+        "post/space%20group",
+        params={"title": "victim/name"},
+        allow_404=True,
+        log_errors=False,
     )
 
 

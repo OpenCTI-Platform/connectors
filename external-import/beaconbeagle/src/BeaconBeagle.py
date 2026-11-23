@@ -2,7 +2,6 @@ import datetime
 import hashlib
 import ipaddress
 import json
-import os
 import re
 import subprocess
 import sys
@@ -12,7 +11,6 @@ import uuid
 
 import requests
 import stix2
-import yaml
 from pycti import (
     AttackPattern,
     CustomObservableText,
@@ -24,8 +22,8 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     Tool,
-    get_config_variable,
 )
+from settings import ConnectorSettings
 from stix2.canonicalization.Canonicalize import canonicalize
 
 # OpenCTI's namespace UUID for deterministic STIX object IDs (matches the
@@ -68,6 +66,47 @@ def _generate_process_id(command_line):
     return "process--" + str(uuid.uuid5(_OPENCTI_NAMESPACE_UUID, data))
 
 
+def _observable_ref(observable):
+    """Return the id of an observable built in this run or read from OpenCTI.
+
+    The observables list mixes STIX objects (``id``) and entities read back
+    from the platform (``standard_id``).
+    """
+    if "standard_id" in observable.keys():
+        return observable["standard_id"]
+    return observable["id"]
+
+
+def _build_observable_link(
+    observable, target_id, identity_id, start_time, marking, description
+):
+    """Build the ``related-to`` link from an observable to a shared entity.
+
+    The observable is the source and the shared Tool / Attack Pattern the
+    target. The platform locks the source and the target of every
+    relationship it writes, except the target of a ``related-to`` whose
+    source is an observable. With the shared entity as the source, every
+    link of a run locked the same Tool, and parallel workers ran out of
+    retries with ``LOCK_ERROR`` (issue #8250).
+    """
+    source_id = _observable_ref(observable)
+    return stix2.Relationship(
+        id=StixCoreRelationship.generate_id(
+            "related-to",
+            source_id,
+            target_id,
+            start_time=start_time,
+        ),
+        source_ref=source_id,
+        target_ref=target_id,
+        relationship_type="related-to",
+        created_by_ref=identity_id,
+        start_time=start_time,
+        object_marking_refs=[marking],
+        description=description,
+    )
+
+
 class BeaconBeagle:
     """BeaconBeagle connector"""
 
@@ -93,115 +132,44 @@ class BeaconBeagle:
         self.beaconbeagle_link_tool_id = None
         self.beaconbeagle_link_ap_id = None
 
-        # Instantiate the connector helper from config.
-        # Use a context manager so the file handle is closed deterministically
-        # (the previous ``yaml.load(open(...))`` shape leaked the handle on
-        # error paths) and ``yaml.safe_load`` so the connector cannot be
-        # tricked into instantiating arbitrary Python objects from a
-        # malicious / tampered config file.
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config_file_path = config_file_path.replace("\\", "/")
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as config_file:
-                config = yaml.safe_load(config_file) or {}
-        else:
-            config = {}
-        self.helper = OpenCTIConnectorHelper(config)
+        # Load and validate the configuration (environment variables or
+        # ``config.yml``) through the Pydantic settings, then build the helper
+        # from it.
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Extra config
         # URL: 'https://witha.name/data/last.json'
-        self.beaconbeagle_url = get_config_variable(
-            "BEACONBEAGLE_URL",
-            ["beaconbeagle", "url"],
-            config,
-            default="https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc",
-        )
+        self.beaconbeagle_url = self.config.beaconbeagle.url
         #   add_urls: true/false
-        self.beaconbeagle_add_urls = get_config_variable(
-            "BEACONBEAGLE_ADD_URLS",
-            ["beaconbeagle", "add_urls"],
-            config,
-            default=False,
-        )
+        self.beaconbeagle_add_urls = self.config.beaconbeagle.add_urls
         #   add_useragent: true/false
-        self.beaconbeagle_add_useragent = get_config_variable(
-            "BEACONBEAGLE_ADD_USERAGENT",
-            ["beaconbeagle", "add_useragent"],
-            config,
-            default=False,
-        )
+        self.beaconbeagle_add_useragent = self.config.beaconbeagle.add_useragent
         #   link_tool: 'CobaltStrike'
-        self.beaconbeagle_link_tool = get_config_variable(
-            "BEACONBEAGLE_LINK_TOOL",
-            ["beaconbeagle", "link_tool"],
-            config,
-            default="",
-        )
+        self.beaconbeagle_link_tool = self.config.beaconbeagle.link_tool
         # link_ap: 'T1071 Standard Application Layer Protocol'
-        self.beaconbeagle_link_ap = get_config_variable(
-            "BEACONBEAGLE_LINK_AP",
-            ["beaconbeagle", "link_ap"],
-            config,
-            default="",
-        )
+        self.beaconbeagle_link_ap = self.config.beaconbeagle.link_ap
         # link_country: 'true/false''
-        self.beaconbeagle_link_country = get_config_variable(
-            "BEACONBEAGLE_LINK_COUNTRY",
-            ["beaconbeagle", "link_country"],
-            config,
-            default=False,
-        )
+        self.beaconbeagle_link_country = self.config.beaconbeagle.link_country
         # link_bgpas: 'true/false''
-        self.beaconbeagle_link_bgpas = get_config_variable(
-            "BEACONBEAGLE_LINK_BGPAS",
-            ["beaconbeagle", "link_bgpas"],
-            config,
-            default=False,
-        )
+        self.beaconbeagle_link_bgpas = self.config.beaconbeagle.link_bgpas
 
         # search_bgpas: 'true/false''
-        self.beaconbeagle_search_bgpas = get_config_variable(
-            "BEACONBEAGLE_SEARCH_BGPAS",
-            ["beaconbeagle", "search_bgpas"],
-            config,
-            default=False,
-        )
+        self.beaconbeagle_search_bgpas = self.config.beaconbeagle.search_bgpas
 
         # link_watermark: ' [CobaltStrikeLicenceWatermark]'
-        self.beaconbeagle_link_watermark = get_config_variable(
-            "BEACONBEAGLE_LINK_WATERMARK_TXT",
-            ["beaconbeagle", "link_watermark"],
-            config,
-            default="",
-        )
+        self.beaconbeagle_link_watermark = self.config.beaconbeagle.link_watermark_txt
         # links_duration: hours used as the fallback indicator-validity
         # window (``valid_from`` → ``valid_until``) when BeaconBeagle does
         # not provide a ``lasttime`` for a given C2 entry. The fallback is
         # wired into ``beaconbeagle_api_get_list`` below — the previous
         # shape loaded this config but never consulted it, so operators
         # changing the value got no effect.
-        self.beaconbeagle_links_duration = get_config_variable(
-            "BEACONBEAGLE_LINKS_DURATION",
-            ["beaconbeagle", "links_duration"],
-            config,
-            isNumber=True,
-            default=24,
-        )
-        #   interval: 2
-        self.beaconbeagle_interval = get_config_variable(
-            "BEACONBEAGLE_INTERVAL",
-            ["beaconbeagle", "interval"],
-            config,
-            isNumber=True,
-            default=2,
-        )
+        self.beaconbeagle_links_duration = self.config.beaconbeagle.links_duration
+        # Run frequency, from ``connector.duration_period``
+        self.beaconbeagle_interval = self.config.connector.duration_period
         #   Marking: TLP:GREEN
-        self.beaconbeagle_marking = get_config_variable(
-            "BEACONBEAGLE_MARKING",
-            ["beaconbeagle", "marking_definition"],
-            config,
-            default="TLP:GREEN",
-        )
+        self.beaconbeagle_marking = self.config.beaconbeagle.marking
 
         self.helper.connector_logger.debug("BeaconBeagle connector initialized.")
         self.helper.connector_logger.debug(
@@ -229,7 +197,7 @@ class BeaconBeagle:
             f"BeaconBeagle links_duration: {self.beaconbeagle_links_duration}."
         )
         self.helper.connector_logger.debug(
-            f"BeaconBeagle interval:       {self.beaconbeagle_interval} hours."
+            f"BeaconBeagle duration_period: {self.beaconbeagle_interval}."
         )
         self.helper.connector_logger.debug(
             f"BeaconBeagle marking:        {self.beaconbeagle_marking}."
@@ -1787,8 +1755,21 @@ class BeaconBeagle:
             return None
 
         # STIX: Linking Tool (StixCoreRelationship)
-        # Linking Elements with Tool/Threat-Actor/Attack-Pattern/Country/Campaign if requested
-        for observable in Observables:
+        # Linking Elements with Tool/Attack-Pattern if requested
+        stix_objects.extend(self.link_observables(Observables, identity_id, start_time))
+        # ---------------------------------------------------------------
+        return stix_objects
+
+    def link_observables(self, observables, identity_id, start_time):
+        """Link every observable to the configured Tool and Attack Pattern.
+
+        The observable is the source of these links: the platform only skips
+        locking the target of a ``related-to`` whose source is an observable,
+        so ``Observable -> Tool`` keeps every write off the shared Tool /
+        Attack Pattern (issue #8250).
+        """
+        links = []
+        for observable in observables:
             if "value" in observable.keys():
                 self.helper.connector_logger.debug(
                     f"  -  Working on observable created: {observable['value']}."
@@ -1807,50 +1788,19 @@ class BeaconBeagle:
                         "    [-] No Link with Tool requested."
                     )
                 else:
-                    # STIX: StixCoreRelationship Observable --> Tool
-                    # We have two kind of observable in that list
-                    if "standard_id" in observable.keys():
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['standard_id']})."
+                    self.helper.connector_logger.debug(
+                        f"    [+] StixCoreRelationship creation between Observable and Tool ({_observable_ref(observable)} > {self.beaconbeagle_link_tool})."
+                    )
+                    links.append(
+                        _build_observable_link(
+                            observable,
+                            self.beaconbeagle_link_tool_id,
+                            identity_id,
+                            start_time,
+                            self.beaconbeagle_marking,
+                            f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
                         )
-                        relation_OT = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_tool_id,
-                                observable["standard_id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_tool_id,
-                            target_ref=observable["standard_id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
-                        )
-                        stix_objects.append(relation_OT)
-                        del relation_OT
-                    else:
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['id']})."
-                        )
-                        relation_OT = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_tool_id,
-                                observable["id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_tool_id,
-                            target_ref=observable["id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
-                        )
-                        stix_objects.append(relation_OT)
-                        del relation_OT
+                    )
             except Exception as e:
                 self.helper.connector_logger.error(
                     f"Error while creating STIX object from Tool: {self.beaconbeagle_link_tool}, error: {e}"
@@ -1859,59 +1809,27 @@ class BeaconBeagle:
             try:
                 if self.beaconbeagle_link_ap_id is None:
                     self.helper.connector_logger.debug(
-                        "    [-] No Link with Tool requested."
+                        "    [-] No Link with Attack-Pattern requested."
                     )
                 else:
-                    # STIX: StixCoreRelationship Observable --> Attack-Pattern
-                    # We have two kind of observable in that list
-                    if "standard_id" in observable.keys():
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['standard_id']})."
+                    self.helper.connector_logger.debug(
+                        f"    [+] StixCoreRelationship creation between Observable and Attack-Pattern ({_observable_ref(observable)} > {self.beaconbeagle_link_ap})."
+                    )
+                    links.append(
+                        _build_observable_link(
+                            observable,
+                            self.beaconbeagle_link_ap_id,
+                            identity_id,
+                            start_time,
+                            self.beaconbeagle_marking,
+                            f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
                         )
-                        relation_OAP = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_ap_id,
-                                observable["standard_id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_ap_id,
-                            target_ref=observable["standard_id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
-                        )
-                        stix_objects.append(relation_OAP)
-                        del relation_OAP
-                    else:
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['id']})."
-                        )
-                        relation_OAP = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_ap_id,
-                                observable["id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_ap_id,
-                            target_ref=observable["id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
-                        )
-                        stix_objects.append(relation_OAP)
-                        del relation_OAP
+                    )
             except Exception as e:
                 self.helper.connector_logger.error(
                     f"Error while creating STIX object from Attack-Pattern: {self.beaconbeagle_link_ap}, error: {e}"
                 )
-        # ---------------------------------------------------------------
-        return stix_objects
+        return links
 
     def create_stix_bundle(self, targeted):
         # create start_date: Now
@@ -2139,11 +2057,10 @@ class BeaconBeagle:
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-            # NOTE: interval sleeping is handled by the outer ``run()`` loop
-            # in units of hours; sleeping here for ``self.beaconbeagle_interval``
-            # *seconds* would add an extra (and confusingly short) pause every
-            # cycle and would also block ``run-and-terminate`` mode from
-            # exiting promptly.
+            # NOTE: sleeping between runs is handled by the outer ``run()``
+            # loop (``connector.duration_period``); sleeping here would add an
+            # extra pause every cycle and would also block
+            # ``run-and-terminate`` mode from exiting promptly.
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
@@ -2178,7 +2095,7 @@ class BeaconBeagle:
         # (single run, then ping + exit).
         self.helper.schedule_process(
             message_callback=self.process_data,
-            duration_period=self.beaconbeagle_interval * 60 * 60,
+            duration_period=self.beaconbeagle_interval.total_seconds(),
         )
 
 

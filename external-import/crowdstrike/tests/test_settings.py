@@ -3,7 +3,8 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
-from crowdstrike_feeds_connector.settings import ConnectorSettings
+from connectors_sdk.models.enums import TLPLevel
+from crowdstrike_feeds_connector.settings import ConnectorSettings, CrowdstrikeConfig
 
 NOW_TIMESTAMP = int(datetime.now(timezone.utc).timestamp())
 
@@ -282,6 +283,21 @@ def test_settings_should_accept_valid_input(settings_dict):
             "crowdstrike.indicator_ip_max_age",
             id="invalid_duration_format",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "tlp": "purple",  # Not a TLP level
+                },
+            },
+            "crowdstrike.tlp",
+            id="invalid_tlp",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
@@ -306,3 +322,16 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_tlp_defaults_to_amber_strict():
+    config = CrowdstrikeConfig(client_id="cid", client_secret="csecret")
+
+    assert config.tlp == TLPLevel.AMBER_STRICT
+
+
+@pytest.mark.parametrize("tlp", ["clear", "CLEAR", "TLP:CLEAR"])
+def test_tlp_accepts_clear_in_any_case(tlp):
+    config = CrowdstrikeConfig(client_id="cid", client_secret="csecret", tlp=tlp)
+
+    assert config.tlp == TLPLevel.CLEAR

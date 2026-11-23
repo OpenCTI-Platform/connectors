@@ -1,13 +1,14 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+LABEL org.opencontainers.image.description="[DEPRECATED] Mandiant connector, use google-ti-feeds"
 
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev
+    apk --no-cache add git build-base libffi-dev
 
 COPY src/requirements.txt /tmp/
 
 RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 COPY src/ /opt/
 WORKDIR /opt/

@@ -143,7 +143,7 @@ class ConverterToStix:
     def _search_threat_by_name(self, name: str):
         """
         :param name: name of the threat being queried
-        :return: the threat entity
+        :return: the threat entity, or None when no entity has this name
         """
         custom_attributes = """
             id
@@ -172,10 +172,10 @@ class ConverterToStix:
             customAttributes=custom_attributes,
         )
 
-        if len(entities) > 0:
-            threat = entities[0]
-            self.threat_cache[name] = threat
-            return threat
+        # Cache misses too, so a label that matches no entity is queried once per run
+        threat = entities[0] if len(entities) > 0 else None
+        self.threat_cache[name] = threat
+        return threat
 
     def create_threat_relationship(
         self, row: list, indicator_id: str, observable_id: str

@@ -553,18 +553,22 @@ class RecordedFutureApiClient:
                             self.extract_priority_rules(each_rule)
                         elif not self.priority_alerts_only:
                             self.extract_priority_rules(each_rule)
-                    self.priorited_rules.append(
-                        PrioritiedRule(
-                            "Fake-Id-Playbook-Alert",
-                            "Domain Abuse",
-                            "TYPOSQUATTING DETECTION",
-                        )
-                    )
                 else:
                     # If data does not contain mandatory counts field, log the error
                     self.helper.connector_logger.error(
                         "Response does not contain mandatory <counts> field"
                     )
+                    break
+            # Placeholder rule carrying the "TYPOSQUATTING DETECTION" intelligence
+            # goal, so that its incident type vocabulary exists. Appended once,
+            # after pagination, rather than once per page of rules.
+            self.priorited_rules.append(
+                PrioritiedRule(
+                    "Fake-Id-Playbook-Alert",
+                    "Domain Abuse",
+                    "TYPOSQUATTING DETECTION",
+                )
+            )
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
                 "Exception occured when trying to reach RecordedFuture's API : ",

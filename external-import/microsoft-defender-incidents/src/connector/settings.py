@@ -7,7 +7,39 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
+
+
+def parse_status_mapping(value: str | dict[str, str] | None) -> dict[str, str]:
+    """
+    Coerce 'status:id,status:id' into a dict keyed by the lower-case Defender status.
+    An empty string or None gives an empty mapping (the feature is off).
+    """
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        items = value.items()
+    else:
+        items = []
+        for pair in value.split(","):
+            pair = pair.strip()
+            if not pair or pair in ('""', "''"):
+                continue
+            if ":" not in pair:
+                raise ValueError(
+                    f"Invalid status mapping entry '{pair}', expected '<defender status>:<status id>'"
+                )
+            key, status_id = pair.split(":", 1)
+            items.append((key, status_id))
+    mapping = {}
+    for key, status_id in items:
+        key, status_id = str(key).strip(), str(status_id).strip()
+        if not key or not status_id:
+            raise ValueError(
+                f"Invalid status mapping entry '{key}:{status_id}', expected '<defender status>:<status id>'"
+            )
+        mapping[key.lower()] = status_id
+    return mapping
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -64,6 +96,28 @@ class MicrosoftDefenderIncidentsConfig(BaseConfigModel):
         description="Microsoft Graph API path for retrieving security incidents.",
         default="/security/incidents",
     )
+    status_mapping: str = Field(
+        description=(
+            "Optional mapping from a Microsoft Defender incident status to an OpenCTI "
+            "Case-Incident workflow status, as comma-separated "
+            "'<defender status>:<status name or id>' pairs "
+            "(e.g. 'active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,"
+            "resolved:CLOSED,redirected:CLOSED'). "
+            "Defender statuses: active, inProgress, resolved, redirected, awaitingAction "
+            "(matched case-insensitively). A status name is resolved once per run against "
+            "the Case-Incident statuses; a UUID is used as the status id. When the "
+            "incident's status is mapped, the Case-Incident workflow status is set; "
+            "otherwise it is left unchanged. Empty (default): no workflow status is set."
+        ),
+        default="",
+    )
+
+    @field_validator("status_mapping")
+    @classmethod
+    def _validate_status_mapping(cls, value: str) -> str:
+        # Fail at startup on a malformed mapping instead of at the first incident.
+        parse_status_mapping(value)
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

@@ -179,6 +179,21 @@ class LivehuntBuilder:
         processed = 0
 
         for vtobj in files_iterator:
+            # ``/ioc_stream`` returns every object matched by a hunting
+            # ruleset, whatever its ``target_entity``: a ruleset on
+            # domains, URLs or IP addresses yields non-file objects that
+            # have no ``size``, ``sha256`` or ``first_submission_date``.
+            # Skip them before any file-only access (and before the
+            # notification deletion and the artifact upload) so one such
+            # object can no longer abort the whole cycle.
+            object_type = getattr(vtobj, "type", "file")
+            if object_type != "file":
+                self.helper.connector_logger.info(
+                    "Skipping a non-file Livehunt notification.",
+                    {"object_id": getattr(vtobj, "id", None), "type": object_type},
+                )
+                continue
+
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 

@@ -2,7 +2,7 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Community | -    | -       |
+| Filigran Verified | -    | -       |
 
 The URLhaus connector imports malicious URL data from abuse.ch URLhaus into OpenCTI as URL observables and indicators.
 

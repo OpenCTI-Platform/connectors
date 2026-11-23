@@ -4,7 +4,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/connector

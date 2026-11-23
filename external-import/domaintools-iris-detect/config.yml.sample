@@ -3,17 +3,16 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'DomainTools Iris Detect'
-  scope: 'stix2'
-  log_level: 'error' # optional (default: 'error')
-  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  # name: 'DomainToolsIrisDetectConnector' # optional (default: 'DomainToolsIrisDetectConnector')
+  # scope: 'stix2' # optional (default: 'stix2')
+  # log_level: 'error' # optional (default: 'error')
+  # duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
 domaintools:
   api_base_url: 'https://api.domaintools.com/v1/iris-detect/'
   api_key: 'ChangeMe'
-  monitor_id: 'ChangeMe'      # optional
-  store_iris_data: false
-  preview: false
-  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  # monitor_id: 'ChangeMe' # optional, only used when requesting domains for specific monitors (default: none)
+  # store_iris_data: false # optional (default: false)
+  # preview: false # optional (default: false)
+  # tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')

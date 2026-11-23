@@ -64,7 +64,7 @@ class ConverterToStix:
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        helper: OpenCTIConnectorHelper | None,
         tlp_level: Literal[
             "clear",
             "white",
@@ -74,6 +74,7 @@ class ConverterToStix:
             "red",
         ] = "clear",
     ):
+        # Optional: process-pool workers convert without an OpenCTI helper.
         self.helper = helper
 
         self.author = OrganizationAuthor(name="CheckFirst")
@@ -236,9 +237,9 @@ class ConverterToStix:
         - Infrastructure → consists-of → IPv4Address (with stop_time)
         - Subdomain [first_observed] → related-to → Infrastructure
 
-        Call this method only when starting from page 1 (first run or force_reprocess)
+        Call this method only on a fresh walk (no cursor, or force_reprocess)
         to create the base infrastructure objects and relationships, then rely on get_campaign_for_year()
-        for subsequent pages/years to reuse the same Campaign and IntrusionSet objects.
+        for subsequent batches/years to reuse the same Campaign and IntrusionSet objects.
         """
         try:
             octi_objects = []
@@ -325,7 +326,7 @@ class ConverterToStix:
             # Known domains already have correct first_seen from the infrastructure bundle.
             infrastructure = self.create_infrastructure(
                 name=article_domain,
-                first_seen=article.published_date,
+                first_seen=None,
             )
             # --- Channel as website (the publishing domain/subdomain) ---
             channel = self.create_channel(

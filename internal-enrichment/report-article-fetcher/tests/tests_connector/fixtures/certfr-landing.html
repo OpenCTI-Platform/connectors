@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="fr" data-fr-scheme="system">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
+    <meta name="theme-color" content="#000091">
+    <title>Point de situation de l’opération REACTIV – octobre 2026 - CERT-FR</title>
+  </head>
+  <body>
+    <div class="fr-skiplinks">
+    <nav role="navigation" aria-label="Accès rapide" class="fr-container">
+        <ul class="fr-skiplinks__list">
+            <li>
+                <a class="fr-link" href="#main-content">Contenu</a>
+            </li>
+            <li>
+                <a class="fr-link" href="#header-navigation">Menu</a>
+            </li>
+            <li>
+                <a class="fr-link" href="#footer">Pied de page</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+<header role="banner" class="fr-header" id="header">
+  <div class="fr-header__body">
+    <div class="fr-container">
+      <div class="fr-header__body-row">
+        <div class="fr-header__brand fr-enlarge-link">
+          <div class="fr-header__brand-top">
+            <div class="fr-header__operator">
+            </div>
+            <div class="fr-header__navbar">
+              <button data-fr-opened="false" aria-controls="header-menu" title="Menu" type="button" id="header-menu-btn"
+                class="fr-btn--menu fr-btn">Menu</button>
+            </div>
+          </div>
+          <div class="fr-header__service">
+            <a href="/" title="Accueil - CERT-FR" aria-label="Accueil - CERT-FR"></a>
+          </div>
+        </div>
+        <div class="fr-header__tools">
+          <!-- Theme -->
+          <div class="fr-header__tools-links" data-fr-js-header-links="true">
+            <ul class="fr-btns-group">
+              <li>
+                <button aria-controls="footer-display" data-fr-opened="false"
+                  class="fr-icon-theme-fill fr-btn--icon-left fr-btn fr-btn--tertiary-no-outline fr-btn--sm"
+                  data-fr-js-modal-button="true">Paramètres d'affichage</button>
+              </li>
+            </ul>
+          </div>
+          <!-- Incident -->
+          <div class="fr-header__search fr-modal" id="modal-search" name="Incident">
+            <div class="fr-container fr-grid-row fr-grid-row--right search-container fr-pr-md-0">
+              <a href="/contact/" class="fr-btn fr-btn--incident fr-btn--icon-left fr-icon-warning-line">Déclarer un
+                incident</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="fr-header__menu fr-modal" id="header-menu" aria-labelledby="header-menu-btn">
+    <div class="fr-container">
+      <button aria-controls="header-menu" title="Fermer" type="button" class="fr-btn--close fr-btn">Fermer</button>
+      <div class="fr-grid-row fr-mt-2w header-menu-display-row">
+        <div class="fr-col-12">
+          <button aria-controls="footer-display" data-fr-opened="false"
+            class="fr-icon-theme-fill fr-btn--icon-left fr-btn fr-btn--tertiary-no-outline fr-btn--sm" data-fr-js-modal-button="true">Paramètres
+            d'affichage</button>
+        </div>
+      </div>
+      <div class="fr-grid-row fr-mt-2w fr-mb-4w header-menu-incident-row">
+        <div class="fr-col-12">
+          <a href="/contact/" class="fr-btn fr-btn--incident fr-btn--icon-left fr-icon-warning-line">Déclarer un
+            incident</a>
+        </div>
+      </div>
+      <div class="fr-header__menu-links">
+      </div>
+      <nav class="fr-nav" id="header-navigation" role="navigation" aria-label="Menu principal">
+        <ul class="fr-nav__list">
+            <li class="fr-nav__item">
+                <button id="nav-nous%20conna%C3%AEtre" aria-expanded="false" aria-controls="nav-nous%20conna%C3%AEtre-menu" type="button"
+                  class="fr-nav__btn">Nous connaître</button>
+                <div class="fr-collapse fr-menu" id="nav-nous%20conna%C3%AEtre-menu">
+                  <ul class="fr-menu__list">
+                      <li>
+                        <a href="/a-propos"  id="nav-nous%20conna%C3%AEtre" class="fr-nav__link">A propos du CERT-FR</a>
+                      </li>
+                      <li>
+                        <a href="/uploads/CERT-FR_RFC2350_EN.pdf"  id="nav-nous%20conna%C3%AEtre" class="fr-nav__link">RFC2350</a>
+                      </li>
+                      <li>
+                        <a href="/csirt"  id="nav-nous%20conna%C3%AEtre" class="fr-nav__link">Ecosystème des CERT/CSIRT</a>
+                      </li>
+                      <li>
+                        <a href="/politique-partage/"  id="nav-nous%20conna%C3%AEtre" class="fr-nav__link">Politique de partage des informations</a>
+                      </li>
+                  </ul>
+                </div>
+            </li>
+            <li class="fr-nav__item">
+                <button id="nav-publications" aria-expanded="false" aria-controls="nav-publications-menu" type="button"
+                  class="fr-nav__btn">Publications</button>
+                <div class="fr-collapse fr-menu" id="nav-publications-menu">
+                  <ul class="fr-menu__list">
+                      <li>
+                        <a href="/alerte/"  id="nav-publications" class="fr-nav__link">Alertes de sécurité</a>
+                      </li>
+                      <li>
+                        <a href="/cti/"  id="nav-publications" class="fr-nav__link">Rapports menaces et incidents</a>
+                      </li>
+                      <li>
+                        <a href="/avis/"  id="nav-publications" class="fr-nav__link">Avis de sécurité</a>
+                      </li>
+                      <li>
+                        <a href="/ioc/"  id="nav-publications" class="fr-nav__link">Indicateurs de compromission</a>
+                      </li>
+                      <li>
+                        <a href="/dur/"  id="nav-publications" class="fr-nav__link">Durcissement et recommandations</a>
+                      </li>
+                      <li>
+                        <a href="/actualite/"  id="nav-publications" class="fr-nav__link">Bulletins d&#39;actualité</a>
+                      </li>
+                      <li>
+                        <a href="/fiche/"  id="nav-publications" class="fr-nav__link">Fiches réflexes</a>
+                      </li>
+                  </ul>
+                </div>
+            </li>
+            <li class="fr-nav__item">
+                <a href="/services/"  id="nav-nos%20services" class="fr-nav__link">Nos services</a>
+            </li>
+            <li class="fr-nav__item">
+                <a href="https://www.welcometothejungle.com/fr/companies/anssi"  id="nav-nous%20rejoindre" class="fr-nav__link">Nous rejoindre</a>
+            </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>
+    <main id="main-content">
+      <div class="content">
+<div class="fr-background-default--grey fr-py-6w">
+  <div class="fr-container">
+    <article class="article">
+        <section class="fr-mb-4w">
+      <h1 class="fr-h1 fr-mb-1w">Rapport menaces et incidents du CERT-FR</h1>
+    <p class="fr-text--lg fr-mb-5w">Objet : Point de situation de l’opération REACTIV – octobre 2026</p>
+    <div class="fr-mt-4w fr-mb-3w">
+  <h2 class="fr-h2">Gestion du document</h2>
+  <div class="meta-table">
+    <table>
+      <tbody>
+        <tr>
+          <th scope="row">Référence</th>
+          <td>CERTFR-2026-CTI-010</td>
+        </tr>
+        <tr>
+          <th scope="row">Titre</th>
+          <td>Point de situation de l’opération REACTIV – octobre 2026</td>
+        </tr><tr>
+            <th scope="row">Date de la première version</th><td>12 novembre 2026</td>
+          </tr>
+          <tr>
+            <th scope="row">Date de la dernière version</th><td>12 novembre 2026</td>
+          </tr><tr>
+          <th scope="row">Source(s)</th>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+    <div class="fr-mb-5w">
+    <p>Une gestion de version détaillée se trouve à la fin de ce document.</p>
+</div>
+</section>
+        <section>
+  <div class="fr-grid-row">
+    <div class="fr-col-12">
+      <div class="publication-content">
+        <p>Face à l’intensification des attaques cybercriminelles liées à des violations de données affectant les services de l’État, le Premier ministre a demandé le 1er septembre 2026 à l’Agence nationale de la sécurité des systèmes d’information (ANSSI) de mettre en place une capacité renforcée de réaction, d’intervention et d’assistance aux services de l’État.  </p>
+<p>Baptisé «<strong>REponse &amp; ACTion Interministérielle face aux Violations de données</strong> » (REACTIV), ce dispositif opérationnel permet de mobiliser immédiatement les compétences et les moyens nécessaires à l’Agence aux côtés des ministères concernés. </p>
+<p>L’opération de cyberdéfense REACTIV consiste ainsi en un basculement immédiat des efforts opérationnels de l’ANSSI pour renforcer l’appui qu’elle fournit aux ministères dans le traitement des compromissions de comptes utilisateurs et dans l’analyse des violations de données. </p>
+<p>Ce renforcement doit permettre de mieux circonscrire les attaques et de lutter plus réactivement contre les exfiltrations de données. Il complète les mesures de la <a href="https://cyber.gouv.fr/nous-connaitre/publications/feuilles-de-route-de-la-securite-numerique-de-letat/feuille-de-route-de-securite-numerique-2026-2027/">Feuille de route des efforts prioritaires en matière de sécurité numérique de l’État 2026-2027</a>, dont le Premier ministre a demandé l’accélération de la mise en œuvre, afin de réhausser significativement et durablement le niveau de sécurité des réseaux ministériels.</p>
+<p>Dans le cadre de cette opération, l’autorité de l’ANSSI est renforcée avec : </p>
+<ul>
+<li>La possibilité pour l’Agence de faire prendre aux ministères, dans des délais contraints, les mesures d'urgence qui s’imposent pour protéger les données des citoyens confiées aux administrations ; </li>
+<li>La mise en place d’une communication technique de crise centralisée par l’ANSSI en cas d’attaque relative à cette menace touchant des services de l’État.</li>
+</ul>
+<p style="border: 1px solid black; padding: 10px;" >
+Le présent document est le deuxième point de situation qui reflète des travaux d’investigation en cours et des incidents qui évoluent. De fait, les éléments et données chiffrées associées sont susceptibles d’évoluer et ne peuvent constituer une vision parfaitement exhaustive, à une date donnée, de la situation opérationnelle relative aux violations de données affectant l’État.</p>
+<p><a href="/uploads/CERTFR-2026-CTI-010.pdf"><span style="display: block; text-align: center; padding: 5px 8px 5px 8px; background-color: #c4322c; width: 340px; height: 60px; margin: 0 auto; color: #ffffff;" data-darkreader-inline-bgcolor="" data-darkreader-inline-color="">Télécharger le rapport : Point de situation de l’opération REACTIV</span></a></p>
+      </div>
+    </div>
+  </div>
+</section>
+        <section class="fr-mt-6w fr-mb-4w">
+  <h2 class="fr-h2">Gestion détaillée du document</h2>
+  <div class="fr-table fr-table--multiline fr-table--no-caption">
+    <div class="fr-table__container">
+      <div class="fr-table__content">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+          <tbody><tr>
+              <td>12 novembre 2026</td>
+              <td>Version initiale</td>
+            </tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+    </article>
+    <section class="fr-py-2w">
+  <div class="fr-container fr-grid-row fr-grid-row--right">
+    <a id="link-11" href="#top" target="_self" class="fr-link fr-icon-arrow-up-fill fr-link--icon-left">Haut de page</a>
+  </div>
+</section>
+  </div>
+</div>
+      </div>
+    </main>
+      <div class="fr-follow" id="follow">
+    <div class="fr-container">
+      <div class="fr-grid-row">
+        <div class="fr-col-12 fr-col-md-8">
+          <div class="fr-follow__newsletter">
+            <div>
+              <h2 class="fr-h5">Accédez au portail authentifié du CERT-FR (ClubSSI)</h2>
+              <p class="fr-text--sm">Se connecter au portail des services numériques du CERT-FR</p>
+            </div>
+            <div>
+                  <a href="https://club.ssi.gouv.fr/ " target="_blank" rel="noopener external" class="fr-btn fr-icon-external-link-line fr-btn--icon-right">Je me connecte</a>
+            </div>
+          </div>
+        </div>
+        <div class="fr-col-12 fr-col-md-4">
+          <div class="fr-follow__social">
+            <h2 class="fr-h5">Suivez-nous sur les réseaux</h2>
+            <ul class="fr-btns-group">
+                <li>
+                  <a title="Suivez-nous sur LinkedIn" href="https://fr.linkedin.com/company/anssi-fr" target="_blank" rel="noopener external" class="fr-btn--linkedin fr-btn">LinkedIn</a>
+                </li>
+                <li>
+                  <a title="Suivez-nous sur X (anciennement Twitter)" href="https://x.com/CERT_FR/" target="_blank" rel="noopener external" class="fr-btn--twitter-x fr-btn">X (anciennement Twitter)</a>
+                </li>
+                <li>
+                  <a title="Suivez-nous sur Mastodon" href="https://social.numerique.gouv.fr/@cert_fr" target="_blank" rel="noopener external me" class="fr-btn--mastodon fr-btn">Mastodon</a>
+                </li>
+                <li>
+                  <a title="Retrouvez-nous sur GitHub" href="https://github.com/ANSSI-FR" target="_blank" rel="noopener external" class="fr-btn--github fr-btn">GitHub</a>
+                </li>
+                <li>
+                  <a title="Flux RSS" href="/flux-rss/"  class="fr-btn--rss fr-btn">RSS</a>
+                </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<footer class="fr-footer" role="contentinfo" id="footer">
+  <div class="fr-container">
+    <div class="fr-footer__body">
+      <div class="fr-footer__brand fr-enlarge-link">
+        <p class="fr-logo"> République <br> Française </p>
+      </div>
+      <div class="fr-footer__content">
+        <p class="fr-footer__content-desc">
+          Le site du CERT-FR est édité par l’Agence nationale de la sécurité des systèmes d’information (ANSSI).
+        </p>
+        <ul class="fr-footer__content-list">
+            <li class="fr-footer__content-item">
+              <a title="info.gouv.fr - nouvelle fenêtre" href="https://www.info.gouv.fr/" target="_blank" rel="noopener external" class="fr-footer__content-link">info.gouv.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a title="service-public.fr - nouvelle fenêtre" href="https://www.service-public.fr/" target="_blank" rel="noopener external" class="fr-footer__content-link">service-public.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a title="legifrance.gouv.fr - nouvelle fenêtre" href="https://www.legifrance.gouv.fr/" target="_blank" rel="noopener external" class="fr-footer__content-link">legifrance.gouv.fr</a>
+            </li>
+            <li class="fr-footer__content-item">
+              <a title="data.gouv.fr - nouvelle fenêtre" href="https://data.gouv.fr/" target="_blank" rel="noopener external" class="fr-footer__content-link">data.gouv.fr</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+    <div class="fr-footer__bottom">
+      <ul class="fr-footer__bottom-list">
+          <li class="fr-footer__bottom-item">
+            <a href="/plan-du-site/"  class="fr-footer__bottom-link">Plan du site</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="/accessibilite/"  class="fr-footer__bottom-link">Accessibilité : partiellement conforme</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="/mentions-legales/"  class="fr-footer__bottom-link">Mentions légales</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="/uploads/20240408_ANSSI_SDO_CGRI.pdf"  class="fr-footer__bottom-link">Conditions générales</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="https://cyber.gouv.fr/" target="_blank" rel="noopener external" class="fr-footer__bottom-link">ANSSI</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="/contact/"  class="fr-footer__bottom-link">Contact</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="https://cyber.gouv.fr/nous-rejoindre" target="_blank" rel="noopener external" class="fr-footer__bottom-link">Recrutement</a>
+          </li>
+          <li class="fr-footer__bottom-item">
+            <a href="/openapi"  class="fr-footer__bottom-link">API</a>
+          </li>
+      </ul>
+      <div class="fr-footer__bottom-copy">
+        <p>Sauf mention explicite de propriété intellectuelle détenue par des tiers, les contenus de ce site sont proposés sous <a href="https://github.com/etalab/licence-ouverte/blob/master/LO.md" target="_blank" rel="noopener external" title="Licence etalab - nouvelle fenêtre">licence etalab-2.0</a></p>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- Modal paramètres d'affichage -->
+<dialog id="footer-display" class="fr-modal" aria-labelledby="footer-display-title">
+  <div class="fr-container fr-container--fluid fr-container-md">
+    <div class="fr-grid-row fr-grid-row--center">
+      <div class="fr-col-12 fr-col-md-6 fr-col-lg-4">
+        <div class="fr-modal__body">
+          <div class="fr-modal__header">
+            <button aria-controls="footer-display" title="Fermer" type="button" class="fr-btn--close fr-btn">Fermer</button>
+          </div>
+          <div class="fr-modal__content">
+            <h2 id="footer-display-title" class="fr-modal__title">Paramètres d'affichage</h2>
+            <div id="fr-display" class="fr-display">
+              <fieldset class="fr-fieldset" id="display-fieldset" aria-labelledby="display-fieldset-legend display-fieldset-messages">
+                <legend class="fr-fieldset__legend--regular fr-fieldset__legend" id="display-fieldset-legend">Choisissez un thème pour personnaliser l'apparence du site.</legend>
+                <div class="fr-fieldset__element">
+                  <div class="fr-radio-group fr-radio-rich">
+                    <input value="light" type="radio" id="fr-radios-theme-light" name="fr-radios-theme">
+                    <label class="fr-label" for="fr-radios-theme-light">Thème clair</label>
+                  </div>
+                </div>
+                <div class="fr-fieldset__element">
+                  <div class="fr-radio-group fr-radio-rich">
+                    <input value="dark" type="radio" id="fr-radios-theme-dark" name="fr-radios-theme">
+                    <label class="fr-label" for="fr-radios-theme-dark">Thème sombre</label>
+                  </div>
+                </div>
+                <div class="fr-fieldset__element">
+                  <div class="fr-radio-group fr-radio-rich">
+                    <input value="system" type="radio" id="fr-radios-theme-system" name="fr-radios-theme">
+                    <label class="fr-label" for="fr-radios-theme-system">Système <span class="fr-hint-text">Utilise les paramètres système</span></label>
+                  </div>
+                </div>
+                <div class="fr-messages-group" id="display-fieldset-messages" aria-live="polite"></div>
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+  </body>
+</html>

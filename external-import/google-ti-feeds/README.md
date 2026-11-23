@@ -160,6 +160,8 @@ Additionally, `Location` and `Identity` (targeted countries, sectors) are extrac
 | `vulnerabilities`     | Vulnerability           |
 | `software_toolkits`   | Tool                    |
 
+The IOC delta packages already embed these relationships, so no extra API call is made to resolve them. `GTI_INDICATOR_SUBENTITIES` selects which ones are sent to OpenCTI. `attack_techniques` is excluded by default because it accounts for most of the relationships of the IOC feed (several techniques per IOC, on most IOCs); add it to `GTI_INDICATOR_SUBENTITIES` to import the Attack-Patterns and their `indicates` relationships.
+
 #### Configurable filters
 
 | Variable                           | Description                                                                      | Default value                      | Example values                                                                                                                                             |
@@ -300,6 +302,7 @@ Unlike the other collections which use the `/collections` search endpoint, the I
 | `GTI_INDICATOR_MIN_SCORE`         | Minimum GTI score an indicator must have to be imported via Delta Sync            | `50`                               | Integer between `0` and `100`, or unset/`100` to disable the filter                                                          |
 | `GTI_INDICATOR_REQUIRE_MALWARE_FAMILY` | Only import indicators associated with at least one Malware Family           | `false`                            | `true` / `false`                                                                                                             |
 | `GTI_INDICATOR_REQUIRE_THREAT_ACTOR`   | Only import indicators associated with at least one Threat Actor             | `false`                            | `true` / `false`                                                                                                             |
+| `GTI_INDICATOR_SUBENTITIES`       | Comma-separated list of sub-entity types to link to each indicator. Does not change API quota usage. An empty value imports the indicators without any relationship. | `["malware_families", "threat_actors", "software_toolkits"]` | `malware_families`, `threat_actors`, `software_toolkits`, `attack_techniques` |
 
 ---
 

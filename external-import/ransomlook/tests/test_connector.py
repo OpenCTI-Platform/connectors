@@ -730,6 +730,8 @@ def test_collect_builds_expected_graph():
             {"id": "empty", "content": ""},
         ]
     )
+    # No dedicated claim detail: the index and group data are imported as is.
+    connector.client.get_post = MagicMock(return_value={})
 
     objects = connector._collect(
         datetime(2026, 1, 1, tzinfo=timezone.utc),
@@ -747,6 +749,7 @@ def test_collect_builds_expected_graph():
         "relationship",
     } <= types
     connector.client.get_group.assert_called_once_with("akira")
+    assert connector.client.get_post.call_count == 2
     assert helper.connector_logger.warning.call_count == 2
 
 
@@ -927,7 +930,7 @@ def test_retry_compaction_marks_claim_cursor_unsafe_for_pending_claim_overflow(s
     assert connector._unsafe_claim_cursor is True
 
 
-def test_deduplicate_rejects_divergent_content_at_one_version():
+def _divergent_identities():
     first = stix2.Identity(
         id="identity--00000000-0000-4000-8000-000000000001",
         name="one",
@@ -942,8 +945,43 @@ def test_deduplicate_rejects_divergent_content_at_one_version():
         created=first.created,
         modified=first.modified,
     )
-    with pytest.raises(ValueError, match="divergent content"):
-        RansomLookConnector._deduplicate([first, second])
+    return first, second
+
+
+def test_deduplicate_keeps_one_divergent_version_without_aborting():
+    first, second = _divergent_identities()
+    other = stix2.Identity(
+        id="identity--00000000-0000-4000-8000-000000000002",
+        name="other",
+        identity_class="organization",
+    )
+    divergences = []
+
+    forward = RansomLookConnector._deduplicate(
+        [first, other, second], lambda kept, dropped: divergences.append(dropped)
+    )
+    backward = RansomLookConnector._deduplicate([second, other, first])
+
+    # The whole cycle is kept, one version per ID, in first-ID order.
+    assert [obj.id for obj in forward] == [first.id, other.id]
+    # The kept version does not depend on the order the API returned them.
+    assert forward[0].serialize() == backward[0].serialize()
+    assert len(divergences) == 1
+    assert divergences[0].serialize() != forward[0].serialize()
+
+
+def test_divergent_version_is_logged_with_its_stix_id_and_type():
+    first, second = _divergent_identities()
+    connector = make_connector()
+
+    objects = connector._deduplicate_objects([first, second])
+
+    assert len(objects) == 1
+    connector.helper.connector_logger.warning.assert_called_once()
+    message, context = connector.helper.connector_logger.warning.call_args.args
+    assert "divergent content" in message
+    assert context["id"] == first.id
+    assert context["type"] == "identity"
 
 
 @pytest.mark.parametrize("cursor", [123, "not-a-date", "2026-02-13T00:00:00Z"])
@@ -1893,7 +1931,7 @@ def test_run_schedules_process():
     connector = make_connector()
     connector.run()
     connector.helper.schedule_process.assert_called_once_with(
-        message_callback=connector.process_message,
+        message_callback=connector._scheduled_process,
         duration_period=3600.0,
     )
 

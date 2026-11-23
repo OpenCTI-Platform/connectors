@@ -118,6 +118,84 @@ def find_imports(
     return results
 
 
+def find_sdk_external_import_connector(
+    trees: dict[Path, ast.Module],
+) -> ImportInfo | None:
+    """Return the import of connectors-sdk's ``ExternalImportConnector``, if any.
+
+    ``ExternalImportConnector`` owns the run loop: it schedules runs with
+    ``schedule_process`` and opens and closes each work with ``initiate_work``
+    and ``to_processed`` (``in_error=True`` on failure). A connector built on
+    it delegates all of this to the SDK, so its own code has none of these calls.
+    """
+    return _find_sdk_import(trees, "ExternalImportConnector")
+
+
+def find_sdk_internal_enrichment_connector(
+    trees: dict[Path, ast.Module],
+) -> ImportInfo | None:
+    """Return the import of connectors-sdk's ``InternalEnrichmentConnector``, if any.
+
+    ``InternalEnrichmentConnector`` owns the message handling: it creates the
+    helper with ``playbook_compatible=True``, listens with ``helper.listen()``,
+    checks the scope and the entity TLP (``check_max_tlp`` on the TLP of the
+    entity markings), and sends exactly one bundle per playbook message, with
+    the ``stix_objects`` received, whatever happens. A connector built on it
+    delegates all of this to the SDK, so its own code has none of these patterns.
+
+    The import alone is not enough: a connector that keeps its own message
+    handling may import the class only to call its static helpers
+    (``is_entity_in_scope()``, ``is_entity_tlp_allowed()``). Only an import
+    whose name is instantiated or subclassed in the same file counts.
+    """
+    for sdk_import in _find_sdk_imports(trees, "InternalEnrichmentConnector"):
+        local_name = sdk_import.alias or sdk_import.name
+        if _is_instantiated_or_subclassed(trees[sdk_import.file_path], local_name):
+            return sdk_import
+    return None
+
+
+def _find_sdk_import(trees: dict[Path, ast.Module], name: str) -> ImportInfo | None:
+    """Return the first import of ``name`` from connectors-sdk, if any."""
+    imports = _find_sdk_imports(trees, name)
+    return imports[0] if imports else None
+
+
+def _find_sdk_imports(trees: dict[Path, ast.Module], name: str) -> list[ImportInfo]:
+    """Return every import of ``name`` from connectors-sdk.
+
+    Only imports from ``connectors_sdk`` count: a connector can define its own
+    class with the same name (e.g. a local ``InternalEnrichmentConnector``).
+    """
+    return find_imports(
+        trees,
+        module_pattern=r"^connectors_sdk(\.|$)",
+        name_pattern=rf"^{name}$",
+    )
+
+
+def _is_instantiated_or_subclassed(tree: ast.Module, name: str) -> bool:
+    """Tell whether ``name`` is called or used as a base class in ``tree``.
+
+    Matches ``Name(...)``, ``Name[Settings](...)``, ``class C(Name)`` and
+    ``class C(Name[Settings])``, but not ``Name.static_method(...)``.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            candidates = [node.func]
+        elif isinstance(node, ast.ClassDef):
+            candidates = node.bases
+        else:
+            continue
+        for candidate in candidates:
+            # Unwrap the generic form: Name[Settings]
+            if isinstance(candidate, ast.Subscript):
+                candidate = candidate.value
+            if isinstance(candidate, ast.Name) and candidate.id == name:
+                return True
+    return False
+
+
 @dataclass
 class ClassInfo:
     """Represents a class definition found in source."""
