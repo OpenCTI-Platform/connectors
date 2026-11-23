@@ -1,3 +1,5 @@
 # Install AFTER requirements.txt with --upgrade --no-deps.
 # pycti currently pins setuptools~=82.0.0; override that pin for security fixes.
 setuptools>=84.1.0,<85
+# urllib3 security floor for the version pulled in through pycti/requests.
+urllib3==2.8.0
