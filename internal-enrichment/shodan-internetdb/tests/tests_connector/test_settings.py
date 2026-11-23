@@ -25,6 +25,7 @@ from shodan_internetdb.settings import ConnectorSettings
                 },
                 "shodan": {
                     "ssl_verify": True,
+                    "timeout": 30,
                 },
             },
             id="full_valid_settings_dict",

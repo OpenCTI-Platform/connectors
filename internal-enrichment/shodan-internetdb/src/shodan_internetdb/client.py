@@ -27,16 +27,17 @@ class ShodanResult(BaseModel):
 class ShodanInternetDbClient:
     """Shodan InternetDB client"""
 
-    def __init__(self, verify: bool = True):
+    def __init__(self, verify: bool = True, timeout: int = 30):
         """
         Constructor
         :param verify: Verify SSL connections
+        :param timeout: Request timeout in seconds
         """
         self._base_url = "https://internetdb.shodan.io/"
         self._headers = {"Accept": "application/json"}
         self._session = requests.Session()
         self._verify = verify
-        self._timeout = 30
+        self._timeout = timeout
 
     def query(self, ip: str) -> ShodanResult:
         """Process the IP and return the result

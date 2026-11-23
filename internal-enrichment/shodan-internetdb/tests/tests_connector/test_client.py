@@ -34,3 +34,10 @@ def test_query_sets_timeout(mocker: MockerFixture) -> None:
     with pytest.raises(ShodanInternetDbRateLimitError):
         ShodanInternetDbClient().query("1.2.3.4")
     assert get.call_args.kwargs["timeout"] == 30
+
+
+def test_query_uses_configured_timeout(mocker: MockerFixture) -> None:
+    get = _mock_get(mocker, 429)
+    with pytest.raises(ShodanInternetDbRateLimitError):
+        ShodanInternetDbClient(timeout=5).query("1.2.3.4")
+    assert get.call_args.kwargs["timeout"] == 5
