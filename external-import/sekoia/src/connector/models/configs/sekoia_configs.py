@@ -1,5 +1,6 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
+from connectors_sdk import DatetimeFromIsoString
 from pydantic import (
     Field,
     HttpUrl,
@@ -10,6 +11,8 @@ from pydantic import (
 from src.connector.models.configs import ConfigBaseSettings
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
+
+DEFAULT_START_DATE = "P90D"
 
 
 class _ConfigLoaderSekoia(ConfigBaseSettings):
@@ -27,9 +30,9 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         default="d6092c37-d8d7-45c3-8aff-c4dc26030608",
         description="Allows you to specify the collection to query in order to retrieve or manage indicators of compromise.",
     )
-    start_date: Optional[str] = Field(
-        default=None,
-        description="The date to start consuming data from. May be in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00.",
+    start_date: DatetimeFromIsoString = Field(
+        default=DEFAULT_START_DATE,
+        description="Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P90D'). Default: 90 days ago. Only used on the first run, when no state exists.",
     )
     limit: PositiveInt = Field(
         default=200,
