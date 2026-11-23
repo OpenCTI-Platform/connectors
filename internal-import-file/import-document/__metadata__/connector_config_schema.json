@@ -50,7 +50,7 @@
     },
     "CONNECTOR_TYPE": {
       "default": "INTERNAL_IMPORT_FILE",
-      "description": "The type of the connector. Use `INTERNAL_ANALYSIS` to run the connector in content mapping mode, along with `only_contextual` set to `true`.",
+      "description": "The type of the connector. `INTERNAL_ANALYSIS` runs the connector in content mapping mode. Ignored when `IMPORT_DOCUMENT_MODE` is set, which catalog deployments must use since they cannot set this value.",
       "enum": [
         "INTERNAL_IMPORT_FILE",
         "INTERNAL_ANALYSIS"
@@ -76,6 +76,15 @@
       "default": false,
       "description": "If true, creates an Indicator for each extracted observable.",
       "type": "boolean"
+    },
+    "IMPORT_DOCUMENT_MODE": {
+      "default": null,
+      "description": "`import` registers the connector as a file import connector, which parses uploaded files into entities. `analysis` registers it as an analysis connector, used by 'Ask new mapping' in the Content tab of containers. Deploy one instance per mode to use both. When not set, the mode follows `CONNECTOR_TYPE`.",
+      "enum": [
+        "import",
+        "analysis"
+      ],
+      "type": "string"
     }
   },
   "required": [

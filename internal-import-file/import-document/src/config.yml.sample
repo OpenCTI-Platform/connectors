@@ -12,3 +12,4 @@ connector:
 
 # import_document:
 #   create_indicator: false
+#   mode: 'import' # Set to 'analysis' for the content mapping mode ("Ask new mapping")

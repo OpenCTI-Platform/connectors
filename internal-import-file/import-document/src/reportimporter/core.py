@@ -37,7 +37,11 @@ class ReportImporter:
         base_path = os.path.dirname(os.path.abspath(__file__))
 
         self.config = ConnectorSettings()
-        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        helper_config = self.config.to_helper_config()
+        # pycti reads CONNECTOR_TYPE from the environment before the config dict,
+        # and a catalog deployment always injects it: align it with the mode.
+        os.environ["CONNECTOR_TYPE"] = helper_config["connector"]["type"]
+        self.helper = OpenCTIConnectorHelper(config=helper_config)
         self.create_indicator = self.config.import_document.create_indicator
         self.current_file = None
 
