@@ -188,6 +188,7 @@ def test_settings_should_migrate_deprecated_interval_to_duration_period():
             return handler(
                 {
                     **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {},
                     "eset": {**MINIMAL_VALID_SETTINGS_DICT["eset"], "interval": 30},
                 }
             )
@@ -216,3 +217,20 @@ def test_settings_should_prefer_duration_period_over_deprecated_interval():
         settings = FakeConnectorSettings()
 
     assert settings.connector.duration_period == timedelta(hours=2)
+
+
+def test_settings_should_keep_previous_defaults():
+    """Unset variables must behave as before the migration."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(MINIMAL_VALID_SETTINGS_DICT)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.eset.collections is None
+    assert settings.eset.create_observables is False
+    assert settings.eset.import_apt_reports is True
+    assert settings.eset.api_url == "eti.eset.com"
+    assert settings.connector.duration_period == timedelta(hours=1)
