@@ -11,7 +11,13 @@ from censys_collections.client import Client
 from censys_collections.converter import Converter
 from censys_collections.processor import CollectionsProcessor
 from censys_collections.state import CensysCollectionsState
-from censys_platform import Collection, CollectionStatus, Host, SearchQueryHit
+from censys_platform import (
+    Collection,
+    CollectionPrivacy,
+    CollectionStatus,
+    Host,
+    SearchQueryHit,
+)
 from censys_platform.models import HostAssetWithMatchedServices
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import IPV4Address
@@ -23,6 +29,7 @@ def _make_collection(uid: str = "coll-1", name: str = "My Collection") -> Collec
         name=name,
         query="",
         description="",
+        privacy=CollectionPrivacy.PRIVATE,
         status=CollectionStatus.ACTIVE,
         status_reason=None,
         total_assets=1,

@@ -1931,7 +1931,7 @@ def test_run_schedules_process():
     connector = make_connector()
     connector.run()
     connector.helper.schedule_process.assert_called_once_with(
-        message_callback=connector.process_message,
+        message_callback=connector._scheduled_process,
         duration_period=3600.0,
     )
 
