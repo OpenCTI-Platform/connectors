@@ -8963,10 +8963,120 @@
       "support_version": ">=5.5.4",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/eset",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-eset",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/eset_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "ESET Cyber Threat Intelligence",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "eset"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT1H",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "ESET_API_URL": {
+            "default": "eti.eset.com",
+            "description": "Hostname of the ESET Threat Intelligence TAXII service.",
+            "type": "string"
+          },
+          "ESET_USERNAME": {
+            "description": "ESET Threat Intelligence username.",
+            "type": "string"
+          },
+          "ESET_PASSWORD": {
+            "description": "ESET Threat Intelligence password.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "ESET_COLLECTIONS": {
+            "default": null,
+            "description": "Comma-separated list of ESET TAXII collections to import. When unset (null), no collection is imported and only the APT reports are.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ESET_IMPORT_APT_REPORTS": {
+            "default": true,
+            "description": "Whether to import ESET APT reports.",
+            "type": "boolean"
+          },
+          "ESET_IMPORT_START_DATE": {
+            "default": "P30D",
+            "description": "Start date (ISO 8601) from which data is imported on the first run. Either absolute (e.g. '2022-04-01') or relative (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
+            "type": "string"
+          },
+          "ESET_CREATE_OBSERVABLES": {
+            "default": false,
+            "description": "Whether to create observables from imported indicators.",
+            "type": "boolean"
+          },
+          "ESET_INTERVAL": {
+            "default": null,
+            "deprecated": true,
+            "type": "integer",
+            "description": "Use CONNECTOR_DURATION_PERIOD instead."
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "ESET_USERNAME",
+          "ESET_PASSWORD"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "MITRE ATLAS",
@@ -9090,10 +9200,105 @@
       "support_version": ">=7.260529.0",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ctm360-cyna-feed",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-ctm360-cyna-feed",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/ctm360-cyna-feed_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "CTM360-CYNA",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "ctm360-cyna"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "P1D",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "CTM360_CYNA_API_BASE_URL": {
+            "default": "https://cyna.ctm360.com",
+            "description": "CYNA API base URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CTM360_CYNA_API_KEY": {
+            "description": "API key for CYNA authentication.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CTM360_CYNA_IMPORT_INTERVAL": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_DURATION_PERIOD instead.",
+            "type": "integer"
+          },
+          "CTM360_CYNA_PAGE_SIZE": {
+            "default": 25,
+            "description": "Number of news items per API page (default: 25).",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "CTM360_CYNA_MAX_PAGES": {
+            "default": 100,
+            "description": "Maximum pages to fetch per import cycle (safety limit).",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "CTM360_CYNA_API_KEY"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Cuckoo Feed",
@@ -17512,10 +17717,154 @@
       "support_version": ">=6.9.0",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/beaconbeagle",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-beaconbeagle",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/beaconbeagle_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "BeaconBeagle",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "beaconbeagle"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT2H",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "BEACONBEAGLE_URL": {
+            "default": "https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc",
+            "description": "The BeaconBeagle C2 list URL.",
+            "type": "string"
+          },
+          "BEACONBEAGLE_ADD_URLS": {
+            "default": false,
+            "description": "Save URLs from BeaconBeagle into OpenCTI.",
+            "type": "boolean"
+          },
+          "BEACONBEAGLE_ADD_USERAGENT": {
+            "default": false,
+            "description": "Save User-Agent strings as observables.",
+            "type": "boolean"
+          },
+          "BEACONBEAGLE_LINK_TOOL": {
+            "default": "",
+            "description": "Tool name (e.g. 'CobaltStrike') to link observables to. Leave empty to skip the link.",
+            "type": "string"
+          },
+          "BEACONBEAGLE_LINK_AP": {
+            "default": "",
+            "description": "Attack-pattern reference. Either a plain name or '<MITRE_ID> <name>' (e.g. 'T1071 Standard Application Layer Protocol'). Leave empty to skip.",
+            "type": "string"
+          },
+          "BEACONBEAGLE_LINK_COUNTRY": {
+            "default": false,
+            "description": "Create a Country location for each C2 IP and link it.",
+            "type": "boolean"
+          },
+          "BEACONBEAGLE_LINK_BGPAS": {
+            "default": false,
+            "description": "Create an Autonomous-System observable for each C2 IP and link it.",
+            "type": "boolean"
+          },
+          "BEACONBEAGLE_SEARCH_BGPAS": {
+            "default": false,
+            "description": "Fall back to 'whois -h bgp.tools' when the BeaconBeagle payload is missing the AS / country fields. Generates outbound traffic to bgp.tools.",
+            "type": "boolean"
+          },
+          "BEACONBEAGLE_LINK_WATERMARK_TXT": {
+            "default": "",
+            "description": "Suffix appended to the Text observable that tracks CobaltStrike licence watermarks. Leave empty to disable.",
+            "type": "string"
+          },
+          "BEACONBEAGLE_LINKS_DURATION": {
+            "default": 24,
+            "description": "Duration in hours used as the indicator valid_from-valid_until window when BeaconBeagle does not provide a lasttime for a C2 entry.",
+            "type": "integer"
+          },
+          "BEACONBEAGLE_INTERVAL": {
+            "default": null,
+            "deprecated": true,
+            "type": "integer",
+            "description": "Use CONNECTOR_DURATION_PERIOD instead."
+          },
+          "BEACONBEAGLE_MARKING": {
+            "default": "TLP:GREEN",
+            "description": "Marking definition applied on every produced object.",
+            "enum": [
+              "TLP:CLEAR",
+              "TLP:WHITE",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:AMBER+STRICT",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "BEACONBEAGLE_MARKING_DEFINITION": {
+            "default": null,
+            "deprecated": true,
+            "type": "string",
+            "description": "Use BEACONBEAGLE_MARKING instead."
+          },
+          "BEACONBEAGLE_LINK_WATERMARK": {
+            "default": null,
+            "deprecated": true,
+            "type": "string",
+            "description": "Use BEACONBEAGLE_LINK_WATERMARK_TXT instead."
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Spycloud",
@@ -24011,10 +24360,129 @@
       "support_version": ">=7.260604.0",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ctm360-cyberblindspot-feed",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-ctm360-cyberblindspot-feed",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/ctm360-cyberblindspot-feed_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "CTM360-CyberBlindSpot",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "CTM360-CyberBlindSpot"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "P1D",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "CTM360_CBS_API_BASE_URL": {
+            "default": "https://cbs.ctm360.com",
+            "description": "CyberBlindSpot API base URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CTM360_CBS_API_KEY": {
+            "description": "API key for CyberBlindSpot authentication.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CTM360_CBS_IMPORT_INTERVAL": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_DURATION_PERIOD instead.",
+            "type": "integer"
+          },
+          "CTM360_CBS_IMPORT_INCIDENTS": {
+            "default": true,
+            "description": "Enable importing incidents.",
+            "type": "boolean"
+          },
+          "CTM360_CBS_IMPORT_MALWARE_LOGS": {
+            "default": true,
+            "description": "Enable importing malware logs.",
+            "type": "boolean"
+          },
+          "CTM360_CBS_IMPORT_BREACHED_CREDENTIALS": {
+            "default": true,
+            "description": "Enable importing breached credentials.",
+            "type": "boolean"
+          },
+          "CTM360_CBS_IMPORT_CARD_LEAKS": {
+            "default": true,
+            "description": "Enable importing card leaks.",
+            "type": "boolean"
+          },
+          "CTM360_CBS_IMPORT_DOMAIN_PROTECTION": {
+            "default": true,
+            "description": "Enable importing domain protection findings.",
+            "type": "boolean"
+          },
+          "CTM360_CBS_STATUS_POLL_INTERVAL": {
+            "default": 3600,
+            "description": "Interval in seconds between status polling cycles (default: 1h).",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "CTM360_CBS_ENABLE_STATUS_TRACKING": {
+            "default": true,
+            "description": "Enable background polling for incident status changes.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "CTM360_CBS_API_KEY"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Ransomware.live",
