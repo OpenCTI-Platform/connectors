@@ -126,7 +126,10 @@ class OrchestratorReport(BaseOrchestrator):
                     # Convert attack technique IDs to proper model format for conversion
                     if attack_technique_ids:
                         attack_technique_data = GTIAttackTechniqueIDData.from_id_list(
-                            attack_technique_ids
+                            attack_technique_ids,
+                            names=self._extract_attack_technique_names(
+                                attack_technique_entities
+                            ),
                         )
                         subentities_detailed["attack_techniques"] = [
                             attack_technique_data

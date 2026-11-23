@@ -38,7 +38,10 @@ def mock_tlp_marking():
 @pytest.fixture
 def attack_technique_ids() -> GTIAttackTechniqueIDData:
     """Attack technique ID data with two technique IDs."""
-    return GTIAttackTechniqueIDData.from_id_list(["T1055", "T1078"])
+    return GTIAttackTechniqueIDData.from_id_list(
+        ["T1055", "T1078"],
+        names={"T1055": "Process Injection", "T1078": "Valid Accounts"},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +105,9 @@ def test_single_attack_pattern_has_no_description(
 ):
     """A single minimal AttackPattern from a technique ID must have description=None."""
     # GIVEN
-    ids_data = GTIAttackTechniqueIDData.from_id_list(["T1059"])
+    ids_data = GTIAttackTechniqueIDData.from_id_list(
+        ["T1059"], names={"T1059": "Command and Scripting Interpreter"}
+    )
     mapper = _given_attack_technique_ids_mapper(
         ids_data,
         mock_organization,

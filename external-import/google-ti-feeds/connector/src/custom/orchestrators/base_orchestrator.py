@@ -39,6 +39,45 @@ class BaseOrchestrator:
 
         self.client_api = ClientAPI(config, logger)
 
+    def _extract_attack_technique_names(
+        self, attack_technique_entities: list[Any]
+    ) -> dict[str, str]:
+        """Map attack technique IDs to their names.
+
+        Only entities with an ID and a non-empty ``attributes.name`` string are kept.
+        The name is required downstream: the attack pattern ID depends on the MITRE
+        ID alone, so a technique named after its own ID would overwrite the real
+        MITRE technique name. A technique without a name is skipped by the mapper.
+
+        Args:
+            attack_technique_entities: GTI attack technique entities.
+
+        Returns:
+            dictionary of attack technique ID to technique name.
+
+        """
+        names: dict[str, str] = {}
+        missing_name_count = 0
+        for attack_technique in attack_technique_entities:
+            technique_id = getattr(attack_technique, "id", None)
+            if not technique_id:
+                continue
+            name = getattr(getattr(attack_technique, "attributes", None), "name", None)
+            if isinstance(name, str) and name.strip():
+                names[technique_id] = name
+            else:
+                missing_name_count += 1
+
+        if missing_name_count:
+            self.logger.warning(
+                "Skipping attack techniques without a name",
+                {
+                    "prefix": LOG_PREFIX,
+                    "attack_technique_without_name_count": missing_name_count,
+                },
+            )
+        return names
+
     def _log_relationships_summary(
         self,
         subentities_ids: dict[str, Any],
