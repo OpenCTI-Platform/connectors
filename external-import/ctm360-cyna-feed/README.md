@@ -139,6 +139,17 @@ All variables are required unless a default is listed.
 | `CTM360_CYNA_PAGE_SIZE`     | Number of news items fetched per API page.                              | `25`                         |
 | `CTM360_CYNA_MAX_PAGES`     | Maximum pages to fetch per import cycle (safety cap).                   | `100`                        |
 
+### Upgrade note
+
+`CONNECTOR_DURATION_PERIOD` was previously required but ignored: the loop used
+`CTM360_CYNA_IMPORT_INTERVAL`. It now drives the loop and takes precedence over
+`CTM360_CYNA_IMPORT_INTERVAL`. The provided samples set `CONNECTOR_DURATION_PERIOD`
+to `PT24H`, so if you tuned the interval and kept that value, the connector goes
+back to one import per day.
+
+Move your value to `CONNECTOR_DURATION_PERIOD` (for example `PT1H` instead of
+`CTM360_CYNA_IMPORT_INTERVAL=3600`) and remove `CTM360_CYNA_IMPORT_INTERVAL`.
+
 ---
 
 ## Usage
