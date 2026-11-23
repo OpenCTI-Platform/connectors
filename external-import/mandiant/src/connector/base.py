@@ -5,6 +5,7 @@ import time
 from datetime import timedelta
 from typing import Any
 
+from deprecation_notice import log_deprecation
 from pycti import OpenCTIConnectorHelper
 
 from .api import OFFSET_PAGINATION, MandiantAPI
@@ -371,6 +372,7 @@ class Mandiant:
             ) from err
 
     def process_message(self):
+        log_deprecation(self.helper.connector_logger)
         self._init_state()
         for collection in self.mandiant_collections:
             try:
@@ -525,6 +527,7 @@ class Mandiant:
                 continue
 
     def run(self):
+        log_deprecation(self.helper.connector_logger)
         self.helper.schedule_process(
             message_callback=self.process_message,
             duration_period=self.duration_period.total_seconds(),

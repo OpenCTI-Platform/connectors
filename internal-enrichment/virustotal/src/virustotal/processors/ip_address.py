@@ -3,6 +3,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from virustotal.client import VirusTotalQuotaExceededError
 from virustotal.models.configs.virustotal_configs import resolve_since_floor
 from virustotal.processors.entity import EntityProcessor
 
@@ -134,7 +135,10 @@ class IPProcessor(EntityProcessor):
             if pages > 0 and delay:
                 time.sleep(delay)
 
-            page = self.client.get_ip_resolutions_page(ip, cursor, limit)
+            try:
+                page = self.client.get_ip_resolutions_page(ip, cursor, limit)
+            except VirusTotalQuotaExceededError as err:
+                page = {"error": {"code": "QuotaExceededError", "message": str(err)}}
             if not page or "error" in page or "data" not in page:
                 error = page.get("error") if isinstance(page, dict) else None
                 self.helper.connector_logger.warning(

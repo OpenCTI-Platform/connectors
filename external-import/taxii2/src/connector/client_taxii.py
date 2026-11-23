@@ -190,6 +190,16 @@ class Taxii2:
                     # Check manifest size
                     if "objects" in manifest and len(manifest["objects"]) > 0:
                         date_added = manifest["objects"][0]["date_added"]
+                        # Some TAXII 2.0 servers treat `added_after` as inclusive.
+                        # When a batch of objects shares an identical date_added, the
+                        # filter stops advancing and the returned page is never empty,
+                        # so this loop never terminates. Break when no progress is made.
+                        if date_added == self.filters.get("added_after"):
+                            self.helper.log_info(
+                                f"added_after did not advance past {date_added}; "
+                                "end of collection reached. Stopping pagination."
+                            )
+                            break
                         self.filters["added_after"] = date_added
                         # Get the next set of objects
                         response = self.get_objects(collection)

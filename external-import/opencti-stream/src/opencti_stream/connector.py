@@ -1,9 +1,13 @@
+import base64
 import json
 import sys
 from datetime import datetime, timezone
 
 from opencti_stream.settings import ConnectorSettings
+from pycti import OpenCTIApiClient
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+
+STORAGE_URI_PREFIX = "/storage/get/"
 
 
 class OpenCTIStream:
@@ -18,8 +22,15 @@ class OpenCTIStream:
     - The originating user (`origin.user_id` of each stream event) is propagated as
       the bundle's `applicant_id`, used by workers in queue mode and by `diode-import`
       via `DIODE_IMPORT_APPLICANT_MAPPINGS` in directory / S3 modes.
-    - The forwarded objects are NOT mutated. In particular, `created_by_ref` is left
-      untouched so the original source attribution carries over to the target instance.
+    - The forwarded objects are NOT mutated, except for the optional file contents
+      (see below). In particular, `created_by_ref` is left untouched so the original
+      source attribution carries over to the target instance.
+
+    File contents:
+    - Stream events only reference the files attached to an object (name, MIME type
+      and a `/storage/get/...` URI). When `stream.include_files` is enabled, each file
+      is downloaded from the source OpenCTI and embedded base64-encoded in its `data`
+      field, which the target instance uploads when it ingests the bundle.
 
     Runtime model:
     - The SSE consumer is a long-lived background thread started by
@@ -58,6 +69,57 @@ class OpenCTIStream:
             return configured.get_secret_value()
         return self.helper.opencti_token
 
+    def _download_file(self, uri: str) -> str | None:
+        """Download one file from the source OpenCTI and return it base64-encoded.
+
+        The source OpenCTI is the one the stream is read from, so the request is
+        authenticated with the live stream token rather than the connector token.
+        Returns `None` when the file cannot be downloaded.
+        """
+        api = self.helper.api
+        try:
+            response = api.session.get(
+                self._live_stream_url() + uri,
+                headers={"Authorization": f"Bearer {self._live_stream_token()}"},
+                verify=api.ssl_verify,
+                cert=api.cert,
+                proxies=api.proxies,
+                timeout=api.session_requests_timeout,
+            )
+            response.raise_for_status()
+        except Exception as exc:  # pylint: disable=broad-except
+            self.helper.connector_logger.warning(
+                "Failed to download file from the source OpenCTI",
+                {"uri": uri, "error": str(exc)},
+            )
+            return None
+        return base64.b64encode(response.content).decode("utf-8")
+
+    def _include_files(self, stix_object: dict) -> None:
+        """Embed the content of the files attached to `stix_object`, in place.
+
+        Files that already carry `data`, or whose URI does not point to the OpenCTI
+        storage, are left unchanged. A file that cannot be downloaded is forwarded
+        without `data`, as it would be with the option disabled, so one failing
+        file never blocks the event.
+        """
+        files = OpenCTIApiClient.get_attribute_in_extension("files", stix_object)
+        if not isinstance(files, list):
+            return
+        for file in files:
+            if not isinstance(file, dict) or file.get("data"):
+                continue
+            uri = file.get("uri")
+            if not isinstance(uri, str) or not uri.startswith(STORAGE_URI_PREFIX):
+                self.helper.connector_logger.warning(
+                    "Skipping file without an OpenCTI storage URI",
+                    {"stix_id": stix_object.get("id"), "file_name": file.get("name")},
+                )
+                continue
+            data = self._download_file(uri)
+            if data is not None:
+                file["data"] = data
+
     def _on_event(self, msg) -> None:
         """SSE callback: forward one stream event as a one-object STIX bundle."""
         if msg.event not in ("create", "update"):
@@ -74,6 +136,9 @@ class OpenCTIStream:
         stix_object = payload.get("data")
         if not isinstance(stix_object, dict):
             return
+
+        if self.config.stream.include_files:
+            self._include_files(stix_object)
 
         # Carry the originating user as the bundle applicant. Persisted into the bundle
         # in directory/S3 mode (used by `diode-import` for applicant remapping via

@@ -3,11 +3,14 @@
 import hashlib
 import json
 import time
-from collections.abc import Iterator
+from collections import Counter
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from heapq import nsmallest
+from itertools import islice
+from typing import Any, Literal
 
 import stix2
 from connector.api_client import (
@@ -15,11 +18,18 @@ from connector.api_client import (
     RansomLookAPIClient,
     RansomLookAPIError,
     RansomLookCapabilityUnavailable,
+    RansomLookCooldownPersistenceError,
     RansomLookCycleBudgetExhausted,
+    RansomLookSourceDeferred,
+    RansomLookTransportError,
 )
 from connector.converter import RansomLookConverter
 from connector.evidence import EvidenceBudget, EvidenceDecoder, EvidencePayload
 from connector.settings import ConnectorSettings
+from connectors_sdk.exceptions.connector_errors import (
+    ProviderApiConnectionError,
+    ProviderApiTimeoutError,
+)
 from pycti import OpenCTIConnectorHelper
 
 
@@ -46,6 +56,7 @@ class CollectionCycle:
     resolved_deferred_keys: set[str] = field(default_factory=set)
     route_registry_updates: dict[str, dict[str, Any]] = field(default_factory=dict)
     deferred_window_metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
+    claim_fingerprints: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -69,6 +80,13 @@ class RansomLookConnector:
     STATE_VERSION = 4
     REVISION_LEDGER_MAX_ENTRIES = 100_000
     ROUTE_REGISTRY_MAX_ENTRIES = 20_000
+    FETCH_CACHE_MAX_ENTRIES = 10_000
+    NOTE_DETAIL_CACHE_MAX_ENTRIES = 1_000
+    POST_DETAIL_CACHE_MAX_BYTES = 8 * 1024 * 1024
+    FETCH_CACHE_FUTURE_SKEW = timedelta(minutes=5)
+    SHA256_HEX_LENGTH = 64
+    CLAIM_REFRESH = timedelta(hours=6)
+    PROFILE_REFRESH = timedelta(hours=24)
 
     def __init__(
         self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
@@ -103,6 +121,121 @@ class RansomLookConnector:
         self._reset_evidence_budget()
         self.metrics = RunMetrics()
         self._unsafe_claim_cursor = False
+        self._fetch_cache: dict[str, Any] = {}
+        self._run_cache_namespace: str | None = None
+
+    def _cache_namespace(self) -> str:
+        """Bind disposable receipts to the source, credentials, and output policy."""
+        policy = self.config.ransomlook.model_dump(mode="json", exclude={"api_key"})
+        digest = hashlib.sha256(json.dumps(policy, sort_keys=True).encode())
+        api_key = self.config.ransomlook.api_key
+        if api_key is not None and api_key.get_secret_value():
+            digest.update(b"\0api-key\0")
+            digest.update(api_key.get_secret_value().encode())
+        return digest.hexdigest()
+
+    def _load_fetch_cache(self, raw: Any) -> dict[str, Any]:
+        """Read bounded, content-free receipts; invalid state only causes replay."""
+        namespace = self._run_cache_namespace or self._cache_namespace()
+        empty = {"namespace": namespace, "claims": {}, "profiles": {}}
+        if not isinstance(raw, dict) or raw.get("namespace") != empty["namespace"]:
+            return empty
+        now = datetime.now(timezone.utc)
+        for family in ("claims", "profiles"):
+            records = raw.get(family)
+            if not isinstance(records, dict):
+                continue
+            # Oversized state is treated as a cache miss beyond this bound;
+            # inspecting every entry to find the newest would be unbounded.
+            for key, value in islice(records.items(), self.FETCH_CACHE_MAX_ENTRIES):
+                if (
+                    not isinstance(key, str)
+                    or len(key) != self.SHA256_HEX_LENGTH
+                    or not isinstance(value, dict)
+                ):
+                    continue
+                fingerprint = value.get("fingerprint")
+                if family == "claims" and (
+                    not isinstance(fingerprint, str)
+                    or len(fingerprint) != self.SHA256_HEX_LENGTH
+                ):
+                    continue
+                try:
+                    saved = self.converter.parse_timestamp(value.get("at"))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if saved > now + self.FETCH_CACHE_FUTURE_SKEW:
+                    continue
+                empty[family][key] = {
+                    "at": saved.isoformat(timespec="microseconds"),
+                    **({"fingerprint": fingerprint} if family == "claims" else {}),
+                }
+        return empty
+
+    def _cache_fresh(self, record: Any, lifetime: timedelta) -> bool:
+        if not isinstance(record, dict):
+            return False
+        try:
+            age = datetime.now(timezone.utc) - self.converter.parse_timestamp(
+                record.get("at")
+            )
+        except (TypeError, ValueError, OverflowError):
+            return False
+        return -self.FETCH_CACHE_FUTURE_SKEW <= age < lifetime
+
+    def _save_fetch_cache(
+        self, family: Literal["claims", "profiles"], entries: dict[str, dict[str, str]]
+    ) -> None:
+        """Stage delivered receipts in the working state initialized for this run."""
+        if family not in ("claims", "profiles"):
+            raise ValueError("Unknown RansomLook fetch-cache family")
+        if getattr(self, "_working_state", None) is None:
+            raise RuntimeError("RansomLook working state is not initialized")
+        namespace = self._run_cache_namespace or self._cache_namespace()
+        cache = (
+            dict(self._fetch_cache)
+            if self._fetch_cache.get("namespace") == namespace
+            else {"namespace": namespace}
+        )
+        cache.setdefault("claims", {})
+        cache.setdefault("profiles", {})
+        cache[family] = dict(cache[family])
+        for key, value in entries.items():
+            if (
+                not isinstance(key, str)
+                or len(key) != self.SHA256_HEX_LENGTH
+                or not isinstance(value, dict)
+            ):
+                continue
+            fingerprint = value.get("fingerprint")
+            if family == "claims" and (
+                not isinstance(fingerprint, str)
+                or len(fingerprint) != self.SHA256_HEX_LENGTH
+            ):
+                continue
+            try:
+                saved = self.converter.parse_timestamp(value.get("at"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            cache[family][key] = {
+                "at": saved.isoformat(timespec="microseconds"),
+                **({"fingerprint": fingerprint} if family == "claims" else {}),
+            }
+        excess = len(cache[family]) - self.FETCH_CACHE_MAX_ENTRIES
+        if excess > 0:
+            # Scan on overflow to keep each profile checkpoint within the bound.
+            # For equal timestamps, evict later-inserted entries first.
+            evictions = nsmallest(
+                excess,
+                enumerate(cache[family].items()),
+                key=lambda item: (item[1][1]["at"], -item[0]),
+            )
+            for _, (key, _) in evictions:
+                del cache[family][key]
+        self._fetch_cache = cache
+        # Later updates replace the family rather than mutating it. _save_state
+        # copies the working state before passing it to the helper.
+        self._working_state["fetch_cache"] = cache
 
     def _reset_evidence_budget(self) -> None:
         """Start a fresh, independently bounded evidence budget for one run."""
@@ -117,13 +250,25 @@ class RansomLookConnector:
             ),
         )
         self._leak_cache: tuple[list[dict[str, Any]], bool] | None = None
+        self._note_details: dict[str, dict[str, Any]] = {}
+        self._note_details_bytes = 0
 
     @staticmethod
-    def _deduplicate(objects: list[Any]) -> list[Any]:
+    def _deduplicate(
+        objects: list[Any],
+        on_divergent: Callable[[Any, Any], None] | None = None,
+    ) -> list[Any]:
         """Deduplicate STIX objects by ID while retaining the latest value.
+
+        Two objects with one ID and one ``modified`` value but different
+        content cannot both be delivered. Instead of aborting the whole cycle,
+        one version is kept deterministically (the greater serialization, so
+        the choice does not depend on the order the API returned them) and
+        ``on_divergent`` is told which object was kept and which was dropped.
 
         Args:
             objects: STIX objects with an ``id`` attribute.
+            on_divergent: Optional callback receiving ``(kept, dropped)``.
 
         Returns:
             Objects in stable first-ID order, with duplicate values updated.
@@ -136,16 +281,43 @@ class RansomLookConnector:
             ):
                 previous_modified = getattr(previous, "modified", None)
                 current_modified = getattr(obj, "modified", None)
-                if (
-                    previous_modified is not None
-                    and previous_modified == current_modified
-                    and previous.serialize() != obj.serialize()
-                ):
-                    raise ValueError(
-                        "RansomLook produced divergent content at one STIX version"
-                    )
+                same_version = previous_modified is not None and (
+                    previous_modified == current_modified
+                )
+                if same_version:
+                    previous_content = previous.serialize(sort_keys=True)
+                    current_content = obj.serialize(sort_keys=True)
+                    if previous_content != current_content:
+                        kept, dropped = (
+                            (obj, previous)
+                            if current_content > previous_content
+                            else (previous, obj)
+                        )
+                        if on_divergent is not None:
+                            on_divergent(kept, dropped)
+                        result[obj.id] = kept
+                        continue
             result[obj.id] = obj
         return list(result.values())
+
+    def _deduplicate_objects(self, objects: list[Any]) -> list[Any]:
+        """Deduplicate STIX objects, logging any divergent version resolved."""
+        return RansomLookConnector._deduplicate(objects, self._log_divergent_version)
+
+    def _log_divergent_version(self, kept: Any, dropped: Any) -> None:
+        """Log a divergent STIX version with the identifiers needed to debug it."""
+        self.helper.connector_logger.warning(
+            "RansomLook produced divergent content at one STIX version; "
+            "keeping one version and continuing the cycle",
+            {
+                "id": kept.id,
+                "type": getattr(kept, "type", None),
+                "modified": str(getattr(kept, "modified", None)),
+                "dropped_sha256": hashlib.sha256(
+                    dropped.serialize(sort_keys=True).encode()
+                ).hexdigest()[:16],
+            },
+        )
 
     def _window(self, now: datetime) -> tuple[datetime, datetime]:
         """Calculate a replay-safe import window.
@@ -204,7 +376,7 @@ class RansomLookConnector:
         objects = list(cycle.claims)
         for enrichment in cycle.enrichments:
             objects.extend(enrichment.objects)
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _collect_cycle(
         self,
@@ -292,13 +464,15 @@ class RansomLookConnector:
             else:
                 successful_ranges.add((retry_start_date, retry_end_date))
 
-        normal_budget = max(0, record_limit - pending_quota - len(posts))
-        batch = self.client.get_posts(start, end, record_budget=normal_budget)
-        if hasattr(batch, "posts") and hasattr(batch, "deferred_windows"):
-            posts.extend(batch.posts)
-            newly_deferred.extend(batch.deferred_windows)
-        else:  # compatibility for isolated adapters and test doubles
-            posts.extend(batch)
+        normal_range = (start.date().isoformat(), end.date().isoformat())
+        if start > end or normal_range not in successful_ranges:
+            normal_budget = max(0, record_limit - pending_quota - len(posts))
+            batch = self.client.get_posts(start, end, record_budget=normal_budget)
+            if hasattr(batch, "posts") and hasattr(batch, "deferred_windows"):
+                posts.extend(batch.posts)
+                newly_deferred.extend(batch.deferred_windows)
+            else:  # compatibility for isolated adapters and test doubles
+                posts.extend(batch)
         unique_deferred = {
             (
                 self._canonical_deferred_date(window.start),
@@ -330,6 +504,8 @@ class RansomLookConnector:
         grouped_posts: dict[
             str, tuple[str, list[tuple[dict[str, Any], str, datetime]]]
         ] = {}
+        claim_fingerprints: dict[str, str] = {}
+        observed_groups: dict[str, str] = {}
         route_records: dict[
             str, dict[str, tuple[dict[str, Any], str, str, datetime]]
         ] = {}
@@ -480,15 +656,51 @@ class RansomLookConnector:
             ),
         ):
             del claim_key
+            state_key = self._claim_state_key_from_post(indexed_post)
+            observed_groups[self.converter.canonical_identity(group_name)] = group_name
+            fingerprint = hashlib.sha256(
+                json.dumps(
+                    {
+                        k: v
+                        for k, v in indexed_post.items()
+                        if not k.startswith("_ransomlook_")
+                    },
+                    sort_keys=True,
+                    default=str,
+                ).encode()
+            ).hexdigest()
+            previous = self._fetch_cache.get("claims", {}).get(state_key, {})
+            if (
+                state_key not in pending_claims
+                # Fetch records that will leave the next date-based window,
+                # even if their freshness period has not expired.
+                and discovered.date()
+                >= (
+                    end - timedelta(days=self.config.ransomlook.replay_window_days)
+                ).date()
+                and previous.get("fingerprint") == fingerprint
+                and self._cache_fresh(previous, self.CLAIM_REFRESH)
+            ):
+                continue
+            claim_fingerprints[state_key] = fingerprint
             self.metrics.accepted_posts += 1
             key = self.converter.canonical_identity(group_name)
             display_name, group_posts = grouped_posts.setdefault(key, (group_name, []))
             group_posts.append((indexed_post, post_title, discovered))
             grouped_posts[key] = (display_name, group_posts)
 
-        encountered = {key: value[0] for key, value in grouped_posts.items()}
-        if self.config.ransomlook.enrich_actor_profiles:
-            for key, name in pending_groups.items():
+        encountered = {
+            key: name
+            for key, name in observed_groups.items()
+            if key in pending_groups
+            or not self._cache_fresh(
+                self._fetch_cache.get("profiles", {}).get(self._claim_state_key(key)),
+                self.PROFILE_REFRESH,
+            )
+        }
+        profile_keys = set(encountered) | set(pending_groups)
+        if self.config.ransomlook.enrich_actor_profiles and profile_keys:
+            for key, name in {**encountered, **pending_groups}.items():
                 grouped_posts.setdefault(key, (name, []))
 
         claims: list[Any] = []
@@ -497,14 +709,14 @@ class RansomLookConnector:
         processed_keys: set[str] = set()
         actor_objects: dict[str, list[Any]] = {}
         actors_complete = True
-        if self.config.ransomlook.enrich_actor_profiles:
+        if self.config.ransomlook.enrich_actor_profiles and profile_keys:
             claim_request_reserve = sum(
                 1 + len(group_posts)
                 for _group_name, group_posts in grouped_posts.values()
                 if group_posts
             )
             actor_objects, actors_complete = self._try_create_named_actor_profiles(
-                {key for key in grouped_posts},
+                profile_keys,
                 request_reserve=claim_request_reserve,
             )
         group_order = sorted(
@@ -543,26 +755,38 @@ class RansomLookConnector:
 
             prepared_posts: list[tuple[dict[str, Any], datetime]] = []
             retry_reasons: dict[str, list[str]] = {}
+            remaining_titles = Counter(title for _, title, _ in group_posts)
+            post_details: dict[str, tuple[dict[str, Any], int]] = {}
+            cached_detail_bytes = 0
+            max_cached_detail_bytes = min(
+                self.client.max_response_bytes, self.POST_DETAIL_CACHE_MAX_BYTES
+            )
             for post_index, (indexed_post, post_title, discovered) in enumerate(
                 group_posts
             ):
+                remaining_titles[post_title] -= 1
                 state_key = self._claim_state_key_from_post(indexed_post)
-                if self.client.remaining_requests <= 0:
+                cached = post_details.get(post_title)
+                if cached is None and self.client.remaining_requests <= 0:
                     self._retain_request_budget_claims(
-                        group_posts[post_index:],
+                        [group_posts[post_index]],
                         incomplete,
                         pending_claims,
                     )
-                    break
+                    continue
                 group_post = full_post_index.get((post_title, discovered), {})
                 # The group history and date index are discovery mechanisms.  The
                 # dedicated post endpoint is the authoritative claim-evidence
                 # carrier and may be the only response containing description,
                 # screen, and source (as in the lockbit5/magna.com.do record).
                 try:
-                    dedicated_post, detail_complete = self._get_post_data(
-                        group_name, post_title
-                    )
+                    if cached is not None:
+                        dedicated_post, _ = cached
+                        detail_complete = True
+                    else:
+                        dedicated_post, detail_complete = self._get_post_data(
+                            group_name, post_title
+                        )
                 except RansomLookCycleBudgetExhausted:
                     self._retain_request_budget_claims(
                         group_posts[post_index:],
@@ -570,6 +794,20 @@ class RansomLookConnector:
                         pending_claims,
                     )
                     break
+                if cached is not None and not remaining_titles[post_title]:
+                    cached_detail_bytes -= post_details.pop(post_title)[1]
+                elif (
+                    cached is None and detail_complete and remaining_titles[post_title]
+                ):
+                    # Only duplicate titles can use this receipt. Bound the
+                    # retained payload, and retry failures instead of caching them.
+                    try:
+                        detail_bytes = len(json.dumps(dedicated_post).encode("utf-8"))
+                    except (TypeError, ValueError, RecursionError):
+                        detail_bytes = max_cached_detail_bytes + 1
+                    if cached_detail_bytes + detail_bytes <= max_cached_detail_bytes:
+                        post_details[post_title] = (dedicated_post, detail_bytes)
+                        cached_detail_bytes += detail_bytes
                 post = {
                     **self._merge_post_records(
                         indexed_post, group_post, dedicated_post
@@ -647,7 +885,10 @@ class RansomLookConnector:
                         pending_claims.get(state_key),
                     )
 
-            if self.config.ransomlook.enrich_actor_profiles:
+            if (
+                self.config.ransomlook.enrich_actor_profiles
+                and group_key in profile_keys
+            ):
                 # Optional profile objects can still be produced when the group
                 # detail endpoint fails. Include the deterministic baseline
                 # Intrusion Set so every enrichment delivery remains a complete
@@ -692,12 +933,18 @@ class RansomLookConnector:
                             )
                             enrichment_objects.extend(wallets)
                             complete = complete and wallets_complete
+                    except (
+                        RansomLookSourceDeferred,
+                        RansomLookCooldownPersistenceError,
+                    ):
+                        # Cooldown and persistence failures must stop the run.
+                        raise
                     except Exception as exc:
                         self.helper.connector_logger.warning(
                             "Unable to convert optional RansomLook enrichment",
                             {
                                 "group_sha256": self._identity_hash(group_name),
-                                "error_type": self._error_kind(exc),
+                                **self._error_details(exc),
                             },
                         )
                         enrichment_objects = [
@@ -728,6 +975,7 @@ class RansomLookConnector:
             resolved_deferred,
             route_updates,
             deferred_metadata,
+            claim_fingerprints,
         )
 
     @staticmethod
@@ -924,6 +1172,13 @@ class RansomLookConnector:
         """Classify failures without logging exception text or embedded URLs."""
         return type(exc).__name__
 
+    @classmethod
+    def _error_details(cls, exc: BaseException) -> dict[str, str]:
+        details = {"error_type": cls._error_kind(exc)}
+        if isinstance(exc, RansomLookAPIError) and exc.reason is not None:
+            details["reason"] = exc.reason
+        return details
+
     def _log_run_metrics(self, outcome: str) -> None:
         """Emit one payload-free operational summary."""
         budget = self.evidence.budget
@@ -977,7 +1232,7 @@ class RansomLookConnector:
         except RansomLookAPIError as exc:
             self.helper.connector_logger.warning(
                 "Unable to enumerate optional RansomLook named actors",
-                {"error_type": self._error_kind(exc)},
+                self._error_details(exc),
             )
             return by_group, False
 
@@ -1027,7 +1282,7 @@ class RansomLookConnector:
                     "Unable to import optional RansomLook named actor",
                     {
                         "actor_sha256": self._identity_hash(actor_name),
-                        "error_type": self._error_kind(exc),
+                        **self._error_details(exc),
                     },
                 )
                 complete = False
@@ -1037,7 +1292,7 @@ class RansomLookConnector:
                     "Skipping malformed optional RansomLook named actor",
                     {
                         "actor_sha256": self._identity_hash(actor_name),
-                        "error_type": self._error_kind(exc),
+                        **self._error_details(exc),
                     },
                 )
         return by_group, complete
@@ -1081,7 +1336,7 @@ class RansomLookConnector:
         result: dict[str, list[Any]] = {}
         for group_key in matched_groups:
             group = self.converter.create_group(related_groups[group_key], {})
-            result[group_key] = self._deduplicate(
+            result[group_key] = self._deduplicate_objects(
                 [
                     *shared,
                     self.converter.create_profile_relationship(
@@ -1096,7 +1351,7 @@ class RansomLookConnector:
             return []
         # Source Identity and marking must precede the objects that reference
         # them when a logical delivery is divided into bounded bundles.
-        return self._deduplicate(
+        return self._deduplicate_objects(
             [self.converter.author, self.converter.marking, *objects]
         )
 
@@ -1113,7 +1368,7 @@ class RansomLookConnector:
                 "group metadata",
                 {
                     "group_sha256": self._identity_hash(group_name),
-                    "error_type": self._error_kind(exc),
+                    **self._error_details(exc),
                 },
             )
             return {}, [], False
@@ -1130,7 +1385,7 @@ class RansomLookConnector:
                 "Unable to enrich RansomLook claim; importing index data",
                 {
                     "identity_sha256": self._identity_hash(group_name, post_title),
-                    "error_type": self._error_kind(exc),
+                    **self._error_details(exc),
                 },
             )
             return {}, False
@@ -1191,7 +1446,7 @@ class RansomLookConnector:
                 "Unable to import optional RansomLook notes",
                 {
                     "group_sha256": self._identity_hash(group_name),
-                    "error_type": self._error_kind(exc),
+                    **self._error_details(exc),
                 },
             )
             return [], False
@@ -1207,7 +1462,30 @@ class RansomLookConnector:
                     continue
                 seen.add(key)
                 try:
-                    detail = {**summary, **self.client.get_note(key)}
+                    note_detail = self._note_details.get(key)
+                    if note_detail is None:
+                        note_detail = self.client.get_note(key)
+                        if len(self._note_details) < self.NOTE_DETAIL_CACHE_MAX_ENTRIES:
+                            try:
+                                size = len(key.encode("utf-8")) + len(
+                                    json.dumps(note_detail, ensure_ascii=True).encode(
+                                        "ascii"
+                                    )
+                                )
+                            except (
+                                TypeError,
+                                ValueError,
+                                RecursionError,
+                                OverflowError,
+                            ):
+                                size = None
+                            if size is not None and (
+                                self._note_details_bytes + size
+                                <= self.client.max_response_bytes
+                            ):
+                                self._note_details[key] = note_detail
+                                self._note_details_bytes += size
+                    detail = {**summary, **note_detail}
                 except RansomLookCycleBudgetExhausted:
                     complete = False
                     break
@@ -1225,7 +1503,7 @@ class RansomLookConnector:
                         "Unable to import optional RansomLook note detail",
                         {
                             "identifier_sha256": self._identity_hash(group_name, key),
-                            "error_type": self._error_kind(exc),
+                            **self._error_details(exc),
                         },
                     )
                     complete = False
@@ -1256,7 +1534,7 @@ class RansomLookConnector:
                 ]
             )
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
-        return self._deduplicate(objects), complete
+        return self._deduplicate_objects(objects), complete
 
     def _try_create_group_wallets(
         self, group_name: str, group_id: str
@@ -1277,7 +1555,7 @@ class RansomLookConnector:
                 "Unable to import optional RansomLook cryptocurrency wallets",
                 {
                     "group_sha256": self._identity_hash(group_name),
-                    "error_type": self._error_kind(exc),
+                    **self._error_details(exc),
                 },
             )
             return [], False
@@ -1303,7 +1581,7 @@ class RansomLookConnector:
                         ),
                     ]
                 )
-        return self._deduplicate(objects), True
+        return self._deduplicate_objects(objects), True
 
     @staticmethod
     def _explicit_relation_values(
@@ -1371,7 +1649,7 @@ class RansomLookConnector:
         except RansomLookAPIError as exc:
             self.helper.connector_logger.warning(
                 "Unable to import optional RansomLook leaks",
-                {"error_type": self._error_kind(exc)},
+                self._error_details(exc),
             )
             self._leak_cache = ([], False)
             return self._leak_cache
@@ -1400,7 +1678,7 @@ class RansomLookConnector:
                         "Unable to import optional RansomLook leak detail",
                         {
                             "identifier_sha256": self._identity_hash(str(leak_id)),
-                            "error_type": self._error_kind(exc),
+                            **self._error_details(exc),
                         },
                     )
                     complete = False
@@ -1441,7 +1719,7 @@ class RansomLookConnector:
                     "Unable to import optional RansomLook torrents",
                     {
                         "group_sha256": self._identity_hash(group_name),
-                        "error_type": self._error_kind(exc),
+                        **self._error_details(exc),
                     },
                 )
                 complete = False
@@ -1586,8 +1864,8 @@ class RansomLookConnector:
             )
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
         return (
-            self._deduplicate(profile),
-            {key: self._deduplicate(value) for key, value in claims.items()},
+            self._deduplicate_objects(profile),
+            {key: self._deduplicate_objects(value) for key, value in claims.items()},
             complete,
         )
 
@@ -1624,7 +1902,7 @@ class RansomLookConnector:
                 "Unable to import optional RansomLook analyses",
                 {
                     "group_sha256": self._identity_hash(group_name),
-                    "error_type": self._error_kind(exc),
+                    **self._error_details(exc),
                 },
             )
             return [], claims, False
@@ -1639,7 +1917,7 @@ class RansomLookConnector:
                     "Skipping malformed RansomLook technical analysis",
                     {
                         "group_sha256": self._identity_hash(group_name),
-                        "error_type": self._error_kind(exc),
+                        **self._error_details(exc),
                     },
                 )
                 complete = False
@@ -1660,8 +1938,8 @@ class RansomLookConnector:
                 profile.extend(converted)
         complete = complete and self.evidence.budget.exhausted == budget_exhaustions
         return (
-            self._deduplicate(profile),
-            {key: self._deduplicate(value) for key, value in claims.items()},
+            self._deduplicate_objects(profile),
+            {key: self._deduplicate_objects(value) for key, value in claims.items()},
             complete,
         )
 
@@ -1756,7 +2034,7 @@ class RansomLookConnector:
                     ),
                 )
             )
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _create_group_infrastructure(
         self, metadata: dict[str, Any], group_id: str, group_name: str | None = None
@@ -1803,7 +2081,7 @@ class RansomLookConnector:
                         self.converter._optional_timestamp(location.get("lastscrape")),
                     )
                 )
-        return self._deduplicate(objects)
+        return self._deduplicate_objects(objects)
 
     def _create_claim_graph(
         self,
@@ -1870,7 +2148,7 @@ class RansomLookConnector:
         else:
             accepted_evidence = []
             evidence_objects = []
-        direct_objects = self._deduplicate(
+        direct_objects = self._deduplicate_objects(
             [*(direct_leak_objects or []), *(direct_analysis_objects or [])]
         )
 
@@ -1879,7 +2157,7 @@ class RansomLookConnector:
             payloads: list[EvidencePayload],
             direct: list[Any],
         ) -> list[Any]:
-            objects = self._deduplicate([*base_objects, *evidence, *direct])
+            objects = self._deduplicate_objects([*base_objects, *evidence, *direct])
             report_refs = [group.id, *(obj.id for obj in objects)]
             return [
                 *objects,
@@ -2396,6 +2674,9 @@ class RansomLookConnector:
         self._working_state = None
         self._unsafe_claim_cursor = False
         outcome = "failed"
+        self.client.begin_run()
+        self.metrics = RunMetrics()
+        self._reset_evidence_budget()
         try:
             start, end = self._window(now)
             self.helper.connector_logger.info(
@@ -2404,6 +2685,12 @@ class RansomLookConnector:
             )
             state = self._load_state()
             self._working_state = deepcopy(state)
+            self._run_cache_namespace = self._cache_namespace()
+            self._fetch_cache = self._load_fetch_cache(state.get("fetch_cache"))
+            self.client.restore_cooldown(state.get("source_cooldown"))
+            self.client.on_cooldown = self._persist_source_cooldown
+            self.client.check_cooldown()
+            self._working_state.pop("source_cooldown", None)
             pending_claims = deepcopy(state["claims"].get("pending_claims", {}))
             deferred_windows = deepcopy(state["claims"].get("deferred_windows", {}))
             route_registry = deepcopy(state["claims"].get("route_registry", {}))
@@ -2447,6 +2734,21 @@ class RansomLookConnector:
             else:
                 message = "No new RansomLook intelligence found"
                 self.helper.connector_logger.info(message)
+
+            completed_claims = (
+                cycle.processed_claim_keys - cycle.incomplete_claims.keys()
+            )
+            self._save_fetch_cache(
+                "claims",
+                {
+                    key: {
+                        "at": now.isoformat(),
+                        "fingerprint": cycle.claim_fingerprints[key],
+                    }
+                    for key in completed_claims
+                    if key in cycle.claim_fingerprints
+                },
+            )
 
             if self.config.ransomlook.enrich_actor_profiles:
                 for key, name in cycle.encountered_groups.items():
@@ -2500,12 +2802,20 @@ class RansomLookConnector:
                         "Unable to deliver optional RansomLook enrichment",
                         {
                             "group_sha256": self._identity_hash(enrichment.name),
-                            "error_type": self._error_kind(exc),
+                            **self._error_details(exc),
                         },
                     )
                 if delivered and enrichment.complete:
                     pending_group_records.pop(enrichment.key, None)
                     ledger = staged_ledger
+                    self._save_fetch_cache(
+                        "profiles",
+                        {
+                            self._claim_state_key(enrichment.key): {
+                                "at": now.isoformat()
+                            }
+                        },
+                    )
                 else:
                     pending_group_records[enrichment.key] = self._group_retry_record(
                         enrichment.name,
@@ -2536,14 +2846,67 @@ class RansomLookConnector:
                     revision_ledger=ledger,
                 )
             outcome = "success"
+        except RansomLookSourceDeferred as exc:
+            outcome = "source-deferred"
+            self.helper.connector_logger.warning(
+                (
+                    "RansomLook request skipped due to active cooldown"
+                    if exc.status_code is None
+                    else "RansomLook source is cooling down"
+                ),
+                meta={
+                    "retry_not_before": (
+                        self.client.retry_not_before.isoformat()
+                        if self.client.retry_not_before is not None
+                        else None
+                    ),
+                    "status_code": exc.status_code,
+                    "endpoint": exc.endpoint,
+                    "retry_source": exc.retry_source,
+                    "request_attempts": self.client.request_attempts,
+                    "cooldown_state": (
+                        "staged" if exc.status_code is not None else "restored"
+                    ),
+                },
+            )
+            if (
+                self.config.connector.duration_period.total_seconds() == 0
+                or self.helper.get_run_and_terminate() is True
+            ):
+                raise
+        except RansomLookTransportError as exc:
+            self.helper.connector_logger.warning(
+                "RansomLook source connection failed", meta=self._error_details(exc)
+            )
+            raise
+        except RansomLookCycleBudgetExhausted as exc:
+            if exc.transport_reason is None:
+                self.helper.connector_logger.error(
+                    "RansomLook import failed", self._error_details(exc)
+                )
+            else:
+                self.helper.connector_logger.warning(
+                    "RansomLook source connection failed",
+                    meta={**self._error_details(exc), "reason": exc.transport_reason},
+                )
+            raise
         except Exception as exc:
             self.helper.connector_logger.error(
-                "RansomLook import failed", {"error_type": self._error_kind(exc)}
+                "RansomLook import failed", self._error_details(exc)
             )
             raise
         finally:
             self._log_run_metrics(outcome)
             self._working_state = None
+            self._run_cache_namespace = None
+            self.client.on_cooldown = None
+
+    def _persist_source_cooldown(self, cooldown: dict[str, str]) -> None:
+        """Save a source refusal without advancing claim or profile progress."""
+        state = deepcopy(self._working_state)
+        state["source_cooldown"] = cooldown
+        self.helper.set_state(state)
+        self._working_state = state
 
     def _validated_delivery_bundles(self, objects: list[Any]) -> Iterator[str]:
         """Validate one graph and stream bounded dependency-complete bundles."""
@@ -3019,9 +3382,35 @@ class RansomLookConnector:
         self._working_state = deepcopy(state)
         self.helper.set_state(state)
 
+    def _scheduled_process(self) -> list[dict[str, Any]] | None:
+        """Report transient connection failures and leave the scheduler running."""
+        try:
+            self.process_message()
+        except (RansomLookTransportError, RansomLookCycleBudgetExhausted) as exc:
+            reason = (
+                exc.reason
+                if isinstance(exc, RansomLookTransportError)
+                else exc.transport_reason
+            )
+            if reason is None:
+                raise
+            error = (
+                ProviderApiTimeoutError("RansomLook source request timed out")
+                if reason == "timeout"
+                else ProviderApiConnectionError("RansomLook source connection failed")
+            )
+            return [error.convert_to_pycti_format()]
+        return None
+
     def run(self) -> None:
         """Start the OpenCTI helper's interval scheduler."""
+        one_shot = (
+            self.config.connector.duration_period.total_seconds() == 0
+            or self.helper.get_run_and_terminate() is True
+        )
         self.helper.schedule_process(
-            message_callback=self.process_message,
+            message_callback=(
+                self.process_message if one_shot else self._scheduled_process
+            ),
             duration_period=self.config.connector.duration_period.total_seconds(),
         )

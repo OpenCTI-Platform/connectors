@@ -113,6 +113,7 @@ class ConnectorURLhaus:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+        work_id = None
         try:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
@@ -135,7 +136,9 @@ class ConnectorURLhaus:
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
-            self.state.threat_cache = {}
+            # Clear in place: the converter holds a reference to this dict,
+            # so rebinding it would keep the previous run's cache
+            self.state.threat_cache.clear()
             stix_objects_generator = self._collect_intelligence()
             for stix_objects in stix_objects_generator:
                 if len(stix_objects) == 0:
@@ -177,6 +180,12 @@ class ConnectorURLhaus:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            # Report the failure on the work: the state is not updated, so the
+            # next run retries from the same point.
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, f"Connector run failed: {err}", in_error=True
+                )
 
     def run(self) -> None:
         """

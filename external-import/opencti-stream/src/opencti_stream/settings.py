@@ -87,6 +87,16 @@ class OpenCTIStreamSettings(BaseConfigModel):
         ),
         default=None,
     )
+    include_files: bool = Field(
+        description=(
+            "Whether to embed the content of the files attached to each object "
+            "(base64-encoded) in the forwarded bundle, so that the target instance "
+            "also receives the files. Files are downloaded from the OpenCTI the "
+            "stream is read from. Disabled by default because it increases the "
+            "size of every bundle carrying files."
+        ),
+        default=False,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

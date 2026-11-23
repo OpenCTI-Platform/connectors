@@ -91,9 +91,7 @@ def _then_last_alert_timestamp_equals(
     assert (
         actual is not None
     ), "last_alert_timestamp should not be None after load()"  # noqa: S101
-    assert (
-        actual.isoformat() == expected_iso
-    ), (  # noqa: S101
+    assert actual.isoformat() == expected_iso, (  # noqa: S101
         f"Expected last_alert_timestamp '{expected_iso}', got {actual.isoformat()!r}"
     )
 

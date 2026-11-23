@@ -1,5 +1,6 @@
 """Unit tests for VC306 — connector log level should default to 'error'."""
 
+import pytest
 from connector_linter.models import Severity
 from connector_linter.runner import run_checks
 
@@ -28,6 +29,13 @@ _SDK_INHERITS_DEFAULT = """\
 from connectors_sdk.models.connector import BaseExternalImportConnectorConfig
 
 class ConnectorSettings(BaseExternalImportConnectorConfig):
+    my_api_key: str
+"""
+
+_SDK_TYPED_SETTINGS = """\
+from connectors_sdk import {base}
+
+class ConnectorSettings({base}):
     my_api_key: str
 """
 
@@ -70,6 +78,23 @@ class TestVC306LogLevelDefault:
     def test_passes_sdk_inherits_default(self, connector_src):
         """SDK base configs already default to 'error' — should pass."""
         path = connector_src(("src/main.py", _SDK_INHERITS_DEFAULT))
+        results = run_checks(path, select=["VC306"])
+        assert all(r.severity == Severity.INFO for r in results)
+
+    @pytest.mark.parametrize(
+        "base_name",
+        [
+            "BaseExternalImportConnectorSettings",
+            "BaseInternalEnrichmentConnectorSettings",
+            "BaseStreamConnectorSettings",
+            "BaseInternalExportFileConnectorSettings",
+            "BaseInternalImportFileConnectorSettings",
+        ],
+    )
+    def test_passes_sdk_typed_base_settings(self, connector_src, base_name):
+        """Per-type SDK settings bases already default to 'error' — should pass."""
+        source = _SDK_TYPED_SETTINGS.format(base=base_name)
+        path = connector_src(("src/main.py", source))
         results = run_checks(path, select=["VC306"])
         assert all(r.severity == Severity.INFO for r in results)
 

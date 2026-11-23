@@ -23,3 +23,4 @@ taxii:
   # stix_version: '2.1' # optional (default: '2.1'), version for STIX
   # delete_created_by_ref: true # optional (default: true), strip created_by_ref from objects before posting
   # delete_marking_definition: true # optional (default: true), strip object_marking_refs from objects before posting
+  # identity_id_mapping: 'identity--<uuid>:identity--<uuid>,identity--<uuid>:identity--<uuid>' # optional comma separated original_id:replacement_id identity IDs to be replaced before posting

@@ -15,19 +15,22 @@ ThreatFox connector (STIX-bundle ingestion)
 from __future__ import annotations
 
 import csv
+import http.client
 import io
 import os
 import ssl
 import sys
 import time
 import traceback
+import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import stix2
+from connectors_sdk.exceptions.error import DataRetrievalError
 from pycti import (
     Indicator,
     Malware,
@@ -39,6 +42,13 @@ from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+RETRY_BASE_DELAY = 60  # seconds, first retry after a failed run
+# Bounds 2**n for a long run of failures; the interval caps the delay long before.
+MAX_BACKOFF_EXPONENT = 30
+
+
+class ThreatFoxDownloadError(DataRetrievalError):
+    """Download of the ThreatFox export failed; the message never holds the URL."""
 
 
 # pylint:disable=too-many-instance-attributes
@@ -53,7 +63,13 @@ class ThreatFox:
         self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
         # ThreatFox config
-        self.threatfox_csv_url = self.config.threatfox.csv_url
+        if self.config.threatfox.has_legacy_csv_url:
+            self.helper.connector_logger.warning(
+                "THREATFOX_CSV_URL points to the retired public export and is "
+                "ignored: the export URL is built from THREATFOX_AUTH_KEY. "
+                "Remove THREATFOX_CSV_URL from the configuration."
+            )
+        self.threatfox_csv_url = self.config.threatfox.export_url
         self.threatfox_import_offline = self.config.threatfox.import_offline
         self.threatfox_interval = self.config.threatfox.interval
         self.create_indicators = self.config.threatfox.create_indicators
@@ -98,6 +114,13 @@ class ThreatFox:
     def get_interval(self) -> float:
         """Convert the threatfox_interval (days) to seconds"""
         return float(self.threatfox_interval) * 60 * 60 * 24
+
+    def get_retry_delay(self, failed_attempts: int) -> float:
+        """Seconds to wait after `failed_attempts` consecutive failed runs:
+        1, 2, 4... minutes, capped at the interval."""
+
+        exponent = min(failed_attempts - 1, MAX_BACKOFF_EXPONENT)
+        return min(RETRY_BASE_DELAY * 2**exponent, self.get_interval())
 
     def _resolve_score(self, ioc: "FeedRow") -> int:
         """Resolve the x_opencti_score for an IOC.
@@ -150,16 +173,45 @@ class ThreatFox:
             last_run_dt = datetime.fromtimestamp(last_run_ts, UTC)
             self.helper.log_info(f"Connector last run: {last_run_dt}")
 
+        # After failed runs, wait for the backoff delay instead of the interval,
+        # so a permanent error (revoked key, ...) does not start a new work
+        # every minute.
+        failed_attempts = state.get("failed_attempts", 0)
+        if failed_attempts:
+            wait = self.get_retry_delay(failed_attempts)
+            elapsed = now_ts - state.get("last_failure", 0)
+        else:
+            wait = self.get_interval()
+            elapsed = now_ts - last_run_ts
+
         next_dt = datetime.fromtimestamp(now_ts + self.get_interval(), UTC)
-        if (now_ts - last_run_ts) >= self.get_interval():
+        if elapsed >= wait:
             self.helper.log_info("Connector will run!")
             if self.import_data(state, now_dt, now_ts):
                 self.helper.log_info(
                     f"Last_run stored, next run in: {next_dt - now_dt}"
                 )
+            else:
+                failed_attempts += 1
+                self.helper.set_state(
+                    {
+                        **state,
+                        "failed_attempts": failed_attempts,
+                        "last_failure": now_ts,
+                    }
+                )
+                self.helper.connector_logger.info(
+                    "Run failed, last_run not stored, retrying after a backoff",
+                    meta={
+                        "failed_attempts": failed_attempts,
+                        "next_attempt_in": str(
+                            timedelta(seconds=self.get_retry_delay(failed_attempts))
+                        ),
+                    },
+                )
         else:
             self.helper.log_info(
-                f"Connector will not run, next run in: {next_dt - now_dt}"
+                f"Connector will not run, next run in: {timedelta(seconds=wait - elapsed)}"
             )
 
     # -------------------------- Import pipeline ----------------------- #
@@ -167,8 +219,9 @@ class ThreatFox:
         """Pull and import ThreatFox data via STIX.
 
         Returns True when the run succeeded and state was advanced. On failure
-        (download or bundle send) the work is marked in error and state is left
-        untouched so the next run retries the same window.
+        (download or bundle send) the work is marked in error and `last_run`
+        and `last_processed_entry` are left untouched, so the next attempt
+        (after the retry backoff) covers the same window.
         """
 
         work_id = self.helper.api.work.initiate_work(
@@ -203,7 +256,16 @@ class ThreatFox:
                         f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
                     )
                     continue
-                ioc = FeedRow(row)
+                # A bad row must not fail the run: it would fail again on
+                # every retry for as long as it stays in the export.
+                try:
+                    ioc = FeedRow(row)
+                except (IndexError, ValueError) as err:
+                    self.helper.connector_logger.warning(
+                        "The csv line cannot be parsed and will be ignored",
+                        meta={"line": i, "error": str(err), "data": row},
+                    )
+                    continue
 
                 # skip unwanted IOC types
                 if ALL_TYPES not in self.ioc_to_import:
@@ -250,9 +312,12 @@ class ThreatFox:
                 )
 
         except Exception:  # pylint:disable=broad-exception-caught
+            # Keep `last_run` unchanged so the next loop retries instead of
+            # waiting a full interval, and report the work as failed.
             self.helper.log_error(traceback.format_exc())
-            message = "Connector run failed, state not updated"
-            self.helper.api.work.to_processed(work_id, message, in_error=True)
+            self.helper.api.work.to_processed(
+                work_id, "Connector run failed, see connector logs", in_error=True
+            )
             return False
 
         # Store the current timestamp as a last run
@@ -275,11 +340,36 @@ class ThreatFox:
         """
 
         self.helper.log_info("Fetching Threat Fox dataset")
-        with urllib.request.urlopen(
-            self.threatfox_csv_url,
-            context=ssl.create_default_context(),
-        ) as response:
-            data: bytes = response.read()
+        # The export URL contains the Auth-Key, and some urlopen errors
+        # (InvalidURL, unknown url type) quote it. Re-raise with `from None`
+        # instead of `from err`: chaining would print the original message,
+        # and so the key, in the logged traceback (see "Use `from None`
+        # intentionally, to remove sensitive values" in
+        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
+        try:
+            with urllib.request.urlopen(
+                self.threatfox_csv_url,
+                context=ssl.create_default_context(),
+            ) as response:
+                data: bytes = response.read()
+        except urllib.error.HTTPError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: HTTP {err.code} {err.reason}"
+            ) from None
+        except urllib.error.URLError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: {err.reason}"
+            ) from None
+        except (http.client.InvalidURL, ValueError) as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export URL is invalid ({type(err).__name__}): check "
+                "THREATFOX_AUTH_KEY or THREATFOX_CSV_URL for spaces or "
+                "unexpected characters"
+            ) from None
+        except Exception as err:  # pylint:disable=broad-exception-caught
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed ({type(err).__name__})"
+            ) from None
 
         try:
             zipped_file = io.BytesIO(data)

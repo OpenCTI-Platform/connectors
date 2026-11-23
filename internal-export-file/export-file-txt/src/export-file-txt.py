@@ -6,6 +6,24 @@ from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
 
 
+def extract_values(entities_list: list, key: str) -> list[str]:
+    """Return the non-empty values of `key`, one per exported line.
+
+    Entities whose value is missing, null or blank (for example an
+    observable without `observable_value`) are skipped: they have nothing to
+    write and a None value broke the join of the whole export.
+    """
+    values = []
+    for entity in entities_list:
+        value = entity.get(key)
+        if value is None:
+            continue
+        value = str(value)
+        if value.strip():
+            values.append(value)
+    return values
+
+
 class ExportFileTxt:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -84,11 +102,9 @@ class ExportFileTxt:
 
             if entities_list is not None:
                 if entity_type == "Stix-Cyber-Observable":
-                    observable_values = [
-                        f["observable_value"]
-                        for f in entities_list
-                        if "observable_value" in f
-                    ]
+                    observable_values = extract_values(
+                        entities_list, "observable_value"
+                    )
                     observable_values_bytes = "\n".join(observable_values)
                     self.helper.api.stix_cyber_observable.push_list_export(
                         entity_id,
@@ -99,7 +115,7 @@ class ExportFileTxt:
                         list_filters,
                     )
                 elif entity_type == "Stix-Core-Object":
-                    entities_values = [f["name"] for f in entities_list if "name" in f]
+                    entities_values = extract_values(entities_list, "name")
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_core_object.push_list_export(
                         entity_id,
@@ -112,8 +128,8 @@ class ExportFileTxt:
                 else:
                     if entity_type == "Malware-Analysis":
                         for entity in entities_list:
-                            entity["name"] = entity["result_name"]
-                    entities_values = [f["name"] for f in entities_list if "name" in f]
+                            entity["name"] = entity.get("result_name")
+                    entities_values = extract_values(entities_list, "name")
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_domain_object.push_list_export(
                         entity_id,

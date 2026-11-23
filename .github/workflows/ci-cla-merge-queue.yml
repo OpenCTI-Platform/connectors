@@ -1,0 +1,32 @@
+name: CLA (merge queue)
+
+on:
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
+
+permissions:
+  statuses: write
+
+jobs:
+  cla:
+    name: CLA (merge queue)
+    runs-on: ubuntu-latest
+    steps:
+      # filigran/cla is a required check published by an external GitHub app on
+      # the PR head commit only. The merge queue builds its own temporary
+      # commits (gh-readonly-queue/...), so the app never reports there and the
+      # queue times out waiting for it. The CLA was already verified on the PR:
+      # report success on the merge-group commit.
+      - name: Report CLA status on the merge-group commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh api "repos/${REPO}/statuses/${SHA}" \
+            -f state=success \
+            -f context=filigran/cla \
+            -f description="CLA already verified on PR"

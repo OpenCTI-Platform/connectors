@@ -27,7 +27,7 @@
 
 ## Introduction
 
-The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
+The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation or update of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
 
 SentinelOne supports the following Indicator of Compromise (IOC) types:
 - **File Hashes**: SHA-256, SHA-1, MD5
@@ -188,11 +188,21 @@ Alongside this, the connector is only able to consume basic **single-expression*
 
 Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
 
+### Score
+
+SentinelOne uses the STIX `confidence` field of an indicator as the IOC risk score. The connector therefore sends the OpenCTI score of the indicator in the `confidence` field, instead of the OpenCTI confidence level. When the indicator has no score, its `confidence` is sent unchanged.
+
+### Updates
+
+An update event carries the full indicator, so the connector pushes it to SentinelOne again. SentinelOne updates the existing IOC in place (same IOC, no duplicate), which propagates changes such as a new score, name, description or labels.
+
 ## Known Limitations
 
 - **IOCs not visible in the Management Console**: Threat intelligence data uploaded via the API cannot be configured or viewed through the SentinelOne Management Console and is accessible only via the API. See [SentinelOne's API documentation](https://usea1-partners.sentinelone.net/api-doc/api-details?category=threat-intelligence&api=get-iocs) for details.
 - **Single-expression patterns only**: Compound STIX patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) are not supported and will be silently ignored.
 - **Limited IOC types**: Only file hashes (SHA-256, SHA-1, MD5) and network indicators (URLs, domains, IPv4) are supported.
+- **Validity period not kept**: SentinelOne ignores the indicator `valid_until` and sets the IOC expiration to 30 days after its last push, so each update also extends the expiration.
+- **Deletions are not propagated**: Deleting an indicator in OpenCTI does not remove the IOC from SentinelOne. When an update changes the pattern of an indicator, the IOC built from the previous pattern also remains in SentinelOne.
 
 ## Debugging
 

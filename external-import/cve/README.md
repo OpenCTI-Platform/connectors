@@ -230,6 +230,10 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
 |---------------|-------------------|-----------------|--------------------------------------------|
 | Software      | `has`             | Vulnerability   | Indicates the software is affected by the vulnerability |
 
+#### Affected version ranges
+
+`import_software` is the way the NVD affected ranges of a CVE become Software objects. The NVD record gives its ranges as CPE match criteria (`versionStartIncluding`, `versionEndExcluding`, ...); the connector does not store these bounds on the Vulnerability. With `import_software=true` it asks the NVD CPE Match API to expand each criterion into the concrete CPE names it matches, and writes one Software per matched version with a `has` relationship to the Vulnerability. An asset inventory that records Software by CPE can then be matched against the vulnerability version by version. With `import_software=false` (the default) no affected version reaches OpenCTI from this connector. This connector writes no `remediates` relationship: the NVD record does not name the fixing release; the [CVE List V5 connector](../cvelistv5) writes `Software remediates Vulnerability` when the CVE record names it.
+
 ### Operating Modes
 
 1. **Incremental Updates** (`maintain_data=true`):
@@ -241,13 +245,14 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
    - Imports all CVEs from specified year to present
    - Useful for initial population
    - Requires `history_start_year` (minimum 2019)
+   - Saves its progress in the connector state after each NVD window (at most 120 days) is sent: if the connector or the OpenCTI API restarts, or a window fails, the next run resumes at the first window not sent instead of starting again from 1 January of `history_start_year`. The resumed date is logged at INFO (`Resuming the interrupted CVE history import from ...`). Changing `history_start_year` before the history completes starts the history again. Once the whole history is imported, the progress is replaced by the `last_run` used by the incremental updates; resetting the connector state starts the history from the beginning.
 
 3. **Software Import** (`import_software=true`):
    - Resolves CPEs for each CVE via the NVD CPE Match API
    - Creates Software entities with vendor, product, version, and CPE URI
    - Links each Software to its Vulnerability with a `has` relationship
    - Can be combined with any operating mode (incremental or historical)
-   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one additional NVD API call per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
+   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one or more additional NVD API calls per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
 
 ### Processing Details
 
@@ -255,7 +260,7 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
 - **Rate Limiting**: NVD API has rate limits; connector handles pagination
 - **Date Range**: Maximum 120-day range per API query
 - **API Key Required**: Unauthenticated requests are heavily rate-limited
-- **CPE Match API**: When `import_software=true`, an additional API call per CVE is made to the [NVD CPE Match API](https://nvd.nist.gov/developers/products). These requests use the same NVD API key and are throttled by the connector's shared sliding-window `AsyncRateLimiter`, rather than a fixed 6-second sleep between requests.
+- **CPE Match API**: When `import_software=true`, one or more additional API calls per CVE are made to the [NVD CPE Match API](https://nvd.nist.gov/developers/products). These requests use the same NVD API key and are throttled by the connector's shared sliding-window `AsyncRateLimiter`, rather than a fixed 6-second sleep between requests.
 
 ## Debugging
 

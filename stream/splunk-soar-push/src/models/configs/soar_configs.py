@@ -57,6 +57,15 @@ class _ConfigLoaderSoar(ConfigBaseSettings):
         alias="SPLUNK_SOAR_DEFAULT_STATUS",
         description="Default status for SOAR entities.",
     )
+    low_score_severity: str = Field(
+        default="low",
+        alias="SPLUNK_SOAR_LOW_SCORE_SEVERITY",
+        description=(
+            "SOAR severity of artifacts whose OpenCTI score is below 20. "
+            "Must exist in SOAR, which only ships with high, medium and low "
+            "(set to a custom severity such as informational if you created one)."
+        ),
+    )
 
     # Performance settings
     max_artifacts_per_container: int = Field(

@@ -174,6 +174,33 @@ def test_get_marking_existing_key(connector):
     assert result == TLP_MAPPINGS[1]
 
 
+@pytest.mark.parametrize(
+    "tlp,expected",
+    [
+        (0, "white"),
+        (1, "green"),
+        (2, "amber"),
+        (3, "TLP:AMBER+STRICT"),
+        (4, "red"),
+    ],
+)
+def test_tlp_mappings_follow_thehive_5_2_numbering(tlp, expected):
+    # TheHive 5.2+: 3 = TLP:AMBER+STRICT, 4 = TLP:RED (issue #8273)
+    marking = TLP_MAPPINGS[tlp]
+    if expected.startswith("TLP:"):
+        assert marking["x_opencti_definition"] == expected
+    else:
+        assert marking["definition"]["tlp"] == expected
+
+
+def test_process_markings_amber_strict_and_red(connector):
+    amber_strict = connector.process_markings({"tlp": 3, "pap": 0})[0]
+    red = connector.process_markings({"tlp": 4, "pap": 0})[0]
+    assert amber_strict["x_opencti_definition"] == "TLP:AMBER+STRICT"
+    assert red == TLP_MAPPINGS[4]
+    assert red["definition"]["tlp"] == "red"
+
+
 def test_get_marking_missing_key_falls_back_to_zero(connector):
     result = connector.get_marking(TLP_MAPPINGS, 99)
     assert result == TLP_MAPPINGS[0]

@@ -4,7 +4,6 @@ FROM python:3.12-alpine
 # hadolint ignore=DL3003
 WORKDIR /opt/opencti-connector-sigmahq
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic && \
     apk --no-cache add --virtual .build-deps \
         git build-base libffi-dev libxml2-dev libxslt-dev
 RUN --mount=type=bind,source=./src/requirements.txt,target=requirements.txt \

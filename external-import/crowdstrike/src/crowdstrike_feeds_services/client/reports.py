@@ -21,6 +21,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         sort: str,
         fql_filter: str,
         fields: List[Any],
+        raise_on_error: bool = False,
     ) -> Dict[str, Any]:
         """
         Get info about reports that match provided FQL filters
@@ -43,7 +44,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
                 fields=fields,
             ),
         )
-        self.handle_api_error(response)
+        self.handle_api_error(response, raise_on_error=raise_on_error)
         self.helper.connector_logger.info("Getting combined report entities...")
 
         return cast(Dict[str, Any], response.get("body", {}))

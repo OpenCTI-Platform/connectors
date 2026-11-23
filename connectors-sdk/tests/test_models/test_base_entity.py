@@ -155,3 +155,22 @@ def test_base_entity_cannot_be_compared_with_different_class(implemented_base_en
     # Then it should raise a TypeError
     with pytest.raises(NotImplementedError):
         _ = entity_instance == different_instance
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_base_entity_should_refuse_non_finite_numbers(value):
+    """Test that a BaseObject refuses NaN and infinity, which are not valid JSON."""
+
+    # Given a BaseObject implementation with a float field
+    class FloatEntity(BaseObject):
+        """Entity with a float field, for testing."""
+
+        number: float
+
+        def to_stix2_object(self):
+            """Dummy method to satisfy the interface."""
+
+    # When creating it with a number that is not finite
+    # Then a ValidationError is raised
+    with pytest.raises(ValidationError, match="finite number"):
+        FloatEntity(number=value)

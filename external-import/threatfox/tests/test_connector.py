@@ -11,31 +11,34 @@ from src.models.configs.threatfox_configs import _ConfigLoaderThreatFox
 class TestThreatFoxConfigDefaults:
     """Tests for ThreatFox-specific config default values."""
 
-    def test_default_csv_url(self):
-        cfg = _ConfigLoaderThreatFox()
-        assert cfg.csv_url == "https://threatfox.abuse.ch/export/csv/recent/"
+    def test_default_export_url_built_from_auth_key(self):
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
+        assert cfg.csv_url is None
+        assert cfg.export_url == (
+            "https://threatfox-api.abuse.ch/v2/files/exports/test-auth-key/recent.csv"
+        )
 
     def test_default_import_offline_is_true(self):
-        cfg = _ConfigLoaderThreatFox()
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
         assert cfg.import_offline is True
 
     def test_default_create_indicators_is_true(self):
-        cfg = _ConfigLoaderThreatFox()
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
         assert cfg.create_indicators is True
 
     def test_default_score_is_50(self):
-        cfg = _ConfigLoaderThreatFox()
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
         assert cfg.default_x_opencti_score == 50
 
     def test_default_type_specific_scores_are_none(self):
-        cfg = _ConfigLoaderThreatFox()
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
         assert cfg.x_opencti_score_ip is None
         assert cfg.x_opencti_score_domain is None
         assert cfg.x_opencti_score_url is None
         assert cfg.x_opencti_score_hash is None
 
     def test_default_ioc_to_import(self):
-        cfg = _ConfigLoaderThreatFox()
+        cfg = _ConfigLoaderThreatFox(auth_key="test-auth-key")
         assert cfg.ioc_to_import == "all_types"
 
 
@@ -54,7 +57,11 @@ class TestThreatFoxConfigFromEnv:
     def test_csv_url_from_env(self, minimal_env, monkeypatch):
         monkeypatch.setenv("THREATFOX_CSV_URL", "https://custom.example.com/feed.csv")
         cfg = ConfigLoader()
-        assert cfg.threatfox.csv_url == "https://custom.example.com/feed.csv"
+        assert (
+            cfg.threatfox.csv_url.get_secret_value()
+            == "https://custom.example.com/feed.csv"
+        )
+        assert cfg.threatfox.export_url == "https://custom.example.com/feed.csv"
 
     def test_score_override_from_env(self, minimal_env, monkeypatch):
         monkeypatch.setenv("THREATFOX_DEFAULT_X_OPENCTI_SCORE", "80")

@@ -5,10 +5,10 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 COPY src /opt/opencti-connector-dark-web-informer
 
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev && \
+    apk --no-cache add git build-base libffi-dev && \
     cd /opt/opencti-connector-dark-web-informer && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 WORKDIR /opt/opencti-connector-dark-web-informer
 

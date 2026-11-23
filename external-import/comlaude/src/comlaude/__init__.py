@@ -114,7 +114,6 @@ class ComLaudeAuth(object):
             json=self._creds,
             headers=headers,
             timeout=self._timeout,
-            verify=False,
         )
 
         LOGGER.debug("Token JSON: %s", self._creds)
@@ -200,7 +199,6 @@ class ComLaudeSearch(object):
             headers=headers,
             params=self.parameters,
             timeout=self._timeout,
-            verify=False,
         )
 
         LOGGER.debug("get_events Response: %s", response.text)

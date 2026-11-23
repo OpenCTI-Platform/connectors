@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 from taxii_post_connector import ConnectorSettings
+from taxii_post_connector.settings import parse_identity_id_mapping
 
 
 def _full_valid_settings() -> dict[str, Any]:
@@ -132,6 +133,7 @@ def test_settings_should_use_defaults_when_optional_fields_are_missing():
     assert settings.taxii.stix_version == "2.1"
     assert settings.taxii.delete_created_by_ref is True
     assert settings.taxii.delete_marking_definition is True
+    assert settings.taxii.identity_id_mapping == {}
 
 
 def test_settings_should_hide_secrets():
@@ -302,3 +304,45 @@ def test_settings_should_accept_either_token_or_login_password(taxii_auth):
     assert (settings.taxii.token is not None) or (
         settings.taxii.login is not None and settings.taxii.password is not None
     )
+
+
+ORIGINAL_ID_1 = "identity--00000000-0000-4000-8000-000000000011"
+ORIGINAL_ID_2 = "identity--00000000-0000-4000-8000-000000000012"
+
+REPLACEMENT_ID_1 = "identity--00000000-0000-4000-8000-000000000021"
+REPLACEMENT_ID_2 = "identity--00000000-0000-4000-8000-000000000022"
+
+
+def test_parse_identity_id_mapping():
+    """Test that env var paris (strings) and config.yml dicts give the same mapping"""
+    expected = {ORIGINAL_ID_1: REPLACEMENT_ID_1, ORIGINAL_ID_2: REPLACEMENT_ID_2}
+
+    # string constructed mapping, with white spaces
+    assert (
+        parse_identity_id_mapping(
+            f" {ORIGINAL_ID_1} : {REPLACEMENT_ID_1} , {ORIGINAL_ID_2}:{REPLACEMENT_ID_2} ,"
+        )
+        == expected
+    )
+    # a dictionary (from config.yml) should map to a corresponding dictionary
+    assert parse_identity_id_mapping(expected) == expected
+
+
+@pytest.mark.parametrize(
+    "identity_id_mapping",
+    [
+        pytest.param(f"{ORIGINAL_ID_1}{REPLACEMENT_ID_1}", id="missing_the_colon"),
+        pytest.param(f"{ORIGINAL_ID_1}:", id="empty_replacement_id"),
+        pytest.param(f":{REPLACEMENT_ID_1}", id="empty_original_id"),
+        pytest.param("malware--a:malware--b", id="non_identity_ids"),
+        pytest.param(
+            f"{ORIGINAL_ID_1}:{REPLACEMENT_ID_1},{ORIGINAL_ID_1}:{REPLACEMENT_ID_2}",
+            id="duplicate_original_id",
+        ),
+        pytest.param({ORIGINAL_ID_1: ""}, id="config_yml_empty_replacement_id"),
+    ],
+)
+def test_parse_identity_id_mapping_rejects_invalid_pairs(identity_id_mapping):
+    """Testing Pairs that dont meet the correct criteria of identity IDs in the form original_id:replacement_id"""
+    with pytest.raises(ValueError):
+        parse_identity_id_mapping(identity_id_mapping)

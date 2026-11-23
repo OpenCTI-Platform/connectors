@@ -7,6 +7,7 @@ from typing import Any
 from config import ConfigConnector
 from cyberintegrations.adapters.openCTI_adapter import TIAdapter
 from cyberintegrations.decorators import cache_data
+from deprecation_notice import log_deprecation
 from pycti import OpenCTIConnectorHelper
 from utils import ExternalImportHelper
 
@@ -68,6 +69,7 @@ class ExternalImportConnector:
     def __init__(self):
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(config=self.cfg.to_helper_config())
+        log_deprecation(self.helper.connector_logger)
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
         self.helper.connector_logger.debug(
             "Initialized ConfigConnector, OpenCTIConnectorHelper"
@@ -304,6 +306,7 @@ class ExternalImportConnector:
                 if last_run is None or (timestamp - last_run >= interval_seconds):
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
+                    log_deprecation(self.helper.connector_logger)
                     self.helper.connector_logger.info(
                         f"{self.helper.connect_name} will run!"
                     )

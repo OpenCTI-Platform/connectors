@@ -1,0 +1,43 @@
+{
+  "data": {
+    "entries": [
+      {
+        "ID": 12,
+        "date": "2026-08-21T02:30:00.000000Z",
+        "created_library_entries": [
+          {"id": "bb301bd1-f53f-481f-9425-c60d9a2ca521", "label": "Operation FrostGate: APT28 Targets European Energy Sector"},
+          {"id": "3f34e1e6-fa38-4804-8cb7-7e555415269c", "label": "Deleted report"}
+        ],
+        "created_ta_entries": []
+      },
+      {
+        "ID": 11,
+        "date": "2026-08-20T02:30:00.000000Z",
+        "created_library_entries": [
+          {"id": "dde3cc0c-8158-4e2a-b258-c632546bdbca", "label": ""},
+          {"id": "bb301bd1-f53f-481f-9425-c60d9a2ca521", "label": "Operation FrostGate: APT28 Targets European Energy Sector"}
+        ],
+        "created_ta_entries": [
+          {"id": "9d2b4f1e-6c8a-4e3f-9b7d-2a1c5e8f0d3b", "label": "Synthetic Actor"}
+        ]
+      },
+      {
+        "ID": 9,
+        "date": "2026-08-18T02:30:00.000000Z",
+        "created_library_entries": null,
+        "created_ta_entries": []
+      },
+      {
+        "ID": 7,
+        "date": "2026-08-16T02:30:00.000000Z",
+        "created_library_entries": [
+          {"id": "709bf9ad-7489-460c-b5f6-03d9737d5c77", "label": "UAC-0056 Continues Operations Against Eastern Europe"}
+        ],
+        "created_ta_entries": []
+      }
+    ],
+    "latest": 12
+  },
+  "message": "ORKL library versions",
+  "status": "success"
+}

@@ -1,10 +1,17 @@
 """Pytest fixtures for ThreatFox connector tests."""
 
+import os
+import sys
+
 import pytest
+
+# The connector imports its modules as `src.*`, so its root must be importable.
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 MINIMAL_ENV = {
     "OPENCTI_URL": "http://localhost:8080",
     "OPENCTI_TOKEN": "test-token-00000000-0000-0000-0000-000000000000",
+    "THREATFOX_AUTH_KEY": "test-auth-key",
 }
 
 

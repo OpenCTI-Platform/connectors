@@ -1311,7 +1311,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 host=self.config.reversinglabs_spectra_analyze.url,
                 token=self.config.reversinglabs_spectra_analyze.token,
                 user_agent=self.reversinglabs_spectra_user_agent,
-                verify=False,
+                verify=self.config.reversinglabs_spectra_analyze.ssl_verify,
             )
 
             if opencti_type in FILE_SAMPLE:
