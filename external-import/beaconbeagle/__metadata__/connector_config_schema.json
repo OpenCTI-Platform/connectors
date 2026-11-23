@@ -48,6 +48,12 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
     "BEACONBEAGLE_URL": {
       "default": "https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc",
       "description": "The BeaconBeagle C2 list URL.",
@@ -99,9 +105,10 @@
       "type": "integer"
     },
     "BEACONBEAGLE_INTERVAL": {
-      "default": 2,
-      "description": "Run frequency, in hours.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "BEACONBEAGLE_MARKING": {
       "default": "TLP:GREEN",

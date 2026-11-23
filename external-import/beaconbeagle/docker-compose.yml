@@ -9,6 +9,7 @@ services:
       - CONNECTOR_NAME=BEACONBEAGLE
       - CONNECTOR_SCOPE=beaconbeagle
       - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT2H # ISO-8601 duration between two runs
       # - BEACONBEAGLE_URL=https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc
       - BEACONBEAGLE_ADD_URLS=true
       - BEACONBEAGLE_ADD_USERAGENT=true
@@ -19,6 +20,5 @@ services:
       # - BEACONBEAGLE_SEARCH_BGPAS=false # whois -h bgp.tools fallback; generates outbound traffic to bgp.tools
       # - BEACONBEAGLE_LINK_WATERMARK_TXT= # suffix for the CobaltStrike licence-watermark Text observable; empty disables it
       # - BEACONBEAGLE_LINKS_DURATION=24
-      # - BEACONBEAGLE_INTERVAL=2 # In hours
       # - BEACONBEAGLE_MARKING=TLP:GREEN
     restart: always

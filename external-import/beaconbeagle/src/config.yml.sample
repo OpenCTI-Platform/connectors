@@ -8,6 +8,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'BeaconBeagle'
   scope: 'beaconbeagle'
+  # duration_period: 'PT2H' # ISO-8601 duration between two runs
   log_level: 'info'
 
 
@@ -33,5 +34,4 @@ beaconbeagle:
   # watermarks. Leave empty (or omit) to disable watermark tracking.
   # link_watermark_txt: ''
   # links_duration: 24
-  # interval: 2 # In hours
   # marking: 'TLP:GREEN'

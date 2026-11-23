@@ -12,6 +12,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | string |  | `["beaconbeagle"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT2H"` | The period of time to await between two runs of the connector. |
 | BEACONBEAGLE_URL | `string` |  | string |  | `"https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc"` | The BeaconBeagle C2 list URL. |
 | BEACONBEAGLE_ADD_URLS | `boolean` |  | boolean |  | `false` | Save URLs from BeaconBeagle into OpenCTI. |
 | BEACONBEAGLE_ADD_USERAGENT | `boolean` |  | boolean |  | `false` | Save User-Agent strings as observables. |
@@ -22,7 +23,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | BEACONBEAGLE_SEARCH_BGPAS | `boolean` |  | boolean |  | `false` | Fall back to 'whois -h bgp.tools' when the BeaconBeagle payload is missing the AS / country fields. Generates outbound traffic to bgp.tools. |
 | BEACONBEAGLE_LINK_WATERMARK_TXT | `string` |  | string |  | `""` | Suffix appended to the Text observable that tracks CobaltStrike licence watermarks. Leave empty to disable. |
 | BEACONBEAGLE_LINKS_DURATION | `integer` |  | integer |  | `24` | Duration in hours used as the indicator valid_from-valid_until window when BeaconBeagle does not provide a lasttime for a C2 entry. |
-| BEACONBEAGLE_INTERVAL | `integer` |  | integer |  | `2` | Run frequency, in hours. |
 | BEACONBEAGLE_MARKING | `string` |  | string |  | `"TLP:GREEN"` | Marking definition applied on every produced object (TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED). |
+| BEACONBEAGLE_INTERVAL | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
 | BEACONBEAGLE_MARKING_DEFINITION | `string` |  | string | ⛔️ | `null` | Use BEACONBEAGLE_MARKING instead. |
 | BEACONBEAGLE_LINK_WATERMARK | `string` |  | string | ⛔️ | `null` | Use BEACONBEAGLE_LINK_WATERMARK_TXT instead. |

@@ -166,8 +166,8 @@ class BeaconBeagle:
         # shape loaded this config but never consulted it, so operators
         # changing the value got no effect.
         self.beaconbeagle_links_duration = self.config.beaconbeagle.links_duration
-        #   interval: 2
-        self.beaconbeagle_interval = self.config.beaconbeagle.interval
+        # Run frequency, from ``connector.duration_period``
+        self.beaconbeagle_interval = self.config.connector.duration_period
         #   Marking: TLP:GREEN
         self.beaconbeagle_marking = self.config.beaconbeagle.marking
 
@@ -197,7 +197,7 @@ class BeaconBeagle:
             f"BeaconBeagle links_duration: {self.beaconbeagle_links_duration}."
         )
         self.helper.connector_logger.debug(
-            f"BeaconBeagle interval:       {self.beaconbeagle_interval} hours."
+            f"BeaconBeagle duration_period: {self.beaconbeagle_interval}."
         )
         self.helper.connector_logger.debug(
             f"BeaconBeagle marking:        {self.beaconbeagle_marking}."
@@ -2057,11 +2057,10 @@ class BeaconBeagle:
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-            # NOTE: interval sleeping is handled by the outer ``run()`` loop
-            # in units of hours; sleeping here for ``self.beaconbeagle_interval``
-            # *seconds* would add an extra (and confusingly short) pause every
-            # cycle and would also block ``run-and-terminate`` mode from
-            # exiting promptly.
+            # NOTE: sleeping between runs is handled by the outer ``run()``
+            # loop (``connector.duration_period``); sleeping here would add an
+            # extra pause every cycle and would also block
+            # ``run-and-terminate`` mode from exiting promptly.
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
@@ -2096,7 +2095,7 @@ class BeaconBeagle:
         # (single run, then ping + exit).
         self.helper.schedule_process(
             message_callback=self.process_data,
-            duration_period=self.beaconbeagle_interval * 60 * 60,
+            duration_period=self.beaconbeagle_interval.total_seconds(),
         )
 
 

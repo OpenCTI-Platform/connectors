@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +25,7 @@ FULL_VALID_SETTINGS_DICT = {
         "name": "BeaconBeagle",
         "scope": "beaconbeagle",
         "log_level": "error",
+        "duration_period": "PT4H",
     },
     "beaconbeagle": {
         "url": "https://beaconbeagle.com/api/v1/c2?q=&sort=firsttime",
@@ -36,7 +38,6 @@ FULL_VALID_SETTINGS_DICT = {
         "search_bgpas": False,
         "link_watermark_txt": " [CobaltStrikeLicenceWatermark]",
         "links_duration": 12,
-        "interval": 4,
         "marking": "TLP:AMBER",
     },
 }
@@ -77,7 +78,7 @@ def test_settings_should_apply_defaults_on_minimal_input():
     assert settings.beaconbeagle.link_tool == ""
     assert settings.beaconbeagle.link_watermark_txt == ""
     assert settings.beaconbeagle.links_duration == 24
-    assert settings.beaconbeagle.interval == 2
+    assert settings.connector.duration_period == timedelta(hours=2)
     assert settings.beaconbeagle.marking == "TLP:GREEN"
 
 
@@ -140,3 +141,27 @@ def test_settings_should_migrate_renamed_yaml_keys():
 
     assert settings.beaconbeagle.marking == "TLP:RED"
     assert settings.beaconbeagle.link_watermark_txt == " [wm]"
+
+
+def test_settings_should_migrate_interval_to_duration_period():
+    """The former `interval` key (hours) MUST become `connector.duration_period`."""
+    with pytest.warns(UserWarning, match="Deprecated setting"):
+        settings = _settings_class(
+            {**MINIMAL_VALID_SETTINGS_DICT, "beaconbeagle": {"interval": 6}}
+        )()
+
+    assert settings.connector.duration_period == timedelta(hours=6)
+
+
+def test_settings_should_prefer_duration_period_when_interval_is_also_set():
+    """`connector.duration_period` MUST win over the deprecated `interval`."""
+    with pytest.warns(UserWarning, match="Using only"):
+        settings = _settings_class(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "connector": {"duration_period": "PT12H"},
+                "beaconbeagle": {"interval": 6},
+            }
+        )()
+
+    assert settings.connector.duration_period == timedelta(hours=12)

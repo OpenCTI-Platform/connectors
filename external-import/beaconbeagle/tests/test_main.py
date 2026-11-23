@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -25,6 +26,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "BeaconBeagle",
                     "scope": "beaconbeagle",
                     "log_level": "error",
+                    "duration_period": "PT2H",
                 },
                 "beaconbeagle": {
                     "url": "https://beaconbeagle.com/api/v1/c2?q=&sort=firsttime",
@@ -37,7 +39,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "search_bgpas": False,
                     "link_watermark_txt": "",
                     "links_duration": 24,
-                    "interval": 2,
                     "marking": "TLP:GREEN",
                 },
             }
@@ -113,5 +114,5 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.beaconbeagle_search_bgpas is False
     assert connector.beaconbeagle_link_watermark == ""
     assert connector.beaconbeagle_links_duration == 24
-    assert connector.beaconbeagle_interval == 2
+    assert connector.beaconbeagle_interval == timedelta(hours=2)
     assert connector.beaconbeagle_marking == "TLP:GREEN"

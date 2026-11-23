@@ -8,7 +8,6 @@ from connectors_sdk import (
 )
 from connectors_sdk.settings.deprecations import DeprecatedField
 from pydantic import Field
-from pydantic.json_schema import SkipJsonSchema
 
 
 class BeaconBeagleConnectorConfig(BaseExternalImportConnectorConfig):
@@ -26,11 +25,8 @@ class BeaconBeagleConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=["beaconbeagle"],
     )
-    # Required by the SDK base class but not used here: the connector keeps its
-    # own scheduling, driven by ``beaconbeagle.interval`` (BEACONBEAGLE_INTERVAL).
-    # Defaulted and hidden from the config schema so it is not offered.
-    duration_period: SkipJsonSchema[timedelta] = Field(
-        description="Unused: runs are scheduled by BEACONBEAGLE_INTERVAL (hours).",
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=2),
     )
 
@@ -101,9 +97,12 @@ class BeaconBeagleConfig(BaseConfigModel):
         ),
         default=24,
     )
-    interval: int = Field(
-        description="Run frequency, in hours.",
-        default=2,
+    interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(hours=int(x)),
     )
     marking: str = Field(
         description=(
