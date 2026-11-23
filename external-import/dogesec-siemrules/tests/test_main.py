@@ -37,7 +37,7 @@ class StubConnectorSettings(ConnectorSettings):
 
     @classmethod
     def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-        return handler(STUB_SETTINGS_DICT)
+        return handler(deepcopy(STUB_SETTINGS_DICT))
 
 
 @pytest.fixture(name="mock_opencti_connector_helper")
@@ -107,7 +107,7 @@ def test_connector_stops_without_detection_packs(
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(
                 {
-                    **STUB_SETTINGS_DICT,
+                    **deepcopy(STUB_SETTINGS_DICT),
                     "siemrules": {"api_key": "test-api-key"},
                 }
             )

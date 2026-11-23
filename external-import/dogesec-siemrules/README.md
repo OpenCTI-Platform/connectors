@@ -34,14 +34,12 @@ If you are unfamiliar with how to install OpenCTI Connectors, [you should read t
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md).
 
-They are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). Set `CONNECTOR_ID` to a unique UUIDv4 for each deployment. The options specific to SIEM Rules are as follows:
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-| Docker Env variable         | config variable             | Required | Data Type | Default                      | Description |
-| --------------------------- | --------------------------- | -------- | --------- | ---------------------------- | ----------- |
-| `SIEMRULES_API_KEY`         | `siemrules.api_key`         | TRUE     | string    | n/a                          | The API key used to authenticate to SIEM Rules Web. |
-| `SIEMRULES_DETECTION_PACKS` | `siemrules.detection_packs` | TRUE     | list      | `[]` (the connector stops)   | A list of comma separated Detection Pack IDs (e.g. `'pack_id1,pack2_id,pack3_id'`). You can get a Detection Pack ID in the SIEM Rules web app. At least one Detection Pack ID must be passed. All historical intelligence from reports will be ingested, and new intelligence added to the Detection Pack will be ingested as per the `CONNECTOR_DURATION_PERIOD` setting. You can use any Detection Pack visible to the authenticated team (even if the team you're using to authenticate with does not own it). |
-| `SIEMRULES_BASE_URL`        | `siemrules.base_url`        | FALSE    | url       | `https://api.siemrules.com/` | Should always be `https://api.siemrules.com/`. |
-| `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | FALSE    | duration  | `PT1H`                       | How often this Connector should poll SIEM Rules Web for updates, as an ISO 8601 duration (e.g. `PT12H`). |
+Set `CONNECTOR_ID` to a unique UUIDv4 for each deployment.
+
+`SIEMRULES_DETECTION_PACKS` takes a comma-separated list of Detection Pack IDs (e.g. `pack_id1,pack_id2,pack_id3`). You can get a Detection Pack ID in the SIEM Rules web app. At least one Detection Pack ID must be passed: the connector stops at startup when the list is empty. You can use any Detection Pack visible to the authenticated team, even if that team does not own it. All historical intelligence from reports is ingested, and new intelligence added to a Detection Pack is ingested at the interval set by `CONNECTOR_DURATION_PERIOD`.
 
 `SIEMRULES_INTERVAL_HOURS` (`siemrules.interval_hours`) is deprecated: it still works and is converted to `CONNECTOR_DURATION_PERIOD`, but use `CONNECTOR_DURATION_PERIOD` instead.
 

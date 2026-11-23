@@ -14,6 +14,6 @@ services:
       # - CONNECTOR_DURATION_PERIOD=PT1H
       # Parameters for connector-dogesec-siemrules
       - SIEMRULES_API_KEY=ChangeMe
-      - SIEMRULES_DETECTION_PACKS=ChangeMe # comma-separated Detection Pack IDs
+      - SIEMRULES_DETECTION_PACKS= # comma-separated Detection Pack IDs
       # - SIEMRULES_BASE_URL=https://api.siemrules.com/
     restart: always

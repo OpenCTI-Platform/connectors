@@ -11,5 +11,5 @@ connector:
 
 siemrules:
   api_key: 'ChangeMe'
-  detection_packs: 'ChangeMe' # comma-separated Detection Pack IDs
+  detection_packs: '' # comma-separated Detection Pack IDs
   # base_url: 'https://api.siemrules.com/'
