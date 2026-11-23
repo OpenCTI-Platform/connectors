@@ -16,4 +16,4 @@ connector:
 stixify:
   # base_url: 'https://api.stixify.com/'
   api_key: 'ChangeMe'
-  dossier_ids: 'ChangeMe' # comma separated dossier ids
+  dossier_ids: '' # comma separated dossier ids

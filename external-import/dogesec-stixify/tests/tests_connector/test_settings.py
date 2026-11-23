@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 from typing import Any
 from uuid import UUID
@@ -25,7 +26,7 @@ def build_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-            return handler(settings_dict)
+            return handler(deepcopy(settings_dict))
 
     return FakeConnectorSettings()
 

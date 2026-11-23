@@ -23,15 +23,6 @@ def mock_opencti_connector_helper(monkeypatch):
     monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 
 
-@pytest.fixture
-def mock_requests_session(monkeypatch) -> MagicMock:
-    """Mock the HTTP session used to call the Stixify API."""
-
-    session = MagicMock()
-    monkeypatch.setattr("connector.requests.Session", MagicMock(return_value=session))
-    return session
-
-
 class StubConnectorSettings(ConnectorSettings):
     """
     Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -93,7 +84,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
 
 
 def test_connector_is_instantiated(
-    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+    monkeypatch, mock_opencti_connector_helper, mock_session
 ):
     """
     Test that the connector's main class builds its settings and helper, and that
@@ -109,12 +100,12 @@ def test_connector_is_instantiated(
     assert connector.base_url == "https://test-stixify-url/"
     assert connector.api_key == "test-api-key"
     assert connector.dossier_ids == ["dossier-1", "dossier-2"]
-    assert connector.session is mock_requests_session
+    assert connector.session is mock_session
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
 
 def test_connector_schedules_with_duration_period(
-    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+    monkeypatch, mock_opencti_connector_helper, mock_session
 ):
     """Test that the connector schedules its runs with `CONNECTOR_DURATION_PERIOD`, in seconds."""
     monkeypatch.setattr("connector.ConnectorSettings", StubConnectorSettings)
@@ -129,7 +120,7 @@ def test_connector_schedules_with_duration_period(
 
 
 def test_connector_should_exit_without_dossier_ids(
-    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+    monkeypatch, mock_opencti_connector_helper, mock_session
 ):
     """Test that the connector stops at startup when no Dossier ID is set."""
 
@@ -169,7 +160,7 @@ def test_connector_should_exit_without_dossier_ids(
         "http://proxy.local:8000/prefix/",
     ],
 )
-@pytest.mark.usefixtures("mock_opencti_connector_helper")
+@pytest.mark.usefixtures("mock_opencti_connector_helper", "mock_session")
 def test_connector_api_urls_have_no_double_slash(monkeypatch, base_url):
     """
     Test that the validated `base_url`, joined with an API path the way the
@@ -187,7 +178,6 @@ def test_connector_api_urls_have_no_double_slash(monkeypatch, base_url):
             return super()._load_config_dict(_, with_base_url)
 
     monkeypatch.setattr("connector.ConnectorSettings", BaseUrlConnectorSettings)
-    monkeypatch.setattr("connector.requests.Session", MagicMock())
 
     connector = StixifyConnector()
     url = urljoin(connector.base_url, "v1/objects/")

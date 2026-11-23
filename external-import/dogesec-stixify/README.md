@@ -12,6 +12,7 @@
   - [Requirements](#requirements)
 - [Configuration](#configuration)
   - [Configuration Variables](#configuration-variables)
+  - [Finding Dossier IDs](#finding-dossier-ids)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -71,31 +72,16 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 
 ### Configuration Variables
 
-#### OpenCTI Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### Base Connector Parameters
+### Finding Dossier IDs
 
-| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
-|-----------|---------------|------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | `connector.id` | No | `773ede4d-ae39-4bbb-a656-f67951f2fcee` | A unique `UUIDv4` for this connector. Set your own value when running several instances |
-| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `Stixify` | Name displayed in OpenCTI |
-| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `stixify` | The scope of the connector |
-| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `PT1H` | ISO-8601 duration between two runs. The connector polls Stixify for new Reports in the Dossier(s) at this schedule. The minimum value allowed and recommended value is `PT1H` |
+The connector imports the Reports (and the objects extracted from them) of the Dossiers listed in `STIXIFY_DOSSIER_IDS`, as comma-separated IDs, for example `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. Set at least one Dossier ID: the connector stops at startup when none is set.
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | No | `https://api.stixify.com/` | Stixify API URL |
-| API Key | `STIXIFY_API_KEY` | `stixify.api_key` | Yes | - | API key for authentication |
-| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | `[]` | At least one ID is needed: the connector stops at startup when none is set. Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
-| Interval Hours (deprecated) | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | No | - | Deprecated: use `CONNECTOR_DURATION_PERIOD` instead. When set alone, its value (in hours) is migrated to `CONNECTOR_DURATION_PERIOD` |
+You do not need to own a Dossier to import it, but it must be visible to you. To check, log in to Stixify with the team the API key belongs to and make sure you can see the Dossier.
 
 ---
 

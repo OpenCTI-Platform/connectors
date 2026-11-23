@@ -15,5 +15,5 @@ services:
       - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=75
       # - STIXIFY_BASE_URL=https://api.stixify.com/
       - STIXIFY_API_KEY=ChangeMe
-      - STIXIFY_DOSSIER_IDS=ChangeMe # comma separated dossier ids
+      - STIXIFY_DOSSIER_IDS= # comma separated dossier ids
     restart: always
