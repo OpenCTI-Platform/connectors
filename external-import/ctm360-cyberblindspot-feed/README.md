@@ -176,6 +176,21 @@ docker compose up -d connector-ctm360-cyberblindspot
 | `CTM360_CBS_ENABLE_STATUS_TRACKING` | Enable background polling for incident status changes | `true` | No |
 | `CTM360_CBS_STATUS_POLL_INTERVAL` | Interval in seconds between status polling cycles | `3600` (1h) | No |
 
+### Upgrade notes
+
+**Import interval: `CONNECTOR_DURATION_PERIOD` now takes precedence.** The
+import loop reads `CONNECTOR_DURATION_PERIOD` (default `PT24H`).
+`CTM360_CBS_IMPORT_INTERVAL` is deprecated and is only migrated to it when
+`CONNECTOR_DURATION_PERIOD` is not set. When both are set, the SDK emits a
+deprecation warning and ignores `CTM360_CBS_IMPORT_INTERVAL`.
+
+Earlier versions of the sample `docker-compose.yml` already set
+`CONNECTOR_DURATION_PERIOD=PT24H`, which the connector ignored. If you copied
+it and only tuned `CTM360_CBS_IMPORT_INTERVAL` (for example `3600`), the
+connector now imports once a day instead of hourly. To keep your cadence,
+replace `CTM360_CBS_IMPORT_INTERVAL=3600` with
+`CONNECTOR_DURATION_PERIOD=PT1H`.
+
 ---
 
 ## Usage
