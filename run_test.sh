@@ -86,7 +86,15 @@ do
   uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
+  # Unit tests must not reach external services: block every outbound
+  # connection except localhost and Unix sockets (asyncio event loops).
+  # A test that really needs a host opts in with @pytest.mark.allow_hosts([...]).
+  echo 'Installing pytest-socket to block network access during tests'
+  uv pip install -q pytest-socket==0.7.0
+
   uv pip check || exit 1  # exit if dependencies are broken
+
+  network_guard_args=(--allow-hosts=127.0.0.1,::1,localhost --allow-unix-socket)
 
   echo 'Running tests'
   if [ "$pytest_cov_installed_by_requirements" = "true" ]; then
@@ -94,12 +102,12 @@ do
     # --cov is not needed because already configured as addopts in pyproject.toml
     # --cov-append is needed to merge coverage results from multiple test runs
     python -m pytest "$project" --cov-append --cov-report=xml \
-      --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+      --junitxml="$OUT_DIR/junit.xml" -q -rA "${network_guard_args[@]}"  # exit non zero if no test run
   else
     echo 'Installing pytest-cov and using explicit coverage arguments'
     uv pip install -q pytest-cov
     python -m pytest "$project" --cov --cov-append \
-      --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+      --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA "${network_guard_args[@]}"  # exit non zero if no test run
   fi
 
   echo 'Removing virtual environment'

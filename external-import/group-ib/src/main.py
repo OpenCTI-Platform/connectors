@@ -5,6 +5,7 @@ import traceback
 import dotenv
 from adapter import DataToSTIXAdapter
 from config import ConfigConnector
+from deprecation_notice import warn_deprecated
 from lib.external_import import ExternalImportConnector
 
 dotenv.load_dotenv()
@@ -286,6 +287,7 @@ class CustomConnector(ExternalImportConnector):
 
 
 if __name__ == "__main__":
+    warn_deprecated()
     try:
         connector = CustomConnector()
         connector.run()

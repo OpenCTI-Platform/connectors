@@ -7,7 +7,40 @@ from uuid import uuid4
 
 import isodate
 import pytest
+from connector.src.custom.configs.campaign.gti_config_campaign import (
+    GTICampaignConfig,
+)
 from connector.src.custom.configs.gti_config import GTIConfig
+from connector.src.custom.configs.gti_config_common import (
+    ALLOWED_CAMPAIGN_SUBENTITIES,
+    ALLOWED_INDICATOR_SUBENTITIES,
+    ALLOWED_MALWARE_FAMILY_SUBENTITIES,
+    ALLOWED_ORIGINS,
+    ALLOWED_REPORT_SUBENTITIES,
+    ALLOWED_REPORT_TYPES,
+    ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES,
+    ALLOWED_THREAT_ACTOR_SUBENTITIES,
+    ALLOWED_VULNERABILITY_SUBENTITIES,
+    GTIBaseConfig,
+)
+from connector.src.custom.configs.indicator.gti_config_indicator import (
+    ALLOWED_IOC_TYPES,
+    GTIIndicatorConfig,
+)
+from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
+from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.software_toolkit.gti_config_software_toolkit import (
+    ALLOWED_ORIGINS as ALLOWED_SOFTWARE_TOOLKIT_ORIGINS,
+)
+from connector.src.custom.configs.software_toolkit.gti_config_software_toolkit import (
+    GTISoftwareToolkitConfig,
+)
+from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
+    GTIThreatActorConfig,
+)
+from connector.src.custom.configs.vulnerability.gti_config_vulnerability import (
+    GTIVulnerabilityConfig,
+)
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
@@ -116,15 +149,27 @@ def valid_gti_report_types(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_types": "invalid report type"},
-        {"gti_report_types": "Actor Profile,Invalid Report Type"},
-        {"gti_report_types": "Country Profile,Invalid Report Type"},
-        {"gti_report_types": "Cyber Physical Security Roundup,Invalid Report Type"},
+        {"gti_report_types": "invalid report type", "invalid": "invalid report type"},
+        {
+            "gti_report_types": "Actor Profile,Invalid Report Type",
+            "invalid": "Invalid Report Type",
+        },
+        {
+            "gti_report_types": "Country Profile,Invalid Report Type",
+            "invalid": "Invalid Report Type",
+        },
+        {
+            "gti_report_types": "Cyber Physical Security Roundup,Invalid Report Type",
+            "invalid": "Invalid Report Type",
+        },
     ]
 )
-def invalid_gti_report_types(request) -> dict[str, str]:
-    """Fixture for invalid GTI report types."""
-    return {"GTI_REPORT_TYPES": request.param["gti_report_types"]}
+def invalid_gti_report_types(request) -> tuple[dict[str, str], str]:
+    """Fixture for invalid GTI report types, with the value the error must name."""
+    return (
+        {"GTI_REPORT_TYPES": request.param["gti_report_types"]},
+        request.param["invalid"],
+    )
 
 
 @pytest.fixture(
@@ -143,13 +188,19 @@ def valid_gti_report_origins(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_origins": '"invalid origin"'},
-        {"gti_report_origins": "google threat intelligence,partner,other"},
+        {"gti_report_origins": '"invalid origin"', "invalid": '"invalid origin"'},
+        {
+            "gti_report_origins": "google threat intelligence,partner,other",
+            "invalid": "other",
+        },
     ]
 )
-def invalid_gti_report_origins(request) -> dict[str, str]:
-    """Fixture for invalid GTI report origin."""
-    return {"GTI_REPORT_ORIGINS": request.param["gti_report_origins"]}
+def invalid_gti_report_origins(request) -> tuple[dict[str, str], str]:
+    """Fixture for invalid GTI report origin, with the value the error must name."""
+    return (
+        {"GTI_REPORT_ORIGINS": request.param["gti_report_origins"]},
+        request.param["invalid"],
+    )
 
 
 # =====================
@@ -222,16 +273,30 @@ def test_gti_connector_valid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with invalid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_types(  # type: ignore
-    min_required_config: dict[str, str], invalid_gti_report_types: dict[str, str]
+    min_required_config: dict[str, str],
+    invalid_gti_report_types: tuple[dict[str, str], str],
 ) -> None:
     """Test GTI connector with invalid GTI report types."""
     # Given a minimum required configuration for GTI and invalid GTI report types
-    data = {**min_required_config, **invalid_gti_report_types}
+    report_types, invalid = invalid_gti_report_types
+    data = {**min_required_config, **report_types}
     mock_env = _given_setup_env_vars(data)
     # When the connector is created
     connector, config_ex = _when_connector_created()
-    # Then the connector should raise a ConfigurationError
-    _then_connector_configuration_exception(mock_env, connector, config_ex)
+    # Then the connector should raise a GTIConfigurationError naming the report type
+    _then_connector_gti_configuration_error(
+        mock_env,
+        connector,
+        config_ex,
+        f"Invalid report type: {invalid}. "
+        "Allowed values: All, Actor Profile, Country Profile, "
+        "Cyber Physical Security Roundup, Event Coverage/Implication, "
+        "Industry Reporting, Malware Profile, Net Assessment, "
+        "Network Activity Reports, News Analysis, OSINT Article, Patch Report, "
+        "Strategic Perspective, TTP Deep Dive, Threat Activity Alert, "
+        "Threat Activity Report, Trends and Forecasting, "
+        "Weekly Vulnerability Exploitation Report.",
+    )
 
 
 # noinspection DuplicatedCode
@@ -253,16 +318,225 @@ def test_gti_connector_valid_gti_report_origins(  # type: ignore
 # Scenario: Create a connector with invalid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_origins(  # type: ignore
-    min_required_config: dict[str, str], invalid_gti_report_origins: dict[str, str]
+    min_required_config: dict[str, str],
+    invalid_gti_report_origins: tuple[dict[str, str], str],
 ) -> None:
     """Test GTI connector with invalid GTI report origins."""
     # Given a minimum required configuration for GTI and invalid GTI report origins
-    data = {**min_required_config, **invalid_gti_report_origins}
+    report_origins, invalid = invalid_gti_report_origins
+    data = {**min_required_config, **report_origins}
     mock_env = _given_setup_env_vars(data)
     # When the connector is created
     connector, config_ex = _when_connector_created()
-    # Then the connector should raise a ConfigurationError
-    _then_connector_configuration_exception(mock_env, connector, config_ex)
+    # Then the connector should raise a GTIConfigurationError naming the origin
+    _then_connector_gti_configuration_error(
+        mock_env,
+        connector,
+        config_ex,
+        f"Invalid report origin: {invalid}. "
+        "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+    )
+
+
+# Scenario: The enable option comes first in each data collection of the configuration
+@pytest.mark.parametrize(
+    "collection_config, enable_option",
+    [
+        (GTISoftwareToolkitConfig, "import_software_toolkits"),
+        (GTIIndicatorConfig, "import_indicators"),
+        (GTICampaignConfig, "import_campaigns"),
+        (GTIVulnerabilityConfig, "import_vulnerabilities"),
+        (GTIMalwareConfig, "import_malware_families"),
+        (GTIThreatActorConfig, "import_threat_actors"),
+        (GTIReportConfig, "import_reports"),
+    ],
+)
+def test_gti_config_enable_option_first_in_each_collection(
+    collection_config: type[GTIBaseConfig], enable_option: str
+) -> None:
+    """Test that the composer form lists the enable option before its sub-options."""
+    # Given the options of a data collection
+    collection_options = set(collection_config.model_fields) - set(
+        GTIBaseConfig.model_fields
+    )
+    # When they are listed in the configuration schema order
+    ordered_options = [
+        name for name in GTIConfig.model_fields if name in collection_options
+    ]
+    # Then the enable option comes first
+    assert ordered_options[0] == enable_option  # noqa: S101
+
+
+# Scenario: The configuration schema declares the allowed values of the list options
+@pytest.mark.parametrize(
+    "option, allowed_values",
+    [
+        ("software_toolkit_origins", ALLOWED_SOFTWARE_TOOLKIT_ORIGINS),
+        ("software_toolkit_subentities", ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES),
+        ("indicator_types", ALLOWED_IOC_TYPES),
+        ("indicator_subentities", ALLOWED_INDICATOR_SUBENTITIES),
+        ("campaign_origins", ALLOWED_ORIGINS),
+        ("campaign_subentities", ALLOWED_CAMPAIGN_SUBENTITIES),
+        ("vulnerability_origins", ALLOWED_ORIGINS),
+        ("vulnerability_subentities", ALLOWED_VULNERABILITY_SUBENTITIES),
+        ("malware_family_origins", ALLOWED_ORIGINS),
+        ("malware_family_subentities", ALLOWED_MALWARE_FAMILY_SUBENTITIES),
+        ("threat_actor_origins", ALLOWED_ORIGINS),
+        ("threat_actor_subentities", ALLOWED_THREAT_ACTOR_SUBENTITIES),
+        ("report_types", ALLOWED_REPORT_TYPES),
+        ("report_origins", ALLOWED_ORIGINS),
+        ("report_subentities", ALLOWED_REPORT_SUBENTITIES),
+    ],
+)
+def test_gti_config_schema_declares_allowed_values(
+    option: str, allowed_values: list[str]
+) -> None:
+    """Test that the composer form can offer the allowed values of a list option."""
+    # Given the configuration schema of GTI
+    schema = GTIConfig.model_json_schema()
+    # When the items of the list option are read
+    items = schema["properties"][option]["items"]
+    # Then they are restricted to the allowed values
+    assert items["enum"] == allowed_values  # noqa: S101
+
+
+# Scenario: Create a connector with a sub-entity that is not allowed for the collection
+@pytest.mark.order(0)
+def test_gti_connector_invalid_malware_family_subentities(  # type: ignore
+    min_required_config: dict[str, str],
+) -> None:
+    """Test GTI connector with a sub-entity type that malware families do not support."""
+    # Given a minimum required configuration for GTI and a singular sub-entity type
+    data = {**min_required_config, "GTI_MALWARE_FAMILY_SUBENTITIES": "threat_actor"}
+    mock_env = _given_setup_env_vars(data)
+    # When the connector is created
+    connector, config_ex = _when_connector_created()
+    # Then the connector should raise a GTIConfigurationError naming the sub-entity
+    _then_connector_gti_configuration_error(
+        mock_env,
+        connector,
+        config_ex,
+        "Invalid malware family subentity: threat_actor. "
+        "Allowed values: threat_actors, attack_techniques, vulnerabilities.",
+    )
+
+
+# Scenario: Create a connector with a value outside the allowed values of a list option
+@pytest.mark.order(0)
+@pytest.mark.parametrize(
+    "env_var, expected_message",
+    [
+        (
+            "GTI_SOFTWARE_TOOLKIT_ORIGINS",
+            "Invalid software toolkit origin: unknown. "
+            "Allowed values: All, partner, google threat intelligence.",
+        ),
+        (
+            "GTI_SOFTWARE_TOOLKIT_SUBENTITIES",
+            "Invalid software toolkit subentity: unknown. "
+            "Allowed values: malware_families, attack_techniques.",
+        ),
+        (
+            "GTI_INDICATOR_TYPES",
+            "Invalid indicator type(s): unknown. "
+            "Allowed values: file, ip, url, domain.",
+        ),
+        (
+            "GTI_INDICATOR_SUBENTITIES",
+            "Invalid indicator subentity: unknown. Allowed values: malware_families, "
+            "threat_actors, software_toolkits, attack_techniques.",
+        ),
+        (
+            "GTI_CAMPAIGN_ORIGINS",
+            "Invalid campaign origin: unknown. "
+            "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+        ),
+        (
+            "GTI_CAMPAIGN_SUBENTITIES",
+            "Invalid campaign subentity: unknown. Allowed values: malware_families, "
+            "attack_techniques, vulnerabilities, threat_actors, domains, files, urls, "
+            "ip_addresses, software_toolkits, reports.",
+        ),
+        (
+            "GTI_VULNERABILITY_ORIGINS",
+            "Invalid vulnerability origin: unknown. "
+            "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+        ),
+        (
+            "GTI_VULNERABILITY_SUBENTITIES",
+            "Invalid vulnerability subentity: unknown. "
+            "Allowed values: malware_families, attack_techniques, threat_actors.",
+        ),
+        (
+            "GTI_MALWARE_FAMILY_ORIGINS",
+            "Invalid malware family origin: unknown. "
+            "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+        ),
+        (
+            "GTI_MALWARE_FAMILY_SUBENTITIES",
+            "Invalid malware family subentity: unknown. "
+            "Allowed values: threat_actors, attack_techniques, vulnerabilities.",
+        ),
+        (
+            "GTI_THREAT_ACTOR_ORIGINS",
+            "Invalid threat actor origin: unknown. "
+            "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+        ),
+        (
+            "GTI_THREAT_ACTOR_SUBENTITIES",
+            "Invalid threat actor subentity: unknown. Allowed values: "
+            "malware_families, attack_techniques, vulnerabilities, software_toolkits.",
+        ),
+        (
+            "GTI_REPORT_ORIGINS",
+            "Invalid report origin: unknown. "
+            "Allowed values: All, partner, crowdsourced, google threat intelligence.",
+        ),
+        (
+            "GTI_REPORT_SUBENTITIES",
+            "Invalid report subentity: unknown. Allowed values: malware_families, "
+            "threat_actors, attack_techniques, vulnerabilities, campaigns, domains, "
+            "files, urls, ip_addresses, software_toolkits.",
+        ),
+    ],
+)
+def test_gti_connector_unknown_list_option_value(  # type: ignore
+    min_required_config: dict[str, str], env_var: str, expected_message: str
+) -> None:
+    """Test that a value outside the allowed values names the option and its values."""
+    # Given a minimum required configuration for GTI and an unknown value for the option
+    data = {**min_required_config, env_var: "unknown"}
+    mock_env = _given_setup_env_vars(data)
+
+    # When the connector is created
+    connector, config_ex = _when_connector_created()
+
+    # Then the connector should raise a GTIConfigurationError naming the option
+    _then_connector_gti_configuration_error(
+        mock_env, connector, config_ex, expected_message
+    )
+
+
+# Scenario: Create a connector with an empty list of report origins
+@pytest.mark.order(0)
+def test_gti_connector_empty_gti_report_origins(  # type: ignore
+    min_required_config: dict[str, str],
+) -> None:
+    """Test that an empty origin list raises the same error type as an unknown origin."""
+    # Given a minimum required configuration for GTI and an empty list of report origins
+    data = {**min_required_config, "GTI_REPORT_ORIGINS": ""}
+    mock_env = _given_setup_env_vars(data)
+
+    # When the connector is created
+    connector, config_ex = _when_connector_created()
+
+    # Then the connector should raise a GTIConfigurationError
+    _then_connector_gti_configuration_error(
+        mock_env,
+        connector,
+        config_ex,
+        "At least one report origin must be specified.",
+    )
 
 
 # =====================
@@ -337,14 +611,16 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
     mock_env.stop()
 
 
-# Then the connector config should raise a custom ConfigurationException
-def _then_connector_configuration_exception(  # type: ignore
-    mock_env, connector, config_ex
+# Then the connector config should raise a GTIConfigurationError with a given message
+def _then_connector_gti_configuration_error(  # type: ignore
+    mock_env, connector, config_ex, expected_message: str
 ) -> None:
-    """Check if the connector config raises a custom ConfigurationException."""
-    assert connector is None  # noqa: S101
-    assert isinstance(config_ex, ConfigurationError) or isinstance(  # noqa: S101
-        config_ex, GTIConfigurationError
-    )
+    """Check that the GTI config raises a GTIConfigurationError with the message.
 
+    A generic ConfigurationError is not accepted: it only says "Error loading
+    configuration", without the option or its allowed values.
+    """
     mock_env.stop()
+    assert connector is None  # noqa: S101
+    assert type(config_ex) is GTIConfigurationError  # noqa: S101
+    assert str(config_ex) == expected_message  # noqa: S101

@@ -54,6 +54,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "resource_group": "default",
                     "source_system": "Opencti Stream Connector",
                     "delete_extensions": True,
+                    "use_score_as_confidence": True,
                     "extra_labels": ["label1", "label2"],
                     "workspace_api_version": "2024-02-01-preview",
                     "management_api_version": "2025-03-01",

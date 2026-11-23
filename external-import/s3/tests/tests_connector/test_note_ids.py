@@ -3,7 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from pycti import Note
+from pycti import Note, Vulnerability
 from s3 import S3Connector
 from settings import ConnectorSettings
 
@@ -29,6 +29,23 @@ UUID_AND_NAME_IDS = {
     "Title": "note--79d3852a-0e0c-5cc5-a16b-f215d51ffff4",
     "Analysis": "note--13d57fd1-7474-59ff-8fff-640fd339e6d9",
     "History": "note--34d0f47b-d079-560d-9402-b378e8b1a405",
+}
+# Creation date the platform holds when another source created the vulnerability
+# first, such as the CVE connector with the NVD publication date
+PLATFORM_CREATED = "2021-05-24T00:00:00.000Z"
+# IDs 7.261016.0 to 7.261026.0 gave when the platform held PLATFORM_CREATED:
+# `Note.generate_id(PLATFORM_CREATED, f"{ACTI_UUID} - {note_type}")` for CVE entries
+PLATFORM_CREATED_UUID_ONLY_IDS = {
+    "Title": "note--fd312689-7fd3-5bad-9168-77b94f3e9f4f",
+    "Analysis": "note--69766568-2987-5688-9958-533d9063f987",
+    "History": "note--34c1ff50-b27c-5405-90aa-d9a20d6df81f",
+}
+# `Note.generate_id(PLATFORM_CREATED, f"{ACTI_UUID} - {ACTI_UUID} - {note_type}")`
+# for the non-CVE entry named by its ACTI UUID
+PLATFORM_CREATED_UUID_AND_NAME_IDS = {
+    "Title": "note--c56abe8b-5aa9-5a83-ac13-0f499beee7e2",
+    "Analysis": "note--435a3f65-c077-5d7d-b64f-a282f0af85d8",
+    "History": "note--fea49d75-c22a-519c-995b-168f99387c71",
 }
 
 
@@ -87,8 +104,15 @@ def acti_bundle(name, history):
     }
 
 
-def notes_by_abstract(connector, bundle):
-    fixed_bundle = json.loads(connector.fix_bundle(json.dumps(bundle)))
+def notes_by_abstract(connector, bundle, platform_created=None):
+    """The notes of `bundle`, the platform holding `platform_created` for its entry."""
+    held = None
+    if platform_created is not None:
+        [vulnerability] = bundle["objects"]
+        held = {Vulnerability.generate_id(vulnerability["name"]): platform_created}
+    fixed_bundle = json.loads(
+        connector.fix_bundle(json.dumps(bundle), platform_created=held)
+    )
     return {
         obj["abstract"]: obj for obj in fixed_bundle["objects"] if obj["type"] == "note"
     }
@@ -178,3 +202,101 @@ def test_non_cve_entries_sharing_an_acti_uuid_keep_their_own_notes(connector):
         assert notes[0]["x_opencti_stix_ids"] == [UUID_ONLY_IDS[note_type]]
         assert "x_opencti_stix_ids" not in notes[1]
         assert "x_opencti_stix_ids" not in notes[2]
+
+
+@pytest.mark.parametrize("note_type", NOTE_TYPES)
+def test_cve_note_ids_do_not_depend_on_the_creation_date_held_by_the_platform(
+    connector, note_type
+):
+    """
+    #8126: the CVE connector creates CVEs with the NVD publication date, older than
+    the `created` of the ACTI file. 7.261016.0 to 7.261026.0 derived the note IDs from
+    it, so the notes of the previous versions were duplicated. Notes keep the ID of
+    the previous versions, the ID those versions gave is an alias.
+    """
+    notes = notes_by_abstract(
+        connector, acti_bundle("CVE-2026-12345", [FIRST_ENTRY]), PLATFORM_CREATED
+    )
+
+    note = notes[f"CVE-2026-12345 - {note_type}"]
+    assert note["id"] == UUID_ONLY_IDS[note_type]
+    assert note["created"] == CREATED
+    assert note["x_opencti_stix_ids"] == [PLATFORM_CREATED_UUID_ONLY_IDS[note_type]]
+    assert note["x_opencti_stix_ids"] == [
+        Note.generate_id(PLATFORM_CREATED, f"{ACTI_UUID} - {note_type}")
+    ]
+
+
+@pytest.mark.parametrize("note_type", NOTE_TYPES)
+def test_non_cve_note_ids_do_not_depend_on_the_creation_date_held_by_the_platform(
+    connector, note_type
+):
+    notes = notes_by_abstract(
+        connector, acti_bundle(ACTI_UUID, [FIRST_ENTRY]), PLATFORM_CREATED
+    )
+
+    note = notes[f"{ACTI_UUID} - {note_type}"]
+    assert note["id"] == UUID_AND_NAME_IDS[note_type]
+    assert note["x_opencti_stix_ids"] == [
+        UUID_ONLY_IDS[note_type],
+        PLATFORM_CREATED_UUID_AND_NAME_IDS[note_type],
+    ]
+
+
+def test_entries_sharing_an_acti_uuid_keep_their_own_notes_whatever_the_platform_holds(
+    connector,
+):
+    by_uuid = notes_by_abstract(
+        connector, acti_bundle(ACTI_UUID, [FIRST_ENTRY]), PLATFORM_CREATED
+    )
+    first = notes_by_abstract(
+        connector, acti_bundle("ACME-2026-0001", [FIRST_ENTRY]), PLATFORM_CREATED
+    )
+    second = notes_by_abstract(
+        connector, acti_bundle("ACME-2026-0002", [FIRST_ENTRY]), PLATFORM_CREATED
+    )
+
+    for note_type in NOTE_TYPES:
+        ids = [
+            matching_ids(by_uuid[f"{ACTI_UUID} - {note_type}"]),
+            matching_ids(first[f"ACME-2026-0001 - {note_type}"]),
+            matching_ids(second[f"ACME-2026-0002 - {note_type}"]),
+        ]
+        assert len(set().union(*ids)) == sum(len(note_ids) for note_ids in ids)
+
+
+@pytest.mark.parametrize(
+    "platform_created",
+    [CREATED, "2026-10-01T00:00:00.000Z", "not a date"],
+    ids=["same_date", "newer_date", "unreadable_date"],
+)
+def test_no_alias_when_the_platform_holds_no_older_creation_date(
+    connector, platform_created
+):
+    notes = notes_by_abstract(
+        connector, acti_bundle("CVE-2026-12345", [FIRST_ENTRY]), platform_created
+    )
+
+    for note_type in NOTE_TYPES:
+        note = notes[f"CVE-2026-12345 - {note_type}"]
+        assert note["id"] == UUID_ONLY_IDS[note_type]
+        assert "x_opencti_stix_ids" not in note
+
+
+def test_alias_when_the_platform_returns_the_same_date_in_another_format(connector):
+    """
+    The platform returns dates with milliseconds. 7.261016.0 to 7.261026.0 kept its
+    string when both dates were equal, so they changed the note IDs of the files
+    written without milliseconds even when the platform held their own date.
+    """
+    bundle = acti_bundle("CVE-2026-12345", [FIRST_ENTRY])
+    bundle["objects"][0]["created"] = "2026-09-15T08:00:00Z"
+
+    notes = notes_by_abstract(connector, bundle, CREATED)
+
+    for note_type in NOTE_TYPES:
+        note = notes[f"CVE-2026-12345 - {note_type}"]
+        assert note["id"] == Note.generate_id(
+            "2026-09-15T08:00:00Z", f"{ACTI_UUID} - {note_type}"
+        )
+        assert note["x_opencti_stix_ids"] == [UUID_ONLY_IDS[note_type]]

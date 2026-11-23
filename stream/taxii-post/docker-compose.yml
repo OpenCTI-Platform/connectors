@@ -26,4 +26,5 @@ services:
       # - TAXII_STIX_VERSION=2.1 # optional (default: '2.1'), version for STIX
       # - TAXII_DELETE_CREATED_BY_REF=true # optional (default: true)
       # - TAXII_DELETE_MARKING_DEFINITION=true # optional (default: true)
+      # - TAXII_IDENTITY_ID_MAPPING=identity--<uuid>:identity--<uuid>,identity--<uuid>:identity--<uuid> # optional comma separated original_id:replacement_id identity IDs to be replaced before posting
     restart: always

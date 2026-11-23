@@ -260,6 +260,15 @@ They are not imported as STIX Indicators, since the raw JSON is not a usable det
 > The endpoint lists of some families mix real C2 servers with legitimate domains (for example, the C2 list of Berbew contains `kaspersky.ru`).
 > When enabled, review the resulting `communicates-with` relationships before using them for detection or blocking.
 
+#### MITRE ATT&CK techniques
+
+When an indicator carries `mitre_attack_ids`, the connector creates the matching **Attack Patterns** and links them to the Malware family (or, when there is none, to the Intrusion Set) tagged on the indicator, with a `uses` relationship. They are not linked to the Indicator itself.
+
+> **Warning — ambiguous ownership:**  
+> The techniques in the payload are the profile of only one of the tagged families or actors, and the payload does not say which one.
+> Techniques are therefore only imported when the indicator has exactly one owner (a single Malware family, or no Malware and a single Intrusion Set).
+> With several families or actors, no Attack Pattern is created for that indicator, rather than attributing techniques to the wrong entity.
+
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get

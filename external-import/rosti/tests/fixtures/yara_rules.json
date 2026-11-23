@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "id": "kVyTZgDmTeCQzNShnGzNdS",
+      "hash": "32b4f8b2f36a001957a7de39bd767941",
+      "name": "PavokwiLoader_1",
+      "filename": "PavokwiLoader_1.yara",
+      "rule": "rule PavokwiLoader_1{\n\tmeta:\n\t\tdescription = \"Detects PavokwiLoader\"\n\t\tauthor = \"PandaRE\"\n\t\tdate = \"2026-09-22\"\n\t\thash = \"009c3f6d2dd110451414783d6b04639bd99032a1838ed75f066f530296256b94\"\n\n\tstrings:\n\t\t$s1 = {\n            48 89 5C 24 08 4C 89 44 24 18 48 89 54 24 10\n            55 56 57 41 54 41 55 41 56 41 57\n            48 81 EC C0 00 00 00\n            81 39 03 00 00 80\n            49 8B E9 4D 8B F0 4C 8B FA 48 8B F1\n\t\t\t}\n\t\t$s2 = {?? 01 ?? 0f 10 05 ?? ?? ?? 00}\n\t\t$a = {\n            48 89 5C 24 08 4C 89 44 24 18 48 89 54 24 10\n            55 56 57 41 54 41 55 41 56 41 57\n            48 81 EC ?? ?? ?? ??\n            81 39 03 00 00 80\n            49 8B E9 4D 8B F0 4C 8B FA 48 8B F1\n        }\n\t\t$b = {\n            48 8B 45 08\n            48 89 44 24 68\n            48 89 7C 24 60\n            83 7F 0C 00\n            0F 86 ?? ?? ?? ??\n            44 89 6C 24 28\n            48 8D 54 24 60\n            4C 8B CD\n            48 89 7C 24 20\n            45 8B C4\n            48 8D 8C 24 98 00 00 00\n            E8 ?? ?? ?? ??\n            0F 10 84 24 98 00 00 00\n            F3 0F 7F 44 24 70\n            66 0F 73 D8 08\n            66 0F 7E C0\n        }\n\t\t$c = {41 C0}\n\n\tcondition:\n\t\tuint16( 0 ) == 0x5A4D and all of ( $s* ) and @b > @a and @b - @a < 0x200 and #c > 50 and #s2 > 5 and filesize < 5MB\n}"
+    },
+    {
+      "id": "FAGKVT39ocPDmm5A2nsh2f",
+      "hash": "922e27508fb0ed4c0dd34cf406262f44",
+      "name": "RMMCRAT_1",
+      "filename": "RMMCRAT_1.yara",
+      "rule": "rule RMMCRAT_1{\n\tmeta:\n\t\tdescription = \"Detects RMMCRAT\"\n\t\tauthor = \"PandaRE\"\n\t\tdate = \"2026-09-22\"\n\t\thash = \"3afabe2f9197f66460044083c708a5206291b2efe1138be1c763f60c47069787\"\n\n\tstrings:\n\t\t$s1 = \"RMMC\"\n\t\t$s2 = \"RMM Agent embedded configuration\"\n\n\tcondition:\n\t\tuint16( 0 ) == 0x5A4D and all of them\n}"
+    }
+  ],
+  "meta": {
+    "count": 2,
+    "paginated": false
+  }
+}

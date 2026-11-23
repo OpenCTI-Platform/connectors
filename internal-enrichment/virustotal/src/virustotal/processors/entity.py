@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from virustotal.builder import VirusTotalBuilder
+from virustotal.client import VirusTotalQuotaExceededError
 
 if TYPE_CHECKING:
     from virustotal import VirusTotalConnector
@@ -81,6 +82,17 @@ class EntityProcessor(ABC):
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
+    def _report_progress(self, message: str) -> None:
+        """Report an informational message on the current work, if any.
+
+        An enrichment can run without a platform work (``helper.work_id`` is
+        ``None``, e.g. from a playbook): the API refuses a null work id, so
+        the message is only logged then, and the enrichment goes on.
+        """
+        if self.helper.work_id:
+            self.helper.api.work.to_received(self.helper.work_id, message)
+        self.helper.log_debug(message)
+
     def _gti_identifier(self) -> str:
         """Return the identifier to use for GTI relationship lookups.
 
@@ -110,12 +122,19 @@ class EntityProcessor(ABC):
                 continue
             if identifier is None:
                 identifier = self._gti_identifier()
-            response = self.client.get_gti_relationship(
-                self._GTI_ENDPOINT_TYPE,
-                identifier,
-                relationship,
-                self.connector.gti_relationship_limit,
-            )
+            try:
+                response = self.client.get_gti_relationship(
+                    self._GTI_ENDPOINT_TYPE,
+                    identifier,
+                    relationship,
+                    self.connector.gti_relationship_limit,
+                )
+            except VirusTotalQuotaExceededError:
+                self.helper.connector_logger.warning(
+                    "[VirusTotal] Quota exceeded, skipping GTI relationship",
+                    {"entity_identifier": identifier, "relationship": relationship},
+                )
+                continue
             if not response or "data" not in response or not response["data"]:
                 continue
             for item in response["data"]:

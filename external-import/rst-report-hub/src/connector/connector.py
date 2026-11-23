@@ -45,6 +45,7 @@ class ReportHub:
                 self.labels_format_check(rst_cfg.report_labels_disabled or "")
             ),
             "set_detection_flag": bool(rst_cfg.set_detection_flag),
+            "no_file_trigger_import": bool(rst_cfg.no_file_trigger_import),
         }
 
     def labels_format_check(self, labels_str: str):
@@ -245,6 +246,9 @@ class ReportHub:
                             "name": f"{report_id}.pdf",
                             "mime_type": "application/pdf",
                             "data": base64.b64encode(pdf_report).decode("utf-8"),
+                            "no_trigger_import": self._downloader_config[
+                                "no_file_trigger_import"
+                            ],
                         }
                         self._combine_report_and_send(stix_report, file_pdf, report_id)
                 except requests.exceptions.RequestException as ex:

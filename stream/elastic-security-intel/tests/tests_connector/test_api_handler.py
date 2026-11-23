@@ -8,42 +8,14 @@ can no longer abort the deletion and leave stale duplicates behind.
 """
 
 import pytest
-import requests_mock as rm_module
 from elastic_security_intel_connector.api_handler import ElasticApiHandler
 
-ELASTIC_URL = "http://elastic.test:9200"
-INDEX_NAME = "logs-ti_custom_opencti.indicator"
-DELETE_URL = f"{ELASTIC_URL}/{INDEX_NAME}/_delete_by_query"
-DOC_URL = f"{ELASTIC_URL}/{INDEX_NAME}/_doc"
-
-
-class _Logger:
-    def info(self, *args, **kwargs):
-        pass
-
-    debug = warning = error = info
-
-
-class _Helper:
-    connector_logger = _Logger()
-
-
-class _Config:
-    load = {}
-    elastic_url = ELASTIC_URL
-    elastic_api_key = "dummy"
-    elastic_client_cert = None
-    elastic_client_key = None
-    elastic_ca_cert = None
-    elastic_verify_ssl = False
-    elastic_index_name = INDEX_NAME
-    elastic_kibana_url = None
-    elastic_opencti_external_url = "http://opencti.test"
+from tests.conftest import DELETE_URL, DOC_URL
 
 
 @pytest.fixture
-def handler():
-    return ElasticApiHandler(_Helper(), _Config())
+def handler(helper, config):
+    return ElasticApiHandler(helper, config)
 
 
 @pytest.fixture
@@ -64,12 +36,6 @@ def observable():
             }
         },
     }
-
-
-@pytest.fixture
-def requests_mock():
-    with rm_module.Mocker() as m:
-        yield m
 
 
 def _delete_by_query_requests(mock):

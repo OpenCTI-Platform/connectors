@@ -74,6 +74,9 @@ def all_optional_indicator_config(request) -> dict[str, str]:  # type: ignore
         {"gti_import_indicators": "False"},
         {"gti_indicator_types": "file,ip,url,domain"},
         {"gti_indicator_import_start_date": "PT2H"},
+        {
+            "gti_indicator_subentities": "malware_families,threat_actors,software_toolkits"
+        },
     ]
 )
 def all_defaulted_indicator_config(request) -> dict[str, str]:  # type: ignore
@@ -142,6 +145,32 @@ def valid_indicator_types(request) -> dict[str, str]:  # type: ignore
 def invalid_indicator_types(request) -> dict[str, str]:  # type: ignore
     """Fixture for invalid indicator type configurations."""
     return {"GTI_INDICATOR_TYPES": request.param["gti_indicator_types"]}
+
+
+@pytest.fixture(
+    params=[
+        {"gti_indicator_subentities": "malware_families"},
+        {"gti_indicator_subentities": "malware_families,attack_techniques"},
+        {
+            "gti_indicator_subentities": "malware_families,threat_actors,software_toolkits,attack_techniques"
+        },
+        {"gti_indicator_subentities": ""},
+    ]
+)
+def valid_indicator_subentities(request) -> dict[str, str]:  # type: ignore
+    """Fixture for valid indicator sub-entity configurations."""
+    return {"GTI_INDICATOR_SUBENTITIES": request.param["gti_indicator_subentities"]}
+
+
+@pytest.fixture(
+    params=[
+        {"gti_indicator_subentities": "vulnerabilities"},
+        {"gti_indicator_subentities": "malware_families,unknown"},
+    ]
+)
+def invalid_indicator_subentities(request) -> dict[str, str]:  # type: ignore
+    """Fixture for invalid indicator sub-entity configurations."""
+    return {"GTI_INDICATOR_SUBENTITIES": request.param["gti_indicator_subentities"]}
 
 
 # =====================
@@ -258,6 +287,39 @@ def test_gti_connector_invalid_indicator_start_dates(  # type: ignore
     """Test GTI connector raises error for indicator import start dates ≤ 1 hour."""
     data = {**min_required_config, **invalid_indicator_start_dates}
     # Given minimum configuration and an invalid start date
+    mock_env = _given_setup_env_vars(data)
+    # When the connector is created
+    connector, config_ex = _when_connector_created()
+    # Then the connector should raise a ConfigurationError
+    _then_connector_configuration_exception(mock_env, connector, config_ex)
+
+
+# Scenario: Create a connector with valid indicator sub-entities
+@pytest.mark.order(0)
+def test_gti_connector_valid_indicator_subentities(  # type: ignore
+    capfd,
+    min_required_config: dict[str, str],
+    valid_indicator_subentities: dict[str, str],
+) -> None:
+    """Test GTI connector with valid indicator sub-entities."""
+    data = {**min_required_config, **valid_indicator_subentities}
+    # Given minimum configuration and valid indicator sub-entities
+    mock_env = _given_setup_env_vars(data)
+    # When the connector is created
+    connector, _ = _when_connector_created()
+    # Then the connector should be created successfully
+    _then_connector_created_successfully(capfd, mock_env, connector, data)
+
+
+# Scenario: Create a connector with invalid indicator sub-entities
+@pytest.mark.order(0)
+def test_gti_connector_invalid_indicator_subentities(  # type: ignore
+    min_required_config: dict[str, str],
+    invalid_indicator_subentities: dict[str, str],
+) -> None:
+    """Test GTI connector raises error for invalid indicator sub-entities."""
+    data = {**min_required_config, **invalid_indicator_subentities}
+    # Given minimum configuration and invalid indicator sub-entities
     mock_env = _given_setup_env_vars(data)
     # When the connector is created
     connector, config_ex = _when_connector_created()

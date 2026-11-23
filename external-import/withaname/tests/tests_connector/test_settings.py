@@ -1,4 +1,6 @@
+from datetime import timedelta
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connector import ConnectorSettings
@@ -33,14 +35,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 "opencti": {
                     "url": "http://localhost:8080",
                     "token": "test-token",
-                },
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                },
-                "withaname": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -95,7 +89,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "withaname": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
@@ -106,9 +99,19 @@ def test_settings_should_accept_valid_input(settings_dict):
             {
                 "opencti": {
                     "url": "http://localhost:8080",
+                },
+            },
+            "opencti.token",
+            id="missing_opencti_token",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
                     "token": "test-token",
                 },
                 "connector": {
+                    "id": 123456,
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
@@ -116,12 +119,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "withaname": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
             "connector.id",
-            id="missing_connector_id",
+            id="invalid_connector_id",
         ),
     ],
 )
@@ -147,3 +149,39 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_apply_defaults():
+    """
+    Test that `ConnectorSettings` applies the defaults needed to deploy the connector
+    from the catalog with only the OpenCTI URL and token.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a minimal config dict.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.id == "8dd7bd2f-e08d-486e-8cce-74889327f7f6"
+    assert UUID(settings.connector.id).version == 4
+    assert settings.connector.name == "DDoSIA"
+    assert settings.connector.scope == ["withaname"]
+    assert settings.connector.duration_period == timedelta(hours=1)
+    assert str(settings.withaname.api_base_url) == "https://witha.name/"
+    assert settings.withaname.tlp_level == "green"
+    assert settings.withaname.import_start_timestamp is None
+    assert settings.withaname.create_notes is True

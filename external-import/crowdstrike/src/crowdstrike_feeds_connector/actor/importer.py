@@ -116,6 +116,7 @@ class ActorImporter(BaseImporter):
             sort=sort,
             fql_filter=fql_filter,
             fields=fields,
+            raise_on_error=True,
         )
 
         return actors

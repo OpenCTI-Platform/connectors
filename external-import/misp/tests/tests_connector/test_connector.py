@@ -1238,6 +1238,37 @@ def test_process_events_adds_one_second_after_loop_completion(
         assert result is None
 
 
+@freeze_time("2026-01-01 00:00:10")
+def test_process_events_checkpoint_keeps_the_highest_event_date(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    With `date_from`, MISP returns the events in `Event.id` order, so the last
+    event of a run can carry an older datetime than an earlier one. The
+    checkpoint written after the loop is the highest datetime seen plus one
+    second, never the last event's, so it never moves back.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["date_filter_field"] = "date_from"
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts_newer = int(time.time()) - 2
+    ts_older = int(time.time()) - 5
+    events = [
+        _make_publish_timestamp_event("1", ts_newer),
+        _make_publish_timestamp_event("2", ts_older),
+    ]
+
+    state, _, result = _run_process_events(connector, events)
+
+    expected = (
+        datetime.fromtimestamp(ts_newer, tz=timezone.utc) + timedelta(seconds=1)
+    ).isoformat()
+    assert state.get("last_event_date") == expected
+    assert result is None
+
+
 @pytest.mark.parametrize(
     "import_from_date, expected_logs",
     [

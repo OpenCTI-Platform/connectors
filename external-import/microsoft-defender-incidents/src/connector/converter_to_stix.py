@@ -1,5 +1,8 @@
+import re
+
 import stix2
 import stix2.exceptions
+from connector.settings import parse_status_mapping
 from connector.utils import CASE_INCIDENT_PRIORITIES, format_datetime
 from pycti import (
     AttackPattern,
@@ -10,6 +13,10 @@ from pycti import (
     Incident,
     Malware,
     StixCoreRelationship,
+)
+
+_UUID_REGEX = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE
 )
 
 
@@ -49,6 +56,119 @@ class ConverterToStix:
             description="Import incidents according to alerts found in Microsoft Defender",
         )
         self.all_hashes = set()
+        self.status_mapping = self._read_status_mapping(config)
+        # Defender status (lower-case) -> OpenCTI Status id, resolved by refresh_workflow_ids()
+        self.workflow_ids: dict[str, str] = {}
+
+    @staticmethod
+    def _read_status_mapping(config) -> dict[str, str]:
+        """
+        Read the optional Defender status to OpenCTI Status id mapping.
+        :param config: Connector settings
+        :return: Mapping keyed by the lower-case Defender status (empty when not configured)
+        """
+        mdi_config = getattr(config, "microsoft_defender_incidents", None)
+        raw_mapping = getattr(mdi_config, "status_mapping", None)
+        if not isinstance(raw_mapping, (str, dict)):
+            return {}
+        return parse_status_mapping(raw_mapping)
+
+    @staticmethod
+    def build_case_incident_labels(incident: dict) -> list[str]:
+        """
+        Build the Defender state labels of a Case Incident.
+        One label per present field: defender-status, defender-classification and
+        defender-determination, with the value lower-cased.
+        :param incident: Defender incident
+        :return: List of labels (may be empty)
+        """
+        labels = []
+        for field, prefix in (
+            ("status", "defender-status"),
+            ("classification", "defender-classification"),
+            ("determination", "defender-determination"),
+        ):
+            value = incident.get(field)
+            if value:
+                labels.append(f"{prefix}:{str(value).lower()}")
+        return labels
+
+    def fetch_case_incident_statuses(self) -> dict[str, str]:
+        """
+        Read the workflow statuses of the Case-Incident entity type in OpenCTI.
+        :return: Status template name (upper-case) -> Status id
+        """
+        query = """
+            query CaseIncidentStatuses($filters: FilterGroup) {
+                statuses(first: 500, filters: $filters) {
+                    edges { node { id template { name } } }
+                }
+            }
+        """
+        variables = {
+            "filters": {
+                "mode": "and",
+                "filters": [{"key": "type", "values": ["Case-Incident"]}],
+                "filterGroups": [],
+            }
+        }
+        result = self.helper.api.query(query, variables)
+        edges = (((result or {}).get("data") or {}).get("statuses") or {}).get(
+            "edges"
+        ) or []
+        statuses = {}
+        for edge in edges:
+            node = edge.get("node") or {}
+            name = (node.get("template") or {}).get("name")
+            if name and node.get("id"):
+                statuses[str(name).upper()] = node["id"]
+        return statuses
+
+    def refresh_workflow_ids(self) -> None:
+        """
+        Resolve the configured mapping into OpenCTI Status ids, once per run.
+        A mapping value that is a UUID is used as the Status id as is; any other value
+        is matched, case-insensitively, against the Case-Incident status names.
+        A name with no matching Case-Incident status is logged and left unmapped.
+        :return: None
+        """
+        self.workflow_ids = {}
+        if not self.status_mapping:
+            return
+        statuses = None
+        for defender_status, target in self.status_mapping.items():
+            if _UUID_REGEX.fullmatch(target):
+                self.workflow_ids[defender_status] = target
+                continue
+            if statuses is None:
+                try:
+                    statuses = self.fetch_case_incident_statuses()
+                except Exception as err:  # noqa: BLE001 - never stop the import
+                    self.helper.connector_logger.warning(
+                        "[CONVERTER] Cannot read the Case-Incident statuses, "
+                        "status names of the mapping are ignored for this run",
+                        {"error": str(err)},
+                    )
+                    statuses = {}
+            status_id = statuses.get(target.upper())
+            if status_id:
+                self.workflow_ids[defender_status] = status_id
+            else:
+                self.helper.connector_logger.warning(
+                    "[CONVERTER] No Case-Incident status matches the mapped name",
+                    {"defender_status": defender_status, "status_name": target},
+                )
+
+    def resolve_workflow_id(self, incident: dict) -> str | None:
+        """
+        Resolve the OpenCTI Status id mapped to the incident's Defender status.
+        :param incident: Defender incident
+        :return: Status id, or None when no mapping applies
+        """
+        status = incident.get("status")
+        if not status:
+            return None
+        return self.workflow_ids.get(str(status).lower())
 
     @staticmethod
     def create_author_identity(
@@ -119,14 +239,22 @@ class ConverterToStix:
         case_incident_created_at = format_datetime(incident.get("createdDateTime"))
         case_incident_description = (
             f"Incident from Microsoft Defender "
-            f"| classification: {incident.get('classification', '')} "
-            f"| determination: {incident.get('determination', '')}"
+            f"| status: {incident.get('status') or ''} "
+            f"| classification: {incident.get('classification') or ''} "
+            f"| determination: {incident.get('determination') or ''} "
+            f"| assigned to: {incident.get('assignedTo') or ''}"
         )
+        case_incident_labels = self.build_case_incident_labels(incident)
+        custom_properties = {}
+        workflow_id = self.resolve_workflow_id(incident)
+        if workflow_id:
+            custom_properties["x_opencti_workflow_id"] = workflow_id
 
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case_incident_name, case_incident_created_at),
             name=case_incident_name,
             description=case_incident_description,
+            labels=case_incident_labels or None,
             severity=incident.get("severity"),
             priority=CASE_INCIDENT_PRIORITIES[incident.get("severity")],
             created=case_incident_created_at,
@@ -140,6 +268,7 @@ class ConverterToStix:
             created_by_ref=self.author["id"],
             object_marking_refs=[self.tlp_marking],
             object_refs=bundle_objects,
+            custom_properties=custom_properties,
         )
         return stix_case
 

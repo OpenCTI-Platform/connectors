@@ -1,3 +1,5 @@
+# DEPRECATED: this connector is deprecated and will be removed in a future release.
+# Migrate to group-ib-ti. See DEPRECATION.md.
 version: '3'
 services:
   connector-group-ib:

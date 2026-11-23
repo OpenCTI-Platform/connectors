@@ -162,3 +162,57 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "rst_config, expected",
+    [
+        pytest.param(
+            {},
+            True,
+            id="no_file_trigger_import_default",
+        ),
+        pytest.param(
+            {"no_file_trigger_import": True},
+            True,
+            id="no_file_trigger_import_enabled",
+        ),
+        pytest.param(
+            {"no_file_trigger_import": False},
+            False,
+            id="no_file_trigger_import_disabled",
+        ),
+        pytest.param(
+            {"no_file_trigger_import": "true"},
+            True,
+            id="no_file_trigger_import_string_true",
+        ),
+        pytest.param(
+            {"no_file_trigger_import": "false"},
+            False,
+            id="no_file_trigger_import_string_false",
+        ),
+    ],
+)
+def test_settings_should_parse_no_file_trigger_import(rst_config, expected):
+    """Test the default and explicit values of the PDF import-trigger setting."""
+    settings_dict = {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-token",
+        },
+        "connector": {},
+        "rst_report_hub": {
+            "api_key": "ChangeMe",
+            **rst_config,
+        },
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.rst_report_hub.no_file_trigger_import is expected

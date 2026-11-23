@@ -2,6 +2,7 @@ import traceback
 
 from connector import CheckfirstImportConnector, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+from utils.file_logging import attach_file_logging
 
 if __name__ == "__main__":
     """
@@ -16,6 +17,17 @@ if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        # After helper/SDK logging setup (those may replace root handlers).
+        if settings.checkfirst.log_file:
+            log_path = attach_file_logging(
+                settings.checkfirst.log_file,
+                settings.connector.log_level,
+            )
+            helper.connector_logger.info(
+                "[CONNECTOR] File logging enabled",
+                {"log_file": str(log_path)},
+            )
 
         connector = CheckfirstImportConnector(config=settings, helper=helper)
         connector.run()

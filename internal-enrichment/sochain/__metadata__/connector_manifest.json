@@ -1,0 +1,26 @@
+{
+  "title": "SoChain",
+  "slug": "sochain",
+  "description": "Internal enrichment connector for Cryptocurrency-Wallet observables holding a Bitcoin, Litecoin, Dogecoin or Zcash (transparent) address. It reads the address summary from the SoChain API: balance, unconfirmed balance, total received, transaction counts, and the blocks of first and last activity, and writes them to the observable's description with a link to the address on SoChain. It also checks the address for address poisoning: when look-alike addresses sent it dust, it adds the 'address-poisoning' label and a note listing each look-alike and the address it imitates. Works without an API key (2,500 lookups a day per IP); a key from https://sochain.com/dashboard raises the limit.",
+  "short_description": "Enriches Bitcoin, Litecoin, Dogecoin and Zcash wallet observables with balance, transaction counts, first and last activity, and address-poisoning findings from SoChain.",
+  "logo": "internal-enrichment/sochain/__metadata__/logo.png",
+  "use_cases": [
+    "Fraud, Financial Crime & Cryptocurrency Monitoring"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": "https://sochain.com/support",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://sochain.com/pricing",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/sochain",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sochain",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

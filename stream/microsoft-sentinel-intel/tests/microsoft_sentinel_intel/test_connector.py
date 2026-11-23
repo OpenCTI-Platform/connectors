@@ -9,27 +9,53 @@ from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
+OPENCTI_EXTENSION_ID = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 BASE_API_URL = "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main"
+
+
+def _build_connector() -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
 
 
 @pytest.fixture(name="connector")
 def fixture_connector(
     mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_config
 ) -> Connector:
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.to_helper_config())
-    client = ConnectorClient(helper=helper, config=config)
-    return Connector(helper=helper, config=config, client=client)
+    return _build_connector()
 
 
 @pytest.fixture(name="batch_connector")
 def fixture_batch_connector(
     mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_batch_config
 ) -> Connector:
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.to_helper_config())
-    client = ConnectorClient(helper=helper, config=config)
-    return Connector(helper=helper, config=config, client=client)
+    return _build_connector()
+
+
+@pytest.fixture(name="score_as_confidence_connector")
+def fixture_score_as_confidence_connector(
+    mocked_api_client: MagicMock,
+    mock_microsoft_sentinel_intel_score_as_confidence_config,
+) -> Connector:
+    return _build_connector()
+
+
+@pytest.fixture(name="score_as_confidence_keep_extensions_connector")
+def fixture_score_as_confidence_keep_extensions_connector(
+    mocked_api_client: MagicMock,
+    mock_microsoft_sentinel_intel_score_as_confidence_keep_extensions_config,
+) -> Connector:
+    return _build_connector()
+
+
+@pytest.fixture(name="batch_score_as_confidence_connector")
+def fixture_batch_score_as_confidence_connector(
+    mocked_api_client: MagicMock,
+    mock_microsoft_sentinel_intel_batch_score_as_confidence_config,
+) -> Connector:
+    return _build_connector()
 
 
 @pytest.fixture(name="event_data_indicator")
@@ -38,7 +64,12 @@ def fixture_event_data_indicator() -> dict:
         "id": "indicator--uuid",
         "spec_version": "2.1",
         "type": "indicator",
-        "extensions": {},
+        "extensions": {
+            OPENCTI_EXTENSION_ID: {
+                "extension_type": "property-extension",
+                "score": 80,
+            }
+        },
         "created": "2025-06-06T09:37:59.399Z",
         "modified": "2025-06-06T09:37:59.399Z",
         "revoked": False,
@@ -72,6 +103,7 @@ def test_handle_event_create(
     )
 
     event_data_indicator.pop("extensions")  # as delete_extensions is True
+    # confidence is kept as use_score_as_confidence is False by default
     event_data_indicator["labels"] = ["label"]  # labels in config
 
     request = mocked_send_request.call_args.kwargs["request"]
@@ -86,6 +118,76 @@ def test_handle_event_create(
         "sourcesystem": "Opencti Stream Connector",
         "stixobjects": [event_data_indicator],
     }
+
+
+@pytest.mark.parametrize("score", [80, 0])
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_score_as_confidence_config")
+def test_handle_event_create_should_send_score_as_confidence_when_enabled(
+    mocker: MockerFixture,
+    score_as_confidence_connector: Connector,
+    event_data_indicator: dict,
+    score: int,
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    event_data_indicator["extensions"][OPENCTI_EXTENSION_ID]["score"] = score
+
+    score_as_confidence_connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    uploaded = json.loads(request.body)["stixobjects"][0]
+    assert uploaded["confidence"] == score
+    assert "extensions" not in uploaded
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_score_as_confidence_config")
+def test_handle_event_create_should_drop_confidence_when_enabled_and_no_score(
+    mocker: MockerFixture,
+    score_as_confidence_connector: Connector,
+    event_data_indicator: dict,
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    event_data_indicator["extensions"][OPENCTI_EXTENSION_ID].pop("score")
+    event_data_indicator["confidence"] = 42
+
+    score_as_confidence_connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    uploaded = json.loads(request.body)["stixobjects"][0]
+    assert "confidence" not in uploaded
+    assert "extensions" not in uploaded
+
+
+@pytest.mark.usefixtures(
+    "mock_microsoft_sentinel_intel_score_as_confidence_keep_extensions_config"
+)
+def test_handle_event_create_should_send_score_as_confidence_when_extensions_kept(
+    mocker: MockerFixture,
+    score_as_confidence_keep_extensions_connector: Connector,
+    event_data_indicator: dict,
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    score_as_confidence_keep_extensions_connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    uploaded = json.loads(request.body)["stixobjects"][0]
+    assert uploaded["confidence"] == 80
+    assert uploaded["extensions"] == event_data_indicator["extensions"]
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -287,7 +389,12 @@ def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
         "id": indicator_id,
         "spec_version": "2.1",
         "type": "indicator",
-        "extensions": {},
+        "extensions": {
+            OPENCTI_EXTENSION_ID: {
+                "extension_type": "property-extension",
+                "score": 80,
+            }
+        },
         "created": "2025-06-06T09:37:59.399Z",
         "modified": "2025-06-06T09:37:59.399Z",
         "revoked": False,
@@ -446,7 +553,32 @@ def test_process_batch_prepare_applied(
     body = json.loads(request.body)
     for obj in body["stixobjects"]:
         assert "extensions" not in obj  # delete_extensions is True
+        assert obj["confidence"] == 100  # use_score_as_confidence is False
         assert "label" in obj["labels"]  # extra_labels applied
+
+
+@pytest.mark.usefixtures(
+    "mock_microsoft_sentinel_intel_batch_score_as_confidence_config"
+)
+def test_process_batch_should_send_score_as_confidence_when_enabled(
+    mocker: MockerFixture, batch_score_as_confidence_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+            _make_batch_event("create", "indicator--2", "2.2.2.2"),
+        ]
+    )
+
+    batch_score_as_confidence_connector.process_batch(batch_data)
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert [obj["confidence"] for obj in body["stixobjects"]] == [80, 80]
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
@@ -487,30 +619,21 @@ def fixture_create_update_only_connector(
     mocked_api_client: MagicMock,
     mock_microsoft_sentinel_intel_create_update_only_config,
 ) -> Connector:
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.to_helper_config())
-    client = ConnectorClient(helper=helper, config=config)
-    return Connector(helper=helper, config=config, client=client)
+    return _build_connector()
 
 
 @pytest.fixture(name="delete_only_connector")
 def fixture_delete_only_connector(
     mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_delete_only_config
 ) -> Connector:
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.to_helper_config())
-    client = ConnectorClient(helper=helper, config=config)
-    return Connector(helper=helper, config=config, client=client)
+    return _build_connector()
 
 
 @pytest.fixture(name="batch_create_only_connector")
 def fixture_batch_create_only_connector(
     mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_batch_create_only_config
 ) -> Connector:
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.to_helper_config())
-    client = ConnectorClient(helper=helper, config=config)
-    return Connector(helper=helper, config=config, client=client)
+    return _build_connector()
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")

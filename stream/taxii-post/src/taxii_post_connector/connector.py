@@ -35,6 +35,34 @@ def content_type_by_stix_version(version: str) -> str:
         return f"application/vnd.oasis.stix+json; version={version}"
 
 
+def remap_identity_ids(stix_object: dict, identity_id_mapping: dict) -> dict:
+    """
+    Replaces the mapped identity IDs from the identity_id_mapping connector variable in place in the parsed object, returning
+    the altered object.
+
+    NB: As per the stix2.1 documentation, any property that can point at an identity object is a top level and as such this replacement is quite simple.
+    """
+
+    # For fields that hold a single ID, replace it if it is in the mapping
+    for key in [
+        "id",
+        "created_by_ref",
+        "source_ref",
+        "target_ref",
+        "sighting_of_ref",
+    ]:
+        if stix_object.get(key) in identity_id_mapping:
+            stix_object[key] = identity_id_mapping[stix_object[key]]
+
+    # For fields that hold a list of IDs, replace each if they are in the mapping
+    for key in ["where_sighted_refs", "object_refs"]:
+        if key in stix_object:
+            stix_object[key] = [
+                identity_id_mapping.get(ref, ref) for ref in stix_object[key]
+            ]
+    return stix_object
+
+
 class TaxiiPostConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config.taxii
@@ -79,6 +107,9 @@ class TaxiiPostConnector:
                 del data_object["object_marking_refs"]
             if self.config.delete_created_by_ref and "created_by_ref" in data_object:
                 del data_object["created_by_ref"]
+            # apply the necessary remaps to identity ids if configured
+            if self.config.identity_id_mapping:
+                remap_identity_ids(data_object, self.config.identity_id_mapping)
             if self.config.stix_version != "2.1":
                 del data_object["extensions"]
                 for key in (

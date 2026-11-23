@@ -23,7 +23,7 @@ def main() -> None:
             if octi_helper:
                 connector_run(global_config, octi_helper)
     except Exception as unexpected_err:
-        logger.error("Unexpected startup error", {"error": str(unexpected_err)})
+        logger.error("Unexpected startup error: %s", unexpected_err)
         traceback.print_exc()
         sys.exit(1)
 
@@ -36,7 +36,7 @@ def load_conf() -> "GlobalConfig | None":
         _add_gticonf(global_config)
         return global_config
     except Exception as config_err:
-        logger.error("Failed to load configuration", {"error": str(config_err)})
+        logger.error("Failed to load configuration: %s", config_err)
         raise
 
 
@@ -45,7 +45,7 @@ def _add_gticonf(global_config: "GlobalConfig") -> None:
     try:
         global_config.add_config_class(GTIConfig)
     except GTIConfigurationError as config_err:
-        logger.error("Failed to load GTI configuration", {"error": str(config_err)})
+        logger.error("Failed to load GTI configuration: %s", config_err)
 
 
 def load_helper(global_config: "GlobalConfig") -> "OpenCTIConnectorHelper | None":
@@ -54,7 +54,7 @@ def load_helper(global_config: "GlobalConfig") -> "OpenCTIConnectorHelper | None
         octi_helper = OpenCTIConnectorHelper(config=global_config.to_dict())
         return octi_helper
     except Exception as helper_err:
-        logger.error("Failed to initialize OpenCTI helper", {"error": str(helper_err)})
+        logger.error("Failed to initialize OpenCTI helper: %s", helper_err)
         raise
 
 
@@ -68,7 +68,7 @@ def connector_run(
     except (KeyboardInterrupt, SystemExit):
         logger.info("Connector stopped by user/system")
     except Exception as run_err:
-        logger.error("Connector execution failed", {"error": str(run_err)})
+        logger.error("Connector execution failed: %s", run_err)
 
 
 if __name__ == "__main__":

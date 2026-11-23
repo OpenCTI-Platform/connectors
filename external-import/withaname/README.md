@@ -40,32 +40,15 @@ The WithaName connector automatically retrieves snapshots of DDoS targets. For e
 
 ## Configuration variables
 
-### OpenCTI environment variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | --------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+Only `OPENCTI_URL` and `OPENCTI_TOKEN` are required. Set `CONNECTOR_ID` to a unique UUIDv4 for each deployment; every other variable has a default.
 
-### Base connector environment variables
+`WITHANAME_IMPORT_START_TIMESTAMP` sets where the first import starts:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | -------------------------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                               |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing.                                |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H              | No        | The period of time to await between two runs of the connector.                           |
-
-### DDoSIA specific parameters
-
-| Parameter | config.yml | Docker environment variable | Default | Mandatory | Description |
-| ---------- | ----------- | --------------------------- | --------- | --------- | ----------- |
-| API Base URL | api_base_url | `WITHANAME_API_BASE_URL` | / | Yes | The base URL of the witha.name API. |
-| TLP Level | tlp_level | `WITHANAME_TLP_LEVEL` | green | No | Default TLP level of the imported entities. |
-| Import Start Timestamp | import_start_timestamp | `WITHANAME_IMPORT_START_TIMESTAMP` | null | No | Timestamp to start the first import. <br> - `null`: Only the most recent snapshot. <br> - `0`: All available history. <br> - `value`: All snapshots since this timestamp. |
-| Create Notes | create_notes | `WITHANAME_CREATE_NOTES` | true | No | Whether to create STIX Note objects for each domain containing raw targets data. Set to `false` to disable note creation. |
+- unset (default): only the most recent snapshot.
+- `0`: all available history.
+- a Unix timestamp: all snapshots since this timestamp.
 
 ## Behavior
 

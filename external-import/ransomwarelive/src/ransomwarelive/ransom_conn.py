@@ -1,7 +1,6 @@
 import sys
 from datetime import datetime, timedelta, timezone
 
-import pycti
 import stix2
 from pycti import OpenCTIConnectorHelper
 from ransomwarelive.converter_to_stix import ConverterToStix
@@ -10,6 +9,7 @@ from ransomwarelive.utils import (
     domain_extractor,
     get_group_entry,
     is_domain,
+    normalize_country_code,
     safe_datetime,
 )
 from ransomwarelive_client import (
@@ -53,6 +53,9 @@ class RansomwareAPIConnector:
         # ``collect_intelligence`` / ``collect_historic_intelligence``) because
         # ``schedule_iso`` reuses this instance across scheduled runs.
         self.processed_groups: set[str] = set()
+        # Countries resolved during the current run, keyed by ISO code. Reset
+        # at the start of each collection sweep, like ``processed_groups``.
+        self.country_cache: dict = {}
 
     def _build_api_client(self) -> RansomwareAPIClientProtocol:
         if self.config.ransomwarelive.api_base_url == "https://api-pro.ransomware.live":
@@ -72,35 +75,94 @@ class RansomwareAPIConnector:
 
     def location_fetcher(self, country: str):
         """
-        Fetches the location object from OpenCTI
+        Fetch the country to link to a victim, reusing the one already in
+        OpenCTI when there is one.
+
+        The lookup is done by name or alias equal to the code, because the
+        OpenCTI dataset names countries in full ("Germany") with their ISO
+        codes as aliases. Reading by the ID generated from the code fails
+        with "Id loading expect only one response" as soon as several
+        countries hold that code (see #4556). The result is cached for the
+        run.
+
         Param:
             country: country code format ISO 3166-1 alpha-2
         Return:
-            country stix id if retrieve else None
+            country STIX object, or None on error
         """
-        country_id = pycti.Location.generate_id(country, "Country")
+        if country in self.country_cache:
+            return self.country_cache[country]
         try:
-            country_out = self.helper.api.stix_domain_object.read(id=country_id)
-            if country_out and country_out.get("standard_id").startswith("location--"):
+            existing_country = self._find_existing_country(country)
+            if existing_country:
                 country_obj = (
                     self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
                         entity_type="country",
-                        entity_id=country_out["standard_id"],
+                        entity_id=existing_country["id"],
                         only_entity=True,
                     )
                 )
-                return country_obj
             else:
                 country_obj = self.converter_to_stix.create_country(
                     country_name=country
                 )
-                return country_obj
-
         except Exception as e:
             self.helper.connector_logger.error(
                 "Error fetching location", {"country": country, "error": e}
             )
             return None
+        # An empty export (country deleted meanwhile) is not cached, so the
+        # next victim of the same country retries the lookup.
+        if country_obj:
+            self.country_cache[country] = country_obj
+        return country_obj
+
+    def _find_existing_country(self, country: str) -> dict | None:
+        """
+        Find the OpenCTI country named after the code or holding it as alias.
+
+        When several countries match (duplicates created by older runs or by
+        other connectors), the one holding the code as alias is preferred,
+        then the oldest one.
+
+        Param:
+            country: country code format ISO 3166-1 alpha-2
+        Return:
+            the matching country (internal id, name, aliases), or None
+        """
+        countries = self.helper.api.location.list(
+            types=["Country"],
+            filters={
+                "mode": "or",
+                "filters": [
+                    {"key": "name", "values": [country], "operator": "eq"},
+                    {"key": "x_opencti_aliases", "values": [country], "operator": "eq"},
+                ],
+                "filterGroups": [],
+            },
+            customAttributes="id standard_id name x_opencti_aliases created_at",
+        )
+        if not countries:
+            return None
+
+        def holds_code_as_alias(candidate: dict) -> bool:
+            aliases = candidate.get("x_opencti_aliases") or []
+            return country.upper() in (alias.upper() for alias in aliases)
+
+        selected = sorted(
+            countries,
+            key=lambda c: (not holds_code_as_alias(c), c.get("created_at") or ""),
+        )[0]
+        if len(countries) > 1:
+            self.helper.connector_logger.warning(
+                "Several countries match the country code, one is used",
+                {
+                    "country": country,
+                    "count": len(countries),
+                    "selected": selected.get("name"),
+                },
+            )
+        return selected
 
     def sector_fetcher(self, sector: str):
         """
@@ -283,14 +345,25 @@ class RansomwareAPIConnector:
 
         # 1. Creating Victim object
         victim_name = item.get("victim")
+        if not isinstance(victim_name, str) or not victim_name.strip():
+            self.helper.connector_logger.warning(
+                "Missing victim name, victim skipped",
+                {"group": item.get("group"), "discovered": item.get("discovered")},
+            )
+            return []
         victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
-        attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date)
-
         discovered = item.get("discovered")
         discovered_iso = safe_datetime(discovered)
+
+        # The attack date is sometimes empty in the API: keep it unknown
+        # (``None``) for the attack timeline (Campaign ``first_seen``,
+        # relationship ``start_time``). Only the Report, which requires a
+        # ``published`` date, falls back to the disclosure date.
+        attack_date = item.get("attackdate")
+        attack_date_iso = safe_datetime(attack_date)
+        report_published_iso = attack_date_iso or discovered_iso
 
         # Build the canonical external-reference list ONCE up-front so
         # every emitted SDO (Threat Actor, Campaign, Report, …) sees the
@@ -549,9 +622,15 @@ class RansomwareAPIConnector:
         # ``create_intrusion_set``, so the call site has to forward the
         # flag (without it the relationship always came back ``None``
         # even when the user had explicitly opted into intrusion sets).
-        if item.get("country"):
-            country_name = item["country"]
-            location = self.location_fetcher(country_name)
+        raw_country = item.get("country")
+        country_code = normalize_country_code(raw_country)
+        if raw_country and not country_code:
+            self.helper.connector_logger.warning(
+                "Invalid country code, location skipped",
+                {"country": raw_country, "victim": victim_name},
+            )
+        if country_code:
+            location = self.location_fetcher(country_code)
 
             if location:
                 (
@@ -600,11 +679,18 @@ class RansomwareAPIConnector:
         # makes the data flow much harder to follow. Building the full
         # ``object_refs`` list first and constructing the Report once
         # is the canonical stix2 idiom.
-        if self.config.ransomwarelive.create_report:
+        if self.config.ransomwarelive.create_report and report_published_iso is None:
+            # A Report needs a ``published`` date: without an attack date or a
+            # discovered date, skip the Report but keep the other objects.
+            self.helper.connector_logger.warning(
+                "Missing attack and discovered dates, report skipped",
+                {"victim": victim_name},
+            )
+        elif self.config.ransomwarelive.create_report:
             report = self.converter_to_stix.process_report(
                 report_name=item.get("group"),
                 victim_name=victim_name,
-                attack_date_iso=attack_date_iso,
+                attack_date_iso=report_published_iso,
                 description=item.get("description"),
                 object_refs=object_refs,
                 discovered_iso=discovered_iso,
@@ -634,6 +720,7 @@ class RansomwareAPIConnector:
         # its newly disclosed leak sites / TTPs are silently skipped until the
         # process restarts.
         self.processed_groups = set()
+        self.country_cache = {}
         # fetching group information
         group_data = self.api_client.get_groups()
         if not group_data:
@@ -783,6 +870,7 @@ class RansomwareAPIConnector:
         # across scheduled runs, so without this a group enriched on a previous
         # run would be skipped forever and never pick up new leak sites / TTPs.
         self.processed_groups = set()
+        self.country_cache = {}
         group_data = self.api_client.get_groups()
         if not group_data:
             self.helper.connector_logger.info(
@@ -820,6 +908,12 @@ class RansomwareAPIConnector:
         for item in response_json:
             discovered_raw = item.get("discovered")
             created = safe_datetime(discovered_raw)
+            if created is None:
+                self.helper.connector_logger.warning(
+                    "Invalid discovered date, victim skipped",
+                    {"discovered": discovered_raw, "victim": item.get("victim")},
+                )
+                continue
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 

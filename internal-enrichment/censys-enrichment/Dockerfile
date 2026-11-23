@@ -7,7 +7,6 @@ RUN apk --no-cache upgrade && \
       build-base  \
       git  \
       libffi-dev  \
-      libmagic  \
       libxml2-dev  \
       libxslt-dev
 
@@ -17,6 +16,6 @@ WORKDIR /opt/opencti-connector-censys-enrichment
 
 # git is required to resolve the connectors-sdk VCS dependency declared in pyproject.toml
 RUN pip3 install --no-cache-dir . && \
-    apk del git build-base
+    apk del build-base git libffi-dev libxml2-dev libxslt-dev
 
 CMD ["censys-enrichment-connector"]
