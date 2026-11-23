@@ -5,7 +5,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'BeaconBeagle'
   scope: 'beaconbeagle'
   # duration_period: 'PT2H' # ISO-8601 duration between two runs
