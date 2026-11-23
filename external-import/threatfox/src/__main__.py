@@ -56,6 +56,9 @@ class ThreatFox:
     spamhaus_client: Optional[SpamhausClient] = None
     # Whether a community Auth-Key can take over when the commercial mode fails.
     community_fallback: bool = True
+    # Set by `fetch_rows` when the current run was served by the community export
+    # after the commercial mode failed.
+    csv_fallback_used: bool = False
 
     def __init__(self):
         """Initializer"""
@@ -218,6 +221,7 @@ class ThreatFox:
         )
 
         last_processed_entry_running_max = 0
+        self.csv_fallback_used = False
 
         try:
             bundle_objects = []
@@ -290,6 +294,12 @@ class ThreatFox:
             )
             return False
 
+        # The community export only covers the recent window. After a fallback,
+        # keep the checkpoint of the commercial API, otherwise the next healthy
+        # commercial run would start after entries that neither source imported.
+        if self.csv_fallback_used:
+            last_processed_entry_running_max = last_processed_entry
+
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"
         self.helper.log_info(message)
@@ -323,6 +333,7 @@ class ThreatFox:
                     "community abuse.ch Auth-Key",
                     meta={"error": str(err)},
                 )
+                self.csv_fallback_used = True
             else:
                 yield from rows
                 return

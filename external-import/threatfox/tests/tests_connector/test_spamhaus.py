@@ -346,6 +346,45 @@ class TestFallbackToTheCommunityKey:
         assert "falling back" in warning.lower()
         assert "community" in warning.lower()
 
+    def test_the_commercial_checkpoint_is_kept_after_a_csv_fallback(self, connector):
+        checkpoint = datetime(2027, 1, 5, 0, 0, tzinfo=UTC).timestamp()
+        connector.spamhaus_client = FakeSpamhausClient(
+            error=SpamhausUnavailableError("Spamhaus cannot answer (HTTP 503)")
+        )
+        connector.download_csv = MagicMock(
+            return_value=iter(
+                [
+                    '2027-01-14 10:00:00, "9", "csv.example.com", "domain", "botnet_cc", '
+                    '"win.ave_maria", "", "Ave Maria", "", "75", "False", "None", "exe", "0", "abuse_ch"'
+                ]
+            )
+        )
+
+        assert run(connector, {"last_processed_entry": checkpoint}) is True
+
+        # The CSV row is imported, but the checkpoint stays where the commercial
+        # API left it, so the next healthy run catches up from there.
+        assert sent_bundle_objects(connector)
+        stored = connector.helper.set_state.call_args.args[0]
+        assert stored["last_processed_entry"] == checkpoint
+        assert stored["last_run"] == NOW.timestamp()
+
+    def test_the_checkpoint_advances_again_once_the_commercial_api_recovers(
+        self, connector
+    ):
+        connector.csv_fallback_used = True  # left over from a previous run
+        connector.spamhaus_client = FakeSpamhausClient(
+            pages=[[api_ioc(id=1, first_seen="2027-01-14T12:00:00Z")]]
+        )
+
+        assert run(connector) is True
+
+        stored = connector.helper.set_state.call_args.args[0]
+        assert (
+            stored["last_processed_entry"]
+            == datetime(2027, 1, 14, 12, 0, tzinfo=UTC).timestamp()
+        )
+
     def test_only_commercial_credentials_fail_the_run(self, connector):
         connector.community_fallback = False
         connector.spamhaus_client = FakeSpamhausClient(
