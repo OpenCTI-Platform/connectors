@@ -15,5 +15,5 @@ services:
       # Parameters specific to connector-dogesec-cyberthreatexchange
       # - CYBERTHREATEXCHANGE_BASE_URL=https://api.cyberthreatexchange.com/
       - CYBERTHREATEXCHANGE_API_KEY=ChangeMe
-      - CYBERTHREATEXCHANGE_FEED_IDS=ChangeMe # comma-separated feed IDs
+      - CYBERTHREATEXCHANGE_FEED_IDS= # comma-separated feed IDs, at least one required
     restart: always

@@ -12,4 +12,4 @@ connector:
 cyberthreatexchange:
   # base_url: 'https://api.cyberthreatexchange.com/'
   api_key: 'ChangeMe'
-  feed_ids: 'ChangeMe' # comma-separated feed IDs
+  feed_ids: '' # comma-separated feed IDs, at least one required

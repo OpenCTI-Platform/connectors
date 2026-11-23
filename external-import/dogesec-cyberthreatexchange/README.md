@@ -58,33 +58,12 @@ The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-They are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### OpenCTI Parameters
+#### Feed IDs
 
-| Parameter | Docker envvar | config.yml | Mandatory | Description |
-|-----------|---------------|------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | `opencti.url` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | `opencti.token` | Yes | The default admin token configured in the OpenCTI platform |
-
-#### Base Connector Parameters
-
-| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
-|-----------|---------------|------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | `connector.id` | No | `b51736f7-7ed8-4c41-b247-eadd836f4f6c` | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `CyberThreatExchange` | Name displayed in OpenCTI |
-| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `cyberthreatexchange` | The scope of the connector |
-| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `PT1H` | Polling interval as an ISO 8601 duration. The connector polls Cyber Threat Exchange for new Reports in the Feed(s) at this schedule. The minimum and recommended value is `PT1H` |
-
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
-|-----------|---------------|------------|-----------|---------|-------------|
-| Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | No | `https://api.cyberthreatexchange.com/` | Cyber Threat Exchange API URL |
-| API Key | `CYBERTHREATEXCHANGE_API_KEY` | `cyberthreatexchange.api_key` | Yes | - | API key for authentication |
-| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. The connector stops at startup when no Feed ID is set |
-| Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | No | - | **Deprecated**: use `CONNECTOR_DURATION_PERIOD` instead. Polling interval in hours, still honoured when `CONNECTOR_DURATION_PERIOD` is not set |
+`CYBERTHREATEXCHANGE_FEED_IDS` (`cyberthreatexchange.feed_ids` in `config.yml`) takes a comma-separated list of the IDs of the Feeds to import, for example `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. At least one Feed ID is required: the connector stops at startup when none is set.
 
 ---
 
