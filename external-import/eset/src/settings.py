@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -62,9 +63,12 @@ class EsetConfig(BaseConfigModel):
         description="Whether to import ESET APT reports.",
         default=True,
     )
-    import_start_date: str = Field(
-        description="Date from which data is imported on the first run (e.g. 2022-04-01).",
-        default="2022-04-01",
+    import_start_date: DatetimeFromIsoString = Field(
+        description=(
+            "Start date (ISO 8601) from which data is imported on the first run. "
+            "Either absolute (e.g. '2022-04-01') or relative (e.g. 'P30D' for 30 days ago)."
+        ),
+        default="P30D",
     )
     create_observables: bool = Field(
         description="Whether to create observables from imported indicators.",

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -162,3 +163,19 @@ def test_settings_should_strip_spaces_in_collections():
     settings = FakeConnectorSettings()
 
     assert settings.eset.collections == ["ei.misp", "ei.cc"]
+
+
+def test_settings_should_default_import_start_date_to_30_days_ago():
+    """The first-run start date MUST be relative, not a hard-coded date."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(MINIMAL_VALID_SETTINGS_DICT)
+
+    expected = datetime.now(timezone.utc) - timedelta(days=30)
+
+    assert (
+        abs(FakeConnectorSettings().eset.import_start_date - expected).total_seconds()
+        < 60
+    )

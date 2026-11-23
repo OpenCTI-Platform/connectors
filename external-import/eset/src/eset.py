@@ -45,7 +45,7 @@ class Eset:
             name="ESET",
             description="ESET, s.r.o., is a software company specializing in cybersecurity.",
         )
-        self.added_after = int(parse(self.eset_import_start_date).timestamp())
+        self.added_after = int(self.eset_import_start_date.timestamp())
         # Init variables
         self.cache = {}
 
