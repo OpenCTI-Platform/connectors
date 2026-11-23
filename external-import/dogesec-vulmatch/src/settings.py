@@ -50,24 +50,24 @@ class VulmatchConfig(BaseConfigModel):
         ),
         default=False,
     )
-    cvss_v2_score_min: float = Field(
+    cvss_v2_score_min: int = Field(
         description=(
             "The minimum CVSS v2 base score of the vulnerabilities to ingest, "
-            "between 0.01 and 10. Set to -1 to disable this filter."
+            "as an integer between 1 and 10. Set to -1 to disable this filter."
         ),
         default=-1,
     )
-    cvss_v3_score_min: float = Field(
+    cvss_v3_score_min: int = Field(
         description=(
             "The minimum CVSS v3 base score of the vulnerabilities to ingest, "
-            "between 0.01 and 10. Set to -1 to disable this filter."
+            "as an integer between 1 and 10. Set to -1 to disable this filter."
         ),
         default=-1,
     )
-    cvss_v4_score_min: float = Field(
+    cvss_v4_score_min: int = Field(
         description=(
             "The minimum CVSS v4 base score of the vulnerabilities to ingest, "
-            "between 0.01 and 10. Set to -1 to disable this filter."
+            "as an integer between 1 and 10. Set to -1 to disable this filter."
         ),
         default=-1,
     )

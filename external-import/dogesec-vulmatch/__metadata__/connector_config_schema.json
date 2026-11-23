@@ -75,18 +75,18 @@
     },
     "VULMATCH_CVSS_V2_SCORE_MIN": {
       "default": -1,
-      "description": "The minimum CVSS v2 base score of the vulnerabilities to ingest, between 0.01 and 10. Set to -1 to disable this filter.",
-      "type": "number"
+      "description": "The minimum CVSS v2 base score of the vulnerabilities to ingest, as an integer between 1 and 10. Set to -1 to disable this filter.",
+      "type": "integer"
     },
     "VULMATCH_CVSS_V3_SCORE_MIN": {
       "default": -1,
-      "description": "The minimum CVSS v3 base score of the vulnerabilities to ingest, between 0.01 and 10. Set to -1 to disable this filter.",
-      "type": "number"
+      "description": "The minimum CVSS v3 base score of the vulnerabilities to ingest, as an integer between 1 and 10. Set to -1 to disable this filter.",
+      "type": "integer"
     },
     "VULMATCH_CVSS_V4_SCORE_MIN": {
       "default": -1,
-      "description": "The minimum CVSS v4 base score of the vulnerabilities to ingest, between 0.01 and 10. Set to -1 to disable this filter.",
-      "type": "number"
+      "description": "The minimum CVSS v4 base score of the vulnerabilities to ingest, as an integer between 1 and 10. Set to -1 to disable this filter.",
+      "type": "integer"
     },
     "VULMATCH_EPSS_SCORE_MIN": {
       "default": -1,

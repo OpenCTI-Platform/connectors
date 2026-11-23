@@ -24,15 +24,6 @@ def mock_opencti_connector_helper(monkeypatch):
     monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 
 
-@pytest.fixture
-def mock_requests_session(monkeypatch):
-    """Mock the HTTP session used to call the Vulmatch API."""
-
-    session = MagicMock()
-    monkeypatch.setattr("connector.requests.Session", MagicMock(return_value=session))
-    return session
-
-
 class StubConnectorSettings(ConnectorSettings):
     """
     Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -59,7 +50,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "api_key": "test-api-key",
                     "sbom_only": True,
                     "cvss_v2_score_min": -1,
-                    "cvss_v3_score_min": 7.5,
+                    "cvss_v3_score_min": 7,
                     "cvss_v4_score_min": 0,
                     "epss_score_min": 0.1,
                     "days_to_backfill": 500,
@@ -100,14 +91,14 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
 
 
 def test_connector_is_instantiated(
-    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+    monkeypatch, mock_opencti_connector_helper, mock_session
 ):
     """
     Test that the connector's main class builds its own settings and helper from them,
     and passes the custom values to the objects that use them.
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
-    :param mock_requests_session: the Vulmatch HTTP session is mocked to avoid any external call
+    :param mock_session: the Vulmatch HTTP session is mocked to avoid any external call
     """
     monkeypatch.setattr("connector.ConnectorSettings", StubConnectorSettings)
 
@@ -120,17 +111,17 @@ def test_connector_is_instantiated(
     assert connector.api_key == "test-api-key"
     assert connector.sbom_only is True
     assert connector.cvss_v2_score_min is None
-    assert connector.cvss_v3_score_min == 7.5
+    assert connector.cvss_v3_score_min == 7
     assert connector.cvss_v4_score_min is None
     assert connector.epss_score_min == 0.1
     assert connector.days_to_backfill == 365
     assert connector.config.connector.duration_period == timedelta(days=2)
-    assert connector.session is mock_requests_session
-    assert mock_requests_session.headers == {"API-KEY": "test-api-key"}
+    assert connector.session is mock_session
+    assert mock_session.headers == {"API-KEY": "test-api-key"}
 
 
 def test_connector_run_uses_duration_period(
-    monkeypatch, mock_opencti_connector_helper, mock_requests_session
+    monkeypatch, mock_opencti_connector_helper, mock_session
 ):
     """
     Test that the connector schedules its runs with `connector.duration_period`, in seconds.
@@ -156,7 +147,7 @@ def test_connector_run_uses_duration_period(
         "http://proxy.local:8000/prefix/",
     ],
 )
-@pytest.mark.usefixtures("mock_opencti_connector_helper")
+@pytest.mark.usefixtures("mock_opencti_connector_helper", "mock_session")
 def test_connector_api_urls_have_no_double_slash(monkeypatch, base_url):
     """
     Test that the validated `base_url`, joined with an API path the way the
@@ -174,7 +165,6 @@ def test_connector_api_urls_have_no_double_slash(monkeypatch, base_url):
             return super()._load_config_dict(_, with_base_url)
 
     monkeypatch.setattr("connector.ConnectorSettings", BaseUrlConnectorSettings)
-    monkeypatch.setattr("connector.requests.Session", MagicMock())
 
     connector = VulmatchConnector()
     url = urljoin(connector.base_url, "v1/objects/")

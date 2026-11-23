@@ -56,8 +56,8 @@ def build_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
                     "api_key": "test-api-key",
                     "sbom_only": True,
                     "cvss_v2_score_min": 5,
-                    "cvss_v3_score_min": 7.5,
-                    "cvss_v4_score_min": 8.1,
+                    "cvss_v3_score_min": 7,
+                    "cvss_v4_score_min": 8,
                     "epss_score_min": 0.5,
                     "days_to_backfill": 30,
                 },
@@ -114,23 +114,67 @@ def test_settings_should_default_connector_id():
     assert UUID(settings.connector.id).version == 4
 
 
-def test_settings_should_accept_decimal_score_filters():
+def test_settings_should_keep_cvss_score_filters_as_integers():
     """
-    Test that the CVSS and EPSS score filters accept decimal values
-    (CVSS scores range from 0.01 to 10 and EPSS scores from 0 to 1).
+    Test that the CVSS score filters are parsed as integers, as before the
+    migration, so the values sent to the Vulmatch API keep the same format
+    (`7`, not `7.0`).
     """
     settings = build_settings(
         {
             **MINIMAL_VALID_SETTINGS_DICT,
             "vulmatch": {
                 "api_key": "test-api-key",
-                "cvss_v3_score_min": "7.5",
+                "cvss_v2_score_min": "5",
+                "cvss_v3_score_min": "7",
+                "cvss_v4_score_min": "9",
+            },
+        }
+    )
+
+    for score in (
+        settings.vulmatch.cvss_v2_score_min,
+        settings.vulmatch.cvss_v3_score_min,
+        settings.vulmatch.cvss_v4_score_min,
+    ):
+        assert type(score) is int
+    assert settings.vulmatch.cvss_v2_score_min == 5
+    assert settings.vulmatch.cvss_v3_score_min == 7
+    assert settings.vulmatch.cvss_v4_score_min == 9
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["cvss_v2_score_min", "cvss_v3_score_min", "cvss_v4_score_min"],
+)
+def test_settings_should_reject_decimal_cvss_score_filters(field_name):
+    """Test that the CVSS score filters reject decimal values."""
+    with pytest.raises(ConfigValidationError) as err:
+        build_settings(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "vulmatch": {"api_key": "test-api-key", field_name: "7.5"},
+            }
+        )
+
+    assert f"vulmatch.{field_name}" in str(err.value.__cause__)
+
+
+def test_settings_should_accept_decimal_epss_score_filter():
+    """
+    Test that the EPSS score filter accepts decimal values
+    (EPSS scores range from 0 to 1).
+    """
+    settings = build_settings(
+        {
+            **MINIMAL_VALID_SETTINGS_DICT,
+            "vulmatch": {
+                "api_key": "test-api-key",
                 "epss_score_min": "0.05",
             },
         }
     )
 
-    assert settings.vulmatch.cvss_v3_score_min == 7.5
     assert settings.vulmatch.epss_score_min == 0.05
 
 
