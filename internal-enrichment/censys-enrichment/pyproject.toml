@@ -9,10 +9,10 @@ dynamic = ["version"]
 requires-python = ">=3.11"
 
 dependencies = [
-    "pycti==7.261023.1",
+    "pycti==7.261119.0",
     "censys-platform~=0.16.0",
-    "pydantic==2.14.0",
-    "pydantic-settings~=2.15.0",
+    "pydantic==2.14.4",
+    "pydantic-settings~=2.16.2",
     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
 ]
 
