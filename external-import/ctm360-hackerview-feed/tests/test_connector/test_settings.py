@@ -1,6 +1,7 @@
 """Tests for CTM360 HackerView Feed connector settings."""
 
 from datetime import timedelta
+from uuid import UUID
 
 import pytest
 from connector.settings import ConnectorSettings
@@ -36,6 +37,13 @@ class TestConnectorSettingsInstantiation:
         """Connector ID should match the environment variable."""
         settings = ConnectorSettings()
         assert settings.connector.id == "00000000-0000-0000-0000-000000000000"
+
+    def test_default_connector_id(self, monkeypatch):
+        """Without CONNECTOR_ID the connector falls back on its own UUID v4."""
+        monkeypatch.delenv("CONNECTOR_ID")
+        settings = ConnectorSettings()
+        assert settings.connector.id == "a9424db4-ebdf-4090-a52e-f505794cdd4c"
+        assert UUID(settings.connector.id).version == 4
 
     def test_connector_type(self):
         """Connector type should be EXTERNAL_IMPORT."""

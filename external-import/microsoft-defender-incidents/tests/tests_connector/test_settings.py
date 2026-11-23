@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
+from connector.settings import parse_status_mapping
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 
 
@@ -40,6 +41,19 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
             },
             id="minimal_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "microsoft_defender_incidents": {
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "status_mapping": "active:id-1, resolved:id-2",
+                },
+            },
+            id="valid_status_mapping",
         ),
     ],
 )
@@ -111,6 +125,20 @@ def test_settings_should_accept_valid_input(settings_dict):
             "connector.id",
             id="invalid_connector_id",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "microsoft_defender_incidents": {
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "status_mapping": "active-without-id",
+                },
+            },
+            "microsoft_defender_incidents.status_mapping",
+            id="invalid_status_mapping",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
@@ -137,3 +165,26 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        pytest.param("", {}, id="empty"),
+        pytest.param('""', {}, id="empty_quotes"),
+        pytest.param(
+            "active:a, inProgress:b,resolved:c",
+            {"active": "a", "inprogress": "b", "resolved": "c"},
+            id="pairs",
+        ),
+        pytest.param({"Resolved": "c"}, {"resolved": "c"}, id="dict"),
+    ],
+)
+def test_parse_status_mapping(value, expected):
+    assert parse_status_mapping(value) == expected
+
+
+@pytest.mark.parametrize("value", ["active", "active:", ":id"])
+def test_parse_status_mapping_rejects_malformed_entries(value):
+    with pytest.raises(ValueError):
+        parse_status_mapping(value)

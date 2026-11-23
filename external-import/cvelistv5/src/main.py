@@ -1,18 +1,14 @@
 """OpenCTI cvelistV5 connector entrypoint."""
 
-import os
 import sys
 import traceback
 from datetime import datetime, timezone
 
-import yaml
 from cve_processor import CVEProcessor
 from git_handler import GitHandler
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
-DEFAULT_REPO_URL = "https://github.com/CVEProject/cvelistV5.git"
-DEFAULT_REPO_BRANCH = "main"
-DEFAULT_LOCAL_PATH = "/opt/cvelistV5"
 DEFAULT_START_YEAR = 2024
 MIN_START_YEAR = 1999
 
@@ -21,53 +17,14 @@ class CVEListV5Connector:
     """External import connector that ingests CVEs from CVEProject/cvelistV5."""
 
     def __init__(self) -> None:
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as config_file:
-                config = yaml.safe_load(config_file) or {}
-        else:
-            config = {}
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.repo_url = self.config.cvelistv5.repo_url
+        self.repo_branch = self.config.cvelistv5.repo_branch
+        self.local_path = self.config.cvelistv5.local_path
 
-        self.repo_url = (
-            get_config_variable(
-                "CVELISTV5_REPO_URL",
-                ["cvelistv5", "repo_url"],
-                config,
-            )
-            or DEFAULT_REPO_URL
-        )
-        self.repo_branch = (
-            get_config_variable(
-                "CVELISTV5_REPO_BRANCH",
-                ["cvelistv5", "repo_branch"],
-                config,
-            )
-            or DEFAULT_REPO_BRANCH
-        )
-        self.local_path = (
-            get_config_variable(
-                "CVELISTV5_LOCAL_PATH",
-                ["cvelistv5", "local_path"],
-                config,
-            )
-            or DEFAULT_LOCAL_PATH
-        )
-
-        start_year = get_config_variable(
-            "CVELISTV5_HISTORY_START_YEAR",
-            ["cvelistv5", "history_start_year"],
-            config,
-            isNumber=True,
-            default=DEFAULT_START_YEAR,
-        )
-        try:
-            start_year = int(start_year)
-        except (TypeError, ValueError):
-            start_year = DEFAULT_START_YEAR
+        start_year = self.config.cvelistv5.history_start_year
         if start_year < MIN_START_YEAR:
             self.helper.connector_logger.warning(
                 "Configured history_start_year is below the minimum supported year, "
@@ -77,12 +34,7 @@ class CVEListV5Connector:
             start_year = DEFAULT_START_YEAR
         self.start_year = start_year
 
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            config,
-            default="PT1H",
-        )
+        self.duration_period = self.config.connector.duration_period
 
         # Lazy initialized inside _process_updates() so a missing / unreachable
         # upstream repository does not prevent the connector container from booting.
@@ -172,9 +124,9 @@ class CVEListV5Connector:
 
     def start(self) -> None:
         self.helper.connector_logger.info("Starting CVEListV5 connector.")
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self._process_updates,
-            duration_period=self.duration_period,
+            duration_period=self.duration_period.total_seconds(),
         )
 
 

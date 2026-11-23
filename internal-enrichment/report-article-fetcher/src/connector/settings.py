@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -65,12 +67,51 @@ class ReportArticleFetcherConfig(BaseConfigModel):
         ge=0,
         le=1,
     )
+    follow_pdf: bool = Field(
+        description=(
+            "On a landing page (a short page that links its report as a PDF on the "
+            "same site), also fetch the PDF: its text follows the page in the report's "
+            "content and the file is attached to the report."
+        ),
+        default=True,
+    )
+    landing_max_length: int = Field(
+        description=(
+            "A page whose extracted text is shorter than this, in characters, is a "
+            "landing page whose linked PDF report is followed."
+        ),
+        default=4000,
+        ge=0,
+    )
+    max_pdf_size: int = Field(
+        description="Largest PDF report downloaded from a landing page, in bytes.",
+        default=20_000_000,
+        gt=0,
+    )
     match_single_reference: bool = Field(
         description=(
             "Also accept reports not created by the RSS ingestion when they have exactly "
             "one external reference."
         ),
         default=False,
+    )
+    max_workers: int = Field(
+        description=(
+            "Reports processed at the same time by one connector process. Each worker "
+            "consumes the queue with its own OpenCTI client and HTTP session, like a "
+            "replica of the connector. Requires the AMQP listen protocol."
+        ),
+        default=1,
+        ge=1,
+        le=32,
+    )
+    summary_log_level: Literal["debug", "info", "warning", "error", "none"] = Field(
+        description=(
+            "Level of the one-line summary written for each report (outcome, skip "
+            "reason, fetch, extraction, check and send times). The default is "
+            "visible under the default log level; none turns it off."
+        ),
+        default="error",
     )
 
 

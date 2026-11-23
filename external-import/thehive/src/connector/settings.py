@@ -59,7 +59,7 @@ class TheHiveConfig(BaseConfigModel):
         default=None,
     )
     import_only_tlp: ListFromString = Field(
-        description="Comma-separated list of TLP levels to import (0=WHITE, 1=GREEN, 2=AMBER, 3=RED, 4=AMBER+STRICT).",
+        description="Comma-separated list of TLP levels to import (0=WHITE, 1=GREEN, 2=AMBER, 3=AMBER+STRICT, 4=RED).",
         default=["0", "1", "2", "3", "4"],
     )
     import_alerts: bool = Field(

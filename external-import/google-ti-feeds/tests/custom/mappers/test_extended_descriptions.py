@@ -256,9 +256,10 @@ def test_mapper_options(entity_type: str, expected: dict[str, Any]) -> None:
         extended_descriptions=True,
         ioc_tags_as_labels=True,
     )
-    converter = ConvertToSTIXReport(
-        config=config, logger=logging.getLogger(__name__), tlp_level="white"
-    )
+    logger = logging.getLogger(__name__)
+    converter = ConvertToSTIXReport(config=config, logger=logger, tlp_level="white")
     # When the mapper options are resolved
-    # Then they match the entity type
+    # Then they match the entity type, and threat actor mappers get the logger
+    if entity_type == "threat_actors":
+        expected = {**expected, "logger": logger}
     assert converter.mapper_options(entity_type) == expected  # noqa: S101

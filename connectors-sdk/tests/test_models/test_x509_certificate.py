@@ -10,6 +10,7 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.x509_certificate import X509Certificate
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 
 
@@ -117,6 +118,19 @@ def test_x509_certificate_to_stix2_object(
         object_marking_refs=[
             marking.to_stix2_object().id for marking in fake_valid_tlp_markings
         ],
+        extensions={
+            STIX_EXT_OCTI_SCO: {
+                "extension_type": "property-extension",
+                "labels": ["test", "x509_certificate"],
+                "description": "Test description",
+                "score": 85,
+                "created_by_ref": fake_valid_organization_author.id,
+                "external_references": [
+                    external_ref.to_stix2_object()
+                    for external_ref in fake_valid_external_references
+                ],
+            }
+        },
         x_opencti_external_references=[
             external_ref.to_stix2_object()
             for external_ref in fake_valid_external_references

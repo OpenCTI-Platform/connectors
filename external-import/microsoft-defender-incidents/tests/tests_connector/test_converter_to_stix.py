@@ -111,6 +111,161 @@ def test_create_custom_case_incident(converter):
     assert result.name == "Test Case"
 
 
+_STATUS_IDS = {
+    "active": "11111111-1111-4111-8111-111111111111",
+    "resolved": "22222222-2222-4222-8222-222222222222",
+}
+
+
+def _converter_with_mapping(mock_helper, mock_config, mapping):
+    mock_config.microsoft_defender_incidents.status_mapping = mapping
+    conv = ConverterToStix(mock_helper, mock_config, stix2.TLP_RED)
+    conv.refresh_workflow_ids()
+    return conv
+
+
+def _statuses_response(names_to_ids):
+    return {
+        "data": {
+            "statuses": {
+                "edges": [
+                    {"node": {"id": status_id, "template": {"name": name}}}
+                    for name, status_id in names_to_ids.items()
+                ]
+            }
+        }
+    }
+
+
+def test_case_incident_mapping_by_status_name(mock_helper, mock_config):
+    """Names are resolved once per run against the Case-Incident statuses."""
+    mock_helper.api.query.return_value = _statuses_response(
+        {"NEW": _STATUS_IDS["active"], "CLOSED": _STATUS_IDS["resolved"]}
+    )
+    conv = _converter_with_mapping(
+        mock_helper, mock_config, "active:NEW,resolved:closed,redirected:CLOSED"
+    )
+    assert mock_helper.api.query.call_count == 1
+    variables = mock_helper.api.query.call_args[0][1]
+    assert variables["filters"]["filters"][0] == {
+        "key": "type",
+        "values": ["Case-Incident"],
+    }
+    resolved = conv.create_custom_case_incident(
+        {**_BASE_INCIDENT, "status": "resolved"}, []
+    )
+    assert resolved["x_opencti_workflow_id"] == _STATUS_IDS["resolved"]
+    active = conv.create_custom_case_incident(
+        {**_BASE_INCIDENT, "status": "active"}, []
+    )
+    assert active["x_opencti_workflow_id"] == _STATUS_IDS["active"]
+
+
+def test_case_incident_mapped_name_not_found_warns_and_sends_no_workflow(
+    mock_helper, mock_config
+):
+    mock_helper.api.query.return_value = _statuses_response(
+        {"NEW": _STATUS_IDS["active"]}
+    )
+    conv = _converter_with_mapping(mock_helper, mock_config, "resolved:DONE")
+    mock_helper.connector_logger.warning.assert_called_once()
+    result = conv.create_custom_case_incident(
+        {**_BASE_INCIDENT, "status": "resolved"}, []
+    )
+    assert "x_opencti_workflow_id" not in result
+    assert "defender-status:resolved" in result.labels
+
+
+def test_case_incident_statuses_read_failure_does_not_stop_import(
+    mock_helper, mock_config
+):
+    mock_helper.api.query.side_effect = Exception("boom")
+    conv = _converter_with_mapping(
+        mock_helper, mock_config, f"active:NEW,resolved:{_STATUS_IDS['resolved']}"
+    )
+    assert conv.workflow_ids == {"resolved": _STATUS_IDS["resolved"]}
+
+
+def test_case_incident_mapping_by_id_does_not_query_statuses(mock_helper, mock_config):
+    _converter_with_mapping(
+        mock_helper, mock_config, f"resolved:{_STATUS_IDS['resolved']}"
+    )
+    mock_helper.api.query.assert_not_called()
+
+
+def test_case_incident_resolved_with_mapping_sets_workflow_and_labels(
+    mock_helper, mock_config
+):
+    """Reported case: an incident imported as active is re-fetched resolved."""
+    conv = _converter_with_mapping(
+        mock_helper,
+        mock_config,
+        f"active:{_STATUS_IDS['active']},resolved:{_STATUS_IDS['resolved']}",
+    )
+    active = {**_BASE_INCIDENT, "status": "active"}
+    first = conv.create_custom_case_incident(active, [])
+    assert first["x_opencti_workflow_id"] == _STATUS_IDS["active"]
+    assert "defender-status:active" in first.labels
+
+    resolved = {
+        **_BASE_INCIDENT,
+        "status": "resolved",
+        "classification": "truePositive",
+        "determination": "malware",
+        "assignedTo": "analyst@example.com",
+    }
+    second = conv.create_custom_case_incident(resolved, [])
+    assert second.id == first.id
+    assert second["x_opencti_workflow_id"] == _STATUS_IDS["resolved"]
+    assert second.labels == [
+        "defender-status:resolved",
+        "defender-classification:truepositive",
+        "defender-determination:malware",
+    ]
+    assert "assigned to: analyst@example.com" in second.description
+
+
+def test_case_incident_without_mapping_sets_labels_but_no_workflow(converter):
+    incident = {**_BASE_INCIDENT, "status": "resolved"}
+    result = converter.create_custom_case_incident(incident, [])
+    assert "x_opencti_workflow_id" not in result
+    assert result.labels == [
+        "defender-status:resolved",
+        "defender-classification:truepositive",
+        "defender-determination:malware",
+    ]
+
+
+def test_case_incident_unmapped_status_sends_no_workflow(mock_helper, mock_config):
+    conv = _converter_with_mapping(
+        mock_helper, mock_config, f"resolved:{_STATUS_IDS['resolved']}"
+    )
+    incident = {**_BASE_INCIDENT, "status": "awaitingAction"}
+    result = conv.create_custom_case_incident(incident, [])
+    assert "x_opencti_workflow_id" not in result
+    assert "defender-status:awaitingaction" in result.labels
+
+
+def test_case_incident_status_mapping_is_case_insensitive(mock_helper, mock_config):
+    conv = _converter_with_mapping(
+        mock_helper, mock_config, f"InProgress:{_STATUS_IDS['active']}"
+    )
+    incident = {**_BASE_INCIDENT, "status": "inProgress"}
+    result = conv.create_custom_case_incident(incident, [])
+    assert result["x_opencti_workflow_id"] == _STATUS_IDS["active"]
+
+
+def test_case_incident_without_defender_fields_has_no_labels(converter):
+    incident = {
+        key: value
+        for key, value in _BASE_INCIDENT.items()
+        if key not in ("classification", "determination")
+    }
+    result = converter.create_custom_case_incident(incident, [])
+    assert getattr(result, "labels", None) is None
+    assert "x_opencti_workflow_id" not in result
+
+
 # ---------------------------------------------------------------------------
 # create_evidence_user_account
 # ---------------------------------------------------------------------------

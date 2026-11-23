@@ -1,7 +1,10 @@
 from typing import Dict
 
 from pycti import OpenCTIConnectorHelper
-from urlscan_enrichment_services.client import UrlscanClient
+from urlscan_enrichment_services.client import (
+    UrlscanClient,
+    UrlscanUnresolvableDomainError,
+)
 from urlscan_enrichment_services.constants import UrlscanConstants
 from urlscan_enrichment_services.converter_to_stix2 import UrlscanConverter
 from urlscan_enrichment_services.settings import ConnectorSettings
@@ -227,6 +230,28 @@ class UrlscanConnector:
         stix2_bundle = self.helper.stix2_create_bundle(reordered_data)
         return stix2_bundle
 
+    def _send_unchanged_bundle(self, entity_value: str, reason: str) -> str:
+        """
+        Send back the objects received, unchanged, when urlscan.io cannot scan
+        the entity (e.g. a domain that does not resolve), so that a playbook
+        running this enrichment goes on to its next step.
+        """
+        self.helper.connector_logger.warning(
+            "[API-SUBMISSION] urlscan.io cannot scan this entity, "
+            "it is sent back unchanged.",
+            {"entity_value": entity_value, "reason": reason},
+        )
+        bundles_sent = self.helper.send_stix2_bundle(
+            self.helper.stix2_create_bundle(self.stix_objects)
+        )
+        return (
+            "[CONNECTOR] urlscan.io cannot scan this entity ("
+            + reason
+            + "), sent "
+            + f"{len(bundles_sent)}"
+            + " unchanged stix bundle(s)"
+        )
+
     def _process_message(self, data: Dict) -> str:
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
@@ -256,9 +281,14 @@ class UrlscanConnector:
                     self.client.check_urlscan_user_quota(
                         self.config.urlscan_enrichment.visibility
                     )
-                    json_submission = self.client.urlscan_submission(
-                        opencti_entity_value
-                    )
+                    try:
+                        json_submission = self.client.urlscan_submission(
+                            opencti_entity_value
+                        )
+                    except UrlscanUnresolvableDomainError as err:
+                        return self._send_unchanged_bundle(
+                            opencti_entity_value, str(err)
+                        )
                     uuid = json_submission["uuid"]
                     self.helper.connector_logger.info(
                         "[INFO-SUBMISSION] The urlscan submission request generated the uuid:",

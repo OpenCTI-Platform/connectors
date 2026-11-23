@@ -68,6 +68,47 @@ def _generate_process_id(command_line):
     return "process--" + str(uuid.uuid5(_OPENCTI_NAMESPACE_UUID, data))
 
 
+def _observable_ref(observable):
+    """Return the id of an observable built in this run or read from OpenCTI.
+
+    The observables list mixes STIX objects (``id``) and entities read back
+    from the platform (``standard_id``).
+    """
+    if "standard_id" in observable.keys():
+        return observable["standard_id"]
+    return observable["id"]
+
+
+def _build_observable_link(
+    observable, target_id, identity_id, start_time, marking, description
+):
+    """Build the ``related-to`` link from an observable to a shared entity.
+
+    The observable is the source and the shared Tool / Attack Pattern the
+    target. The platform locks the source and the target of every
+    relationship it writes, except the target of a ``related-to`` whose
+    source is an observable. With the shared entity as the source, every
+    link of a run locked the same Tool, and parallel workers ran out of
+    retries with ``LOCK_ERROR`` (issue #8250).
+    """
+    source_id = _observable_ref(observable)
+    return stix2.Relationship(
+        id=StixCoreRelationship.generate_id(
+            "related-to",
+            source_id,
+            target_id,
+            start_time=start_time,
+        ),
+        source_ref=source_id,
+        target_ref=target_id,
+        relationship_type="related-to",
+        created_by_ref=identity_id,
+        start_time=start_time,
+        object_marking_refs=[marking],
+        description=description,
+    )
+
+
 class BeaconBeagle:
     """BeaconBeagle connector"""
 
@@ -1787,8 +1828,21 @@ class BeaconBeagle:
             return None
 
         # STIX: Linking Tool (StixCoreRelationship)
-        # Linking Elements with Tool/Threat-Actor/Attack-Pattern/Country/Campaign if requested
-        for observable in Observables:
+        # Linking Elements with Tool/Attack-Pattern if requested
+        stix_objects.extend(self.link_observables(Observables, identity_id, start_time))
+        # ---------------------------------------------------------------
+        return stix_objects
+
+    def link_observables(self, observables, identity_id, start_time):
+        """Link every observable to the configured Tool and Attack Pattern.
+
+        The observable is the source of these links: the platform only skips
+        locking the target of a ``related-to`` whose source is an observable,
+        so ``Observable -> Tool`` keeps every write off the shared Tool /
+        Attack Pattern (issue #8250).
+        """
+        links = []
+        for observable in observables:
             if "value" in observable.keys():
                 self.helper.connector_logger.debug(
                     f"  -  Working on observable created: {observable['value']}."
@@ -1807,50 +1861,19 @@ class BeaconBeagle:
                         "    [-] No Link with Tool requested."
                     )
                 else:
-                    # STIX: StixCoreRelationship Observable --> Tool
-                    # We have two kind of observable in that list
-                    if "standard_id" in observable.keys():
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['standard_id']})."
+                    self.helper.connector_logger.debug(
+                        f"    [+] StixCoreRelationship creation between Observable and Tool ({_observable_ref(observable)} > {self.beaconbeagle_link_tool})."
+                    )
+                    links.append(
+                        _build_observable_link(
+                            observable,
+                            self.beaconbeagle_link_tool_id,
+                            identity_id,
+                            start_time,
+                            self.beaconbeagle_marking,
+                            f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
                         )
-                        relation_OT = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_tool_id,
-                                observable["standard_id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_tool_id,
-                            target_ref=observable["standard_id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
-                        )
-                        stix_objects.append(relation_OT)
-                        del relation_OT
-                    else:
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['id']})."
-                        )
-                        relation_OT = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_tool_id,
-                                observable["id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_tool_id,
-                            target_ref=observable["id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
-                        )
-                        stix_objects.append(relation_OT)
-                        del relation_OT
+                    )
             except Exception as e:
                 self.helper.connector_logger.error(
                     f"Error while creating STIX object from Tool: {self.beaconbeagle_link_tool}, error: {e}"
@@ -1859,59 +1882,27 @@ class BeaconBeagle:
             try:
                 if self.beaconbeagle_link_ap_id is None:
                     self.helper.connector_logger.debug(
-                        "    [-] No Link with Tool requested."
+                        "    [-] No Link with Attack-Pattern requested."
                     )
                 else:
-                    # STIX: StixCoreRelationship Observable --> Attack-Pattern
-                    # We have two kind of observable in that list
-                    if "standard_id" in observable.keys():
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['standard_id']})."
+                    self.helper.connector_logger.debug(
+                        f"    [+] StixCoreRelationship creation between Observable and Attack-Pattern ({_observable_ref(observable)} > {self.beaconbeagle_link_ap})."
+                    )
+                    links.append(
+                        _build_observable_link(
+                            observable,
+                            self.beaconbeagle_link_ap_id,
+                            identity_id,
+                            start_time,
+                            self.beaconbeagle_marking,
+                            f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
                         )
-                        relation_OAP = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_ap_id,
-                                observable["standard_id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_ap_id,
-                            target_ref=observable["standard_id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
-                        )
-                        stix_objects.append(relation_OAP)
-                        del relation_OAP
-                    else:
-                        self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['id']})."
-                        )
-                        relation_OAP = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                self.beaconbeagle_link_ap_id,
-                                observable["id"],
-                                start_time=start_time,
-                            ),
-                            source_ref=self.beaconbeagle_link_ap_id,
-                            target_ref=observable["id"],
-                            relationship_type="related-to",
-                            created_by_ref=identity_id,
-                            start_time=start_time,
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
-                        )
-                        stix_objects.append(relation_OAP)
-                        del relation_OAP
+                    )
             except Exception as e:
                 self.helper.connector_logger.error(
                     f"Error while creating STIX object from Attack-Pattern: {self.beaconbeagle_link_ap}, error: {e}"
                 )
-        # ---------------------------------------------------------------
-        return stix_objects
+        return links
 
     def create_stix_bundle(self, targeted):
         # create start_date: Now

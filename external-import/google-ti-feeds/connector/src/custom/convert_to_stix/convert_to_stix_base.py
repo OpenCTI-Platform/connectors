@@ -136,13 +136,18 @@ class BaseConvertToSTIX:
 
         Returns:
             Mapper keyword arguments, for the options present in the configuration.
+            Threat actor mappers also get the connector logger, to warn about
+            dates they cannot parse.
 
         """
-        return {
+        options: dict[str, Any] = {
             option: getattr(self.config, option)
             for option in MAPPER_OPTIONS.get(entity_type, ())
             if hasattr(self.config, option)
         }
+        if entity_type == "threat_actors":
+            options["logger"] = self.logger
+        return options
 
     def _create_organization(self) -> OrganizationAuthor:
         """Create the organization identity object.

@@ -102,10 +102,46 @@
       "minimum": 0,
       "type": "number"
     },
+    "REPORT_ARTICLE_FETCHER_FOLLOW_PDF": {
+      "default": true,
+      "description": "On a landing page (a short page that links its report as a PDF on the same site), also fetch the PDF: its text follows the page in the report's content and the file is attached to the report.",
+      "type": "boolean"
+    },
+    "REPORT_ARTICLE_FETCHER_LANDING_MAX_LENGTH": {
+      "default": 4000,
+      "description": "A page whose extracted text is shorter than this, in characters, is a landing page whose linked PDF report is followed.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "REPORT_ARTICLE_FETCHER_MAX_PDF_SIZE": {
+      "default": 20000000,
+      "description": "Largest PDF report downloaded from a landing page, in bytes.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
     "REPORT_ARTICLE_FETCHER_MATCH_SINGLE_REFERENCE": {
       "default": false,
       "description": "Also accept reports not created by the RSS ingestion when they have exactly one external reference.",
       "type": "boolean"
+    },
+    "REPORT_ARTICLE_FETCHER_MAX_WORKERS": {
+      "default": 1,
+      "description": "Reports processed at the same time by one connector process. Each worker consumes the queue with its own OpenCTI client and HTTP session, like a replica of the connector. Requires the AMQP listen protocol.",
+      "maximum": 32,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "REPORT_ARTICLE_FETCHER_SUMMARY_LOG_LEVEL": {
+      "default": "error",
+      "description": "Level of the one-line summary written for each report (outcome, skip reason, fetch, extraction, check and send times). The default is visible under the default log level; none turns it off.",
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "none"
+      ],
+      "type": "string"
     }
   },
   "required": [

@@ -154,7 +154,8 @@ runs:
       # /!\ STABLE FIELDS ONLY. This lands in `src/`, which is copied BEFORE
       # `pip install`. A value changing per commit (SHA, timestamp, run id) would
       # invalidate the layer cache for every connector on each push to master.
-      # Volatile data belongs in an OCI label (see "Compute OCI labels").
+      # Volatile data belongs in an OCI label (see "Compute OCI labels"): the
+      # build commit is io.opencti.build.sha on every image.
       shell: bash
       run: |
         set -euo pipefail
@@ -293,6 +294,7 @@ runs:
           io.opencti.connector.path=${{ inputs.connector_path }}
           io.opencti.build.mode=${{ inputs.build_mode }}
           io.opencti.build.variant=${{ inputs.variant || 'default' }}
+          io.opencti.build.sha=${{ github.sha }}
           io.opencti.build.run_id=${{ github.run_id }}
           io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 

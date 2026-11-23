@@ -82,6 +82,17 @@ class EntityProcessor(ABC):
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
 
+    def _report_progress(self, message: str) -> None:
+        """Report an informational message on the current work, if any.
+
+        An enrichment can run without a platform work (``helper.work_id`` is
+        ``None``, e.g. from a playbook): the API refuses a null work id, so
+        the message is only logged then, and the enrichment goes on.
+        """
+        if self.helper.work_id:
+            self.helper.api.work.to_received(self.helper.work_id, message)
+        self.helper.log_debug(message)
+
     def _gti_identifier(self) -> str:
         """Return the identifier to use for GTI relationship lookups.
 
