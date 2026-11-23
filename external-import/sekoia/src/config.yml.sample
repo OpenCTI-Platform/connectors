@@ -3,8 +3,20 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
+  # name: 'SEKOIA.IO'
+  # scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship'
+  # log_level: 'error'
+  # duration_period: 'PT60S'
 
 sekoia:
   api_key: 'ChangeMe'
+  # base_url: 'https://api.sekoia.io'
+  # collection: 'd6092c37-d8d7-45c3-8aff-c4dc26030608'
+  # start_date: '2022-01-01'
+  # limit: 200
+  # create_observables: true
+  # import_source_list: false
+  # import_ioc_relationships: true
+  # confidence_score: 50
+  # send_confidence: true

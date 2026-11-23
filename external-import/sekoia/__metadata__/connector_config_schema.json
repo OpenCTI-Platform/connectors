@@ -4,21 +4,21 @@
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token of the user who represents the connector in the OpenCTI platform.",
-      "minLength": 1,
-      "type": "string"
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "SEKOIA.IO",
       "description": "Name of the connector.",
-      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -39,20 +39,13 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
-        "minLength": 1,
         "type": "string"
       },
       "type": "array"
     },
-    "CONNECTOR_TYPE": {
-      "const": "EXTERNAL_IMPORT",
-      "default": "EXTERNAL_IMPORT",
-      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
-      "description": "Determines the verbosity of the logs.",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
@@ -62,8 +55,13 @@
       ],
       "type": "string"
     },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT60S",
+      "default": "PT1M",
       "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
       "format": "duration",
       "type": "string"
@@ -71,26 +69,22 @@
     "SEKOIA_API_KEY": {
       "description": "API key used to authenticate requests to the Sekoia service.",
       "format": "password",
-      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
     "SEKOIA_BASE_URL": {
       "default": "https://api.sekoia.io",
       "description": "Base URL for accessing the Sekoia API.",
-      "minLength": 1,
       "type": "string"
     },
     "SEKOIA_COLLECTION": {
       "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608",
       "description": "Allows you to specify the collection to query in order to retrieve or manage indicators of compromise.",
-      "minLength": 1,
       "type": "string"
     },
     "SEKOIA_START_DATE": {
       "default": null,
       "description": "The date to start consuming data from. May be in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00.",
-      "minLength": 1,
       "type": "string"
     },
     "SEKOIA_LIMIT": {
