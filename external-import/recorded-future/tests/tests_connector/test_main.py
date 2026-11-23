@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from main import BaseRFConnector
-from rflib.constants import RISK_LIST_TYPE_MAPPER
+from rflib.constants import RISK_LIST_TYPE_MAPPER, RiskListType
 
 
 def _build_base_connector(rf_config_values):
@@ -14,8 +14,8 @@ def _build_base_connector(rf_config_values):
         return BaseRFConnector()
 
 
-# Scenario: each risk list gets the threshold of its own setting
-def test_risk_list_thresholds_are_keyed_like_the_risk_lists():
+# Scenario: every risk list has a threshold entry and an entry in the mapper
+def test_every_risk_list_type_has_a_threshold_and_a_mapper_entry():
     connector = _build_base_connector(
         {
             "risk_list_threshold": 70,
@@ -27,12 +27,24 @@ def test_risk_list_thresholds_are_keyed_like_the_risk_lists():
         }
     )
 
-    assert set(connector.risk_list_thresholds) == set(RISK_LIST_TYPE_MAPPER)
+    assert set(connector.risk_list_thresholds) == set(RiskListType)
+    assert set(RISK_LIST_TYPE_MAPPER) == set(RiskListType)
     assert connector.risk_list_threshold == 70
     assert connector.risk_list_thresholds == {
-        "IpAddress": 80,
-        "InternetDomainName": 75,
-        "URL": 65,
-        "Hash": 90,
-        "Vuln": 0,
+        RiskListType.IP: 80,
+        RiskListType.DOMAIN: 75,
+        RiskListType.URL: 65,
+        RiskListType.HASH: 90,
+        RiskListType.VULN: 0,
     }
+
+
+# Scenario: the enum values stay the strings used in work names and STIX classes
+def test_risk_list_types_format_as_their_former_string_keys():
+    assert [f"{risk_list_type}" for risk_list_type in RiskListType] == [
+        "IpAddress",
+        "InternetDomainName",
+        "URL",
+        "Hash",
+        "Vuln",
+    ]

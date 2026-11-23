@@ -21,6 +21,7 @@ from rflib import (
     RecordedFuturePlaybookAlertConnector,
     RFClient,
     RiskList,
+    RiskListType,
     ThreatMap,
 )
 
@@ -54,13 +55,13 @@ class BaseRFConnector:
         self.risk_as_score = self.config.recorded_future.risk_as_score
         self.risk_threshold = self.config.recorded_future.risk_threshold
         self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
-        # Keyed like RISK_LIST_TYPE_MAPPER, None falls back to risk_list_threshold
+        # None falls back to risk_list_threshold
         self.risk_list_thresholds = {
-            "IpAddress": self.config.recorded_future.risk_list_threshold_ip,
-            "InternetDomainName": self.config.recorded_future.risk_list_threshold_domain,
-            "URL": self.config.recorded_future.risk_list_threshold_url,
-            "Hash": self.config.recorded_future.risk_list_threshold_hash,
-            "Vuln": self.config.recorded_future.risk_list_threshold_vulnerability,
+            RiskListType.IP: self.config.recorded_future.risk_list_threshold_ip,
+            RiskListType.DOMAIN: self.config.recorded_future.risk_list_threshold_domain,
+            RiskListType.URL: self.config.recorded_future.risk_list_threshold_url,
+            RiskListType.HASH: self.config.recorded_future.risk_list_threshold_hash,
+            RiskListType.VULN: self.config.recorded_future.risk_list_threshold_vulnerability,
         }
         self.analyst_notes_guess_relationships = (
             self.config.recorded_future.analyst_notes_guess_relationships

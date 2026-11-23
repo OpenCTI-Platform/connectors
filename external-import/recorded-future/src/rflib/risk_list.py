@@ -4,7 +4,7 @@ import re
 import threading
 from datetime import datetime, timezone
 
-from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER
+from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER, RiskListType
 
 
 class RiskList(threading.Thread):
@@ -24,7 +24,7 @@ class RiskList(threading.Thread):
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold
-        # Per risk list thresholds, keyed like RISK_LIST_TYPE_MAPPER
+        # Per risk list thresholds, keyed by RiskListType
         self.risk_list_thresholds = risk_list_thresholds or {}
         self.risklist_related_entities = risklist_related_entities
         self.riskrules_as_label = riskrules_as_label
@@ -70,7 +70,7 @@ class RiskList(threading.Thread):
             for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
 
                 # Check access to the vulnerability module
-                if key == "Vuln":
+                if key == RiskListType.VULN:
                     vuln_permission = self.rfapi.check_vul_entitlement()
                     if vuln_permission:
                         self.helper.connector_logger.info(
@@ -187,7 +187,7 @@ class RiskList(threading.Thread):
                 return None
 
         # Parse data
-        if key == "Vuln":
+        if key == RiskListType.VULN:
             description = (
                 "Triggered risk rules:"
                 + "\n\n"
