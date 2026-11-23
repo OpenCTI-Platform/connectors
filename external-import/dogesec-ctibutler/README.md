@@ -69,44 +69,26 @@ The OpenCTI CTI Butler Connector can be used to replace the following connectors
 
 ### Configuration Variables
 
-#### OpenCTI Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### Base Connector Parameters
+`CONNECTOR_DURATION_PERIOD` defaults to `P7D`, which is recommended because knowledge bases change very infrequently.
+The deprecated `CTIBUTLER_INTERVAL_DAYS` is still accepted and converted to a duration in days.
 
-| Parameter | Docker envvar | config.yml | Mandatory | Default | Description |
-|-----------|---------------|------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | `connector.id` | No | A fixed `UUIDv4` | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | `connector.name` | No | `CTIButler` | Name displayed in OpenCTI |
-| Connector Scope | `CONNECTOR_SCOPE` | `connector.scope` | No | `ctibutler` | The scope of the connector |
-| Log Level | `CONNECTOR_LOG_LEVEL` | `connector.log_level` | No | `error` | Log level: `debug`, `info`, `warn`, `warning` or `error` |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | `connector.duration_period` | No | `P7D` | Polling interval as an ISO 8601 duration. `P7D` is recommended because knowledge bases change very infrequently. |
+#### Available Knowledge Bases
 
-#### Connector Extra Parameters
+Set `CTIBUTLER_KNOWLEDGEBASES` to a comma-separated list of knowledge bases, without spaces. The available knowledge bases are:
 
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `CTIBUTLER_BASE_URL` | `ctibutler.base_url` | No | `https://api.ctibutler.com/` | CTI Butler API URL |
-| API Key | `CTIBUTLER_API_KEY` | `ctibutler.api_key` | Yes | - | API key for authentication |
-| Knowledge Bases | `CTIBUTLER_KNOWLEDGEBASES` | `ctibutler.knowledgebases` | Yes | - | Comma-separated list of knowledge bases, without spaces. See Available Knowledgebases section for a full list of available options. |
-| Interval Days (deprecated) | `CTIBUTLER_INTERVAL_DAYS` | `ctibutler.interval_days` | No | - | Deprecated, use `CONNECTOR_DURATION_PERIOD` instead. Still accepted and converted to a duration in days. |
-
-##### Available Knowledge Bases
-
-| Knowledge Base | Description |
-|----------------|-------------|
-| `attack-enterprise` | MITRE ATT&CK for Enterprise |
-| `attack-mobile` | MITRE ATT&CK for Mobile |
-| `attack-ics` | MITRE ATT&CK for ICS |
-| `capec` | Common Attack Pattern Enumeration and Classification |
-| `disarm` | DISARM Framework |
-| `atlas` | MITRE ATLAS (AI/ML threats) |
-| `location` | Location data |
-| `sector` | Industry sector data |
+- `attack-enterprise`: MITRE ATT&CK for Enterprise
+- `attack-mobile`: MITRE ATT&CK for Mobile
+- `attack-ics`: MITRE ATT&CK for ICS
+- `capec`: Common Attack Pattern Enumeration and Classification
+- `disarm`: DISARM Framework
+- `atlas`: MITRE ATLAS (AI/ML threats)
+- `location`: Location data
+- `sector`: Industry sector data
 
 ---
 
