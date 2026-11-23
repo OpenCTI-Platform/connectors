@@ -53,13 +53,13 @@ Runtime environment variables take precedence over `src/.env`, then `src/config.
 | CVE Max Concurrency | `cve.cve_max_concurrency` | `CVE_CVE_MAX_CONCURRENCY` | `50` | No | Maximum concurrent CVE NVD lookup tasks per container. |
 | Max CVEs Per Entity | `cve.max_cves_per_entity` | `CVE_MAX_CVES_PER_ENTITY` | `100` | No | Maximum distinct CVEs per entity; values above the hard limit of 100 are capped. |
 
-Enrichment is processed and sent in chunks of at most five CVEs. Software resolution stops at 100 unique CPE names or 10 CPE Match API pages per CVE, whichever limit is reached first, and logs a warning when truncated. Each CVE creates at most 201 enrichment objects (one Vulnerability plus 100 Software objects and their relationships), plus one relationship to the source entity. These hard limits apply regardless of concurrency and history-window settings.
+Enrichment is processed in chunks of at most five CVEs. Direct enrichment sends one bundle per chunk; a playbook step sends a single bundle covering every chunk. Software resolution stops at 100 unique CPE names or 10 CPE Match API pages per CVE, whichever limit is reached first, and logs a warning when truncated. Each CVE creates at most 201 enrichment objects (one Vulnerability plus 100 Software objects and their relationships), plus one relationship to the source entity. These hard limits apply regardless of concurrency and history-window settings.
 
 CVE numeric suffixes are limited to 4–32 digits as an operational bound on NVD request size. Longer suffixes are ignored entirely, never truncated into another identifier.
 
-Source markings from both the STIX and OpenCTI representations are retained on generated objects and relationships, with marking definitions included in each chunk. Enrichment is refused before querying NVD if a source marking cannot be resolved.
+Objects built from NVD data (Vulnerabilities, Software and their `has` relationships) are public, shared entities, so they are marked `TLP:CLEAR` rather than inheriting the source entity's markings. The source markings, from both the STIX and OpenCTI representations, are applied only to the `related-to` relationships linking the CVEs to the source entity, and to the container itself. When a Vulnerability is enriched directly, it keeps its own markings. Every marking definition used is included in the bundle. Enrichment is refused before querying NVD if a source marking cannot be resolved.
 
-NVD lookup and conversion errors fail the current chunk and are raised to the worker for direct enrichment events. A successful NVD response with no matching CVE can still create a placeholder when enabled. For playbooks, an error returns the last successfully sent bundle, preserving earlier chunks and their references; if no chunk succeeded, the original bundle is returned unchanged.
+NVD lookup and conversion errors fail the current chunk and are raised to the worker for direct enrichment events. A successful NVD response with no matching CVE can still create a placeholder when enabled. For playbooks, an error forwards the CVEs enriched so far as one complete bundle; if none were enriched, or the final send fails, the original bundle is forwarded unchanged.
 
 ---
 

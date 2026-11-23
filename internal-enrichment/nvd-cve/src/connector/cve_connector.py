@@ -278,21 +278,24 @@ class CVEConnector:
         return resolved
 
     @staticmethod
-    def _propagate_markings(
-        source_entity: dict[str, Any],
-        enriched_objects: list[dict[str, Any]],
-    ) -> None:
-        """Preserve `object_marking_refs` from the triggering entity on generated objects."""
-        marking_refs = list(source_entity.get("object_marking_refs") or [])
-        if not marking_refs:
-            return
+    def _nvd_marking_definition() -> dict[str, Any]:
+        """TLP:CLEAR marking definition applied to objects built from NVD data."""
+        return json.loads(TLPMarking(level="clear").to_stix2_object().serialize())
 
+    @classmethod
+    def _apply_nvd_marking(cls, enriched_objects: list[dict[str, Any]]) -> None:
+        """Mark objects built from public NVD data as TLP:CLEAR.
+
+        Vulnerabilities, Software and their `has` relationships are shared
+        entities, so they must not inherit the triggering entity's markings:
+        that would hide them from users who cannot see the source entity.
+        Source markings are only applied to the relationships linking these
+        objects to the source entity, and to the container itself.
+        """
+        clear_id = cls._nvd_marking_definition()["id"]
         for obj in enriched_objects:
-            if not isinstance(obj, dict):
-                continue
-            existing = list(obj.get("object_marking_refs") or [])
-            merged = list(dict.fromkeys(existing + marking_refs))
-            obj["object_marking_refs"] = merged
+            if isinstance(obj, dict) and obj.get("type") != "identity":
+                obj["object_marking_refs"] = [clear_id]
 
     def _build_entity_relationships(
         self,
@@ -526,8 +529,8 @@ class CVEConnector:
         if not enriched_objects:
             return [], [], []
 
-        # Preserve markings from triggering entity on enriched objects
-        self._propagate_markings(stix_entity, enriched_objects)
+        # Objects built from public NVD data are TLP:CLEAR
+        self._apply_nvd_marking(enriched_objects)
 
         author_dict = json.loads(self.converter.author.serialize())
         is_container = self._is_container(stix_entity, enrichment_entity)
@@ -576,9 +579,12 @@ class CVEConnector:
         merged_objects: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
 
+        nvd_marking = [self._nvd_marking_definition()] if enriched_objects else []
+        nvd_clear_id = self._nvd_marking_definition()["id"]
         for obj in (
             [author_dict]
             + marking_definitions
+            + nvd_marking
             + enriched_objects
             + relationship_objects
             + [stix_entity]
@@ -593,11 +599,14 @@ class CVEConnector:
                 seen_ids.add(obj_id)
                 if obj_id in existing_by_id and obj is not existing_by_id[obj_id]:
                     base = dict(existing_by_id[obj_id])
+                    existing_markings = list(base.get("object_marking_refs") or [])
+                    new_markings = list(obj.get("object_marking_refs") or [])
+                    if existing_markings:
+                        # Never add the NVD TLP:CLEAR marking to an existing
+                        # entity that already carries its own markings.
+                        new_markings = [m for m in new_markings if m != nvd_clear_id]
                     merged_markings = list(
-                        dict.fromkeys(
-                            list(base.get("object_marking_refs") or [])
-                            + list(obj.get("object_marking_refs") or [])
-                        )
+                        dict.fromkeys(existing_markings + new_markings)
                     )
                     base.update(obj)
                     if merged_markings:

@@ -20,6 +20,7 @@ from tests.conftest import make_cpe_name, make_vulnerability
 from tests.tests_connector.test_cve_connector import _make_enrichment_connector
 
 GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+CLEAR = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 
 
 def payload():
@@ -62,6 +63,7 @@ def test_scope_requires_both_representations(stix_type, graphql_type):
 
 
 def test_graphql_only_markings_cover_every_generated_object():
+    """NVD objects are TLP:CLEAR; source markings stay on links and container."""
     connector = _make_enrichment_connector(import_software=True)
     connector.converter.client_api.get_vulnerability_by_id = AsyncMock(
         return_value=make_vulnerability("CVE-2024-3400")
@@ -77,10 +79,19 @@ def test_graphql_only_markings_cover_every_generated_object():
     objects = json.loads(connector.helper.send_stix2_bundle.call_args.kwargs["bundle"])[
         "objects"
     ]
-    assert any(o["id"] == GREEN and o["type"] == "marking-definition" for o in objects)
+    definitions = {o["id"] for o in objects if o["type"] == "marking-definition"}
+    assert {GREEN, CLEAR} <= definitions
+    seen = set()
     for obj in objects:
-        if obj["type"] in {"vulnerability", "software", "relationship", "report"}:
-            assert GREEN in obj["object_marking_refs"]
+        kind = obj.get("relationship_type") or obj["type"]
+        seen.add(kind)
+        if kind in {"vulnerability", "software", "has"}:
+            # Shared entities built from public NVD data
+            assert obj["object_marking_refs"] == [CLEAR]
+        elif kind in {"related-to", "report"}:
+            # Links to the source entity, and the container, keep its markings
+            assert obj["object_marking_refs"] == [GREEN]
+    assert {"vulnerability", "software", "has", "related-to", "report"} <= seen
     assert "object_marking_refs" not in data["stix_entity"]
 
 
@@ -285,7 +296,41 @@ def test_stix_and_graphql_markings_are_combined():
         "objects"
     ]
     definitions = {o["id"] for o in objects if o["type"] == "marking-definition"}
-    assert len(definitions) == 2
+    source = definitions - {CLEAR}
+    assert CLEAR in definitions
+    assert len(source) == 2
     for obj in objects:
-        if obj["type"] in {"vulnerability", "report", "relationship"}:
-            assert set(obj["object_marking_refs"]) == definitions
+        if obj["type"] == "vulnerability":
+            assert obj["object_marking_refs"] == [CLEAR]
+        elif obj["type"] in {"report", "relationship"}:
+            assert set(obj["object_marking_refs"]) == source
+
+
+def test_direct_vulnerability_enrichment_keeps_its_own_markings():
+    """Enriching a marked Vulnerability must not add TLP:CLEAR to it."""
+    from pycti import Vulnerability
+
+    connector = _make_enrichment_connector()
+    connector.converter.client_api.get_vulnerability_by_id = AsyncMock(
+        return_value=make_vulnerability("CVE-2024-3400")
+    )
+    vuln_id = Vulnerability.generate_id("CVE-2024-3400")
+    entity = {
+        "id": vuln_id,
+        "type": "vulnerability",
+        "name": "CVE-2024-3400",
+        "object_marking_refs": [GREEN],
+    }
+    data = {
+        "event_type": "INTERNAL_ENRICHMENT",
+        "stix_entity": entity,
+        "stix_objects": [entity],
+        "enrichment_entity": {"entity_type": "Vulnerability"},
+    }
+    assert "Enriched 1 CVE" in connector.process_message(data)
+    objects = json.loads(connector.helper.send_stix2_bundle.call_args.kwargs["bundle"])[
+        "objects"
+    ]
+    vulnerability = next(o for o in objects if o["id"] == vuln_id)
+    assert vulnerability["object_marking_refs"] == [GREEN]
+    assert vulnerability.get("description")  # NVD fields were merged in
