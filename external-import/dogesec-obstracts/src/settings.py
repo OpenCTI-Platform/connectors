@@ -53,7 +53,7 @@ class ObstractsConfig(BaseConfigModel):
     days_to_backfill: int = Field(
         description=(
             "Number of days of posts to import for a feed that has not been "
-            "imported yet (maximum: 365)."
+            "imported yet. Recommended maximum: 365."
         ),
         default=7,
     )

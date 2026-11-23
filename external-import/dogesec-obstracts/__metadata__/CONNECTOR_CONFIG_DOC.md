@@ -16,5 +16,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | The period of time to await between two runs of the connector. |
 | OBSTRACTS_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.obstracts.com/"` | The URL of the Obstracts API. |
 | OBSTRACTS_FEED_IDS | `array` |  | string |  | `[]` | Comma-separated list of Obstracts feed IDs to import. When empty, every feed the team is subscribed to is imported. |
-| OBSTRACTS_DAYS_TO_BACKFILL | `integer` |  | integer |  | `7` | Number of days of posts to import for a feed that has not been imported yet (maximum: 365). |
+| OBSTRACTS_DAYS_TO_BACKFILL | `integer` |  | integer |  | `7` | Number of days of posts to import for a feed that has not been imported yet. Recommended maximum: 365. |
 | OBSTRACTS_INTERVAL_HOURS | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |

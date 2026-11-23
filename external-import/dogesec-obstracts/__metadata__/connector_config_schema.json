@@ -78,7 +78,7 @@
     },
     "OBSTRACTS_DAYS_TO_BACKFILL": {
       "default": 7,
-      "description": "Number of days of posts to import for a feed that has not been imported yet (maximum: 365).",
+      "description": "Number of days of posts to import for a feed that has not been imported yet. Recommended maximum: 365.",
       "type": "integer"
     },
     "OBSTRACTS_INTERVAL_HOURS": {
