@@ -369,10 +369,12 @@ class ThreatFox:
                 # every retry for as long as it stays in the feed.
                 try:
                     rows.append(FeedRow.from_api(item))
-                except (KeyError, TypeError, ValueError) as err:
+                except (AttributeError, KeyError, TypeError, ValueError) as err:
+                    # `item` may not be a dict (null, string...): no `.get`.
+                    item_id = item.get("id") if isinstance(item, dict) else None
                     self.helper.connector_logger.warning(
                         "A Spamhaus IOC cannot be parsed and will be ignored",
-                        meta={"id": item.get("id"), "error": repr(err)},
+                        meta={"id": item_id, "error": repr(err)},
                     )
         return rows
 

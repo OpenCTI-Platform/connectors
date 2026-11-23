@@ -291,6 +291,31 @@ class TestCommercialImport:
         warnings = connector.helper.connector_logger.warning.call_args_list
         assert len(warnings) == 2
 
+    def test_items_that_are_not_valid_objects_are_skipped_without_failing_the_run(
+        self, connector
+    ):
+        connector.spamhaus_client = FakeSpamhausClient(
+            pages=[
+                [
+                    None,
+                    "not an object",
+                    api_ioc(id=2, malware_alias=["not", "a", "string"]),
+                    api_ioc(id=3, ioc="good.example.com"),
+                ]
+            ]
+        )
+
+        assert run(connector) is True
+
+        values = [
+            o["value"]
+            for o in sent_bundle_objects(connector)
+            if o["type"] == "domain-name"
+        ]
+        assert values == ["good.example.com"]
+        warnings = connector.helper.connector_logger.warning.call_args_list
+        assert len(warnings) == 3
+
     def test_ioc_type_filter_applies(self, connector):
         connector.ioc_to_import = ["url"]
         connector.spamhaus_client = FakeSpamhausClient(
