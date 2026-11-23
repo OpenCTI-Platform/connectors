@@ -180,7 +180,7 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC301 | ERROR | Common | `author-defined` | Connector must define an author Identity (Organization) |
 | VC302 | ERROR | Common | `author-referenced-on-entities` | Author must be referenced on STIX entities via `created_by_ref` |
 | VC303 | ERROR | Common | `connector-type-hardcoded` | `CONNECTOR_TYPE` must be hardcoded in code, not read from env |
-| VC304 | ERROR | Enrichment | `markings-checked` | TLP markings must be checked via `check_max_tlp` before processing |
+| VC304 | ERROR | Enrichment | `markings-checked` | TLP markings must be checked via `check_max_tlp` before processing (passes with connectors-sdk `InternalEnrichmentConnector`) |
 | VC305 | ERROR | Common | `sdk-base-settings` | Connector must use `BaseConnectorSettings` (or a `Base<Type>ConnectorSettings` subclass) from connectors-sdk |
 | VC306 | WARNING | Common | `log-level-default-error` | Log level should default to `error` |
 | VC307 | WARNING | Common | `except-logging-level` | Except blocks should use `error`/`warning` logging, not `debug`/`info` |
@@ -194,11 +194,11 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC315 | ERROR | External Import | `work-initiated` | Must call `initiate_work()` before processing (passes with connectors-sdk `ExternalImportConnector`) |
 | VC316 | ERROR | External Import | `work-closed` | Must close work with `to_processed()` after processing (passes with connectors-sdk `ExternalImportConnector`) |
 | VC317 | WARNING | External Import | `initiate-work-conditional` | `initiate_work` should only be called when data is available |
-| VC318 | ERROR | Enrichment | `helper-listen` | Must use `self.helper.listen()` for message callback |
-| VC319 | WARNING | Enrichment | `scope-fallback-bundle` | Must return original bundle when entity is not in scope |
-| VC320 | ERROR | Enrichment | `tlp-access-control` | Must enforce TLP access control (extract → check → reject) |
-| VC321 | ERROR | Enrichment | `playbook-compatible` | Must set `playbook_compatible=True` in helper constructor |
-| VC322 | ERROR | Enrichment | `former-bundle-read` | Must read `data['stix_objects']` for playbook compatibility |
+| VC318 | ERROR | Enrichment | `helper-listen` | Must use `self.helper.listen()` for message callback (passes with connectors-sdk `InternalEnrichmentConnector`) |
+| VC319 | WARNING | Enrichment | `scope-fallback-bundle` | Must return original bundle when entity is not in scope (passes with connectors-sdk `InternalEnrichmentConnector`) |
+| VC320 | ERROR | Enrichment | `tlp-access-control` | Must enforce TLP access control (extract → check → reject) (passes with connectors-sdk `InternalEnrichmentConnector`) |
+| VC321 | ERROR | Enrichment | `playbook-compatible` | Must set `playbook_compatible=True` in helper constructor (passes with connectors-sdk `InternalEnrichmentConnector`) |
+| VC322 | ERROR | Enrichment | `former-bundle-read` | Must read `data['stix_objects']` for playbook compatibility (passes with connectors-sdk `InternalEnrichmentConnector`) |
 | VC323 | ERROR | Stream | `helper-listen-stream` | Must use `self.helper.listen_stream()` |
 | VC324 | WARNING | Common | `relationship-start-stop-time` | Relationship should not set both `start_time` and `stop_time` (overloads Redis with time-bucketed duplicates) |
 | VC325 | ERROR | Common | `minimal-settings-tests` | Connector must have minimal settings tests covering valid and invalid inputs |

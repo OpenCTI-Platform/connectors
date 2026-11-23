@@ -5,6 +5,9 @@ outside its scope, it **must** send the original bundle back unchanged so the
 playbook can continue.  Detection relies on the ``event_type`` field in data:
 if absent, the trigger came from a playbook.
 
+Connectors built on connectors-sdk's ``InternalEnrichmentConnector`` pass:
+the SDK sends the original bundle back for any playbook message it skips.
+
 Scope: INTERNAL_ENRICHMENT only.
 Severity: WARNING (best practice, not yet universally adopted).
 """
@@ -13,6 +16,7 @@ import re
 
 from connector_linter.checks.vc3xx_code._helpers import (
     find_pattern_locations,
+    find_sdk_internal_enrichment_connector,
 )
 from connector_linter.models import (
     CheckFinding,
@@ -67,6 +71,18 @@ def check_scope_fallback(ctx: ConnectorContext) -> list[CheckFinding]:
     sources = ctx.python_sources
     if not sources:
         return []
+
+    # The SDK base connector does it itself
+    sdk_import = find_sdk_internal_enrichment_connector(ctx.python_trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Out-of-scope playbook handling delegated to connectors-sdk InternalEnrichmentConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     # Detection flow:
     # 1. First check stix_objects — reading it is required to be able to
