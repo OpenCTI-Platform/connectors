@@ -6,6 +6,7 @@ Reference: https://euvd.enisa.europa.eu/apidoc
 from __future__ import annotations
 
 import itertools
+import time
 from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import Any
@@ -22,6 +23,12 @@ PAGE_SIZE = 100
 RATE_LIMIT = 2  # requests per second
 MAX_RETRIES = 5
 BACKOFF_FACTOR = 2.0
+# The API gateway sometimes answers a short-lived `403 Forbidden` (generic HTML
+# body, no `Retry-After`) after a few hundred pages, and accepts the same
+# request again a few seconds later. The SDK retries only 408/429/5xx, so 403
+# is retried here, with a delay that doubles on each retry: 5, 10, 20, 40, 80 s.
+FORBIDDEN_MAX_RETRIES = 5
+FORBIDDEN_BACKOFF = 5.0  # seconds
 TIMEOUT = 60
 USER_AGENT = (
     "OpenCTI-ENISA-EUVD-Connector/1.0 (+https://github.com/OpenCTI-Platform/connectors)"
@@ -43,6 +50,34 @@ class EnisaEuvdClient(BaseClientApi):
     @property
     def session_headers(self) -> dict[str, str]:
         return {"User-Agent": USER_AGENT}
+
+    def _raw_request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
+        """Send a request, retrying a `403 Forbidden` with exponential backoff.
+
+        Each attempt goes through the session, so each one waits for the rate
+        limit. Retries for 408/429/5xx stay with the session's urllib3 adapter.
+
+        Args:
+            method: HTTP method.
+            path: URL path relative to the base URL.
+            **kwargs: Passed to the underlying request.
+
+        Returns:
+            The first response that is not a 403, or the response of the last
+            attempt once `FORBIDDEN_MAX_RETRIES` retries are used up, so the
+            caller raises its usual error.
+        """
+        for attempt in range(FORBIDDEN_MAX_RETRIES):
+            response = super()._raw_request(method, path, **kwargs)
+            if response.status_code != 403:
+                return response
+            delay = FORBIDDEN_BACKOFF * 2**attempt
+            self._logger.warning(
+                "EUVD API answered 403 Forbidden, retrying after a delay",
+                meta={"path": path, "attempt": attempt + 1, "delay": delay},
+            )
+            time.sleep(delay)
+        return super()._raw_request(method, path, **kwargs)
 
     def iter_vulnerabilities(
         self,
@@ -76,7 +111,8 @@ class EnisaEuvdClient(BaseClientApi):
 
         Raises:
             DataRetrievalError: If the API is unreachable or keeps returning
-                an error once retries are exhausted.
+                an error once retries are exhausted. A 403 is retried with
+                backoff (see `FORBIDDEN_MAX_RETRIES`) before it is raised.
         """
         params: dict[str, Any] = {"size": PAGE_SIZE}
         if updated_after is not None:
