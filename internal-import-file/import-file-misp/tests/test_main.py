@@ -118,3 +118,32 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     # The connector still exposes its historical config attributes.
     assert connector.misp_import_file_create_indicators is True
     assert connector.misp_import_file_import_to_ids_no_score == 40
+
+
+def test_process_attribute_without_comment(mock_opencti_connector_helper, monkeypatch):
+    """
+    The MISP "comment" field is optional: an attribute exported without it
+    MUST be processed instead of raising a KeyError.
+    """
+    monkeypatch.setattr(import_file_misp, "ConnectorSettings", StubConnectorSettings)
+    connector = MispImportFile()
+    author = import_file_misp.stix2.Identity(
+        id="identity--7b82b010-b1c0-4dae-981f-7756374a17df",
+        name="author",
+        identity_class="organization",
+    )
+    attribute = {
+        "type": "ip-dst",
+        "category": "Network activity",
+        "value": "1.2.3.4",
+        "to_ids": True,
+        "timestamp": "1700000000",
+    }
+
+    result = connector._process_attribute(
+        author, [], [], [], None, [], attribute, "2", False
+    )
+
+    assert result is not None
+    assert result["indicator"] is not None
+    assert result["observable"] is not None
