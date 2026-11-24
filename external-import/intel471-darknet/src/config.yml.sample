@@ -14,9 +14,11 @@ intel471:
   api_username: 'ChangeMe'
   api_key: 'ChangeMe'
 
-intel471_darknet:
-  # Unix epoch (seconds) of the earliest alert to import on the first run.
-  # initial_history_alerts: 0
-  # TLP marking applied to created entities: CLEAR, GREEN, AMBER,
-  # AMBER_STRICT, RED.
-  # tlp: 'AMBER'
+# Uncomment the section header together with any setting below: a section
+# left with no setting is read as empty (null) and fails validation.
+# intel471_darknet:
+#   # Unix epoch (seconds) of the earliest alert to import on the first run.
+#   initial_history_alerts: 0
+#   # TLP marking applied to created entities: CLEAR, GREEN, AMBER,
+#   # AMBER_STRICT, RED.
+#   tlp: 'AMBER'
