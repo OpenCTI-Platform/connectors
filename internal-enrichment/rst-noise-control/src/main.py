@@ -1,102 +1,31 @@
-import os
 from typing import Dict
 
 import requests
-import yaml
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
-    get_config_variable,
-)
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from settings import ConnectorSettings
 
 
 class RSTNoiseControlConnector:
     def __init__(self):
         # Load config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.safe_load(open(config_file_path, encoding="UTF-8"))
-            if os.path.isfile(config_file_path)
-            else {}
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config.to_helper_config(), playbook_compatible=True
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
-        self.base_url = str(
-            get_config_variable(
-                "RST_NOISE_CONTROL_BASE_URL",
-                ["rst-noise-control", "base_url"],
-                config,
-                default="https://api.rstcloud.net/v1",
-            )
-        ).rstrip("/")
-        self.api_key = get_config_variable(
-            "RST_NOISE_CONTROL_API_KEY", ["rst-noise-control", "api_key"], config
-        )
-        self.max_tlp = get_config_variable(
-            "RST_NOISE_CONTROL_MAX_TLP",
-            ["rst-noise-control", "max_tlp"],
-            config,
-            default="TLP:AMBER+STRICT",
-        )
+        self.base_url = self.config.rst_noise_control.base_url.rstrip("/")
+        self.api_key = self.config.rst_noise_control.api_key.get_secret_value()
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
-        self.update_confidence = bool(
-            get_config_variable(
-                "RST_NOISE_CONTROL_UPDATE_CONFIDENCE",
-                ["rst-noise-control", "update_confidence"],
-                config,
-                default=True,
-            )
-        )
+        self.update_confidence = self.config.rst_noise_control.update_confidence
 
-        self.update_score = bool(
-            get_config_variable(
-                "RST_NOISE_CONTROL_UPDATE_SCORE",
-                ["rst-noise-control", "update_score"],
-                config,
-                default=True,
-            )
-        )
-        self.change_score = int(
-            get_config_variable(
-                "RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE",
-                ["rst-noise-control", "change_action_score_change"],
-                config,
-                default=10,
-            )
-        )
-        self.drop_score = int(
-            get_config_variable(
-                "RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE",
-                ["rst-noise-control", "drop_action_score_change"],
-                config,
-                default=50,
-            )
-        )
-        self.detection_flag = bool(
-            get_config_variable(
-                "RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG",
-                ["rst-noise-control", "drop_action_detection_flag"],
-                config,
-                default=True,
-            )
-        )
+        self.update_score = self.config.rst_noise_control.update_score
+        self.change_score = self.config.rst_noise_control.change_action_score_change
+        self.drop_score = self.config.rst_noise_control.drop_action_score_change
+        self.detection_flag = self.config.rst_noise_control.drop_action_detection_flag
 
-        self.timeout = int(
-            get_config_variable(
-                "RST_NOISE_CONTROL_TIMEOUT",
-                ["rst-noise-control", "timeout"],
-                config,
-                default=10,
-            )
-        )
+        self.timeout = self.config.rst_noise_control.timeout
 
-        self.connector_auto = bool(
-            get_config_variable(
-                "CONNECTOR_AUTO",
-                ["connector", "auto"],
-                config,
-            )
-        )
+        self.connector_auto = self.config.connector.auto
 
         self.helper.log_info(f"connector_auto {self.connector_auto}")
         self.helper.log_info(f"detection_flag {self.detection_flag}")
