@@ -64,23 +64,26 @@ Key features:
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Domain-Name,Url,indicator` |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance (default: `RST WHOIS API`) |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `Domain-Name,Url,indicator` (default: `Domain-Name,Url,indicator`) |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: `false`) |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) (default: `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER+STRICT`) |
 
 ### RST WHOIS API Configuration
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `rst_whois_api_api_key` | `RST_WHOIS_API_API_KEY` | Yes | RST Cloud API key |
-| `rst_whois_api_base_url` | `RST_WHOIS_API_BASE_URL` | No | API base URL (default: https://api.rstcloud.net/v1) |
-| `rst_whois_api_max_tlp` | `RST_WHOIS_API_MAX_TLP` | No | Maximum TLP (default: TLP:AMBER+STRICT) |
-| `rst_whois_api_timeout` | `RST_WHOIS_API_TIMEOUT` | No | API timeout in seconds (default: 10) |
-| `rst_whois_api_update_output_action` | `RST_WHOIS_API_UPDATE_OUTPUT_ACTION` | No | Update mode: `overwrite` or `append` |
-| `rst_whois_api_whois_output_object` | `RST_WHOIS_API_WHOIS_OUTPUT_OBJECT` | No | Output target: `note` or `description` |
-| `rst_whois_api_output_format` | `RST_WHOIS_API_OUTPUT_FORMAT` | No | Format: `standard` or `extended` |
-| `rst_whois_api_output_include_raw` | `RST_WHOIS_API_OUTPUT_INCLUDE_RAW` | No | Include raw WHOIS response (default: false) |
+| `rst_whois_api_base_url` | `RST_WHOIS_API_BASE_URL` | No | API base URL (default: `https://api.rstcloud.net/v1`) |
+| `rst_whois_api_timeout` | `RST_WHOIS_API_TIMEOUT` | No | API timeout in seconds (default: `10`) |
+| `rst_whois_api_update_output_action` | `RST_WHOIS_API_UPDATE_OUTPUT_ACTION` | No | Update mode: `overwrite` or `append` (default: `overwrite`) |
+| `rst_whois_api_whois_output_object` | `RST_WHOIS_API_WHOIS_OUTPUT_OBJECT` | No | Output target: `note` or `description` (default: `note`) |
+| `rst_whois_api_output_format` | `RST_WHOIS_API_OUTPUT_FORMAT` | No | Format: `standard` or `extended` (default: `standard`) |
+| `rst_whois_api_output_include_raw` | `RST_WHOIS_API_OUTPUT_INCLUDE_RAW` | No | Include raw WHOIS response (default: `false`) |
+| `rst_whois_api_max_tlp` | `RST_WHOIS_API_MAX_TLP` | No | Deprecated: use `CONNECTOR_MAX_TLP` instead |
+
+In `config.yml`, these settings go in the `rst-whois-api` section.
 
 ---
 
@@ -101,25 +104,25 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=RST WHOIS API
-      - CONNECTOR_SCOPE=Domain-Name,Url,indicator
-      - CONNECTOR_AUTO=false
-      - CONNECTOR_LOG_LEVEL=info
-      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1
+      # - CONNECTOR_NAME=RST WHOIS API
+      # - CONNECTOR_SCOPE=Domain-Name,Url,indicator
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_MAX_TLP=TLP:AMBER+STRICT
       - RST_WHOIS_API_API_KEY=ChangeMe
-      - RST_WHOIS_API_MAX_TLP=TLP:AMBER+STRICT
-      - RST_WHOIS_API_UPDATE_OUTPUT_ACTION=overwrite
-      - RST_WHOIS_API_WHOIS_OUTPUT_OBJECT=note
-      - RST_WHOIS_API_OUTPUT_FORMAT=standard
-      - RST_WHOIS_API_OUTPUT_INCLUDE_RAW=false
-      - RST_WHOIS_API_TIMEOUT=10
+      # - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1
+      # - RST_WHOIS_API_TIMEOUT=10
+      # - RST_WHOIS_API_WHOIS_OUTPUT_OBJECT=note
+      # - RST_WHOIS_API_UPDATE_OUTPUT_ACTION=overwrite
+      # - RST_WHOIS_API_OUTPUT_FORMAT=standard
+      # - RST_WHOIS_API_OUTPUT_INCLUDE_RAW=false
     restart: always
 ```
 
 ### Manual Deployment
 
 1. Clone the repository
-2. Copy `config.yml.sample` to `config.yml` and configure
+2. Copy `src/config.yml.sample` to `src/config.yml` and configure
 3. Install dependencies: `pip install -r requirements.txt`
 4. Run the connector
 
