@@ -24,7 +24,7 @@ services:
       # Leave empty (default) to create all types.
       # Valid values: Domain-Name,Hostname,IPv4-Address,IPv6-Address,
       #               Autonomous-System,X509-Certificate,Text,Vulnerability
-      #- ONYPHE_ENRICHMENT_TYPES=
+      - ONYPHE_ENRICHMENT_TYPES=
       # Comma-separated list of fingerprint pivot labels to use when creating
       # Text observables.  Leave empty to use the default sha256-preferred set.
       # Valid values: hhhash-sha256,hhhash-md5,ja4t-md5,ja3s-md5,ja4s-md5,
@@ -33,5 +33,5 @@ services:
       #   http-header-data-sha256,http-header-data-md5,http-header-data-mmh3,
       #   http-body-data-sha256,http-body-data-md5,http-body-data-mmh3,
       #   ssh-fingerprint-sha256,ssh-fingerprint-md5
-      #- ONYPHE_TEXT_FINGERPRINTS=
+      - ONYPHE_TEXT_FINGERPRINTS=
     restart: always
