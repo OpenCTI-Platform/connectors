@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'RST Noise Control'
   scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
   auto: false # Enable/disable auto-enrichment of observables
