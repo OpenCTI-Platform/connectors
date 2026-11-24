@@ -6,24 +6,10 @@ This connector facilitates the import of domain names from the Nameshield regist
 
 ## Configuration
 
-| Parameter | config.yml | Docker environment variable | Default | Mandatory | Description |
-|---|---|---|---|---|---|
-| OpenCTI URL | `opencti.url` | `OPENCTI_URL` | | Yes | The URL of the OpenCTI platform. |
-| OpenCTI token | `opencti.token` | `OPENCTI_TOKEN` | | Yes | The token of the OpenCTI user the connector runs as. |
-| Connector ID | `connector.id` | `CONNECTOR_ID` | `46ae8578-037f-49fc-b68c-f803f1f0d86e` | No | A valid arbitrary `UUIDv4` that must be unique for this connector. |
-| Connector name | `connector.name` | `CONNECTOR_NAME` | `NameShield` | No | The name of the connector. |
-| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | `NameShield` | No | The scope of the connector. |
-| Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | The log level for this connector: `debug`, `info`, `warn` or `error` (less verbose). |
-| Duration period | `connector.duration_period` | `CONNECTOR_DURATION_PERIOD` | `P7D` | No | ISO-8601 duration between two runs (`P7D`: once a week). Replaces `NAMESHIELD_INTERVAL`. |
-| Auth bearer | `nameshield.auth_bearer` | `NAMESHIELD_AUTH_BEARER` | | Yes | Your bearer token provided by NameShield (your IP address must also be allowed). |
-| Server | `nameshield.server` | `NAMESHIELD_SERVER` | `api.nameshield.net` | No | NameShield API server, used as `{server}` in the URL templates. |
-| API version | `nameshield.api_version` | `NAMESHIELD_API_VERSION` | `v1` | No | NameShield API version, used as `{api_version}` in the URL templates. |
-| API endpoint | `nameshield.api_endpoint` | `NAMESHIELD_API_ENDPOINT` | `registrar` | No | NameShield API endpoint, used as `{api_endpoint}` in the URL templates. |
-| Domain list URL | `nameshield.url_list` | `NAMESHIELD_URL_LIST` | `https://{server}/{api_endpoint}/{api_version}/domains` | No | URL template of the domain list. |
-| Domain details URL | `nameshield.url_domain` | `NAMESHIELD_URL_DOMAIN` | `https://{server}/{api_endpoint}/{api_version}/domains/{domain}` | No | URL template of the domain details. |
-| Domain limit | `nameshield.domain_limit` | `NAMESHIELD_DOMAIN_LIMIT` | `10000` | No | Maximum number of domains imported per run, in case you have a lot of domain names. |
-| Marking | `nameshield.marking` | `NAMESHIELD_MARKING` | `TLP:GREEN` | No | TLP marking of the imported objects. An unknown value falls back to `TLP:AMBER+STRICT`. |
-| Link to identities | `nameshield.link_to_identities` | `NAMESHIELD_LINK_TO_IDENTITIES` | | No | Comma-separated STIX IDs of identities (your firm, for example) the indicators are attributed to. Empty for no link. |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 Deprecated settings, still read:
 
