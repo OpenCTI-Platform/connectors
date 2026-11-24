@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [RST IoC Lookup Configuration](#rst-ioc-lookup-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -52,41 +49,12 @@ Key features:
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector (a default is set for catalog deployments) |
-| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance (default: `RST IoC Lookup`) |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `IPv4-Addr,Domain-Name,Url,StixFile,indicator` (default: all of them) |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: `false`) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, `warning` or `error` (default: `error`) |
-| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER+STRICT`) |
-
-### RST IoC Lookup Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `rst_ioc_lookup_api_key` | `RST_IOC_LOOKUP_API_KEY` | Yes | RST Cloud API key |
-| `rst_ioc_lookup_base_url` | `RST_IOC_LOOKUP_BASE_URL` | No | API base URL (default: `https://api.rstcloud.net/v1`) |
-| `rst_ioc_lookup_max_tlp` | `RST_IOC_LOOKUP_MAX_TLP` | No | Deprecated: use `CONNECTOR_MAX_TLP` instead |
-| `rst_ioc_lookup_update_confidence` | `RST_IOC_LOOKUP_UPDATE_CONFIDENCE` | No | Update confidence from enrichment (default: `true`) |
-| `rst_ioc_lookup_update_score` | `RST_IOC_LOOKUP_UPDATE_SCORE` | No | Update score from enrichment (default: `true`) |
-| `rst_ioc_lookup_update_valid_from` | `RST_IOC_LOOKUP_UPDATE_VALID_FROM` | No | Update valid_from using last_seen (default: `true`) |
-| `rst_ioc_lookup_label_format` | `RST_IOC_LOOKUP_LABEL_FORMAT` | No | Label format: `short` or `long` (default: `short`) |
-| `rst_ioc_lookup_score_type` | `RST_IOC_LOOKUP_SCORE_TYPE` | No | Score type: `last`, `first` or `total` (default: `total`) |
-| `rst_ioc_lookup_update_description_action` | `RST_IOC_LOOKUP_UPDATE_DESCRIPTION_ACTION` | No | Description merge: `overwrite`, `append`, `prepend` (default: `overwrite`) |
-| `rst_ioc_lookup_detection_flag_threshold` | `RST_IOC_LOOKUP_DETECTION_FLAG_THRESHOLD` | No | Score threshold for detection flag (default: `45`) |
-| `rst_ioc_lookup_timeout` | `RST_IOC_LOOKUP_TIMEOUT` | No | API timeout in seconds (default: `10`) |
-
-In `config.yml`, the RST IoC Lookup parameters go in the `rst_ioc_lookup` section (the legacy `rst-ioc-lookup` section name is still accepted).
+In `config.yml`, the connector parameters go in the `rst_ioc_lookup` section (the legacy `rst-ioc-lookup` section name is still accepted).
 
 ---
 
