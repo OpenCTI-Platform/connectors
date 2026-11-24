@@ -70,33 +70,18 @@ The OpenCTI Vulmatch Connector enriches vulnerability data with additional intel
 
 ### Configuration Variables
 
-#### OpenCTI Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### Base Connector Parameters
+A few notes on the Vulmatch-specific options:
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
-
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `VULMATCH_BASE_URL` | `vulmatch.base_url` | Yes | `https://api.vulmatch.com/` | Vulmatch API URL |
-| API Key | `VULMATCH_API_KEY` | `vulmatch.api_key` | Yes | - | The Vulmatch API key for authentication (steps to generate described earlier in this document) |                                                                      | SBoM Only | `VULMATCH_SBOM_ONLY` | `vulmatch.sbom_only` | Yes | `FALSE` | You can use the Vulmatch connector in two ways. 1) to only ingest vulnerability data related to products in your Vulmatch SBoM (set this to `TRUE`), or 2) to ingest all vulnerabilities that match filters (set this to `FALSE`) |
-| Minimum EPSS Score | `VULMATCH_EPSS_SCORE_MIN` | `vulmatch.epss_score_min` | Yes | `-1` | The minimum EPSS score for the vulnerabilities to be ingested. Between `0` and `1`. Setting to `-1` will include vulnerabilities with no EPSS scores. |
-| Minimum CVSSv2 Score | `VULMATCH_CVSS_V2_SCORE_MIN` | `vulmatch.cvss_v2_score_min` | Yes | `-1` | The minimum CVSS v2 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
-| Minimum CVSSv3 Score | `VULMATCH_CVSS_V3_SCORE_MIN` | `vulmatch.cvss_v3_score_min` | Yes | `-1` | The minimum CVSS v3 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
-| Minimum CVSSv4 Score | `VULMATCH_CVSS_V4_SCORE_MIN` | `vulmatch.cvss_v4_score_min` | Yes | `-1` | The minimum CVSS v4 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
-| Interval Days | `VULMATCH_INTERVAL_DAYS` | `vulmatch.interval_days` | Yes | `1` | Polling interval in hours. The connector polls Vulmatch for new and updated CVEs at this schedule. The minimum (and recommended) value is `1`. |
-| Days to Backfill | `VULMATCH_DAYS_TO_BACKFILL` | `vulmatch.days_to_backfill` | Yes | `90` | Number of days of historical data to import (maximum: `90`). Uses the `created` value of the CVE. This setting only applies during the initial data polling (backfill). Changing it after the backfill has completed has no effect. |
+- `VULMATCH_API_KEY` is the key generated in [Generating an API Key](#generating-an-api-key).
+- `VULMATCH_SBOM_ONLY` selects one of the two ways to use the connector: ingest only the vulnerabilities related to products in your Vulmatch SBoM (`true`), or every vulnerability that matches the filters (`false`).
+- The score filters (`VULMATCH_EPSS_SCORE_MIN`, `VULMATCH_CVSS_V2_SCORE_MIN`, `VULMATCH_CVSS_V3_SCORE_MIN` and `VULMATCH_CVSS_V4_SCORE_MIN`) are disabled with `-1`, which also includes the vulnerabilities that have no score.
+- `VULMATCH_DAYS_TO_BACKFILL` uses the `created` value of the CVE and only applies to the initial data polling (backfill). Changing it after the backfill has completed has no effect.
+- `CONNECTOR_DURATION_PERIOD` replaces the deprecated `VULMATCH_INTERVAL_DAYS`. When `VULMATCH_INTERVAL_DAYS` is set alone, its value (in days) is migrated to `CONNECTOR_DURATION_PERIOD`.
 
 ---
 
@@ -116,14 +101,14 @@ services:
       - CONNECTOR_ID=${CONNECTOR_VULMATCH_ID}
       - CONNECTOR_NAME=Vulmatch
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D
       - VULMATCH_BASE_URL=https://api.vulmatch.com/
       - VULMATCH_API_KEY=${VULMATCH_API_KEY}
-      - VULMATCH_SBOM_ONLY=FALSE
+      - VULMATCH_SBOM_ONLY=false
       - VULMATCH_EPSS_SCORE_MIN=-1
       - VULMATCH_CVSS_V2_SCORE_MIN=-1
       - VULMATCH_CVSS_V3_SCORE_MIN=-1
       - VULMATCH_CVSS_V4_SCORE_MIN=-1
-      - VULMATCH_INTERVAL_DAYS=1
       - VULMATCH_DAYS_TO_BACKFILL=90
     restart: always
     depends_on:
