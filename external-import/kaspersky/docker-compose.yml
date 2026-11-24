@@ -23,11 +23,11 @@ services:
       #- KASPERSKY_PUBLICATION_REPORT_STATUS=New
       #- KASPERSKY_PUBLICATION_REPORT_IGNORE_PREFIXES=  # Empty by default, e.g. Monthly APT activity report
       #- KASPERSKY_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES=  # Empty by default, e.g. Md5sum, FileItem/Sha1sum (OpenIOC search values)
-      #- KASPERSKY_MASTER_IOC_FETCH_WEEKDAY=  # No default: fetched on every run. ISO weekday, e.g. 1 for Monday.
+      #- KASPERSKY_MASTER_IOC_FETCH_WEEKDAY=1  # ISO weekday (1 is Monday). Leave unset to fetch on every run.
       #- KASPERSKY_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES=  # Empty by default, e.g. md5Hash, sha1Hash (OpenIOC indicator types)
       #- KASPERSKY_MASTER_IOC_REPORT_TYPE=threat-report
       #- KASPERSKY_MASTER_IOC_REPORT_STATUS=New
-      #- KASPERSKY_MASTER_YARA_FETCH_WEEKDAY=  # No default: fetched on every run. ISO weekday, e.g. 2 for Tuesday.
+      #- KASPERSKY_MASTER_YARA_FETCH_WEEKDAY=2  # ISO weekday (1 is Monday). Leave unset to fetch on every run.
       #- KASPERSKY_MASTER_YARA_INCLUDE_REPORT=true
       #- KASPERSKY_MASTER_YARA_REPORT_TYPE=threat-report
       #- KASPERSKY_MASTER_YARA_REPORT_STATUS=New
