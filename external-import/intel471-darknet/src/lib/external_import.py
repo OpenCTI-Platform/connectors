@@ -1,15 +1,14 @@
 """Base class for the Intel 471 darknet external-import connector.
 
-The class is intentionally kept self-contained so the connector can run
-both inside Docker (configuration via environment variables) and as a
-plain Python process (configuration via ``src/config.yml``).
+The configuration is loaded and validated by :class:`settings.ConnectorSettings`
+(environment variables, ``src/config.yml`` or ``config.yml``), so the
+connector runs both inside Docker and as a plain Python process.
 
 Notable behaviours:
 
-* ``CONNECTOR_UPDATE_EXISTING_DATA`` is coerced into a real :class:`bool`
-  so an invalid value cannot turn into a truthy string fall-back.
-* ``CONNECTOR_RUN_EVERY`` raises a clear ``ValueError`` for missing /
-  malformed values.
+* ``CONNECTOR_DURATION_PERIOD`` (or the deprecated ``CONNECTOR_RUN_EVERY``)
+  must be strictly positive: a clear ``ValueError`` is raised at startup
+  otherwise.
 * Timestamps are computed with timezone-aware :func:`datetime.now` /
   :func:`datetime.fromtimestamp`.
 * ``_run_cycle`` only advances ``last_run`` (and marks the work as
@@ -18,22 +17,13 @@ Notable behaviours:
   left untouched so the next run retries from the same window.
 """
 
-import os
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict
 
 import stix2
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-_INTERVAL_UNITS: Dict[str, int] = {
-    "s": 1,
-    "m": 60,
-    "h": 60 * 60,
-    "d": 60 * 60 * 24,
-}
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 _MIN_SLEEP_SECONDS = 1
 _MAX_SLEEP_SECONDS = 60
@@ -46,84 +36,19 @@ class ExternalImportConnector:
     """
 
     def __init__(self) -> None:
-        config = self._load_config()
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        interval = get_config_variable(
-            "CONNECTOR_RUN_EVERY",
-            ["connector", "run_every"],
-            config,
-            default=None,
-        )
-        if not isinstance(interval, str) or not interval.strip():
-            msg = (
-                "CONNECTOR_RUN_EVERY is required and must be a string of the "
-                "form '<int><d|h|m|s>' (e.g. '7d', '12h', '10m', '30s')."
-            )
-            self.helper.log_error(msg)
-            raise ValueError(msg)
-        self.interval: str = interval.lower().strip()
         # Validate eagerly so the operator gets a clear error at startup.
         self._get_interval()
-
-        raw_update = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=False,
-        )
-        self.update_existing_data: bool = self._coerce_bool(raw_update, default=False)
 
     # ------------------------------------------------------------------
     # Configuration helpers
     # ------------------------------------------------------------------
-    @staticmethod
-    def _load_config() -> Dict[str, Any]:
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "config.yml",
-        )
-        if not os.path.isfile(config_file_path):
-            return {}
-        with open(config_file_path, "r", encoding="utf-8") as fh:
-            return yaml.safe_load(fh) or {}
-
-    @staticmethod
-    def _coerce_bool(value: Any, *, default: bool) -> bool:
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return default
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            normalised = value.strip().lower()
-            if normalised in ("true", "1", "yes", "on"):
-                return True
-            if normalised in ("false", "0", "no", "off", ""):
-                return False
-        return default
-
     def _get_interval(self) -> int:
-        unit = self.interval[-1]
-        if unit not in _INTERVAL_UNITS:
-            msg = (
-                f"CONNECTOR_RUN_EVERY value '{self.interval}' has an "
-                "unsupported time unit. Expected one of d, h, m, s."
-            )
-            self.helper.log_error(msg)
-            raise ValueError(msg)
-        try:
-            magnitude = int(self.interval[:-1])
-        except ValueError as exc:
-            msg = (
-                f"CONNECTOR_RUN_EVERY value '{self.interval}' is not a "
-                f"valid integer prefix: {exc}"
-            )
-            self.helper.log_error(msg)
-            raise ValueError(msg) from exc
-        if magnitude <= 0:
-            # ``0`` (e.g. ``0m`` / ``0h`` / ``0s``) would make
+        interval_seconds = int(self.config.connector.duration_period.total_seconds())
+        if interval_seconds <= 0:
+            # A zero interval (e.g. ``PT0S``) would make
             # ``elapsed >= interval_seconds`` true on every iteration
             # and the worker loop would call ``_collect_intelligence``
             # back-to-back with only the inner one-second floor from
@@ -132,12 +57,13 @@ class ExternalImportConnector:
             # positive interval so a misconfiguration cannot push the
             # connector into a tight collection loop.
             msg = (
-                f"CONNECTOR_RUN_EVERY value '{self.interval}' must be a "
-                "strictly positive integer."
+                f"CONNECTOR_DURATION_PERIOD value "
+                f"'{self.config.connector.duration_period}' must be strictly "
+                "positive."
             )
             self.helper.log_error(msg)
             raise ValueError(msg)
-        return magnitude * _INTERVAL_UNITS[unit]
+        return interval_seconds
 
     # ------------------------------------------------------------------
     # Worker loop
@@ -234,7 +160,6 @@ class ExternalImportConnector:
                 )
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
         except Exception as exc:  # noqa: BLE001 - keep looping on errors
