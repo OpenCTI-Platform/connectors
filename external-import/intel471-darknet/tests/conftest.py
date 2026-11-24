@@ -1,16 +1,9 @@
 """Pytest configuration for the ``intel471-darknet`` connector tests.
 
-The connector's ``main.py`` imports ``pycti`` / ``stix2`` / ``bs4`` /
-``requests`` and an Intel 471 specific helper module, none of which is
-available on a minimal CI runner. The test suite therefore only
-exercises the **dependency-free** helper modules under ``src/lib/``:
-
-* ``lib.redaction`` (``test_redaction.py``) — query / fragment
-  redaction for URLs included in connector log lines.
-
-We simply add the connector ``src`` directory to ``sys.path`` so the
-test modules can ``from lib.<module> import <symbol>`` without
-pulling in ``pycti`` / ``stix2`` / ``requests`` / ``bs4``.
+The connector source lives in a flat ``src`` directory (``main.py``,
+``settings.py`` and the ``lib`` package), so it is added to ``sys.path``
+and the test modules can import ``main``, ``settings`` and
+``lib.<module>`` directly.
 """
 
 import sys
