@@ -16,6 +16,13 @@ from connectors_sdk import ApiClientError, BaseClientApi, RateLimit
 from connectors_sdk.exceptions.error import DataRetrievalError
 from enisa_euvd.models import EUVDInvalidItem, EUVDVulnerability
 from pydantic import ValidationError
+from tenacity import (
+    RetryCallState,
+    Retrying,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 PAGE_SIZE = 100
 # EUVD publishes no documented rate limit; stay defensive and proactively
@@ -54,8 +61,10 @@ class EnisaEuvdClient(BaseClientApi):
     def _raw_request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         """Send a request, retrying a `403 Forbidden` with exponential backoff.
 
-        Each attempt goes through the session, so each one waits for the rate
-        limit. Retries for 408/429/5xx stay with the session's urllib3 adapter.
+        The retry is driven by `tenacity` and depends on the response status
+        only: an exception is not retried here. Each attempt goes through the
+        session, so each one waits for the rate limit. Retries for 408/429/5xx
+        stay with the session's urllib3 adapter.
 
         Args:
             method: HTTP method.
@@ -63,21 +72,32 @@ class EnisaEuvdClient(BaseClientApi):
             **kwargs: Passed to the underlying request.
 
         Returns:
-            The first response that is not a 403, or the response of the last
-            attempt once `FORBIDDEN_MAX_RETRIES` retries are used up, so the
-            caller raises its usual error.
+            The first response that is not a 403, or the 403 response of the
+            last attempt once `FORBIDDEN_MAX_RETRIES` retries are used up, so
+            the caller raises its usual error.
         """
-        for attempt in range(FORBIDDEN_MAX_RETRIES):
-            response = super()._raw_request(method, path, **kwargs)
-            if response.status_code != 403:
-                return response
-            delay = FORBIDDEN_BACKOFF * 2**attempt
+        send = super()._raw_request
+
+        def log_retry(retry_state: RetryCallState) -> None:
             self._logger.warning(
                 "EUVD API answered 403 Forbidden, retrying after a delay",
-                meta={"path": path, "attempt": attempt + 1, "delay": delay},
+                meta={
+                    "path": path,
+                    "attempt": retry_state.attempt_number,
+                    "delay": retry_state.next_action.sleep,
+                },
             )
-            time.sleep(delay)
-        return super()._raw_request(method, path, **kwargs)
+
+        retrying = Retrying(
+            retry=retry_if_result(lambda response: response.status_code == 403),
+            stop=stop_after_attempt(FORBIDDEN_MAX_RETRIES + 1),
+            wait=wait_exponential(multiplier=FORBIDDEN_BACKOFF, exp_base=2),
+            before_sleep=log_retry,
+            sleep=time.sleep,
+            # Return the last 403 instead of raising `RetryError`.
+            retry_error_callback=lambda state: state.outcome.result(),
+        )
+        return retrying(send, method, path, **kwargs)
 
     def iter_vulnerabilities(
         self,

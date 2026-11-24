@@ -316,6 +316,21 @@ def test_iter_vulnerabilities_raises_when_every_attempt_is_a_403(clock):
     assert clock.sleeps == [5.0, 10.0, 20.0, 40.0, 80.0]
 
 
+def test_iter_vulnerabilities_does_not_retry_an_exception_from_the_request(clock):
+    logger = MagicMock()
+    client = _client(logger)
+    error = requests.ConnectionError("boom")
+
+    with patch.object(BaseClientApi, "_raw_request", side_effect=error) as mocked:
+        with pytest.raises(DataRetrievalError, match="page 0") as exc_info:
+            list(client.iter_vulnerabilities())
+
+    assert exc_info.value.__cause__ is error
+    assert mocked.call_count == 1
+    assert clock.sleeps == []
+    logger.warning.assert_not_called()
+
+
 @pytest.mark.parametrize("status_code", [200, 404])
 def test_raw_request_does_not_retry_other_statuses(clock, status_code):
     logger = MagicMock()
