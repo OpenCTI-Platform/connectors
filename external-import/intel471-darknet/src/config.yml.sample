@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Intel 471 Darknet'
   scope: 'intel471-darknet'
   log_level: 'info'
