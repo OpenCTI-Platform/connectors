@@ -1,129 +1,44 @@
-import os
 from datetime import datetime, timezone
 from typing import Dict
 from urllib.parse import urlparse
 
 import requests
-import yaml
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
-    get_config_variable,
-)
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from settings import ConnectorSettings
 
 
 class RSTIocLookupConnector:
     def __init__(self):
         # Load config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.safe_load(open(config_file_path, encoding="UTF-8"))
-            if os.path.isfile(config_file_path)
-            else {}
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config.to_helper_config(), playbook_compatible=True
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
-        self.base_url = get_config_variable(
-            "RST_IOC_LOOKUP_BASE_URL",
-            ["rst-ioc-lookup", "base_url"],
-            config,
-            default="https://api.rstcloud.net/v1",
-        )
-        if isinstance(self.base_url, str):
-            self.base_url = self.base_url.rstrip("/")
-        self.api_key = str(
-            get_config_variable(
-                "RST_IOC_LOOKUP_API_KEY", ["rst-ioc-lookup", "api_key"], config
-            )
-        )
-        self.max_tlp = str(
-            get_config_variable(
-                "RST_IOC_LOOKUP_MAX_TLP",
-                ["rst-ioc-lookup", "max_tlp"],
-                config,
-                default="TLP:AMBER+STRICT",
-            )
+        self.base_url = self.config.rst_ioc_lookup.base_url.rstrip("/")
+        self.api_key = self.config.rst_ioc_lookup.api_key.get_secret_value()
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+
+        self.update_confidence = self.config.rst_ioc_lookup.update_confidence
+
+        self.update_score = self.config.rst_ioc_lookup.update_score
+
+        self.update_valid_from = self.config.rst_ioc_lookup.update_valid_from
+
+        self.score_type = self.config.rst_ioc_lookup.score_type
+
+        self.update_description_action = (
+            self.config.rst_ioc_lookup.update_description_action
         )
 
-        self.update_confidence = bool(
-            get_config_variable(
-                "RST_IOC_LOOKUP_UPDATE_CONFIDENCE",
-                ["rst-ioc-lookup", "update_confidence"],
-                config,
-                default=True,
-            )
+        self.detection_flag_threshold = (
+            self.config.rst_ioc_lookup.detection_flag_threshold
         )
 
-        self.update_score = bool(
-            get_config_variable(
-                "RST_IOC_LOOKUP_UPDATE_SCORE",
-                ["rst-ioc-lookup", "update_score"],
-                config,
-                default=True,
-            )
-        )
+        self.label_format = self.config.rst_ioc_lookup.label_format
 
-        self.update_valid_from = bool(
-            get_config_variable(
-                "RST_IOC_LOOKUP_UPDATE_VALID_FROM",
-                ["rst-ioc-lookup", "update_valid_from"],
-                config,
-                default=True,
-            )
-        )
+        self.timeout = self.config.rst_ioc_lookup.timeout
 
-        self.score_type = str(
-            get_config_variable(
-                "RST_IOC_LOOKUP_SCORE_TYPE",
-                ["rst-ioc-lookup", "score_type"],
-                config,
-                default="total",
-            )
-        )
-
-        self.update_description_action = str(
-            get_config_variable(
-                "RST_IOC_LOOKUP_UPDATE_DESCRIPTION_ACTION",
-                ["rst-ioc-lookup", "update_description_action"],
-                config,
-                default="overwrite",
-            )
-        )
-
-        self.detection_flag_threshold = int(
-            get_config_variable(
-                "RST_IOC_LOOKUP_DETECTION_FLAG_THRESHOLD",
-                ["rst-ioc-lookup", "detection_flag_threshold"],
-                config,
-                default=45,
-            )
-        )
-
-        self.label_format = str(
-            get_config_variable(
-                "RST_IOC_LOOKUP_LABEL_FORMAT",
-                ["rst-ioc-lookup", "label_format"],
-                config,
-                default="short",
-            )
-        )
-
-        self.timeout = int(
-            get_config_variable(
-                "RST_IOC_LOOKUP_TIMEOUT",
-                ["rst-ioc-lookup", "timeout"],
-                config,
-                default=10,
-            )
-        )
-
-        self.connector_auto = bool(
-            get_config_variable(
-                "CONNECTOR_AUTO",
-                ["connector", "auto"],
-                config,
-            )
-        )
+        self.connector_auto = self.config.connector.auto
 
         self.helper.log_info(f"connector_auto {self.connector_auto}")
         self.helper.log_info(f"update_score {self.update_score}")
