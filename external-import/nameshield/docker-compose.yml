@@ -4,18 +4,19 @@ services:
     image: opencti/connector-nameshield:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGEME
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=NAMESHIELD
-      - CONNECTOR_LOG_LEVEL=error
-      - NAMESHIELD_AUTH_BEARER=CHANGEME
-      - NAMESHIELD_SERVER=api.nameshield.net
-      - NAMESHIELD_API_VERSION=v1
-      - NAMESHIELD_API_ENDPOINT=registrar
-      - NAMESHIELD_URL_LIST=https://{server}/{api_endpoint}/{api_version}/domains
-      - NAMESHIELD_URL_DOMAIN=https://{server}/{api_endpoint}/{api_version}/domains/{domain}
-      - NAMESHIELD_INTERVAL=168
-      - NAMESHIELD_DOMAIN_LIMIT=10000
-      - NAMESHIELD_MARKING=TLP:GREEN
-      - NAMESHIELD_LINK_TO_IDENTITIES=none
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=NameShield
+      # - CONNECTOR_SCOPE=NameShield
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=P7D # ISO-8601 duration between two runs
+      - NAMESHIELD_AUTH_BEARER=ChangeMe
+      # - NAMESHIELD_SERVER=api.nameshield.net
+      # - NAMESHIELD_API_VERSION=v1
+      # - NAMESHIELD_API_ENDPOINT=registrar
+      # - NAMESHIELD_URL_LIST=https://{server}/{api_endpoint}/{api_version}/domains
+      # - NAMESHIELD_URL_DOMAIN=https://{server}/{api_endpoint}/{api_version}/domains/{domain}
+      # - NAMESHIELD_DOMAIN_LIMIT=10000
+      # - NAMESHIELD_MARKING=TLP:GREEN
+      # - NAMESHIELD_LINK_TO_IDENTITIES= # comma-separated identity STIX IDs, empty for no link
     restart: always

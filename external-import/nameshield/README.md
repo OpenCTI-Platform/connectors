@@ -6,25 +6,29 @@ This connector facilitates the import of domain names from the Nameshield regist
 
 ## Configuration
 
-| Parameter   | Docker envvar  | Description |
-|----------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
-| `opencti_url`  | `OPENCTI_URL`  | The URL of the OpenCTI platform. |
-| `opencti_token`   | `OPENCTI_TOKEN`   | The default admin token configured in the OpenCTI platform parameters file.   |
-| `connector_id` | `CONNECTOR_ID` | A valid arbitrary `UUIDv4` that must be unique for this connector.   |
-| `connector_type` | `CONNECTOR_TYPE` | Must be `EXTERNAL_IMPORT`  |
-| `connector_name`  | `CONNECTOR_NAME`  | The name of the connector, can be just "Nameshield"   |
-| `connector_update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | If an entity already exists, update its attributes with information provided by this connector. |
-| `connector_log_level`   | `CONNECTOR_LOG_LEVEL`   | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).   |
-| `nameshield_auth_bearer` | `NAMESHIELD_AUTH_BEARER` | You connection bearer provided by nameshield (you need autorise you IP also)   |
-| `nameshield_server` | `NAMESHIELD_SERVER` | Must be `api.nameshield.net` (but if Domain name change one day...)  |
-| `nameshield_api_version` | `NAMESHIELD_API_VERSION` | Must be `v1` (but if version change one day...)  |
-| `nameshield_api_endpoint` | `NAMESHIELD_API_ENDPOINT` | Must be `registrar` (but if it change one day...)  |
-| `nameshield_url_list` | `NAMESHIELD_URL_LIST` | Must be `https://{server}/{api_endpoint}/{api_version}/domains` (but if it change one day...)  |
-| `nameshield_url_domain` | `NAMESHIELD_URL_DOMAIN` | Must be `https://{server}/{api_endpoint}/{api_version}/domains/{domain}` (but if it change one day...)  |
-| `nameshield_interval` | `NAMESHIELD_INTERVAL` | Time (in hours) between run (168 is a good value: once a week)  |
-| `nameshield_domain_limit` | `NAMESHIELD_DOMAIN_LIMIT` | Time (in hours) between run (168 is a good value: once a week) in cas yuou have a looooooot of domain name |
-| `nameshield_api_endpointmarking` | `NAMESHIELD_MARKING` | Hot to mark you domain `TLP:GREEN` |
-| `nameshield_link_to_identities`   | `NAMESHIELD_LINK_TO_IDENTITIES`   | In cas you want to link it to your Firm (for exemple) (or more entities comma separated)   |
+| Parameter | config.yml | Docker environment variable | Default | Mandatory | Description |
+|---|---|---|---|---|---|
+| OpenCTI URL | `opencti.url` | `OPENCTI_URL` | | Yes | The URL of the OpenCTI platform. |
+| OpenCTI token | `opencti.token` | `OPENCTI_TOKEN` | | Yes | The token of the OpenCTI user the connector runs as. |
+| Connector ID | `connector.id` | `CONNECTOR_ID` | `46ae8578-037f-49fc-b68c-f803f1f0d86e` | No | A valid arbitrary `UUIDv4` that must be unique for this connector. |
+| Connector name | `connector.name` | `CONNECTOR_NAME` | `NameShield` | No | The name of the connector. |
+| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | `NameShield` | No | The scope of the connector. |
+| Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | The log level for this connector: `debug`, `info`, `warn` or `error` (less verbose). |
+| Duration period | `connector.duration_period` | `CONNECTOR_DURATION_PERIOD` | `P7D` | No | ISO-8601 duration between two runs (`P7D`: once a week). Replaces `NAMESHIELD_INTERVAL`. |
+| Auth bearer | `nameshield.auth_bearer` | `NAMESHIELD_AUTH_BEARER` | | Yes | Your bearer token provided by NameShield (your IP address must also be allowed). |
+| Server | `nameshield.server` | `NAMESHIELD_SERVER` | `api.nameshield.net` | No | NameShield API server, used as `{server}` in the URL templates. |
+| API version | `nameshield.api_version` | `NAMESHIELD_API_VERSION` | `v1` | No | NameShield API version, used as `{api_version}` in the URL templates. |
+| API endpoint | `nameshield.api_endpoint` | `NAMESHIELD_API_ENDPOINT` | `registrar` | No | NameShield API endpoint, used as `{api_endpoint}` in the URL templates. |
+| Domain list URL | `nameshield.url_list` | `NAMESHIELD_URL_LIST` | `https://{server}/{api_endpoint}/{api_version}/domains` | No | URL template of the domain list. |
+| Domain details URL | `nameshield.url_domain` | `NAMESHIELD_URL_DOMAIN` | `https://{server}/{api_endpoint}/{api_version}/domains/{domain}` | No | URL template of the domain details. |
+| Domain limit | `nameshield.domain_limit` | `NAMESHIELD_DOMAIN_LIMIT` | `10000` | No | Maximum number of domains imported per run, in case you have a lot of domain names. |
+| Marking | `nameshield.marking` | `NAMESHIELD_MARKING` | `TLP:GREEN` | No | TLP marking of the imported objects. An unknown value falls back to `TLP:AMBER+STRICT`. |
+| Link to identities | `nameshield.link_to_identities` | `NAMESHIELD_LINK_TO_IDENTITIES` | | No | Comma-separated STIX IDs of identities (your firm, for example) the indicators are attributed to. Empty for no link. |
+
+Deprecated settings, still read:
+
+- `NAMESHIELD_INTERVAL` (`nameshield.interval`, in hours): use `CONNECTOR_DURATION_PERIOD`.
+- `nameshield.marking_definition` in `config.yml`: use `nameshield.marking`.
 
 ## Docker Compose Example
 
@@ -61,9 +65,9 @@ nano /root/opencti/running-connectors/connector_nameshield_domains.sh
 export OPENCTI_URL="http://localhost:4000"
 export OPENCTI_TOKEN="YOUR-USER-TOKEN"
 export CONNECTOR_ID="nameshield-ID"
-export CONNECTOR_TYPE="EXTERNAL_IMPORT"
 export CONNECTOR_NAME="NameShield Connector"
 export CONNECTOR_LOG_LEVEL="info"
+export CONNECTOR_DURATION_PERIOD="P7D"
 
 export NAMESHIELD_AUTH_BEARER="CHANGEME"
 export NAMESHIELD_SERVER="api.nameshield.net"
@@ -71,7 +75,6 @@ export NAMESHIELD_API_VERSION="v1"
 export NAMESHIELD_API_ENDPOINT="registrar"
 export NAMESHIELD_URL_LIST="https://{server}/{api_endpoint}/{api_version}/domains"
 export NAMESHIELD_URL_DOMAIN="https://{server}/{api_endpoint}/{api_version}/domains/{domain}"
-export NAMESHIELD_INTERVAL=168
 export NAMESHIELD_DOMAIN_LIMIT=10000
 export NAMESHIELD_MARKING="TLP:GREEN"
 
