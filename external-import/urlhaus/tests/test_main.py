@@ -42,7 +42,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
