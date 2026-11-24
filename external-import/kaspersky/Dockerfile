@@ -25,7 +25,6 @@ RUN /venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # The Connector.
 FROM base
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the source and set the working directory.
 COPY src /opt/opencti-connector-kaspersky
