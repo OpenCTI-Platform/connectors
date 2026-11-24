@@ -115,8 +115,10 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
           same values as the entity (here, the same IP address), so that it
           gets the same id. In the bundle, it replaces the entity received,
           and OpenCTI adds its new properties (score, labels...) to the entity.
-          Do not set a marking on it: OpenCTI would add the marking to the
-          entity, and change who can see it.
+          We recommend not setting an author or a marking on it, and setting
+          them on the new objects only: OpenCTI can replace the author of the
+          entity, and adds the marking to the entity, which changes who can
+          see it.
         - Link new objects to the entity: use `Reference(id=message.stix_entity.id)`
           as the source or the target of a relationship. A `Reference` only
           points to the entity: it never changes it, and it is never sent.
@@ -138,7 +140,6 @@ class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
         enriched_ip = IPV4Address(
             value=message.stix_entity.value,  # same value, so same id
             score=data.score,
-            author=self.author,
             labels=data.tags or None,
             external_references=(
                 [ExternalReference(source_name="Template", url=data.permalink)]

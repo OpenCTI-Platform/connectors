@@ -50,8 +50,9 @@ class TemplateClient(BaseClientApi):
     def session_headers(self) -> dict[str, str]:
         """The HTTP headers sent with every request.
 
-        `BaseClientApi` reads this property for each request. Never log these
-        headers: they contain the API key.
+        `BaseClientApi` reads this property once, when it creates the HTTP
+        session (on the first request). Never log these headers: they contain
+        the API key.
         """
         return {
             "Accept": "application/json",

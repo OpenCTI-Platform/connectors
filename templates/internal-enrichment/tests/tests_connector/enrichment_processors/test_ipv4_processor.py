@@ -94,8 +94,8 @@ def test_transform_should_enrich_the_entity_and_link_new_objects(
     assert enriched_ip.id == ipv4_message.stix_entity.id
     assert enriched_ip.score == 80
     assert enriched_ip.labels == ["scanner"]
-    assert enriched_ip.author == processor.author
-    assert enriched_ip.markings is None  # never change the entity's markings
+    assert enriched_ip.author is None  # keep the author of the entity
+    assert enriched_ip.markings is None  # keep the markings of the entity
 
     # Then: the autonomous system is linked to the entity received
     [autonomous_system] = [
