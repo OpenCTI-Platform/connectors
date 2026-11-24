@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [RST WHOIS API Configuration](#rst-whois-api-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -52,36 +49,10 @@ Key features:
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance (default: `RST WHOIS API`) |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `Domain-Name,Url,indicator` (default: `Domain-Name,Url,indicator`) |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: `false`) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) (default: `error`) |
-| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER+STRICT`) |
-
-### RST WHOIS API Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `rst_whois_api_api_key` | `RST_WHOIS_API_API_KEY` | Yes | RST Cloud API key |
-| `rst_whois_api_base_url` | `RST_WHOIS_API_BASE_URL` | No | API base URL (default: `https://api.rstcloud.net/v1`) |
-| `rst_whois_api_timeout` | `RST_WHOIS_API_TIMEOUT` | No | API timeout in seconds (default: `10`) |
-| `rst_whois_api_update_output_action` | `RST_WHOIS_API_UPDATE_OUTPUT_ACTION` | No | Update mode: `overwrite` or `append` (default: `overwrite`) |
-| `rst_whois_api_whois_output_object` | `RST_WHOIS_API_WHOIS_OUTPUT_OBJECT` | No | Output target: `note` or `description` (default: `note`) |
-| `rst_whois_api_output_format` | `RST_WHOIS_API_OUTPUT_FORMAT` | No | Format: `standard` or `extended` (default: `standard`) |
-| `rst_whois_api_output_include_raw` | `RST_WHOIS_API_OUTPUT_INCLUDE_RAW` | No | Include raw WHOIS response (default: `false`) |
-| `rst_whois_api_max_tlp` | `RST_WHOIS_API_MAX_TLP` | No | Deprecated: use `CONNECTOR_MAX_TLP` instead |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 In `config.yml`, these settings go in the `rst-whois-api` section.
 
