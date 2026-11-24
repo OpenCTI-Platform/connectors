@@ -225,13 +225,11 @@ Manifest rules (`__metadata__/connector_manifest.json`):
 
 Legacy connectors (`get_config_variable`, `config.yml` loading) are migrated
 in place by the procedure in
-`.claude/skills/connector-manager-supported-migration/references/procedure.md`:
+`.claude/skills/connector-manager-supported-migration/SKILL.md`:
 Pydantic settings wired into the existing code, manifest flag, generated
 schema and tests, one commit per step, no restructuring. Tools that load
-skills and agents from `.claude/` (Claude Code, GitHub Copilot) pick up the
-`connector-manager-supported-migration` skill and the
-`connector-manager-supported-migrator` agent. With other tools, follow the
-procedure file directly.
+skills from `.claude/` (Claude Code, GitHub Copilot) pick it up as a skill.
+With other tools, follow that file directly.
 
 ## Deprecating a connector
 
