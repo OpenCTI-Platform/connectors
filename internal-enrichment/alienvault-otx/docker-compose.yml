@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-alienvault-otx:
+    image: opencti/connector-alienvault-otx:latest # 'alienvault-otx' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=AlienVault OTX # optional (default: 'AlienVault OTX')
+      # - CONNECTOR_SCOPE=IPv4-Addr # optional, comma-separated entity types among 'IPv4-Addr', 'Domain-Name', 'Url' (default: 'IPv4-Addr')
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      - CONNECTOR_MAX_TLP=TLP:AMBER # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
+      # Custom parameters for connector-alienvault-otx
+      - ALIENVAULT_OTX_API_KEY=ChangeMe
+      # - ALIENVAULT_OTX_API_BASE_URL=https://otx.alienvault.com # optional (default: 'https://otx.alienvault.com')
+    restart: always
