@@ -61,6 +61,13 @@ def test_format_date_returns_int():
     assert result > 0
 
 
+def test_format_date_never_rounds_up():
+    # 2024-01-15T12:00:00Z is 1705320000; a sub-second update must not move the state to the next second
+    assert format_date("2024-01-15T12:00:00.6Z") == 1705320000
+    assert format_date("2024-01-15T12:00:00.4Z") == 1705320000
+    assert format_date("2024-01-15T12:00:00Z") == 1705320000
+
+
 def test_format_date_consistent_value():
     result1 = format_date("2024-01-15T10:30:00Z")
     result2 = format_date("2024-01-15T10:30:00Z")

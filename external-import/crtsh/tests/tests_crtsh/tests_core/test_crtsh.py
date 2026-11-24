@@ -590,3 +590,99 @@ def test_get_stix_objects_with_invalid_last_cert_id_imports_every_certificate(
     assert next_last_cert_id == max(item["id"] for item in data)
     imported_serials = {cert.serial_number for cert in _certificates(stix_objects)}
     assert imported_serials == {item["serial_number"] for item in data}
+
+
+# ── Subject alternative names and common name ───────────────────────────────
+
+
+def _certificate_id(client: CrtSHClient, item: dict) -> str:
+    return client.process_certificate(item, [])
+
+
+def test_process_certificate_sets_subject_alternative_names(client: CrtSHClient):
+    """crt.sh items are dicts, so name_value must be read from the dict keys."""
+    item = load_fixture(f"{DEFAULT_DOMAIN}.json")[0]
+    stix_objects = []
+
+    client.process_certificate(item, stix_objects)
+
+    extensions = stix_objects[0].x509_v3_extensions
+    assert extensions.subject_alternative_name == item["name_value"]
+
+
+def test_process_certificate_without_name_value_has_no_extensions(
+    client: CrtSHClient,
+):
+    item = {**load_fixture(f"{DEFAULT_DOMAIN}.json")[0], "name_value": ""}
+    stix_objects = []
+
+    client.process_certificate(item, stix_objects)
+
+    assert "x509_v3_extensions" not in stix_objects[0]
+
+
+@pytest.mark.parametrize(
+    "common_name, expected_domain",
+    [("www.example.org", "www.example.org"), ("*.example.com", "example.com")],
+)
+def test_process_common_name_adds_the_domain_related_to_the_certificate(
+    client: CrtSHClient, common_name, expected_domain
+):
+    item = {**load_fixture(f"{DEFAULT_DOMAIN}.json")[0], "common_name": common_name}
+    certificate_id = _certificate_id(client, item)
+    stix_objects = []
+
+    client.process_common_name(item, stix_objects, certificate_id)
+
+    domains = [obj for obj in stix_objects if isinstance(obj, DomainName)]
+    relationships = [obj for obj in stix_objects if isinstance(obj, Relationship)]
+    assert [domain.value for domain in domains] == [expected_domain]
+    assert len(relationships) == 1
+    assert relationships[0].source_ref == certificate_id
+    assert relationships[0].target_ref == domains[0].id
+
+
+@pytest.mark.parametrize(
+    "common_name",
+    ["AS207960 Test Intermediate - example.com", "Example Corp Root CA", 5],
+)
+def test_process_common_name_skips_values_that_are_not_domains(
+    client: CrtSHClient, common_name
+):
+    """Common names are not always domains: skip them instead of failing."""
+    item = {**load_fixture(f"{DEFAULT_DOMAIN}.json")[0], "common_name": common_name}
+    certificate_id = _certificate_id(client, item)
+    stix_objects = []
+
+    client.process_common_name(item, stix_objects, certificate_id)
+
+    assert stix_objects == []
+
+
+def test_process_name_value_does_not_add_none_for_names_that_are_not_domains(
+    client: CrtSHClient,
+):
+    item = {
+        **load_fixture(f"{DEFAULT_DOMAIN}.json")[0],
+        "name_value": "example.com\nAS207960 Test Intermediate - example.com\n192.0.2.1",
+    }
+    certificate_id = _certificate_id(client, item)
+    stix_objects = []
+
+    client.process_name_value(item, stix_objects, certificate_id)
+
+    assert None not in stix_objects
+    domains = [obj for obj in stix_objects if isinstance(obj, DomainName)]
+    assert [domain.value for domain in domains] == ["example.com"]
+
+
+def test_get_stix_objects_includes_names_and_never_none(client: CrtSHClient, mocker):
+    data = load_fixture(f"{DEFAULT_DOMAIN}.json")
+    mocker.patch.object(client, "_request_data", return_value=data)
+
+    stix_objects, _ = client.get_stix_objects()
+
+    assert None not in stix_objects
+    certificates = [obj for obj in stix_objects if isinstance(obj, X509Certificate)]
+    assert certificates
+    assert all("x509_v3_extensions" in cert for cert in certificates)

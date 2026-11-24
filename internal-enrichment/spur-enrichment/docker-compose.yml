@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-spur-enrichment:
+    image: opencti/connector-spur-enrichment:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      # - CONNECTOR_ID=c384ed87-1b09-439c-9a45-c2b5942e4c5c
+      # - CONNECTOR_NAME=Spur Enrichment
+      # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false # Each enrichment consumes one query of the Spur Context API quota
+      # - CONNECTOR_MAX_TLP=amber # Available values: clear, white, green, amber, amber+strict, red
+      # Custom parameters for connector-spur-enrichment
+      - SPUR_API_KEY=ChangeMe
+      # - SPUR_API_BASE_URL=https://api.spur.us
+      # - SPUR_TLP_LEVEL=amber # Available values: clear, white, green, amber, amber+strict, red
+      # - SPUR_DEFAULT_SCORE=70
+      # - SPUR_FETCH_TAG_METADATA=false # Describe the services seen on the IP; each distinct service costs one more query (cached 24 hours)
+    restart: always

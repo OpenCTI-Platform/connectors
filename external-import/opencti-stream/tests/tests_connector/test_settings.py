@@ -209,3 +209,18 @@ def test_default_applicant_id_accepts_configured_value():
     settings = _build_settings(settings_dict)
 
     assert settings.stream.default_applicant_id == "default-user-uuid"
+
+
+def test_include_files_defaults_to_false():
+    """`stream.include_files` MUST be disabled when omitted (bundles stay small)."""
+    settings = _build_settings(_BASE_SETTINGS_DICT)
+
+    assert settings.stream.include_files is False
+
+
+def test_include_files_accepts_configured_value():
+    settings = _build_settings(
+        {**_BASE_SETTINGS_DICT, "stream": {"include_files": "true"}}
+    )
+
+    assert settings.stream.include_files is True

@@ -19,7 +19,7 @@
   "support_version": ">=6.8.0",
   "subscription_link": "https://www.cyberthreatexchange.com/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dogesec-cyberthreatexchange",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-dogesec-cyberthreatexchange",
   "container_type": "EXTERNAL_IMPORT"

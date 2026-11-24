@@ -1,10 +1,41 @@
+from datetime import datetime, timezone
 from typing import OrderedDict
 
 import pytest
 import stix2
 import stix2.properties
+from connectors_sdk.models import (
+    AdministrativeArea,
+    AssociatedFile,
+    City,
+    Country,
+    CourseOfAction,
+    ExternalReference,
+    File,
+    Hostname,
+    Indicator,
+    Individual,
+    IPV4Address,
+    MediaContent,
+    Organization,
+    OrganizationAuthor,
+    Region,
+    Report,
+    Sector,
+    Sighting,
+    System,
+    Text,
+    Vulnerability,
+)
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_object import BaseObject
+from connectors_sdk.models.enums import (
+    CvssSeverity,
+    ExtensionDefinitionId,
+    ExtensionType,
+    Reliability,
+)
+from pycti import STIX_EXT_OCTI, STIX_EXT_OCTI_SCO
 from pydantic import Field, ValidationError
 
 
@@ -180,3 +211,428 @@ def test_base_identified_entity_common_stix2_properties_includes_created_as_none
     props = entity._common_stix2_properties()
     assert "created" in props
     assert props["created"] is None
+
+
+def test_base_identified_entity_common_properties_have_no_extension(
+    implemented_base_identified_entity,
+):
+    """Test that the common properties have no extension and no x_opencti_* property."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the common properties
+    properties = entity._common_stix2_properties()
+    # Then there is no extension and no x_opencti_* property
+    assert "extensions" not in properties
+    assert not [key for key in properties if key.startswith("x_opencti_")]
+
+
+def test_custom_stix2_extensions_writes_properties_in_extension(
+    implemented_base_identified_entity,
+):
+    """Test that the OpenCTI properties go in a property extension, without empty values."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the extensions for OpenCTI properties
+    extensions = entity._custom_stix2_extensions(
+        ExtensionDefinitionId.OCTI,
+        extension_type=ExtensionType.PROPERTY_EXTENSION,
+        properties={
+            "reliability": "A",
+            "aliases": ["alias"],
+            "score": 0,
+            "location_type": None,
+            "cwe": [],
+        },
+    )
+    # Then the extension holds the non-empty properties, like OpenCTI exports
+    assert extensions == {
+        "extensions": {
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "reliability": "A",
+                "aliases": ["alias"],
+                "score": 0,
+            }
+        }
+    }
+
+
+def test_custom_stix2_extensions_new_type_only_gives_its_type(
+    implemented_base_identified_entity,
+):
+    """Test that an extension that defines a new type only gives its type."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the extensions of a new-sco type
+    extensions = entity._custom_stix2_extensions(
+        ExtensionDefinitionId.OCTI_SCO, extension_type=ExtensionType.NEW_SCO
+    )
+    # Then the extension only gives its type: the properties go at the top level
+    assert extensions == {
+        "extensions": {STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}}
+    }
+
+
+def test_custom_stix2_extensions_property_extension_needs_properties(
+    implemented_base_identified_entity,
+):
+    """Test that a property extension without properties is refused."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting a property extension without properties
+    # Then a ValueError is raised
+    with pytest.raises(ValueError, match="needs properties"):
+        entity._custom_stix2_extensions(
+            ExtensionDefinitionId.OCTI,
+            extension_type=ExtensionType.PROPERTY_EXTENSION,
+        )
+
+
+def test_custom_stix2_extensions_new_type_refuses_properties(
+    implemented_base_identified_entity,
+):
+    """Test that an extension that defines a new type refuses properties."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting a new-sco extension with properties
+    # Then a ValueError is raised
+    with pytest.raises(ValueError, match="holds no properties"):
+        entity._custom_stix2_extensions(
+            ExtensionDefinitionId.OCTI_SCO,
+            extension_type=ExtensionType.NEW_SCO,
+            properties={"score": 1},
+        )
+
+
+def test_deprecated_x_opencti_properties(implemented_base_identified_entity):
+    """Test that the OpenCTI properties are also given as x_opencti_* properties."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the deprecated properties for OpenCTI properties
+    properties = entity._deprecated_x_opencti_properties(
+        {"reliability": "A", "score": 0, "location_type": None}
+    )
+    # Then they are the same properties, with the x_opencti_ prefix
+    # (stix2 drops the empty ones at the top level)
+    assert properties == {
+        "x_opencti_reliability": "A",
+        "x_opencti_score": 0,
+        "x_opencti_location_type": None,
+    }
+
+
+def test_deprecated_x_opencti_properties_renamed(implemented_base_identified_entity):
+    """Test that a renamed OpenCTI property gets the name of its x_opencti_* copy."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the deprecated properties for a CVSS vector
+    properties = entity._deprecated_x_opencti_properties({"cvss_vector": "AV:N"})
+    # Then the x_opencti_* copy has its own name, as the platform exports it
+    assert properties == {"x_opencti_cvss_vector_string": "AV:N"}
+
+
+def test_merge_stix2_properties_merges_extensions(implemented_base_identified_entity):
+    """Test that the merge combines the extensions instead of replacing them."""
+    # Given properties with extensions, some with the same extension id
+    first = {
+        "name": "name",
+        "extensions": {
+            STIX_EXT_OCTI: {"extension_type": "property-extension", "score": 1}
+        },
+    }
+    second = {
+        "extensions": {
+            STIX_EXT_OCTI: {"extension_type": "property-extension", "aliases": ["a"]},
+            "extension-definition--other": {"extension_type": "property-extension"},
+        },
+        "x_opencti_score": 1,
+        "x_opencti_aliases": ["a"],
+    }
+    # When merging them
+    merged = implemented_base_identified_entity._merge_stix2_properties(first, second)
+    # Then the extensions are merged
+    assert merged == {
+        "name": "name",
+        "x_opencti_score": 1,
+        "x_opencti_aliases": ["a"],
+        "extensions": {
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "score": 1,
+                "aliases": ["a"],
+            },
+            "extension-definition--other": {"extension_type": "property-extension"},
+        },
+    }
+
+
+def test_merge_stix2_properties_without_extension(implemented_base_identified_entity):
+    """Test that the merge adds no extension when there is none."""
+    # Given properties without extension
+    # When merging them
+    merged = implemented_base_identified_entity._merge_stix2_properties(
+        {"name": "name"}, {"labels": ["label"]}
+    )
+    # Then there is no extension
+    assert merged == {"name": "name", "labels": ["label"]}
+
+
+@pytest.mark.parametrize(
+    "first, second, message",
+    [
+        pytest.param(
+            {"name": "a"},
+            {"name": "b"},
+            "'name' is given twice with different values",
+            id="top_level_conflict",
+        ),
+        pytest.param(
+            {"extensions": {STIX_EXT_OCTI: {"score": 1}}},
+            {"extensions": {STIX_EXT_OCTI: {"score": 2}}},
+            "'score' is given twice with different values",
+            id="extension_conflict",
+        ),
+    ],
+)
+def test_merge_stix2_properties_rejects_duplicates(
+    implemented_base_identified_entity, first, second, message
+):
+    """Test that the merge refuses a property given twice with different values."""
+    # Given properties that give the same property twice, with different values
+    # When merging them
+    # Then a ValueError is raised
+    with pytest.raises(ValueError, match=message):
+        implemented_base_identified_entity._merge_stix2_properties(first, second)
+
+
+def test_merge_stix2_properties_accepts_same_value_twice(
+    implemented_base_identified_entity,
+):
+    """Test that a property given twice with the same value is accepted."""
+    # Given properties that give the same property twice, with the same value
+    # When merging them
+    merged = implemented_base_identified_entity._merge_stix2_properties(
+        {"x_opencti_score": 1, "extensions": {STIX_EXT_OCTI: {"score": 1}}},
+        {"x_opencti_score": 1, "extensions": {STIX_EXT_OCTI: {"score": 1}}},
+    )
+    # Then the property is kept once
+    assert merged == {"x_opencti_score": 1, "extensions": {STIX_EXT_OCTI: {"score": 1}}}
+
+
+@pytest.mark.parametrize(
+    "properties",
+    [
+        pytest.param(
+            {
+                "extensions": {STIX_EXT_OCTI: {"score": 1}},
+                "x_opencti_score": 1,
+            },
+            id="extension",
+        ),
+        pytest.param(
+            {
+                "extensions": {STIX_EXT_OCTI: {"cvss_vector": "AV:N"}},
+                "x_opencti_cvss_vector_string": "AV:N",
+            },
+            id="renamed",
+        ),
+        pytest.param(
+            {"x_opencti_files": [], "x_opencti_create_indicator": True},
+            id="top_level_only",
+        ),
+        pytest.param({"x_opencti_score": None}, id="empty"),
+        pytest.param(
+            {"extensions": {STIX_EXT_OCTI: {"score": 0}}, "x_opencti_score": 0},
+            id="falsy_value",
+        ),
+        pytest.param(
+            {"extensions": {"extension-definition--other": {"score": 1}}},
+            id="not_an_opencti_extension",
+        ),
+    ],
+)
+def test_check_deprecated_x_opencti_properties_accepts(
+    implemented_base_identified_entity, properties
+):
+    """Test that matching OpenCTI properties and their known exceptions are accepted."""
+    # Given consistent properties
+    # When checking them
+    # Then no error is raised
+    implemented_base_identified_entity._check_deprecated_x_opencti_properties(
+        properties
+    )
+
+
+@pytest.mark.parametrize(
+    "properties, message",
+    [
+        pytest.param(
+            {"extensions": {STIX_EXT_OCTI: {"score": 1}}, "x_opencti_score": 2},
+            "'score' is `1` in the OpenCTI extension, but 'x_opencti_score' is `2`",
+            id="different_values",
+        ),
+        pytest.param(
+            {"x_opencti_score": 1},
+            "'x_opencti_score' is `1`, but it is not in an OpenCTI extension",
+            id="not_in_extension",
+        ),
+        pytest.param(
+            {"extensions": {STIX_EXT_OCTI: {"score": 1}}},
+            "'score' is `1` in the OpenCTI extension, but 'x_opencti_score' is `None`",
+            id="missing_copy",
+        ),
+    ],
+)
+def test_check_deprecated_x_opencti_properties_rejects(
+    implemented_base_identified_entity, properties, message
+):
+    """Test that an OpenCTI property missing or different in one of its places is refused."""
+    # Given inconsistent properties
+    # When checking them
+    # Then a ValueError is raised
+    with pytest.raises(ValueError, match=message):
+        implemented_base_identified_entity._check_deprecated_x_opencti_properties(
+            properties
+        )
+
+
+AUTHOR = OrganizationAuthor(name="Example Corp")
+COMMON_FIELDS = {
+    "author": AUTHOR,
+    "external_references": [
+        ExternalReference(source_name="example", url="https://example.com")
+    ],
+    "labels": ["label"],
+}
+OBSERVABLE_FIELDS = {
+    **COMMON_FIELDS,
+    "score": 80,
+    "description": "Description",
+    "create_indicator": True,
+    "associated_files": [AssociatedFile(name="file.txt", content=b"content")],
+}
+INDICATOR = Indicator(
+    name="Indicator",
+    pattern="[ipv4-addr:value = '1.1.1.1']",
+    pattern_type="stix",
+    valid_from="2026-01-01T00:00:00Z",
+    score=70,
+    main_observable_type="IPv4-Addr",
+    create_observables=True,
+    associated_files=[AssociatedFile(name="file.txt", content=b"content")],
+    **COMMON_FIELDS,
+)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        pytest.param(
+            IPV4Address(value="1.1.1.1", **OBSERVABLE_FIELDS), id="ipv4_address"
+        ),
+        pytest.param(
+            File(name="a.txt", additional_names=["b.txt"], **OBSERVABLE_FIELDS),
+            id="file",
+        ),
+        pytest.param(Hostname(value="example.com", **OBSERVABLE_FIELDS), id="hostname"),
+        pytest.param(Text(value="text", **OBSERVABLE_FIELDS), id="text"),
+        pytest.param(
+            MediaContent(url="https://example.com/a", **OBSERVABLE_FIELDS),
+            id="media_content",
+        ),
+        pytest.param(INDICATOR, id="indicator"),
+        pytest.param(
+            Vulnerability(
+                name="CVE-2025-0001",
+                score=50,
+                aliases=["alias"],
+                cvss_v3_vector_string="CVSS:3.1/AV:N",
+                cvss_v2_vector_string="AV:N/AC:L",
+                cvss_v2_base_score=7.5,
+                cvss_v4_vector_string="CVSS:4.0/AV:N",
+                cvss_v3_base_severity=CvssSeverity.HIGH,
+                **COMMON_FIELDS,
+            ),
+            id="vulnerability",
+        ),
+        pytest.param(
+            Organization(
+                name="Organization",
+                organization_type="vendor",
+                reliability=Reliability.A,
+                aliases=["alias"],
+                **COMMON_FIELDS,
+            ),
+            id="organization",
+        ),
+        pytest.param(
+            Individual(
+                name="Individual",
+                reliability=Reliability.A,
+                aliases=["a"],
+                **COMMON_FIELDS,
+            ),
+            id="individual",
+        ),
+        pytest.param(
+            Sector(
+                name="Sector", reliability=Reliability.A, aliases=["a"], **COMMON_FIELDS
+            ),
+            id="sector",
+        ),
+        pytest.param(
+            System(
+                name="System", reliability=Reliability.A, aliases=["a"], **COMMON_FIELDS
+            ),
+            id="system",
+        ),
+        pytest.param(City(name="Paris", aliases=["a"], **COMMON_FIELDS), id="city"),
+        pytest.param(
+            Country(name="France", aliases=["a"], **COMMON_FIELDS), id="country"
+        ),
+        pytest.param(
+            Region(name="Europe", aliases=["a"], **COMMON_FIELDS), id="region"
+        ),
+        pytest.param(
+            AdministrativeArea(name="Area", aliases=["a"], **COMMON_FIELDS),
+            id="administrative_area",
+        ),
+        pytest.param(
+            CourseOfAction(name="Course of action", aliases=["a"], **COMMON_FIELDS),
+            id="course_of_action",
+        ),
+        pytest.param(
+            Report(
+                name="Report",
+                publication_date="2025-01-01T12:00:00Z",
+                reliability=Reliability.A,
+                objects=[AUTHOR],
+                **COMMON_FIELDS,
+            ),
+            id="report",
+        ),
+        pytest.param(
+            Sighting(
+                sighting_of=INDICATOR,
+                where_sighted=[AUTHOR],
+                first_seen=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                last_seen=datetime(2026, 3, 1, tzinfo=timezone.utc),
+                qualification=True,
+                **COMMON_FIELDS,
+            ),
+            id="sighting",
+        ),
+    ],
+)
+def test_x_opencti_properties_match_their_counterparts(model) -> None:
+    """Test that each OpenCTI property has the same value in both of its places.
+
+    During the deprecation period, every model that writes OpenCTI properties must
+    write them in the platform layout and as x_opencti_* properties. The models
+    build their properties with _merge_stix2_properties, which checks it.
+    """
+    # Given a model with OpenCTI properties
+    # When converting it to a STIX object (the merge checks the properties)
+    stix2_object = model.to_stix2_object()
+    # Then it has x_opencti_* properties, so the check had something to verify
+    assert [key for key in stix2_object if key.startswith("x_opencti_")]

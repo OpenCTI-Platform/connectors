@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import MagicMock, call
 
 import freezegun
@@ -21,7 +22,7 @@ def test_connector_init(
     assert connector.base_url == "https://test-ctibutler-url/"
     assert connector.api_key == "test-api-key"
     assert connector.knowledgebases == ["cwe", "capec"]
-    assert connector.interval_days == 1
+    assert connector.config.connector.duration_period == timedelta(days=1)
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
 

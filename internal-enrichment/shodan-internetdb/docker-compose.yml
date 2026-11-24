@@ -14,4 +14,5 @@ services:
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
       #- CONNECTOR_MAX_TLP=TLP:WHITE # Optional (default: 'TLP:WHITE')
       #- SHODAN_SSL_VERIFY=true # Optional (default: true)
+      #- SHODAN_TIMEOUT=30 # Optional (default: 30)
     restart: always

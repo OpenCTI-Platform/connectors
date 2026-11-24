@@ -69,8 +69,10 @@ _SDK_LOGGER_CLASSES = {
     *SDK_SETTINGS_BASE_NAMES,
     "BaseConnectorState",
     "BaseDataProcessor",
+    "BaseEnrichmentProcessor",
     "ExternalImportConnector",
     "ExternalImportConnectorState",
+    "InternalEnrichmentConnector",
 }
 _GET_LOGGER = "get_logger"
 _ADAPTER = "ConnectorLoggerAdapter"
