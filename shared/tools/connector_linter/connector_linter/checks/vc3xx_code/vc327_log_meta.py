@@ -73,6 +73,7 @@ _SDK_LOGGER_CLASSES = {
     "ExternalImportConnector",
     "ExternalImportConnectorState",
     "InternalEnrichmentConnector",
+    "SpamhausClient",
 }
 _GET_LOGGER = "get_logger"
 _ADAPTER = "ConnectorLoggerAdapter"
