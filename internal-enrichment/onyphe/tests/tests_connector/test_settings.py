@@ -2,7 +2,11 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseInternalEnrichmentConnectorSettings,
+    ConfigValidationError,
+)
 from connectors_sdk.models.enums import TLPLevel
 from internal_enrichment_connector.settings import ConnectorSettings
 
@@ -59,6 +63,11 @@ def build_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
             return handler(settings_dict)
 
     return FakeConnectorSettings()
+
+
+def test_settings_should_be_internal_enrichment_connector_settings():
+    """`ConnectorSettings` uses the settings base class of `INTERNAL_ENRICHMENT` connectors."""
+    assert issubclass(ConnectorSettings, BaseInternalEnrichmentConnectorSettings)
 
 
 @pytest.mark.parametrize(

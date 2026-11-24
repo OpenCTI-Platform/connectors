@@ -2,8 +2,8 @@
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     DeprecatedField,
     ListFromString,
 )
@@ -107,7 +107,7 @@ class OnypheConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalEnrichmentConnectorSettings):
     """Settings of the ONYPHE connector."""
 
     connector: OnypheConnectorConfig = Field(default_factory=OnypheConnectorConfig)
