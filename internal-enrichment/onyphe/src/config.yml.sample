@@ -4,18 +4,23 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'ONYPHE'
-  scope: 'ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text'
-  auto: false # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+  #name: 'ONYPHE' # Optional (default: 'ONYPHE')
+  #scope: 'ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text' # Optional (default: ['ipv4-addr', 'ipv6-addr', 'indicator', 'hostname', 'x509-certificate', 'text'])
+  #auto: false # Optional (default: false), enable/disable auto-enrichment of observables
+  #log_level: 'error' # Optional (default: 'error')
+  #max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
 
 onyphe:
   api_key: 'ChangeMe'
-  base_url: 'https://www.onyphe.io/api/v2/'
-  max_tlp: 'TLP:AMBER'
-  time_since: '2w'
-  default_score: 50
-  import_search_results: true
-  create_note: false
-  import_full_data: false
-  pivot_threshold: 10
+  #base_url: 'https://www.onyphe.io/api/v2/' # Optional (default: 'https://www.onyphe.io/api/v2/')
+  #category: 'ctiscan' # Optional (default: 'ctiscan'), 'ctiscan' or 'riskscan'
+  #time_since: '1w' # Optional (default: '1w')
+  #default_score: 50 # Optional (default: 50)
+  #import_search_results: true # Optional (default: true)
+  #create_note: false # Optional (default: false)
+  #import_full_data: false # Optional (default: false)
+  #pivot_threshold: 10 # Optional (default: 10)
+  #indicator_max_results: 1000 # Optional (default: 1000)
+  #pattern_type: 'onyphe' # Optional (default: 'onyphe')
+  #enrichment_types: '' # Optional (default: []), empty for all types
+  #text_fingerprints: '' # Optional (default: []), empty for the default sha256-preferred set

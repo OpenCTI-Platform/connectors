@@ -72,12 +72,12 @@ The connector supports multiple [ONYPHE data categories](https://search.onyphe.i
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` — must be unique per instance |
-| `connector_name` | `CONNECTOR_NAME` | Yes | Display name in OpenCTI — use distinct names per instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | See per-category scope below |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4`, unique per instance (default: `5d5d8a0c-029d-40ed-a711-371b664c43e6`) |
+| `connector_name` | `CONNECTOR_NAME` | No | Display name in OpenCTI, use distinct names per instance (default: `ONYPHE`) |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | See per-category scope below (default: `ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text`) |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: `false`) |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, `warning` or `error` (default: `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`) |
 
 ### ONYPHE Configuration
 
@@ -85,8 +85,8 @@ The connector supports multiple [ONYPHE data categories](https://search.onyphe.i
 |-----------|---------------|-----------|-------------|
 | `onyphe_api_key` | `ONYPHE_API_KEY` | Yes | ONYPHE API key |
 | `onyphe_category` | `ONYPHE_CATEGORY` | No | Data category: `ctiscan` (default) or `riskscan` |
-| `onyphe_base_url` | `ONYPHE_BASE_URL` | No | API base URL (default: `https://www.onyphe.io/api/v2/`) |
-| `onyphe_max_tlp` | `ONYPHE_MAX_TLP` | No | Maximum TLP for enrichment (default: `TLP:AMBER`) |
+| `onyphe_base_url` | `ONYPHE_BASE_URL` | No | API base URL, with a trailing slash (default: `https://www.onyphe.io/api/v2/`) |
+| `onyphe_max_tlp` | `ONYPHE_MAX_TLP` | No | Deprecated: use `CONNECTOR_MAX_TLP` instead |
 | `onyphe_time_since` | `ONYPHE_TIME_SINCE` | No | Time window for data retrieval (default: `1w`) |
 | `onyphe_default_score` | `ONYPHE_DEFAULT_SCORE` | No | Default score for created observables (default: `50`) |
 | `onyphe_import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | No | Import results as observables for indicator enrichment (default: `true`) |
@@ -127,10 +127,9 @@ services:
       - CONNECTOR_NAME=ONYPHE
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,x509-Certificate,Text,Indicator
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=error
       - ONYPHE_API_KEY=ChangeMe
-      - ONYPHE_MAX_TLP=TLP:AMBER
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - ONYPHE_DEFAULT_SCORE=50
       - ONYPHE_IMPORT_SEARCH_RESULTS=true
       - ONYPHE_CREATE_NOTE=true
@@ -160,11 +159,10 @@ services:
       - CONNECTOR_NAME=ONYPHE CTI
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,x509-Certificate,Text,Indicator
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=error
       - ONYPHE_API_KEY=ChangeMe
       - ONYPHE_CATEGORY=ctiscan
-      - ONYPHE_MAX_TLP=TLP:AMBER
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - ONYPHE_DEFAULT_SCORE=50
       - ONYPHE_IMPORT_SEARCH_RESULTS=true
       - ONYPHE_PIVOT_THRESHOLD=100
@@ -181,11 +179,10 @@ services:
       - CONNECTOR_NAME=ONYPHE ASM
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,x509-Certificate,Indicator
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=error
       - ONYPHE_API_KEY=ChangeMe
       - ONYPHE_CATEGORY=riskscan
-      - ONYPHE_MAX_TLP=TLP:AMBER
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - ONYPHE_DEFAULT_SCORE=50
       - ONYPHE_IMPORT_SEARCH_RESULTS=true
       - ONYPHE_PIVOT_THRESHOLD=100
