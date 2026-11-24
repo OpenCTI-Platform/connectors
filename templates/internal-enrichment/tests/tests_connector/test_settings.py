@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorSettings,
     ConfigValidationError,
 )
+from connectors_sdk.models.enums import TLPLevel
 
 
 def test_settings_should_be_internal_enrichment_connector_settings():
@@ -31,7 +32,7 @@ def test_settings_should_be_internal_enrichment_connector_settings():
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "test, connector",
+                    "scope": "IPv4-Addr",
                     "log_level": "error",
                     "auto": True,
                     "max_tlp": "TLP:CLEAR",
@@ -49,12 +50,7 @@ def test_settings_should_be_internal_enrichment_connector_settings():
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                },
                 "template": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
             },
@@ -108,7 +104,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "test, connector",
+                    "scope": "IPv4-Addr",
                     "log_level": "error",
                     "auto": True,
                     "max_tlp": "TLP:CLEAR",
@@ -128,19 +124,20 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "token": "test-token",
                 },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "test, connector",
+                    "scope": "IPv4-Addr",
                     "log_level": "error",
                     "auto": True,
                     "max_tlp": "TLP:CLEAR",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    # "api_key" is missing, and has no default -- must raise.
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "template.api_key",
+            id="missing_template_api_key",
         ),
     ],
 )
@@ -166,3 +163,23 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_use_the_connector_max_tlp_default():
+    """Test that the connector changes the SDK default of `max_tlp`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test"},
+                    "template": {"api_key": "test-api-key"},
+                }
+            )
+
+    # When: the settings have no max TLP
+    settings = FakeConnectorSettings()
+
+    # Then: the default of the connector is used
+    assert settings.connector.max_tlp == TLPLevel.GREEN
