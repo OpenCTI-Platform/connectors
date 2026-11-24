@@ -1,8 +1,10 @@
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -13,9 +15,42 @@ from pycti import OpenCTIConnectorHelper
 class RansomLookAPIError(RuntimeError):
     """Represent a normalized failure while querying the RansomLook API."""
 
+    def __init__(self, message: str, *, reason: str | None = None) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
+class RansomLookTransportError(RansomLookAPIError):
+    """Represent a source connection or timeout failure."""
+
+
+class RansomLookSourceDeferred(RuntimeError):
+    """Stop the entire cycle while the source asks us to wait."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        endpoint: str | None = None,
+        retry_source: str = "restored",
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.endpoint = endpoint
+        self.retry_source = retry_source
+
+
+class RansomLookCooldownPersistenceError(RuntimeError):
+    """Stop the run when a source cooldown could not be saved."""
+
 
 class RansomLookCycleBudgetExhausted(RuntimeError):
     """Stop a run when its aggregate request count or deadline is exhausted."""
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+        self.transport_reason: str | None = None
 
 
 class RansomLookPostWindowTooLarge(RansomLookAPIError):
@@ -79,8 +114,13 @@ class RansomLookAPIClient:
     _POST_WINDOW_DAYS = 7
     _READ_CHUNK_SIZE = 64 * 1024
     _TORRENT_PAGE_SIZE = 200
-    _TRANSIENT_STATUS = (429, 500, 502, 503, 504)
+    _TRANSIENT_STATUS = (500, 502, 503, 504)
     _MAX_ATTEMPTS = 5
+    _DEFAULT_COOLDOWN_SECONDS = 3600
+    _COOLDOWN_MESSAGE = "RansomLook source deferred until {}"
+    _ENDPOINT_CATEGORIES = frozenset(
+        {"posts", "post", "group", "actors", "notes", "crypto", "torrents", "leaks"}
+    )
 
     def __init__(
         self,
@@ -112,6 +152,10 @@ class RansomLookAPIClient:
         self.max_run_duration_seconds = max_run_duration_seconds
         self.session = requests.Session()
         self.request_attempts = 0
+        self.source_key = hashlib.sha256(self.base_url.encode()).hexdigest()
+        self.retry_not_before: datetime | None = None
+        self.on_cooldown: Callable[[dict[str, str]], None] | None = None
+        self._denied_resources: set[str] = set()
         self.run_started = time.monotonic()
         self.run_deadline = self.run_started + self.max_run_duration_seconds
         self.session.headers.update(
@@ -129,8 +173,86 @@ class RansomLookAPIClient:
     def begin_run(self) -> None:
         """Reset the physical-request counter and shared monotonic deadline."""
         self.request_attempts = 0
+        self._denied_resources.clear()
         self.run_started = time.monotonic()
         self.run_deadline = self.run_started + self.max_run_duration_seconds
+
+    def restore_cooldown(self, raw: Any) -> None:
+        """Restore only a cooldown belonging to this exact source."""
+        self.retry_not_before = None
+        if not isinstance(raw, dict) or raw.get("source_key") != self.source_key:
+            return
+        value = raw.get("retry_not_before")
+        if not isinstance(value, str) or len(value) > 64:
+            return
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(value)
+            if parsed.utcoffset() is not None:
+                self.retry_not_before = parsed.astimezone(timezone.utc)
+        except (ValueError, OverflowError):
+            return
+
+    def export_cooldown(self) -> dict[str, str]:
+        """Return the source identity and its content-free refusal deadline."""
+        state = {"source_key": self.source_key}
+        if self.retry_not_before is not None:
+            state["retry_not_before"] = self.retry_not_before.isoformat()
+        return state
+
+    def check_cooldown(self) -> None:
+        """Stop before network access while a source cooldown is active."""
+        if self.retry_not_before and datetime.now(timezone.utc) < self.retry_not_before:
+            raise RansomLookSourceDeferred(
+                self._COOLDOWN_MESSAGE.format(self.retry_not_before.isoformat())
+            )
+
+    def _defer_source(self, response: requests.Response, path: str) -> None:
+        now = datetime.now(timezone.utc)
+        value = response.headers.get("Retry-After")
+        deadline = None
+        if value is not None:
+            try:
+                seconds = int(value)
+                if seconds >= 0:
+                    deadline = now + timedelta(seconds=seconds)
+            except (ValueError, TypeError, OverflowError):
+                try:
+                    parsed = parsedate_to_datetime(value)
+                    if parsed.utcoffset() is not None:
+                        deadline = parsed.astimezone(timezone.utc)
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        self.retry_not_before = deadline or now + timedelta(
+            seconds=self._DEFAULT_COOLDOWN_SECONDS
+        )
+        category = self._endpoint_category(path)
+        if self.on_cooldown is not None:
+            try:
+                self.on_cooldown(self.export_cooldown())
+            except Exception as exc:
+                self.helper.connector_logger.error(
+                    "Unable to stage RansomLook source cooldown",
+                    meta={
+                        "status_code": response.status_code,
+                        "endpoint": category,
+                        "retry_not_before": self.retry_not_before.isoformat(),
+                        "retry_source": (
+                            "retry_after" if deadline is not None else "default"
+                        ),
+                        "request_attempts": self.request_attempts,
+                    },
+                )
+                raise RansomLookCooldownPersistenceError(
+                    "Unable to persist RansomLook source cooldown"
+                ) from exc
+        raise RansomLookSourceDeferred(
+            self._COOLDOWN_MESSAGE.format(self.retry_not_before.isoformat()),
+            status_code=response.status_code,
+            endpoint=category,
+            retry_source="retry_after" if deadline is not None else "default",
+        )
 
     @property
     def remaining_requests(self) -> int:
@@ -147,6 +269,7 @@ class RansomLookAPIClient:
         return remaining
 
     def _consume_attempt(self) -> float:
+        self.check_cooldown()
         remaining = self.remaining_seconds()
         if self.request_attempts >= self.max_requests_per_run:
             raise RansomLookCycleBudgetExhausted(
@@ -154,6 +277,25 @@ class RansomLookAPIClient:
             )
         self.request_attempts += 1
         return remaining
+
+    def _endpoint_category(self, path: str) -> str:
+        """Return a fixed endpoint category without identifiers or query values."""
+        category = path.lstrip("/").split("/", 1)[0]
+        if category == "torrent":
+            category = "torrents"
+        return category if category in self._ENDPOINT_CATEGORIES else "other"
+
+    @staticmethod
+    def _transport_reason(exc: BaseException | None) -> str | None:
+        if isinstance(
+            exc, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+        ):
+            return None
+        if isinstance(exc, requests.Timeout):
+            return "timeout"
+        if isinstance(exc, requests.ConnectionError):
+            return "connection"
+        return None
 
     def _get(
         self,
@@ -164,7 +306,9 @@ class RansomLookAPIClient:
         optional_capability: str | None = None,
     ) -> Any:
         """Perform one bounded GET and decode its JSON response."""
-        url = f"{self.base_url}/{path.lstrip('/')}"
+        normalized_path = path.lstrip("/")
+        endpoint = self._endpoint_category(normalized_path)
+        url = f"{self.base_url}/{normalized_path}"
         response: requests.Response | None = None
         last_error: BaseException | None = None
         try:
@@ -178,8 +322,30 @@ class RansomLookAPIClient:
                         timeout=(min(10.0, remaining), min(60.0, remaining)),
                         stream=True,
                     )
+                    last_error = None
                     if allow_404 and response.status_code == 404:
                         return []
+                    if response.status_code >= 400:
+                        self.helper.connector_logger.debug(
+                            "RansomLook request received an error response",
+                            meta={
+                                "endpoint": endpoint,
+                                "status_code": response.status_code,
+                                "request_attempts": self.request_attempts,
+                            },
+                        )
+                    if response.status_code == 429:
+                        self._defer_source(response, normalized_path)
+                    if response.status_code == 403 and not optional_capability:
+                        resource = json.dumps(
+                            [normalized_path, params], sort_keys=True, default=str
+                        )
+                        self._denied_resources.add(resource)
+                        if (
+                            normalized_path == "posts"
+                            or len(self._denied_resources) >= 2
+                        ):
+                            self._defer_source(response, normalized_path)
                     if optional_capability and response.status_code in (401, 403, 404):
                         raise RansomLookCapabilityUnavailable(
                             optional_capability, response.status_code
@@ -192,6 +358,22 @@ class RansomLookAPIClient:
                     raise
                 except (requests.RequestException, TypeError, ValueError) as exc:
                     last_error = exc
+                    log_attempt = (
+                        self.helper.connector_logger.warning
+                        if log_errors
+                        else self.helper.connector_logger.debug
+                    )
+                    log_attempt(
+                        "RansomLook request attempt failed",
+                        meta={
+                            "endpoint": endpoint,
+                            "status_code": (
+                                response.status_code if response is not None else None
+                            ),
+                            "error_type": type(exc).__name__,
+                            "request_attempts": self.request_attempts,
+                        },
+                    )
                     retryable_status = (
                         response is not None
                         and response.status_code in self._TRANSIENT_STATUS
@@ -222,9 +404,19 @@ class RansomLookAPIClient:
             ) from last_error
         except RansomLookCapabilityUnavailable:
             raise
-        except RansomLookCycleBudgetExhausted:
+        except RansomLookCycleBudgetExhausted as exc:
+            exc.transport_reason = self._transport_reason(last_error)
             raise
         except RansomLookAPIError as exc:
+            self.helper.connector_logger.debug(
+                "RansomLook response rejected",
+                meta={
+                    "endpoint": endpoint,
+                    "error_type": type(exc).__name__,
+                    "reason": exc.reason,
+                    "request_attempts": self.request_attempts,
+                },
+            )
             if log_errors:
                 self.helper.connector_logger.error(
                     "RansomLook API response rejected",
@@ -233,12 +425,19 @@ class RansomLookAPIClient:
                             :16
                         ],
                         "error_type": type(exc).__name__,
+                        "reason": exc.reason,
                     },
                 )
             raise
         except (requests.RequestException, TypeError, ValueError) as exc:
+            transport_reason = self._transport_reason(exc)
             if log_errors:
-                self.helper.connector_logger.error(
+                log_failure = (
+                    self.helper.connector_logger.warning
+                    if transport_reason is not None
+                    else self.helper.connector_logger.error
+                )
+                log_failure(
                     "RansomLook API request failed",
                     {
                         "endpoint_sha256": hashlib.sha256(path.encode()).hexdigest()[
@@ -247,6 +446,11 @@ class RansomLookAPIClient:
                         "error_type": type(exc).__name__,
                     },
                 )
+            if transport_reason is not None:
+                raise RansomLookTransportError(
+                    "Unable to query RansomLook source",
+                    reason=transport_reason,
+                ) from exc
             raise RansomLookAPIError(
                 f"Unable to query RansomLook endpoint '{path}'"
             ) from exc
@@ -262,15 +466,18 @@ class RansomLookAPIClient:
                 declared_size = int(content_length)
             except ValueError as exc:
                 raise RansomLookAPIError(
-                    "RansomLook returned an invalid Content-Length header"
+                    "RansomLook returned an invalid Content-Length header",
+                    reason="invalid_content_length",
                 ) from exc
             if declared_size < 0:
                 raise RansomLookAPIError(
-                    "RansomLook returned an invalid Content-Length header"
+                    "RansomLook returned an invalid Content-Length header",
+                    reason="invalid_content_length",
                 )
             if declared_size > self.max_response_bytes:
                 raise RansomLookAPIError(
-                    "RansomLook response exceeds the configured size limit"
+                    "RansomLook response exceeds the configured size limit",
+                    reason="response_too_large",
                 )
 
         payload = bytearray()
@@ -281,32 +488,37 @@ class RansomLookAPIClient:
             payload.extend(chunk)
             if len(payload) > self.max_response_bytes:
                 raise RansomLookAPIError(
-                    "RansomLook response exceeds the configured size limit"
+                    "RansomLook response exceeds the configured size limit",
+                    reason="response_too_large",
                 )
         try:
             return json.loads(payload)
         except (UnicodeDecodeError, ValueError, RecursionError) as exc:
-            raise RansomLookAPIError("RansomLook returned invalid JSON") from exc
+            raise RansomLookAPIError(
+                "RansomLook returned invalid JSON", reason="invalid_json"
+            ) from exc
 
     def _dict_list(self, data: Any, endpoint: str) -> list[dict[str, Any]]:
         if not isinstance(data, list) or not all(
             isinstance(item, dict) for item in data
         ):
             raise RansomLookAPIError(
-                f"Unexpected response from RansomLook {endpoint} endpoint"
+                f"Unexpected response from RansomLook {endpoint} endpoint",
+                reason="unexpected_response_shape",
             )
         if len(data) > self.max_records:
             error = f"RansomLook {endpoint} response exceeds the record limit"
             if endpoint == "posts":
                 raise RansomLookPostWindowTooLarge(error)
-            raise RansomLookAPIError(error)
+            raise RansomLookAPIError(error, reason="record_limit_exceeded")
         return data
 
     @staticmethod
     def _dict(data: Any, endpoint: str) -> dict[str, Any]:
         if not isinstance(data, dict):
             raise RansomLookAPIError(
-                f"Unexpected response from RansomLook {endpoint} endpoint"
+                f"Unexpected response from RansomLook {endpoint} endpoint",
+                reason="unexpected_response_shape",
             )
         return data
 
@@ -321,11 +533,13 @@ class RansomLookAPIClient:
             value = data.get(field)
             if value is not None and not isinstance(value, str):
                 raise RansomLookAPIError(
-                    f"Unexpected {field} field in RansomLook {endpoint} response"
+                    f"Unexpected {field} field in RansomLook {endpoint} response",
+                    reason="invalid_capture_type",
                 )
             if isinstance(value, str) and len(value) > self.max_response_bytes:
                 raise RansomLookAPIError(
-                    f"RansomLook {endpoint} capture exceeds the response size limit"
+                    f"RansomLook {endpoint} capture exceeds the response size limit",
+                    reason="capture_too_large",
                 )
         return data
 
@@ -431,7 +645,8 @@ class RansomLookAPIClient:
             return {}, []
         if not isinstance(data, list) or len(data) < 2:
             raise RansomLookAPIError(
-                "Unexpected response from RansomLook group endpoint"
+                "Unexpected response from RansomLook group endpoint",
+                reason="unexpected_response_shape",
             )
         group = self._dict(data[0], "group")
         posts = self._dict_list(data[1], "group posts")
@@ -440,11 +655,13 @@ class RansomLookAPIClient:
             isinstance(location, dict) for location in locations
         ):
             raise RansomLookAPIError(
-                "Unexpected locations field in RansomLook group response"
+                "Unexpected locations field in RansomLook group response",
+                reason="unexpected_response_shape",
             )
         if len(locations) > self.max_records:
             raise RansomLookAPIError(
-                "RansomLook group locations exceed the record limit"
+                "RansomLook group locations exceed the record limit",
+                reason="record_limit_exceeded",
             )
         group["locations"] = [
             self._evidence_record(location, "group location") for location in locations
@@ -458,14 +675,17 @@ class RansomLookAPIClient:
 
     def get_post(self, group: str, title: str) -> dict[str, Any]:
         """Return one detailed claim, including bounded capture carriers."""
-        path = f"post/{quote(group, safe='')}/{quote(title, safe='')}"
-        data = self._get(path, allow_404=True, log_errors=False)
+        path = f"post/{quote(group, safe='')}"
+        data = self._get(
+            path, params={"title": title}, allow_404=True, log_errors=False
+        )
         if data == []:
             return {}
         if isinstance(data, list):
             if len(data) != 1 or not isinstance(data[0], dict):
                 raise RansomLookAPIError(
-                    "Unexpected response from RansomLook post endpoint"
+                    "Unexpected response from RansomLook post endpoint",
+                    reason="unexpected_response_shape",
                 )
             data = data[0]
         return self._evidence_record(self._dict(data, "post"), "post")
@@ -512,14 +732,16 @@ class RansomLookAPIClient:
         by_chain = result.get("by_chain")
         if not isinstance(by_chain, dict):
             raise RansomLookAPIError(
-                "Unexpected by_chain field in RansomLook crypto response"
+                "Unexpected by_chain field in RansomLook crypto response",
+                reason="unexpected_response_shape",
             )
         count = 0
         for wallets in by_chain.values():
             count += len(self._dict_list(wallets, "crypto wallets"))
         if count > self.max_records:
             raise RansomLookAPIError(
-                "RansomLook crypto response exceeds the record limit"
+                "RansomLook crypto response exceeds the record limit",
+                reason="record_limit_exceeded",
             )
         return result
 
@@ -548,7 +770,8 @@ class RansomLookAPIClient:
             total = envelope.get("total")
             if not isinstance(total, int) or total < 0:
                 raise RansomLookAPIError(
-                    "Unexpected total field in RansomLook torrent response"
+                    "Unexpected total field in RansomLook torrent response",
+                    reason="unexpected_response_shape",
                 )
             if len(records) >= self.max_records or len(records) >= total or not results:
                 break

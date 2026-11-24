@@ -12,3 +12,4 @@ connector:
 
 shodan:
   # ssl_verify: true # Optional (default: true)
+  # timeout: 30 # Optional (default: 30), request timeout in seconds

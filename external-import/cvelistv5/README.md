@@ -45,6 +45,20 @@ relationships between them (`software has vulnerability`,
 organizations exposed to a given vulnerability by relying on existing
 `Software` observables.
 
+When an `affected` entry names the release that fixes the CVE, the connector
+also creates a `Software` object for that release and a
+`software remediates vulnerability` relationship. A release is read as a fix
+when it is:
+
+- the exclusive upper bound of an affected range (`lessThan`);
+- the `at` of a change to `unaffected` inside an affected range (`changes`);
+- the version of an entry with status `unaffected` (`0` excluded).
+
+Inclusive bounds (`lessThanOrEqual`) are still affected and name no fix;
+wildcard values and `git` commit identifiers are skipped. The affected range
+itself is still written as one `Software` whose version is the range text
+(for example `<1.25.5`) linked by `has`.
+
 ### Requirements
 
 - OpenCTI Platform version 6.6 or higher
@@ -65,10 +79,10 @@ Below are the generic connector parameters:
 
 | Parameter               | config.yml          | Docker environment variable    | Default                              | Mandatory | Description                                                                                       |
 |-------------------------|---------------------|--------------------------------|--------------------------------------|-----------|---------------------------------------------------------------------------------------------------|
-| Connector ID            | `id`                | `CONNECTOR_ID`                 | /                                    | Yes       | A unique `UUIDv4` identifier for this connector instance.                                         |
+| Connector ID            | `id`                | `CONNECTOR_ID`                 | a fixed `UUIDv4` (see `settings.py`) | No        | A unique `UUIDv4` identifier for this connector instance. Set your own when you run several.      |
 | Connector Name          | `name`              | `CONNECTOR_NAME`               | `CVEProject cvelistV5`               | No        | Name of the connector as displayed in the OpenCTI UI.                                             |
 | Connector Scope         | `scope`             | `CONNECTOR_SCOPE`              | `identity,vulnerability,software`    | No        | The scope of data produced by the connector.                                                      |
-| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `info`                               | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
+| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `error`                              | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
 | Duration Period         | `duration_period`   | `CONNECTOR_DURATION_PERIOD`    | `PT1H`                               | No        | ISO 8601 duration between two runs (e.g. `PT1H` for hourly, `P1D` for daily).                     |
 
 Below are the connector specific parameters:

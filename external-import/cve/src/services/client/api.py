@@ -49,7 +49,11 @@ class CVEClient:
             await self._session.close()
 
     async def _reset_session(self) -> None:
-        """Drop current session so next retry gets a fresh TCP connection."""
+        """Close the session after a connection error so the next attempt opens a new one.
+
+        A retryable HTTP status does not call this. That response arrived on a
+        working connection, and concurrent CPE lookups share this session.
+        """
         if self._session and not self._session.closed:
             await self._session.close()
         self._session = None
@@ -151,7 +155,6 @@ class CVEClient:
                             f"[API] Retryable status {response.status}, "
                             f"waiting {wait:.2f}s (attempt {attempt + 1}/{max_retries})"
                         )
-                        await self._reset_session()
                         await asyncio.sleep(wait)
                         continue
 
@@ -205,6 +208,14 @@ class CVEClient:
             return data
 
         except Exception as err:
-            self._last_error = str(err)
-            self.helper.connector_logger.debug(str(err), meta={"error": str(err)})
+            # The stored error is never empty. Some exceptions have an empty
+            # str() (e.g. a bare TimeoutError() re-raised by request() after
+            # its last retry, AssertionError() or
+            # aiohttp.ClientConnectionError()): in that case repr() is used,
+            # so the error at least names the exception type.
+            error_message = str(err) or repr(err)
+            self._last_error = error_message
+            self.helper.connector_logger.debug(
+                "[API] Request failed", meta={"error": error_message}
+            )
             return None

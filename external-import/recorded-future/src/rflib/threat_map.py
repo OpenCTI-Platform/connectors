@@ -7,12 +7,11 @@ from .rf_to_stix2 import ConversionError, IntrusionSet
 
 
 class ThreatMap(threading.Thread):
-    def __init__(self, helper, rfapi, tlp, risk_list_threshold):
+    def __init__(self, helper, rfapi, tlp):
         threading.Thread.__init__(self)
         self.helper = helper
         self.rfapi = rfapi
         self.tlp = tlp
-        self.risk_list_threshold = risk_list_threshold
 
     def run(self):
         try:

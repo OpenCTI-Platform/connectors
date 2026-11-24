@@ -2,13 +2,12 @@ import base64
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from functools import cached_property
 from posixpath import join as urljoin
 from typing import Any, Dict, Iterable, List, Set
 
 import requests
-from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
 from src.connector.models import ConfigLoader
@@ -70,7 +69,11 @@ class SekoiaConnector(object):
     def process_message(self):
         self.helper.connector_logger.info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
-        cursor = state.get("last_cursor", self.generate_first_cursor())
+        cursor = (
+            state["last_cursor"]
+            if "last_cursor" in state
+            else self.generate_first_cursor()
+        )
         self.helper.connector_logger.info(f"Starting with {cursor}")
 
         friendly_name = "SEKOIA run @ " + datetime.now(timezone.utc).isoformat()
@@ -132,17 +135,17 @@ class SekoiaConnector(object):
         Generate the first cursor to interrogate the API
         so we don't start at the beginning.
         """
-        start = f"{(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()}Z"
-        if self.start_date:
-            self.helper.connector_logger.info(
-                f"Using date provided to the connector: {self.start_date}"
-            )
-            try:
-                start = f"{parse(self.start_date).isoformat()}Z"
-            except ParserError:
-                self.helper.connector_logger.error(
-                    f"Impossible to parse the date provided: {self.start_date}. Starting from one hour ago"
-                )
+        self.helper.connector_logger.info(
+            "Using start date to build the first cursor",
+            meta={"start_date": self.start_date.isoformat()},
+        )
+        # The setting is always timezone-aware: UTC, truncated to the second, "Z" suffix
+        start = (
+            self.start_date.astimezone(timezone.utc)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
+            + "Z"
+        )
 
         return base64.b64encode(start.encode("utf-8")).decode("utf-8")
 

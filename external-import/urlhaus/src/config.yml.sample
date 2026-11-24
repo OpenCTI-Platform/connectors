@@ -10,7 +10,7 @@ connector:
   log_level: 'info'
 
 urlhaus:
-  csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
+  auth_key: 'ChangeMe' # From https://auth.abuse.ch
   default_x_opencti_score: 80  # Optional: Defaults to 80
   import_offline: true
   interval: 3

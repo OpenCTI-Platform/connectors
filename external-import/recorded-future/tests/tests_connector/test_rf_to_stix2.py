@@ -22,6 +22,7 @@ from stix2 import (
     Indicator,
     IntrusionSet,
     IPv4Address,
+    IPv6Address,
     Location,
     Malware,
     Relationship,
@@ -631,6 +632,78 @@ def test_analyst_note_raises_on_risk_api_error_other_than_not_found():
 
 
 @pytest.mark.parametrize(
+    "ip_range, expected_observable_type, expected_main_observable_type",
+    [
+        ("91.92.42.0/24", IPv4Address, "IPv4-Addr"),
+        ("2001:db8::/32", IPv6Address, "IPv6-Addr"),
+    ],
+)
+# Scenario: An IP range (CIDR) is converted to an IP indicator and observable (issue #8487)
+def test_ip_range_is_converted_to_indicator_and_observable(
+    ip_range, expected_observable_type, expected_main_observable_type
+):
+    # Given an IP indicator expressed as a CIDR range
+    indicator = _given_ip_indicator(ip_range, _given_author(), _given_tlp())
+
+    # When it is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the observable carries the range as its value
+    observables = [
+        obj for obj in stix_objects if isinstance(obj, expected_observable_type)
+    ]
+    assert len(observables) == 1
+    assert observables[0].value == ip_range
+    # And the indicator pattern matches the range
+    indicators = [obj for obj in stix_objects if isinstance(obj, Indicator)]
+    assert len(indicators) == 1
+    assert indicators[0].pattern == (
+        f"[{expected_observable_type._type}:value = '{ip_range}']"
+    )
+    assert indicators[0].x_opencti_main_observable_type == (
+        expected_main_observable_type
+    )
+
+
+# Scenario: A malformed IP range is still rejected (issue #8487)
+def test_ip_range_with_invalid_prefix_raises_value_error():
+    # Given an IP indicator with an out-of-range prefix length
+    indicator = _given_ip_indicator("91.92.42.0/99", _given_author(), _given_tlp())
+
+    # When it is converted to STIX objects
+    # Then the conversion fails
+    with pytest.raises(ValueError):
+        _when_to_stix_objects(indicator)
+
+
+# Scenario: An IP range of an analyst note is imported with its risk score (issue #8487)
+def test_analyst_note_imports_ip_range_with_its_risk_score():
+    # Given risk scores imported as score, and a note mentioning an IP address
+    # and an IP range both known by the risk API
+    note = _given_stix_note(risk_as_score=True, risk_threshold=None)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"1.1.1.1": 80, "91.92.42.0/24": 20}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_ip_range())
+    stix_objects = note.to_stix_objects()
+
+    # Then the range is imported with its score, next to the single address
+    scores = {
+        obj["name"]: obj.get("x_opencti_score")
+        for obj in stix_objects
+        if obj["type"] == "indicator"
+    }
+    assert scores == {"1.1.1.1": 80, "91.92.42.0/24": 20}
+    # And the range observable carries the range as its value
+    assert any(
+        isinstance(obj, IPv4Address) and obj.value == "91.92.42.0/24"
+        for obj in stix_objects
+    )
+
+
+@pytest.mark.parametrize(
     "file_hash, expected_pattern",
     [
         (
@@ -964,6 +1037,15 @@ def _given_analyst_note_json_with_domains():
         {"id": "entity-1", "type": "Malware", "name": "Test malware"},
         {"id": "entity-2", "type": "InternetDomainName", "name": "unknown.example.com"},
         {"id": "entity-3", "type": "InternetDomainName", "name": "known.example.com"},
+    ]
+    return note_json
+
+
+def _given_analyst_note_json_with_ip_range():
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "entity-1", "type": "IpAddress", "name": "1.1.1.1"},
+        {"id": "entity-2", "type": "IpAddress", "name": "91.92.42.0/24"},
     ]
     return note_json
 

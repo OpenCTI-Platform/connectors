@@ -24,6 +24,10 @@ SECTIONS_TO_NOTES = {
     "exploits": "exploit",
     "configurations": "configuration",
 }
+# Version values that never name a concrete fixed release.
+NON_VERSION_VALUES = {"", "0", "*", "-", "n/a", "unspecified", "unknown"}
+# Version types whose values are not software releases (commit identifiers).
+NON_RELEASE_VERSION_TYPES = {"git"}
 # CVSS version keys used when searching metrics lists.
 CVSS_V3_VERSIONS = ("cvssV3_1", "cvssV3_0")
 CVSS_V4_VERSIONS = ("cvssV4_0",)
@@ -149,6 +153,9 @@ class CVEProcessor:
                         cpe=cpe,
                     )
                 )
+            stix_objects.extend(
+                self._build_remediating_objects(product, software_vendor, vulnerability)
+            )
             return stix_objects
 
         for version in product.get("versions") or []:
@@ -163,7 +170,106 @@ class CVEProcessor:
                     vulnerability,
                 )
             )
+        stix_objects.extend(
+            self._build_remediating_objects(product, software_vendor, vulnerability)
+        )
         return stix_objects
+
+    def _build_remediating_objects(
+        self,
+        product: dict[str, Any],
+        vendor: stix2.Identity,
+        vulnerability: stix2.Vulnerability,
+    ) -> list[Any]:
+        product_name = product.get("product") or product.get("packageName")
+        if not product_name:
+            return []
+        stix_objects: list[Any] = []
+        for fixed_version in self._extract_fixed_versions(product):
+            stix_objects.extend(
+                self._create_remediating_software(
+                    f"{product_name} {fixed_version}",
+                    fixed_version,
+                    vendor,
+                    vulnerability,
+                )
+            )
+        return stix_objects
+
+    @staticmethod
+    def _extract_fixed_versions(product: dict[str, Any]) -> list[str]:
+        """Return the releases of a CVE 5 `affected` product that fix the CVE.
+
+        A release fixes the CVE when the record names it as:
+        - the exclusive upper bound (`lessThan`) of an affected range;
+        - the `at` of a change to `unaffected` inside an affected range;
+        - the version of an entry marked `unaffected` (exact version or the
+          start of an unaffected range), `0` excluded.
+        `lessThanOrEqual` bounds are still affected and name no fix; git
+        commit identifiers are not releases and are skipped.
+        """
+
+        def is_release(value: Any) -> bool:
+            return (
+                isinstance(value, str)
+                and value.strip().lower() not in NON_VERSION_VALUES
+                and "*" not in value
+            )
+
+        fixed: list[str] = []
+        for version in product.get("versions") or []:
+            if version.get("versionType") in NON_RELEASE_VERSION_TYPES:
+                continue
+            status = version.get("status")
+            candidates: list[Any] = []
+            if status == "affected":
+                candidates.append(version.get("lessThan"))
+                for change in version.get("changes") or []:
+                    if change.get("status") == "unaffected":
+                        candidates.append(change.get("at"))
+            elif status == "unaffected":
+                candidates.append(version.get("version"))
+            for candidate in candidates:
+                if is_release(candidate):
+                    value = candidate.strip()
+                    if value not in fixed:
+                        fixed.append(value)
+        return fixed
+
+    def _create_remediating_software(
+        self,
+        name: str,
+        version: str,
+        vendor: stix2.Identity,
+        vulnerability: stix2.Vulnerability,
+    ) -> list[Any]:
+        software = stix2.Software(
+            name=name,
+            version=version,
+            vendor=vendor.name,
+            custom_properties={"x_opencti_created_by_ref": self.author["id"]},
+            allow_custom=True,
+        )
+        remediates_relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "remediates", software.id, vulnerability.id
+            ),
+            relationship_type="remediates",
+            source_ref=software.id,
+            target_ref=vulnerability.id,
+            created_by_ref=self.author["id"],
+            allow_custom=True,
+        )
+        software_vendor_relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id("related-to", software.id, vendor.id),
+            relationship_type="related-to",
+            description="This software is maintained by",
+            source_ref=software.id,
+            target_ref=vendor.id,
+            created_by_ref=self.author["id"],
+            allow_custom=True,
+        )
+        return [software, remediates_relationship, software_vendor_relationship]
 
     def _create_affected_software(
         self,

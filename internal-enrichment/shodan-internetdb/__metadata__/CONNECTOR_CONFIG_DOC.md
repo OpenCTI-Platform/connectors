@@ -15,4 +15,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"white"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
 | SHODAN_SSL_VERIFY | `boolean` |  | boolean |  | `true` | Whether to verify SSL connections to the Shodan InternetDB API. |
+| SHODAN_TIMEOUT | `integer` |  | `0 < x ` |  | `30` | Timeout in seconds for requests to the Shodan InternetDB API. |
 | SHODAN_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

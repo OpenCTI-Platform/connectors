@@ -11,6 +11,10 @@ VC320 verifies the **complete access-control flow**:
   2. Call ``check_max_tlp``
   3. Reject (raise) when invalid
 
+Connectors built on connectors-sdk's ``InternalEnrichmentConnector`` pass:
+the SDK reads the entity TLP, checks it with ``check_max_tlp`` and skips
+the entity before any processor runs.
+
 Scope: INTERNAL_ENRICHMENT only.
 Severity: ERROR.
 """
@@ -18,6 +22,9 @@ Severity: ERROR.
 import ast
 from typing import TYPE_CHECKING, cast
 
+from connector_linter.checks.vc3xx_code._helpers import (
+    find_sdk_internal_enrichment_connector,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -127,6 +134,18 @@ def check_tlp_access_control(ctx: ConnectorContext) -> list[CheckFinding]:
         return [no_python_sources_finding()]
 
     trees = ctx.python_trees
+
+    # The SDK base connector does it itself
+    sdk_import = find_sdk_internal_enrichment_connector(trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="TLP access control delegated to connectors-sdk InternalEnrichmentConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     # ---------------------------------------------------------------------------
     # 3-step TLP access control verification:

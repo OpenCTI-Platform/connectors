@@ -2,13 +2,16 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
+from connectors_sdk.exceptions.error import DataRetrievalError
 from external_import_connector.client_api import ConnectorClient
 from external_import_connector.connector import ConnectorState, ConnectorURLhaus
 
 
 def _client(get_side_effect=None, get_return=None):
     config = MagicMock()
-    config.urlhaus.csv_url = "https://urlhaus.abuse.ch/downloads/csv_recent/"
+    config.urlhaus.export_url = (
+        "https://urlhaus-api.abuse.ch/v2/files/exports/key/recent.csv"
+    )
     config.urlhaus.import_offline = True
     client = ConnectorClient(MagicMock(), config, ConnectorState())
     client.session = MagicMock()
@@ -23,18 +26,18 @@ def test_get_entities_raises_when_download_fails():
     """A failed download must surface, not end as an empty generator."""
     client = _client(get_side_effect=requests.ConnectionError("unreachable"))
 
-    with pytest.raises(requests.ConnectionError):
+    with pytest.raises(DataRetrievalError):
         list(client.get_entities())
-
-    client.helper.connector_logger.error.assert_called_once()
 
 
 def test_get_entities_raises_on_http_error_status():
     response = MagicMock()
-    response.raise_for_status.side_effect = requests.HTTPError("503")
+    response.status_code = 503
+    response.reason = "Service Unavailable"
+    response.raise_for_status.side_effect = requests.HTTPError("503", response=response)
     client = _client(get_return=response)
 
-    with pytest.raises(requests.HTTPError):
+    with pytest.raises(DataRetrievalError, match="HTTP 503 Service Unavailable"):
         list(client.get_entities())
 
 
