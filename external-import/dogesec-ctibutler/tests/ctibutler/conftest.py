@@ -14,16 +14,15 @@ def config_dict() -> dict[str, Any]:
         },
         "connector": {
             "id": "ctibutler-connector-id",
-            "type": "EXTERNAL_IMPORT",
             "name": "CTIButler",
             "scope": "ctibutler",
             "log_level": "info",
+            "duration_period": "P1D",
         },
         "ctibutler": {
             "base_url": "https://test-ctibutler-url/",
             "api_key": "test-api-key",
             "knowledgebases": "cwe,capec",
-            "interval_days": "1",
         },
     }
 
