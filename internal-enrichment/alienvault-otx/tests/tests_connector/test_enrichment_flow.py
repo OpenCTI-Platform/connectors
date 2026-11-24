@@ -1,25 +1,74 @@
 """Flow tests: the SDK `InternalEnrichmentConnector` driving `AlienVaultOtxProcessor`.
 
-Everything is mocked: the helper (no OpenCTI), and there is no OTX client yet.
+Everything is mocked: the helper (no OpenCTI) and the OTX client (no network). The
+entities have real deterministic STIX ids, so that the replacement of the entity by
+the enriched observable is really tested.
 """
 
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from connector import AlienVaultOtxProcessor, ConnectorSettings
 from connectors_sdk import ConfigValidationError, InternalEnrichmentConnector
-from pycti import OpenCTIConnectorHelper
+from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.models import URL, DomainName, IPV4Address
+from otx_client import OtxClient, OtxGeneral
+from pycti import Identity, OpenCTIConnectorHelper
 
 PATCH_HELPER = "connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector.OpenCTIConnectorHelper"
 
+RESOURCES = Path(__file__).parent.parent / "resources"
+KNOWN = OtxGeneral.model_validate_json(
+    (RESOURCES / "general_ipv4_known.json").read_text()
+)
+UNKNOWN = OtxGeneral.model_validate_json(
+    (RESOURCES / "general_ipv4_unknown.json").read_text()
+)
+DOMAIN_UNKNOWN = OtxGeneral.model_validate_json(
+    (RESOURCES / "general_domain_unknown.json").read_text()
+)
+HOSTNAME_KNOWN = OtxGeneral.model_validate_json(
+    (RESOURCES / "general_hostname_known.json").read_text()
+)
+DOMAIN_SCOPE = {"scope": "Domain-Name"}
+HOSTNAME_REFERENCE_URL = (
+    "https://otx.alienvault.com/indicator/hostname/malicious.example"
+)
+
 OCTI_ID = "0b7e1c5a-3f2d-4e6a-9b8c-1d2e3f4a5b6c"
-IP_ID = "ipv4-addr--0b7e1c5a-3f2d-5e6a-9b8c-1d2e3f4a5b6c"
-DOMAIN_ID = "domain-name--3c6b8a4e-1a52-5c1b-9b7e-3f3c3c7f4b6e"
-URL_ID = "url--1f9e1b2e-1c3b-5b5e-8f4a-2b8f0f9e8d7c"
-IPV6_ID = "ipv6-addr--2a9e1b2e-1c3b-5b5e-8f4a-2b8f0f9e8d7d"
 RELATED_ID = "x-opencti-text--0a2c6d1e-3f5b-5d7a-9c1e-4b6d8f0a2c4e"
+AUTHOR_ID = Identity.generate_id("AlienVault", "organization")
+OTX_REFERENCE_URLS = {
+    "IPv4-Addr": "https://otx.alienvault.com/indicator/ip/192.0.2.10",
+    "Domain-Name": "https://otx.alienvault.com/indicator/domain/malicious.example",
+    "Url": "https://otx.alienvault.com/indicator/url/"
+    "http%3A%2F%2Fmalicious.example%2Fpayload.bin%3Fid%3D1",
+}
+
+
+def _entity(model: Any, stix_type: str, value: str) -> dict[str, str]:
+    """An entity as sent by OpenCTI, with the deterministic id of its value."""
+    return {
+        "type": stix_type,
+        "id": model(value=value).to_stix2_object().id,
+        "value": value,
+    }
+
+
+ENTITIES = {
+    "IPv4-Addr": _entity(IPV4Address, "ipv4-addr", "192.0.2.10"),
+    "Domain-Name": _entity(DomainName, "domain-name", "malicious.example"),
+    "Url": _entity(URL, "url", "http://malicious.example/payload.bin?id=1"),
+    # Not handled by the connector: only its id matters
+    "IPv6-Addr": {
+        "type": "ipv6-addr",
+        "id": "ipv6-addr--2a9e1b2e-1c3b-5b5e-8f4a-2b8f0f9e8d7d",
+        "value": "2001:db8::1",
+    },
+}
 
 
 def _make_settings(connector: dict[str, Any] | None = None) -> ConnectorSettings:
@@ -48,26 +97,21 @@ def _make_helper(playbook: bool = False) -> MagicMock:
 
 
 def _make_connector(
-    helper: MagicMock, settings: ConnectorSettings | None = None
+    helper: MagicMock,
+    settings: ConnectorSettings | None = None,
+    general: OtxGeneral | None = KNOWN,
 ) -> tuple[InternalEnrichmentConnector, AlienVaultOtxProcessor]:
+    """Build the connector, then replace the OTX client built in `post_init()`."""
     processor = AlienVaultOtxProcessor()
-    # Spy on the placeholder: it stands for the future OTX call
-    processor.collect = MagicMock(wraps=processor.collect)
     connector = InternalEnrichmentConnector(
         settings=settings or _make_settings(),
         enrichment_processors=[processor],
     )
     with patch(PATCH_HELPER, return_value=helper):
         connector._init_dependencies()
+    processor.client = MagicMock(spec=OtxClient)
+    processor.client.get_general.return_value = general
     return connector, processor
-
-
-ENTITIES = {
-    "IPv4-Addr": {"type": "ipv4-addr", "id": IP_ID, "value": "1.2.3.4"},
-    "Domain-Name": {"type": "domain-name", "id": DOMAIN_ID, "value": "example.com"},
-    "Url": {"type": "url", "id": URL_ID, "value": "https://example.com/a"},
-    "IPv6-Addr": {"type": "ipv6-addr", "id": IPV6_ID, "value": "2001:db8::1"},
-}
 
 
 def _make_data(
@@ -101,6 +145,50 @@ def _make_data(
 def _sent_objects(helper: MagicMock) -> list[dict[str, Any]]:
     bundle = helper.send_stix2_bundle.call_args_list[0].args[0]
     return json.loads(bundle)["objects"]
+
+
+def _dangling_references(objects: list[dict[str, Any]]) -> list[str]:
+    """The `*_ref` and `*_refs` values of the objects that point outside the bundle."""
+    ids = {obj["id"] for obj in objects}
+    return [
+        ref
+        for obj in objects
+        for key, value in obj.items()
+        if key.endswith(("_ref", "_refs"))
+        for ref in (value if isinstance(value, list) else [value])
+        if ref not in ids
+    ]
+
+
+def _assert_enriched_bundle(
+    helper: MagicMock,
+    entity_type: str,
+    original: list[dict[str, Any]],
+    reference_url: str | None = None,
+) -> None:
+    """The bundle sent holds the author, the marking and the enriched observable."""
+    objects = _sent_objects(helper)
+    by_id = {obj["id"]: obj for obj in objects}
+    entity_id = ENTITIES[entity_type]["id"]
+
+    assert len(by_id) == len(objects)
+    # The entity is replaced in place by the observable rebuilt from its value
+    assert [obj["id"] for obj in objects[:2]] == [entity_id, RELATED_ID]
+    assert by_id[RELATED_ID] == original[1]
+    assert by_id[entity_id] != original[0]
+    assert by_id[entity_id]["value"] == ENTITIES[entity_type]["value"]
+    extension = next(iter(by_id[entity_id]["extensions"].values()))
+    assert extension["external_references"] == [
+        {
+            "source_name": "AlienVault OTX",
+            "url": reference_url or OTX_REFERENCE_URLS[entity_type],
+        }
+    ]
+    # The author and the TLP:CLEAR marking come with it
+    assert by_id[AUTHOR_ID]["name"] == "AlienVault"
+    markings = [obj for obj in objects if obj["type"] == "marking-definition"]
+    assert [marking["x_opencti_definition"] for marking in markings] == ["TLP:CLEAR"]
+    assert _dangling_references(objects) == []
 
 
 class TestBuild:
@@ -156,27 +244,80 @@ class TestBuild:
 
 class TestInScope:
     @pytest.mark.parametrize("entity_type", ["IPv4-Addr", "Domain-Name", "Url"])
-    def test_manual_in_scope_calls_the_placeholder_and_sends_nothing(self, entity_type):
+    def test_manual_known_indicator_sends_the_enriched_bundle_once(self, entity_type):
         helper = _make_helper()
         connector, processor = _make_connector(
             helper, _make_settings({"scope": "IPv4-Addr,Domain-Name,Url"})
         )
+        data = _make_data(entity_type)
+        original = [dict(obj) for obj in data["stix_objects"]]
 
-        result = connector.callback(_make_data(entity_type))
+        result = connector.callback(data)
+
+        assert result == "Entity enriched with 3 objects"
+        processor.client.get_general.assert_called_once()
+        helper.send_stix2_bundle.assert_called_once()
+        _assert_enriched_bundle(helper, entity_type, original)
+
+    @pytest.mark.parametrize("entity_type", ["IPv4-Addr", "Domain-Name", "Url"])
+    def test_playbook_known_indicator_sends_the_enriched_bundle_once(self, entity_type):
+        helper = _make_helper(playbook=True)
+        connector, processor = _make_connector(
+            helper, _make_settings({"scope": "IPv4-Addr,Domain-Name,Url"})
+        )
+        data = _make_data(entity_type, playbook=True)
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        connector.callback(data)
+
+        processor.client.get_general.assert_called_once()
+        helper.send_stix2_bundle.assert_called_once()
+        _assert_enriched_bundle(helper, entity_type, original)
+
+    @pytest.mark.parametrize("general", [None, UNKNOWN])
+    def test_manual_without_data_sends_nothing(self, general):
+        helper = _make_helper()
+        connector, processor = _make_connector(helper, general=general)
+
+        result = connector.callback(_make_data())
 
         assert result == "No enrichment data found"
-        processor.collect.assert_called_once()
+        processor.client.get_general.assert_called_once()
         helper.send_stix2_bundle.assert_not_called()
 
-    def test_playbook_in_scope_sends_the_original_bundle_once(self):
+    @pytest.mark.parametrize("general", [None, UNKNOWN])
+    def test_playbook_without_data_sends_the_original_bundle_once(self, general):
         helper = _make_helper(playbook=True)
-        connector, processor = _make_connector(helper)
+        connector, processor = _make_connector(helper, general=general)
         data = _make_data(playbook=True)
         original = [dict(obj) for obj in data["stix_objects"]]
 
         connector.callback(data)
 
-        processor.collect.assert_called_once()
+        processor.client.get_general.assert_called_once()
+        helper.send_stix2_bundle.assert_called_once()
+        assert _sent_objects(helper) == original
+
+    def test_manual_failure_is_raised_and_sends_nothing(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(helper)
+        processor.client.get_general.side_effect = DataRetrievalError("OTX is down")
+
+        with pytest.raises(DataRetrievalError, match="OTX is down"):
+            connector.callback(_make_data())
+
+        helper.send_stix2_bundle.assert_not_called()
+
+    def test_playbook_failure_is_raised_and_sends_the_original_bundle_once(self):
+        helper = _make_helper(playbook=True)
+        connector, processor = _make_connector(helper)
+        processor.client.get_general.side_effect = DataRetrievalError("OTX is down")
+        data = _make_data(playbook=True)
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        with pytest.raises(DataRetrievalError, match="OTX is down"):
+            connector.callback(data)
+
         helper.send_stix2_bundle.assert_called_once()
         assert _sent_objects(helper) == original
 
@@ -187,7 +328,7 @@ class TestInScope:
 
         connector.callback(_make_data(tlp=tlp))
 
-        processor.collect.assert_called_once()
+        processor.client.get_general.assert_called_once()
 
     def test_entity_without_tlp_reaches_the_processor_after_a_marked_one(self):
         helper = _make_helper()
@@ -196,19 +337,136 @@ class TestInScope:
         connector.callback(_make_data(tlp="TLP:AMBER"))
         connector.callback(_make_data(tlp=None))
 
-        assert processor.collect.call_count == 2
+        assert processor.client.get_general.call_count == 2
+
+
+class TestHostnameFallback:
+    def test_manual_domain_known_through_hostname_links_to_the_hostname_page(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(helper, _make_settings(DOMAIN_SCOPE))
+        processor.client.get_general.side_effect = [DOMAIN_UNKNOWN, HOSTNAME_KNOWN]
+        data = _make_data("Domain-Name")
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        result = connector.callback(data)
+
+        assert result == "Entity enriched with 3 objects"
+        assert [c.args for c in processor.client.get_general.call_args_list] == [
+            ("domain", "malicious.example"),
+            ("hostname", "malicious.example"),
+        ]
+        helper.send_stix2_bundle.assert_called_once()
+        _assert_enriched_bundle(
+            helper, "Domain-Name", original, reference_url=HOSTNAME_REFERENCE_URL
+        )
+
+    def test_playbook_domain_known_through_hostname_sends_the_enriched_bundle_once(
+        self,
+    ):
+        helper = _make_helper(playbook=True)
+        connector, processor = _make_connector(helper, _make_settings(DOMAIN_SCOPE))
+        processor.client.get_general.side_effect = [DOMAIN_UNKNOWN, HOSTNAME_KNOWN]
+        data = _make_data("Domain-Name", playbook=True)
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        connector.callback(data)
+
+        helper.send_stix2_bundle.assert_called_once()
+        _assert_enriched_bundle(
+            helper, "Domain-Name", original, reference_url=HOSTNAME_REFERENCE_URL
+        )
+
+    def test_known_domain_never_queries_hostname_and_links_to_the_domain_page(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(
+            helper, _make_settings(DOMAIN_SCOPE), general=KNOWN
+        )
+        data = _make_data("Domain-Name")
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        connector.callback(data)
+
+        processor.client.get_general.assert_called_once()
+        _assert_enriched_bundle(helper, "Domain-Name", original)
+
+    def test_manual_domain_unknown_in_both_sections_sends_nothing(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(
+            helper, _make_settings(DOMAIN_SCOPE), general=DOMAIN_UNKNOWN
+        )
+
+        result = connector.callback(_make_data("Domain-Name"))
+
+        assert result == "No enrichment data found"
+        assert processor.client.get_general.call_count == 2
+        helper.send_stix2_bundle.assert_not_called()
+
+    def test_playbook_domain_unknown_in_both_sections_sends_the_original_once(self):
+        helper = _make_helper(playbook=True)
+        connector, processor = _make_connector(
+            helper, _make_settings(DOMAIN_SCOPE), general=DOMAIN_UNKNOWN
+        )
+        data = _make_data("Domain-Name", playbook=True)
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        connector.callback(data)
+
+        assert processor.client.get_general.call_count == 2
+        helper.send_stix2_bundle.assert_called_once()
+        assert _sent_objects(helper) == original
+
+    def test_domain_rejected_by_otx_never_queries_hostname(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(
+            helper, _make_settings(DOMAIN_SCOPE), general=None
+        )
+
+        result = connector.callback(_make_data("Domain-Name"))
+
+        assert result == "No enrichment data found"
+        processor.client.get_general.assert_called_once()
+        helper.send_stix2_bundle.assert_not_called()
+
+    def test_manual_hostname_failure_is_raised_and_sends_nothing(self):
+        helper = _make_helper()
+        connector, processor = _make_connector(helper, _make_settings(DOMAIN_SCOPE))
+        processor.client.get_general.side_effect = [
+            DOMAIN_UNKNOWN,
+            DataRetrievalError("OTX hostname is down"),
+        ]
+
+        with pytest.raises(DataRetrievalError, match="OTX hostname is down"):
+            connector.callback(_make_data("Domain-Name"))
+
+        helper.send_stix2_bundle.assert_not_called()
+
+    def test_playbook_hostname_failure_is_raised_and_sends_the_original_once(self):
+        helper = _make_helper(playbook=True)
+        connector, processor = _make_connector(helper, _make_settings(DOMAIN_SCOPE))
+        processor.client.get_general.side_effect = [
+            DOMAIN_UNKNOWN,
+            DataRetrievalError("OTX hostname is down"),
+        ]
+        data = _make_data("Domain-Name", playbook=True)
+        original = [dict(obj) for obj in data["stix_objects"]]
+
+        with pytest.raises(DataRetrievalError, match="OTX hostname is down"):
+            connector.callback(data)
+
+        helper.send_stix2_bundle.assert_called_once()
+        assert _sent_objects(helper) == original
 
 
 class TestOutOfScope:
     @pytest.mark.parametrize("entity_type", ["Domain-Name", "Url", "IPv6-Addr"])
-    def test_manual_out_of_scope_never_reaches_the_processor(self, entity_type):
+    def test_manual_out_of_scope_never_calls_otx(self, entity_type):
         helper = _make_helper()
         connector, processor = _make_connector(helper)
 
         result = connector.callback(_make_data(entity_type))
 
         assert result == f"Entity type {entity_type} is out of scope"
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
         helper.send_stix2_bundle.assert_not_called()
 
     @pytest.mark.parametrize("entity_type", ["Domain-Name", "Url", "IPv6-Addr"])
@@ -222,7 +480,7 @@ class TestOutOfScope:
 
         connector.callback(data)
 
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
         helper.send_stix2_bundle.assert_called_once()
         assert _sent_objects(helper) == original
 
@@ -235,19 +493,19 @@ class TestOutOfScope:
         )
 
         assert result == "Entity type IPv6-Addr is out of scope"
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
 
 
 class TestMaxTlp:
     @pytest.mark.parametrize("tlp", ["TLP:RED", "TLP:AMBER+STRICT"])
-    def test_manual_entity_above_max_tlp_never_reaches_the_processor(self, tlp):
+    def test_manual_entity_above_max_tlp_never_calls_otx(self, tlp):
         helper = _make_helper()
         connector, processor = _make_connector(helper)
 
         result = connector.callback(_make_data(tlp=tlp))
 
         assert result == "Entity TLP is not allowed (max TLP: amber)"
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
         helper.send_stix2_bundle.assert_not_called()
 
     def test_playbook_entity_above_max_tlp_sends_the_original_bundle(self):
@@ -258,7 +516,7 @@ class TestMaxTlp:
 
         connector.callback(data)
 
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
         helper.send_stix2_bundle.assert_called_once()
         assert _sent_objects(helper) == original
 
@@ -270,7 +528,7 @@ class TestMaxTlp:
 
         connector.callback(_make_data(tlp="TLP:AMBER"))
 
-        processor.collect.assert_not_called()
+        processor.client.get_general.assert_not_called()
 
     def test_a_higher_max_tlp_from_the_settings_is_applied(self):
         helper = _make_helper()
@@ -280,4 +538,4 @@ class TestMaxTlp:
 
         connector.callback(_make_data(tlp="TLP:RED"))
 
-        processor.collect.assert_called_once()
+        processor.client.get_general.assert_called_once()
