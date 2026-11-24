@@ -72,7 +72,7 @@ Configuring the connector is straightforward. The minimal setup requires enterin
 
 ### RST Noise Control Configuration
 
-In `config.yml`, these parameters go in the `rst_noise_control` section.
+In `config.yml`, these parameters go in the `rst_noise_control` section (the legacy `rst-noise-control` section name is still accepted).
 
 | Parameter | Docker envvar | Mandatory | Default | Description |
 |-----------|---------------|-----------|---------|-------------|

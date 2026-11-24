@@ -8,7 +8,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 
 
 class RSTNoiseControlConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -84,5 +84,7 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=RSTNoiseControlConnectorConfig
     )
     rst_noise_control: RSTNoiseControlConfig = Field(
-        default_factory=RSTNoiseControlConfig
+        default_factory=RSTNoiseControlConfig,
+        # The legacy `config.yml` section is named `rst-noise-control`
+        validation_alias=AliasChoices("rst_noise_control", "rst-noise-control"),
     )

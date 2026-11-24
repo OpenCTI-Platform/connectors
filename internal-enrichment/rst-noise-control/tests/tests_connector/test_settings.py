@@ -181,3 +181,19 @@ def test_settings_should_prefer_connector_max_tlp_over_deprecated_max_tlp():
         settings = build_settings(settings_dict)
 
     assert settings.connector.max_tlp == TLPLevel.GREEN
+
+
+def test_settings_should_accept_legacy_section_name():
+    """
+    Test that the legacy `rst-noise-control` section of `config.yml` is still read.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "rst-noise-control": {"api_key": "legacy-api-key", "timeout": 5},
+    }
+
+    settings = build_settings(settings_dict)
+
+    assert settings.rst_noise_control.api_key.get_secret_value() == "legacy-api-key"
+    assert settings.rst_noise_control.timeout == 5
