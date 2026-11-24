@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 import stix2
 from pycti import MarkingDefinition
 
@@ -11,15 +13,29 @@ from .rf_to_stix2 import (
     Vulnerability,
 )
 
+
+class RiskListType(StrEnum):
+    """Recorded Future risk lists, valued with the type sent to the STIX classes."""
+
+    IP = "IpAddress"
+    DOMAIN = "InternetDomainName"
+    URL = "URL"
+    HASH = "Hash"
+    VULN = "Vuln"
+
+
 RISK_LIST_TYPE_MAPPER = {
-    "IpAddress": {"class": IPAddress, "path": "/public/opencti/default_ip.csv"},
-    "InternetDomainName": {
+    RiskListType.IP: {"class": IPAddress, "path": "/public/opencti/default_ip.csv"},
+    RiskListType.DOMAIN: {
         "class": Domain,
         "path": "/public/opencti/default_domain.csv",
     },
-    "URL": {"class": URL, "path": "/public/opencti/default_url.csv"},
-    "Hash": {"class": FileHash, "path": "/public/opencti/default_hash.csv"},
-    "Vuln": {
+    RiskListType.URL: {"class": URL, "path": "/public/opencti/default_url.csv"},
+    RiskListType.HASH: {
+        "class": FileHash,
+        "path": "/public/opencti/default_hash.csv",
+    },
+    RiskListType.VULN: {
         "class": Vulnerability,
         "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
     },

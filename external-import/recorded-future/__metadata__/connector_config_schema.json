@@ -178,8 +178,44 @@
     },
     "RECORDED_FUTURE_RISK_LIST_THRESHOLD": {
       "default": 70,
-      "description": "Minimum risk score threshold (0-100) for importing risk list entities.",
-      "exclusiveMinimum": 0,
+      "description": "Minimum risk score (0-100) for importing risk list entities. Applies to every risk list without a threshold of its own (`risk_list_threshold_<list>`). Set to 0 to import all entities.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP": {
+      "default": null,
+      "description": "Minimum risk score (0-100) for the IP address risk list. Overrides `risk_list_threshold` for this list when set.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN": {
+      "default": null,
+      "description": "Minimum risk score (0-100) for the domain risk list. Overrides `risk_list_threshold` for this list when set.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL": {
+      "default": null,
+      "description": "Minimum risk score (0-100) for the URL risk list. Overrides `risk_list_threshold` for this list when set.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH": {
+      "default": null,
+      "description": "Minimum risk score (0-100) for the hash risk list. Overrides `risk_list_threshold` for this list when set.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY": {
+      "default": null,
+      "description": "Minimum risk score (0-100) for the vulnerability risk list. Overrides `risk_list_threshold` for this list when set.",
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES": {

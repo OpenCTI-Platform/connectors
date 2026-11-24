@@ -475,3 +475,140 @@ def test_row_with_malformed_fields_is_skipped_and_next_row_is_processed(bad_fiel
     helper.connector_logger.warning.assert_called_once()
     assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
     helper.connector_logger.error.assert_not_called()
+
+
+# ── Tests for the per risk list score thresholds ─────────────────────────────
+
+
+def _vuln_row(name, risk):
+    return {
+        "Name": name,
+        "Risk": risk,
+        "FirstSeen": "2025-01-01T00:00:00.000Z",
+        "LastSeen": "2025-04-01T00:00:00.000Z",
+        "EvidenceDetails": "",
+    }
+
+
+def _run_ip_and_vuln_lists(
+    risk_list_threshold, risk_list_thresholds, ip_rows, vuln_rows
+):
+    """Run the IP and the vulnerability risk lists, return the names converted per list."""
+    helper = _mock_helper()
+    rfapi = MagicMock()
+    rfapi.check_vul_entitlement.return_value = True
+    risk_list = RiskList(
+        helper=helper,
+        rfapi=rfapi,
+        tlp="white",
+        risk_list_threshold=risk_list_threshold,
+        risklist_related_entities=[],
+        riskrules_as_label=False,
+        risk_list_thresholds=risk_list_thresholds,
+    )
+    ip_class = MagicMock(side_effect=lambda *args, **kwargs: _mock_stix_obj())
+    vuln_class = MagicMock(side_effect=lambda *args, **kwargs: _mock_stix_obj())
+    mapper = {
+        "IpAddress": {"class": ip_class, "path": "/public/opencti/default_ip.csv"},
+        "Vuln": {
+            "class": vuln_class,
+            "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
+        },
+    }
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", mapper), patch(
+        "csv.DictReader", side_effect=[iter(ip_rows), iter(vuln_rows)]
+    ):
+        risk_list.run()
+
+    helper.connector_logger.error.assert_not_called()
+    ip_names = [call.args[0] for call in ip_class.call_args_list]
+    vuln_names = [call.args[0] for call in vuln_class.call_args_list]
+    return ip_names, vuln_names
+
+
+def _ip_row(name, risk):
+    return {**_risk_list_row(name), "Risk": risk}
+
+
+# Scenario: a strict threshold for indicators and no filtering for vulnerabilities
+def test_per_list_threshold_overrides_global_threshold_for_its_list_only():
+    ip_names, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds={"Vuln": 0},
+        ip_rows=[_ip_row("1.1.1.1", "80"), _ip_row("2.2.2.2", "10")],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "80"), _vuln_row("CVE-2025-0002", "0")],
+    )
+
+    # The IP list keeps the global threshold of 70
+    assert ip_names == ["1.1.1.1"]
+    # The vulnerability list uses its own threshold of 0
+    assert vuln_names == ["CVE-2025-0001", "CVE-2025-0002"]
+
+
+# Scenario: a list without a threshold of its own uses the global threshold
+@pytest.mark.parametrize("risk_list_thresholds", [None, {}, {"Vuln": None}])
+def test_global_threshold_applies_when_list_has_no_threshold(risk_list_thresholds):
+    _, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds=risk_list_thresholds,
+        ip_rows=[],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "70"), _vuln_row("CVE-2025-0002", "69")],
+    )
+
+    assert vuln_names == ["CVE-2025-0001"]
+
+
+# Scenario: a list threshold stricter than the global one
+def test_per_list_threshold_can_be_stricter_than_global_threshold():
+    ip_names, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=None,
+        risk_list_thresholds={"IpAddress": 90},
+        ip_rows=[_ip_row("1.1.1.1", "95"), _ip_row("2.2.2.2", "89")],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "5")],
+    )
+
+    assert ip_names == ["1.1.1.1"]
+    # No global threshold: the vulnerability list is not filtered
+    assert vuln_names == ["CVE-2025-0001"]
+
+
+# Scenario: a threshold of 0 also keeps rows with an empty or non-numeric risk
+def test_zero_threshold_keeps_rows_without_numeric_risk():
+    _, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds={"Vuln": 0},
+        ip_rows=[],
+        vuln_rows=[_vuln_row("CVE-2025-0001", ""), _vuln_row("CVE-2025-0002", "n/a")],
+    )
+
+    assert vuln_names == ["CVE-2025-0001", "CVE-2025-0002"]
+
+
+# Scenario: the filtered row is logged with its list, score and threshold
+def test_row_below_threshold_is_logged_with_list_threshold():
+    helper = _mock_helper()
+    risk_list = RiskList(
+        helper=helper,
+        rfapi=MagicMock(),
+        tlp="white",
+        risk_list_threshold=70,
+        risklist_related_entities=[],
+        riskrules_as_label=False,
+        risk_list_thresholds={"IpAddress": 90},
+    )
+
+    bundle = risk_list._row_to_bundle(
+        _ip_row("1.1.1.1", "80"), "IpAddress", {"class": MagicMock()}, None
+    )
+
+    assert bundle is None
+    helper.connector_logger.info.assert_called_once_with(
+        "[RISK LIST] Ignoring object below the risk list threshold",
+        meta={
+            "name": "1.1.1.1",
+            "risk_list": "IpAddress",
+            "risk_score": 80,
+            "risk_score_threshold": 90,
+        },
+    )
