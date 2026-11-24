@@ -1,70 +1,26 @@
 """Kaspersky connector module."""
 
-import os
 import sys
 import time
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
-import yaml
 from kaspersky.client import KasperskyClient
 from kaspersky.master_ioc.importer import MasterIOCImporter
 from kaspersky.master_yara.importer import MasterYaraImporter
 from kaspersky.publication.importer import PublicationImporter
+from kaspersky.settings import ConnectorSettings
 from kaspersky.utils import (
     DEFAULT_TLP_MARKING_DEFINITION,
-    convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 from stix2 import Identity, MarkingDefinition
 
 
 class KasperskyConnector:
     """Kaspersky connector."""
-
-    _CONFIG_NAMESPACE = "kaspersky"
-
-    _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
-    _CONFIG_USER = f"{_CONFIG_NAMESPACE}.user"
-    _CONFIG_PASSWORD = f"{_CONFIG_NAMESPACE}.password"
-    _CONFIG_CERTIFICATE_PATH = f"{_CONFIG_NAMESPACE}.certificate_path"
-
-    _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
-    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
-    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
-
-    _CONFIG_SCOPES = f"{_CONFIG_NAMESPACE}.scopes"
-
-    _CONFIG_PUBLICATION_PREFIX = f"{_CONFIG_NAMESPACE}.publication_"
-    _CONFIG_PUBLICATION_START_TIMESTAMP = f"{_CONFIG_PUBLICATION_PREFIX}start_timestamp"
-    _CONFIG_PUBLICATION_REPORT_TYPE = f"{_CONFIG_PUBLICATION_PREFIX}report_type"
-    _CONFIG_PUBLICATION_REPORT_STATUS = f"{_CONFIG_PUBLICATION_PREFIX}report_status"
-    _CONFIG_PUBLICATION_REPORT_IGNORE_PREFIXES = (
-        f"{_CONFIG_PUBLICATION_PREFIX}report_ignore_prefixes"
-    )
-    _CONFIG_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES = (
-        f"{_CONFIG_PUBLICATION_PREFIX}excluded_ioc_indicator_types"
-    )
-
-    _CONFIG_MASTER_IOC_PREFIX = f"{_CONFIG_NAMESPACE}.master_ioc_"
-    _CONFIG_MASTER_IOC_FETCH_WEEKDAY = f"{_CONFIG_MASTER_IOC_PREFIX}fetch_weekday"
-    _CONFIG_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES = (
-        f"{_CONFIG_MASTER_IOC_PREFIX}excluded_ioc_indicator_types"
-    )
-    _CONFIG_MASTER_IOC_REPORT_TYPE = f"{_CONFIG_MASTER_IOC_PREFIX}report_type"
-    _CONFIG_MASTER_IOC_REPORT_STATUS = f"{_CONFIG_MASTER_IOC_PREFIX}report_status"
-
-    _CONFIG_MASTER_YARA_PREFIX = f"{_CONFIG_NAMESPACE}.master_yara_"
-    _CONFIG_MASTER_YARA_FETCH_WEEKDAY = f"{_CONFIG_MASTER_YARA_PREFIX}fetch_weekday"
-    _CONFIG_MASTER_YARA_INCLUDE_REPORT = f"{_CONFIG_MASTER_YARA_PREFIX}include_report"
-    _CONFIG_MASTER_YARA_REPORT_TYPE = f"{_CONFIG_MASTER_YARA_PREFIX}report_type"
-    _CONFIG_MASTER_YARA_REPORT_STATUS = f"{_CONFIG_MASTER_YARA_PREFIX}report_status"
-
-    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
-
-    _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
@@ -72,12 +28,6 @@ class KasperskyConnector:
         "analyzed": 2,
         "closed": 3,
     }
-
-    _DEFAULT_CREATE_OBSERVABLES = True
-    _DEFAULT_CREATE_INDICATORS = True
-    _DEFAULT_INCLUDE_REPORT = True
-    _DEFAULT_REPORT_STATUS = "new"
-    _DEFAULT_REPORT_TYPE = "threat-report"
 
     _DEFAULT_AUTHOR = "Kaspersky"
 
@@ -91,159 +41,57 @@ class KasperskyConnector:
 
     def __init__(self):
         """Initialize Kaspersky connector."""
-        config = self._read_configuration()
+        self.config = ConnectorSettings()
+        kaspersky_config = self.config.kaspersky
 
         # Kaspersky connector configuration.
-        base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
-        user = self._get_configuration(config, self._CONFIG_USER)
-        password = self._get_configuration(config, self._CONFIG_PASSWORD)
-        certificate_path = self._get_configuration(
-            config, self._CONFIG_CERTIFICATE_PATH
-        )
+        base_url = kaspersky_config.base_url
+        user = kaspersky_config.user
+        password = kaspersky_config.password.get_secret_value()
+        certificate_path = kaspersky_config.certificate_path
 
-        tlp = self._get_configuration(config, self._CONFIG_TLP)
+        tlp = kaspersky_config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
-        create_observables = self._get_configuration(
-            config, self._CONFIG_CREATE_OBSERVABLES
-        )
-        if create_observables is None:
-            create_observables = self._DEFAULT_CREATE_OBSERVABLES
-        else:
-            create_observables = bool(create_observables)
+        create_observables = kaspersky_config.create_observables
+        create_indicators = kaspersky_config.create_indicators
 
-        create_indicators = self._get_configuration(
-            config, self._CONFIG_CREATE_INDICATORS
-        )
-        if create_indicators is None:
-            create_indicators = self._DEFAULT_CREATE_INDICATORS
-        else:
-            create_indicators = bool(create_indicators)
+        scopes = set(kaspersky_config.scopes)
 
-        scopes_str = self._get_configuration(config, self._CONFIG_SCOPES)
-        scopes = set()
-        if scopes_str is not None:
-            scopes = set(convert_comma_separated_str_to_list(scopes_str))
-
-        publication_start_timestamp = self._get_configuration(
-            config, self._CONFIG_PUBLICATION_START_TIMESTAMP, is_number=True
-        )
-
-        publication_report_type = self._get_configuration(
-            config, self._CONFIG_PUBLICATION_REPORT_TYPE
-        )
-        if not publication_report_type:
-            publication_report_type = self._DEFAULT_REPORT_TYPE
-
-        publication_report_status_str = self._get_configuration(
-            config, self._CONFIG_PUBLICATION_REPORT_STATUS
-        )
-        if not publication_report_status_str:
-            publication_report_status_str = self._DEFAULT_REPORT_STATUS
-
+        publication_start_timestamp = kaspersky_config.publication_start_timestamp
+        publication_report_type = kaspersky_config.publication_report_type
         publication_report_status = (
             self._convert_report_status_str_to_report_status_int(
-                publication_report_status_str
+                kaspersky_config.publication_report_status
             )
         )
-
-        publication_report_ignore_prefixes_str = self._get_configuration(
-            config, self._CONFIG_PUBLICATION_REPORT_IGNORE_PREFIXES
+        publication_report_ignore_prefixes = set(
+            kaspersky_config.publication_report_ignore_prefixes
         )
-        publication_report_ignore_prefixes = set()
-        if publication_report_ignore_prefixes_str is not None:
-            publication_report_ignore_prefixes = set(
-                convert_comma_separated_str_to_list(
-                    publication_report_ignore_prefixes_str
-                )
-            )
-
-        publication_excluded_ioc_indicator_types_str = self._get_configuration(
-            config, self._CONFIG_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES
+        publication_excluded_ioc_indicator_types = set(
+            kaspersky_config.publication_excluded_ioc_indicator_types
         )
-        publication_excluded_ioc_indicator_types = set()
-        if publication_excluded_ioc_indicator_types_str is not None:
-            publication_excluded_ioc_indicator_types = set(
-                convert_comma_separated_str_to_list(
-                    publication_excluded_ioc_indicator_types_str
-                )
-            )
 
-        master_ioc_fetch_weekday = self._get_configuration(
-            config, self._CONFIG_MASTER_IOC_FETCH_WEEKDAY, is_number=True
+        master_ioc_fetch_weekday = kaspersky_config.master_ioc_fetch_weekday or None
+        master_ioc_excluded_ioc_indicator_types = set(
+            kaspersky_config.master_ioc_excluded_ioc_indicator_types
         )
-        if not master_ioc_fetch_weekday:
-            master_ioc_fetch_weekday = None
-
-        master_ioc_excluded_ioc_indicator_types_str = self._get_configuration(
-            config, self._CONFIG_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES
-        )
-        master_ioc_excluded_ioc_indicator_types = set()
-        if master_ioc_excluded_ioc_indicator_types_str is not None:
-            master_ioc_excluded_ioc_indicator_types = set(
-                convert_comma_separated_str_to_list(
-                    master_ioc_excluded_ioc_indicator_types_str
-                )
-            )
-
-        master_ioc_report_type = self._get_configuration(
-            config, self._CONFIG_MASTER_IOC_REPORT_TYPE
-        )
-        if not master_ioc_report_type:
-            master_ioc_report_type = self._DEFAULT_REPORT_TYPE
-
-        master_ioc_report_status_str = self._get_configuration(
-            config, self._CONFIG_MASTER_IOC_REPORT_STATUS
-        )
-        if not master_ioc_report_status_str:
-            master_ioc_report_status_str = self._DEFAULT_REPORT_STATUS
-
+        master_ioc_report_type = kaspersky_config.master_ioc_report_type
         master_ioc_report_status = self._convert_report_status_str_to_report_status_int(
-            master_ioc_report_status_str
+            kaspersky_config.master_ioc_report_status
         )
 
-        master_yara_fetch_weekday = self._get_configuration(
-            config, self._CONFIG_MASTER_YARA_FETCH_WEEKDAY, is_number=True
-        )
-        if not master_yara_fetch_weekday:
-            master_yara_fetch_weekday = None
-
-        master_yara_include_report = self._get_configuration(
-            config, self._CONFIG_MASTER_YARA_INCLUDE_REPORT
-        )
-        if master_yara_include_report is None:
-            master_yara_include_report = self._DEFAULT_INCLUDE_REPORT
-        else:
-            master_yara_include_report = bool(master_yara_include_report)
-
-        master_yara_report_type = self._get_configuration(
-            config, self._CONFIG_MASTER_YARA_REPORT_TYPE
-        )
-        if not master_yara_report_type:
-            master_yara_report_type = self._DEFAULT_REPORT_TYPE
-
-        master_yara_report_status_str = self._get_configuration(
-            config, self._CONFIG_MASTER_YARA_REPORT_STATUS
-        )
-        if not master_yara_report_status_str:
-            master_yara_report_status_str = self._DEFAULT_REPORT_STATUS
-
+        master_yara_fetch_weekday = kaspersky_config.master_yara_fetch_weekday or None
+        master_yara_include_report = kaspersky_config.master_yara_include_report
+        master_yara_report_type = kaspersky_config.master_yara_report_type
         master_yara_report_status = (
             self._convert_report_status_str_to_report_status_int(
-                master_yara_report_status_str
+                kaspersky_config.master_yara_report_status
             )
-        )
-
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        )
-
-        update_existing_data = bool(
-            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
         # Create OpenCTI connector helper.
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Create Kaspersky client.
         self.client = KasperskyClient(
@@ -265,7 +113,6 @@ class KasperskyConnector:
                 tlp_marking,
                 create_observables,
                 create_indicators,
-                update_existing_data,
                 publication_start_timestamp,
                 publication_report_type,
                 publication_report_status,
@@ -284,7 +131,6 @@ class KasperskyConnector:
                 tlp_marking,
                 create_observables,
                 create_indicators,
-                update_existing_data,
                 master_ioc_fetch_weekday,
                 master_ioc_excluded_ioc_indicator_types,
                 master_ioc_report_type,
@@ -300,7 +146,6 @@ class KasperskyConnector:
                 self.client,
                 author,
                 tlp_marking,
-                update_existing_data,
                 master_yara_fetch_weekday,
                 master_yara_include_report,
                 master_yara_report_type,
@@ -314,34 +159,6 @@ class KasperskyConnector:
     def close(self) -> None:
         """Close Kaspersky connector."""
         self.client.close()
-
-    @staticmethod
-    def _read_configuration() -> Dict[str, str]:
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
-        if not os.path.isfile(config_file_path):
-            return {}
-
-        with open(config_file_path, encoding="utf-8") as f:
-            return yaml.load(f, Loader=yaml.FullLoader)
-
-    @classmethod
-    def _get_configuration(
-        cls, config: Dict[str, Any], config_name: str, is_number: bool = False
-    ) -> Any:
-        yaml_path = cls._get_yaml_path(config_name)
-        env_var_name = cls._get_environment_variable_name(yaml_path)
-        config_value = get_config_variable(
-            env_var_name, yaml_path, config, isNumber=is_number
-        )
-        return config_value
-
-    @staticmethod
-    def _get_yaml_path(config_name: str) -> List[str]:
-        return config_name.split(".")
-
-    @staticmethod
-    def _get_environment_variable_name(yaml_path: List[str]) -> str:
-        return "_".join(yaml_path).upper()
 
     @classmethod
     def _convert_tlp_to_marking_definition(
@@ -497,7 +314,7 @@ class KasperskyConnector:
         return time_diff >= self._get_interval()
 
     def _get_interval(self) -> int:
-        return int(self.interval_sec)
+        return int(self.config.connector.duration_period.total_seconds())
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
