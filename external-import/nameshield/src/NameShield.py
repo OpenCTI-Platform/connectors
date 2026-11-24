@@ -1,21 +1,19 @@
 # Import Done with isort
 import datetime
 import json
-import os
 import sys
 import time
 
 import requests
 import stix2
-import yaml
 from pycti import (
     Identity,
     Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
+from settings import ConnectorSettings
 
 
 class NameShield:
@@ -23,88 +21,35 @@ class NameShield:
 
     def __init__(self):
         """Initializer"""
-        # ==============================================================
-        # This part is common to all connectors, it loads the config file, and the parameters to local variables
-        # ==============================================================
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config_file_path = config_file_path.replace("\\", "/")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        # Load and validate the settings, then instantiate the connector helper
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Extra config
         # Auth Bearer
-        self.nameshield_auth_bearer = get_config_variable(
-            "NAMESHIELD_AUTH_BEARER",
-            ["nameshield", "auth_bearer"],
-            config,
+        self.nameshield_auth_bearer = (
+            self.config.nameshield.auth_bearer.get_secret_value()
         )
         #   server: 'api.nameshield.net'
-        self.nameshield_server = get_config_variable(
-            "NAMESHIELD_SERVER",
-            ["nameshield", "server"],
-            config,
-        )
+        self.nameshield_server = self.config.nameshield.server
         #   api_version: 'v1'
-        self.nameshield_api_version = get_config_variable(
-            "NAMESHIELD_API_VERSION",
-            ["nameshield", "api_version"],
-            config,
-        )
-        #   api_endpoint: 'v1'
-        self.nameshield_api_endpoint = get_config_variable(
-            "NAMESHIELD_API_ENDPOINT",
-            ["nameshield", "api_endpoint"],
-            config,
-        )
+        self.nameshield_api_version = self.config.nameshield.api_version
+        #   api_endpoint: 'registrar'
+        self.nameshield_api_endpoint = self.config.nameshield.api_endpoint
         # url_list: 'https://{server}/{api_endpoint}/{api_version}/domains'
-        self.nameshield_url_list = get_config_variable(
-            "NAMESHIELD_URL_LIST",
-            ["nameshield", "url_list"],
-            config,
-            default="https://{server}/{api_endpoint}/{api_version}/domains",
-        )
+        self.nameshield_url_list = self.config.nameshield.url_list
         # url_domain: 'https://{server}/{api_endpoint}/{api_version}/domains/{domain}'
-        self.nameshield_url_domain = get_config_variable(
-            "NAMESHIELD_URL_DOMAIN",
-            ["nameshield", "url_domain"],
-            config,
-            default="https://{server}/{api_endpoint}/{api_version}/domains/{domain}",
-        )
-        #   interval: 168
-        self.nameshield_interval = get_config_variable(
-            "NAMESHIELD_INTERVAL",
-            ["nameshield", "interval"],
-            config,
-            isNumber=True,
-            default=168,
+        self.nameshield_url_domain = self.config.nameshield.url_domain
+        #   Interval between two runs, in seconds (connector.duration_period)
+        self.nameshield_interval = int(
+            self.config.connector.duration_period.total_seconds()
         )
         #   Domain Limit: 10000
-        self.nameshield_ioc_limit = get_config_variable(
-            "NAMESHIELD_DOMAIN_LIMIT",
-            ["nameshield", "domain_limit"],
-            config,
-            isNumber=True,
-            default=10000,
-        )
+        self.nameshield_ioc_limit = self.config.nameshield.domain_limit
         #   MArking: TLP:GREEN
-        self.nameshield_marking = get_config_variable(
-            "NAMESHIELD_MARKING",
-            ["nameshield", "marking_definition"],
-            config,
-            default="TLP:GREEN",
-        )
+        self.nameshield_marking = self.config.nameshield.marking
         # NAMESHIELD_LINK_TO_IDENTITIES
-        self.nameshield_link_to_identities = get_config_variable(
-            "NAMESHIELD_LINK_TO_IDENTITIES",
-            ["nameshield", "link_to_identities"],
-            config,
-            default="",
-        )
+        self.nameshield_link_to_identities = self.config.nameshield.link_to_identities
 
         self.helper.connector_logger.debug("NameShield connector initialized.")
         self.helper.connector_logger.debug(
@@ -465,7 +410,7 @@ class NameShield:
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-            time.sleep(self.nameshield_interval * 60 * 60)
+            time.sleep(self.nameshield_interval)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
