@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [ONYPHE Configuration](#onyphe-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Multiple Instances](#multiple-instances)
@@ -61,44 +58,12 @@ The connector supports multiple [ONYPHE data categories](https://search.onyphe.i
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4`, unique per instance (default: `5d5d8a0c-029d-40ed-a711-371b664c43e6`) |
-| `connector_name` | `CONNECTOR_NAME` | No | Display name in OpenCTI, use distinct names per instance (default: `ONYPHE`) |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | See per-category scope below (default: `ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text`) |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: `false`) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, `warning` or `error` (default: `error`) |
-| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`) |
-
-### ONYPHE Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `onyphe_api_key` | `ONYPHE_API_KEY` | Yes | ONYPHE API key |
-| `onyphe_category` | `ONYPHE_CATEGORY` | No | Data category: `ctiscan` (default) or `riskscan` |
-| `onyphe_base_url` | `ONYPHE_BASE_URL` | No | API base URL, with a trailing slash (default: `https://www.onyphe.io/api/v2/`) |
-| `onyphe_max_tlp` | `ONYPHE_MAX_TLP` | No | Deprecated: use `CONNECTOR_MAX_TLP` instead |
-| `onyphe_time_since` | `ONYPHE_TIME_SINCE` | No | Time window for data retrieval (default: `1w`) |
-| `onyphe_default_score` | `ONYPHE_DEFAULT_SCORE` | No | Default score for created observables (default: `50`) |
-| `onyphe_import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | No | Import results as observables for indicator enrichment (default: `true`) |
-| `onyphe_create_note` | `ONYPHE_CREATE_NOTE` | No | Attach enrichment summary as a Note on observables (default: `false`) |
-| `onyphe_import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | No | Import full raw response text — can produce large data (default: `false`) |
-| `onyphe_pivot_threshold` | `ONYPHE_PIVOT_THRESHOLD` | No | Skip observable enrichment if result count exceeds this (default: `10`) |
-| `onyphe_indicator_max_results` | `ONYPHE_INDICATOR_MAX_RESULTS` | No | Maximum results to fetch when enriching an indicator. If the first page reveals more total results than this, the query is considered too imprecise and no results are imported (default: `1000`) |
-| `onyphe_pattern_type` | `ONYPHE_PATTERN_TYPE` | No | Vocabulary entry for ONYPHE indicator pattern type (default: `onyphe`) |
-| `onyphe_enrichment_types` | `ONYPHE_ENRICHMENT_TYPES` | No | Comma-separated list of OpenCTI object types to create during enrichment. Leave empty to create all types (default). See [Enrichment Types](#enrichment-types) for valid values. |
-| `onyphe_text_fingerprints` | `ONYPHE_TEXT_FINGERPRINTS` | No | Comma-separated list of fingerprint pivot labels controlling which ONYPHE hash fields are created as Text observables. Leave empty to use the default sha256-preferred set. See [Text Fingerprints](#text-fingerprints) for valid values. |
-
-#### Connector scope by category
+### Connector scope by category
 
 | Category | `CONNECTOR_SCOPE` |
 |----------|-------------------|
