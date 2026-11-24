@@ -1,6 +1,6 @@
 import traceback
 
-from internal_enrichment_connector.config_loader import ConfigConnector
+from internal_enrichment_connector.settings import ConnectorSettings
 from onyphe_import import ONYPHEConnector
 from pycti import OpenCTIConnectorHelper
 
@@ -15,9 +15,11 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigConnector()
+        config = ConnectorSettings()
         # playbook_compatible=True only if a bundle is sent !
-        helper = OpenCTIConnectorHelper(config=config.load, playbook_compatible=True)
+        helper = OpenCTIConnectorHelper(
+            config=config.to_helper_config(), playbook_compatible=True
+        )
 
         connector = ONYPHEConnector(config=config, helper=helper)
         connector.run()

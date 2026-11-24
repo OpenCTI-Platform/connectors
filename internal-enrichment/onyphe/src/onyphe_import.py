@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
-from internal_enrichment_connector.config_loader import ConfigConnector
+from internal_enrichment_connector.settings import ConnectorSettings
 from onyphe_api import APIError, Onyphe
 from onyphe_references import (
     ANALYTICAL_PIVOTS,
@@ -26,7 +26,7 @@ from pycti import (
 
 
 class ONYPHEConnector:
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
@@ -34,15 +34,17 @@ class ONYPHEConnector:
         self.config = config
         self.helper = helper
 
-        self.max_tlp = self.config.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
-        self.helper.log_debug(f"Config api_key : {config.api_key}")
-        self.helper.log_debug(f"Config base_url : {config.base_url}")
+        self.helper.log_debug(f"Config api_key : {config.onyphe.api_key}")
+        self.helper.log_debug(f"Config base_url : {config.onyphe.base_url}")
 
-        self._pattern_type_create(self.config.pattern_type)
+        self._pattern_type_create(self.config.onyphe.pattern_type)
 
-        self.onyphe_client = Onyphe(config.api_key, config.base_url)
-        self.onyphe_category = self.config.category
+        self.onyphe_client = Onyphe(
+            config.onyphe.api_key.get_secret_value(), config.onyphe.base_url
+        )
+        self.onyphe_category = self.config.onyphe.category
 
         profile = CATEGORY_PROFILES.get(self.onyphe_category)
         if profile is None:
@@ -52,17 +54,17 @@ class ONYPHEConnector:
             )
         self.profile = profile
 
-        if config.enrichment_types:
+        if config.onyphe.enrichment_types:
             self.helper.log_info(
-                f"Enrichment type filter active: {config.enrichment_types}"
+                f"Enrichment type filter active: {config.onyphe.enrichment_types}"
             )
             self.profile = self._apply_enrichment_type_filter(
-                profile, config.enrichment_types
+                profile, config.onyphe.enrichment_types
             )
 
         selected_labels = (
-            config.text_fingerprints
-            if config.text_fingerprints
+            config.onyphe.text_fingerprints
+            if config.onyphe.text_fingerprints
             else DEFAULT_PIVOT_LABELS
         )
         label_set = set(selected_labels)
@@ -292,7 +294,7 @@ class ONYPHEConnector:
             if raw_text:
                 if not isinstance(raw_text, str):
                     continue
-                if self.config.import_full_data:
+                if self.config.onyphe.import_full_data:
                     service_data = raw_text.strip()
                 else:
                     service_data = (raw_text.strip())[0:2048]
@@ -1024,7 +1026,7 @@ class ONYPHEConnector:
             "x_opencti_external_references": [external_reference],
             **(
                 {"x_opencti_description": description}
-                if not self.config.create_note
+                if not self.config.onyphe.create_note
                 else {}
             ),
             "x_opencti_score": self.score,
@@ -1073,7 +1075,7 @@ class ONYPHEConnector:
         if stix_observable:
             self.stix_objects.append(stix_observable)
 
-            if self.config.create_note:
+            if self.config.onyphe.create_note:
                 note_id = Note.generate_id(None, description)
                 note = stix2.Note(
                     id=note_id,
@@ -1096,7 +1098,7 @@ class ONYPHEConnector:
         if score is not None:
             self.score = score
         else:
-            self.score = self.config.default_score
+            self.score = self.config.onyphe.default_score
 
         self.stix_objects = stix_objects
         self.stix_entity = stix_entity
@@ -1222,12 +1224,12 @@ class ONYPHEConnector:
                 self.helper.log_info(
                     f"Processing {stix_entity['type']} observable: {entity_value}"
                 )
-                oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
+                oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.onyphe.time_since}"
 
                 response = self.onyphe_client.search_oql_paginated(
-                    oql, limit=self.config.pivot_threshold
+                    oql, limit=self.config.onyphe.pivot_threshold
                 )
-                if response.get("total", 0) > self.config.pivot_threshold:
+                if response.get("total", 0) > self.config.onyphe.pivot_threshold:
                     bundle = self.helper.stix2_create_bundle(stix_objects)
                     self.helper.send_stix2_bundle(bundle)
                     return "Sent 0 bundles for import. Results over pivot threshold."
@@ -1248,7 +1250,7 @@ class ONYPHEConnector:
 
         elif (
             stix_entity["type"] == "indicator"
-            and stix_entity["pattern_type"] == self.config.pattern_type
+            and stix_entity["pattern_type"] == self.config.onyphe.pattern_type
         ):
             if "x_opencti_score" in stix_entity:
                 score = stix_entity["x_opencti_score"]
@@ -1282,9 +1284,9 @@ class ONYPHEConnector:
                 user_has_time_filter = any(tf in ctifilter for tf in OQL_TIME_FILTERS)
                 oql_parts = [ctifilter.strip()]
                 if not user_has_time_filter:
-                    oql_parts.append(f"-since:{self.config.time_since}")
+                    oql_parts.append(f"-since:{self.config.onyphe.time_since}")
 
-                if self.config.import_search_results:
+                if self.config.onyphe.import_search_results:
                     oql = " ".join(oql_parts)
                 else:
                     summary_keys_csv = ",".join(
@@ -1297,23 +1299,23 @@ class ONYPHEConnector:
 
                 first_page = self.onyphe_client.search_oql(oql)
                 total_available = first_page.get("total", 0)
-                if total_available > self.config.indicator_max_results:
+                if total_available > self.config.onyphe.indicator_max_results:
                     self.helper.log_info(
                         f"Indicator query matched {total_available} results, "
-                        f"exceeding indicator_max_results ({self.config.indicator_max_results}). "
+                        f"exceeding indicator_max_results ({self.config.onyphe.indicator_max_results}). "
                         "Query may be too imprecise — no results imported."
                     )
                     bundle = self.helper.stix2_create_bundle(stix_objects)
                     self.helper.send_stix2_bundle(bundle)
                     return (
                         f"Sent 0 bundles for import. Indicator query returned "
-                        f"{total_available} results, over the {self.config.indicator_max_results} limit."
+                        f"{total_available} results, over the {self.config.onyphe.indicator_max_results} limit."
                     )
                 all_results = first_page.get("results", [])
                 page = 2
                 while (
                     len(all_results) < total_available
-                    and len(all_results) < self.config.indicator_max_results
+                    and len(all_results) < self.config.onyphe.indicator_max_results
                 ):
                     page_response = self.onyphe_client.search_oql(oql, page=page)
                     page_results = page_response.get("results", [])
@@ -1344,7 +1346,7 @@ class ONYPHEConnector:
                 self.helper.log_debug(f"Summary created as note : {note}")
                 bundle_objects.append(note)
 
-                if self.config.import_search_results:
+                if self.config.onyphe.import_search_results:
                     self.helper.log_debug("Importing search results as observables")
                     bundle = self._generate_stix_bundle(
                         results, stix_objects, stix_entity, score, True
