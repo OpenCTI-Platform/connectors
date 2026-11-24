@@ -718,6 +718,10 @@ class FeedRow:
                 moment = moment.astimezone(UTC)
             return moment.strftime("%Y-%m-%d %H:%M:%S")
 
+        tags = item.get("tags") or []
+        if not isinstance(tags, str):
+            tags = ",".join(str(tag) for tag in tags)
+
         return cls(
             (
                 utc_text(item["first_seen"]),
@@ -727,12 +731,14 @@ class FeedRow:
                 item.get("threat_type") or "",
                 item.get("malware") or "unknown",
                 item.get("malware_alias") or "",
-                item.get("malware_printable") or "Unknown malware",
+                item.get("malware_printable")
+                or item.get("malware")
+                or "Unknown malware",
                 utc_text(item.get("last_seen")),
                 str(item.get("confidence_level") or 0),
                 str(bool(item.get("is_compromised"))),
                 item.get("reference") or "",
-                ",".join(item.get("tags") or []),
+                tags,
                 "1" if item.get("reporter") == "anonymous" else "0",
                 item.get("reporter") or "",
             )

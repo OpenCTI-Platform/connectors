@@ -132,6 +132,22 @@ class TestFeedRowFromApi:
         assert row.fk_malware == ""
         assert row.malware_printable == ""
 
+    def test_tags_given_as_one_string_are_kept_whole(self):
+        """A string is the CSV format (comma-separated), not a list of characters."""
+        row = FeedRow.from_api(api_ioc(tags="emotet,exe"))
+
+        assert row.tags == ["botnet_cc", "emotet", "exe"]
+
+    def test_missing_printable_name_falls_back_to_the_malware_name(self):
+        """Without `malware_printable`, the malware must still be linked."""
+        row = FeedRow.from_api(
+            api_ioc(malware="win.emotet", malware_printable=None, malware_alias="")
+        )
+
+        assert row.fk_malware == "win.emotet"
+        assert row.malware_printable == "win.emotet"
+        assert row.malware_aliases == ["win.emotet"]
+
     def test_anonymous_reporter(self):
         assert FeedRow.from_api(api_ioc(reporter="anonymous")).anonymous is True
 
