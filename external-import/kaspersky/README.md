@@ -37,51 +37,10 @@ The OpenCTI Kaspersky connector imports threat intelligence from the Kaspersky T
 
 ## Configuration
 
-The connector can be configured with the following variables:
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI Parameters
-
-| Parameter      | Docker Environment Variable | Mandatory | Description                          |
-|----------------|----------------------------|-----------|--------------------------------------|
-| OpenCTI URL    | `OPENCTI_URL`              | Yes       | URL of the OpenCTI platform         |
-| OpenCTI Token  | `OPENCTI_TOKEN`            | Yes       | API token for the OpenCTI platform  |
-
-### Base Connector Parameters
-
-| Parameter         | Docker Environment Variable | Default                                | Mandatory | Description                                                        |
-|-------------------|-----------------------------|----------------------------------------|-----------|--------------------------------------------------------------------|
-| Connector ID      | `CONNECTOR_ID`              | `ec1217f4-241e-45a9-9ee9-b59e826c967f` | No        | Unique identifier (UUIDv4). Set your own value for each deployment |
-| Connector Name    | `CONNECTOR_NAME`            | `Kaspersky`                            | No        | Name of the connector                                              |
-| Connector Scope   | `CONNECTOR_SCOPE`           | `kaspersky`                            | No        | Connector scope                                                    |
-| Log Level         | `CONNECTOR_LOG_LEVEL`       | `error`                                | No        | Log verbosity (`debug`, `info`, `warn`, `error`)                   |
-| Duration Period   | `CONNECTOR_DURATION_PERIOD` | `PT12H`                                | No        | ISO-8601 duration between two runs (replaces `interval_sec`)       |
-
-### Kaspersky Connector Parameters
-
-| Config Parameter                           | Docker Environment Variable                          | Default                              | Mandatory | Description                                                                 |
-|--------------------------------------------|------------------------------------------------------|--------------------------------------|-----------|-----------------------------------------------------------------------------|
-| `base_url`                                 | `KASPERSKY_BASE_URL`                                 | `https://tip.kaspersky.com`          | No        | Kaspersky TIP API base URL                                                  |
-| `user`                                     | `KASPERSKY_USER`                                     |                                      | Yes       | Kaspersky TIP username                                                      |
-| `password`                                 | `KASPERSKY_PASSWORD`                                 |                                      | Yes       | Kaspersky TIP password                                                      |
-| `certificate_path`                         | `KASPERSKY_CERTIFICATE_PATH`                         |                                      | No        | Full path to the client certificate. When not set, no certificate is sent  |
-| `tlp`                                      | `KASPERSKY_TLP`                                      | `Amber`                              | No        | TLP marking for imported objects (`White`, `Green`, `Amber`, `Red`)         |
-| `create_observables`                       | `KASPERSKY_CREATE_OBSERVABLES`                       | `true`                               | No        | Create observables from IoCs                                                |
-| `create_indicators`                        | `KASPERSKY_CREATE_INDICATORS`                        | `true`                               | No        | Create indicators from IoCs                                                 |
-| `scopes`                                   | `KASPERSKY_SCOPES`                                   | `publication,master_ioc,master_yara` | No        | Data scopes to import                                                       |
-| `publication_start_timestamp`              | `KASPERSKY_PUBLICATION_START_TIMESTAMP`              | `0`                                  | No        | Import publications updated after this timestamp (Unix epoch)               |
-| `publication_report_type`                  | `KASPERSKY_PUBLICATION_REPORT_TYPE`                  | `threat-report`                      | No        | Report type in OpenCTI                                                      |
-| `publication_report_status`                | `KASPERSKY_PUBLICATION_REPORT_STATUS`                | `New`                                | No        | Report status in OpenCTI (`New`, `In progress`, `Analyzed`, `Closed`)       |
-| `publication_report_ignore_prefixes`       | `KASPERSKY_PUBLICATION_REPORT_IGNORE_PREFIXES`       |                                      | No        | Exclude reports starting with these prefixes, e.g. `Monthly APT activity report` |
-| `publication_excluded_ioc_indicator_types` | `KASPERSKY_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES` |                                      | No        | OpenIOC search values to exclude, e.g. `Md5sum,FileItem/Sha1sum`            |
-| `master_ioc_fetch_weekday`                 | `KASPERSKY_MASTER_IOC_FETCH_WEEKDAY`                 |                                      | No        | ISO weekday to fetch Master IoC (1=Monday). When not set: every run         |
-| `master_ioc_excluded_ioc_indicator_types`  | `KASPERSKY_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES`  |                                      | No        | OpenIOC indicator types to exclude, e.g. `md5Hash,sha1Hash`                 |
-| `master_ioc_report_type`                   | `KASPERSKY_MASTER_IOC_REPORT_TYPE`                   | `threat-report`                      | No        | Report type for Master IoC publications                                     |
-| `master_ioc_report_status`                 | `KASPERSKY_MASTER_IOC_REPORT_STATUS`                 | `New`                                | No        | Report status for Master IoC publications                                   |
-| `master_yara_fetch_weekday`                | `KASPERSKY_MASTER_YARA_FETCH_WEEKDAY`                |                                      | No        | ISO weekday to fetch Master YARA (1=Monday). When not set: every run        |
-| `master_yara_include_report`               | `KASPERSKY_MASTER_YARA_INCLUDE_REPORT`               | `true`                               | No        | Include related reports with YARA rules                                     |
-| `master_yara_report_type`                  | `KASPERSKY_MASTER_YARA_REPORT_TYPE`                  | `threat-report`                      | No        | Report type for Master YARA publications                                    |
-| `master_yara_report_status`                | `KASPERSKY_MASTER_YARA_REPORT_STATUS`                | `New`                                | No        | Report status for Master YARA publications                                  |
-| `interval_sec`                             | `KASPERSKY_INTERVAL_SEC`                             |                                      | No        | Deprecated: use `CONNECTOR_DURATION_PERIOD`. Import interval in seconds     |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 **Note**: It is not recommended to use the default value `0` for `publication_start_timestamp` due to large data volumes.
 
