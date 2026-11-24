@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
+RUN addgroup -S connector && adduser -S connector -G connector
+
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
@@ -20,6 +22,8 @@ WORKDIR /opt/opencti-connector-offseq-mirage
 # Install Python dependencies and remove build dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
+
+USER connector
 
 # Expose and entrypoint
 ENTRYPOINT ["python", "main.py"]
