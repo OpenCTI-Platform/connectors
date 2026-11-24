@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [RST Noise Control Configuration](#rst-noise-control-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -50,41 +47,13 @@ Key features:
 ---
 
 ## Configuration
-Configuring the connector is straightforward. The minimal setup requires entering the RST Cloud API key and specifying the OpenCTI connection settings. 
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| `connector_id` | `CONNECTOR_ID` | No | `04543793-50e8-4d02-b472-e88a62e8f161` | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | No | `RST Noise Control` | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | `IPv4-Addr,Domain-Name,Url,StixFile,indicator` | Supported: `IPv4-Addr,Domain-Name,Url,StixFile,indicator` |
-| `connector_auto` | `CONNECTOR_AUTO` | No | `false` | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | `error` | Log level (`debug`, `info`, `warn`, `warning`, `error`) |
-| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | `TLP:AMBER+STRICT` | Maximum TLP of the entities the connector is allowed to enrich |
-
-### RST Noise Control Configuration
-
-In `config.yml`, these parameters go in the `rst_noise_control` section (the legacy `rst-noise-control` section name is still accepted).
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| `api_key` | `RST_NOISE_CONTROL_API_KEY` | Yes | - | RST Cloud API key |
-| `base_url` | `RST_NOISE_CONTROL_BASE_URL` | No | `https://api.rstcloud.net/v1` | API base URL |
-| `timeout` | `RST_NOISE_CONTROL_TIMEOUT` | No | `10` | API request timeout in seconds |
-| `max_tlp` | `RST_NOISE_CONTROL_MAX_TLP` | No | - | Deprecated: use `CONNECTOR_MAX_TLP` instead |
-| `update_confidence` | `RST_NOISE_CONTROL_UPDATE_CONFIDENCE` | No | `true` | Update confidence based on result |
-| `update_score` | `RST_NOISE_CONTROL_UPDATE_SCORE` | No | `true` | Update score based on result |
-| `change_action_score_change` | `RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE` | No | `10` | Score reduction for "Change" action |
-| `drop_action_score_change` | `RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE` | No | `50` | Score reduction for "Drop" action |
-| `drop_action_detection_flag` | `RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG` | No | `true` | Unset detection flag on Drop |
+In `config.yml`, the connector parameters go in the `rst_noise_control` section (the legacy `rst-noise-control` section name is still accepted).
 
 ---
 
