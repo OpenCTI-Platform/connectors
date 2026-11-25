@@ -230,6 +230,10 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
 |---------------|-------------------|-----------------|--------------------------------------------|
 | Software      | `has`             | Vulnerability   | Indicates the software is affected by the vulnerability |
 
+#### Affected version ranges
+
+`import_software` is the way the NVD affected ranges of a CVE become Software objects. The NVD record gives its ranges as CPE match criteria (`versionStartIncluding`, `versionEndExcluding`, ...); the connector does not store these bounds on the Vulnerability. With `import_software=true` it asks the NVD CPE Match API to expand each criterion into the concrete CPE names it matches, and writes one Software per matched version with a `has` relationship to the Vulnerability. An asset inventory that records Software by CPE can then be matched against the vulnerability version by version. With `import_software=false` (the default) no affected version reaches OpenCTI from this connector. This connector writes no `remediates` relationship: the NVD record does not name the fixing release; the [CVE List V5 connector](../cvelistv5) writes `Software remediates Vulnerability` when the CVE record names it.
+
 ### Operating Modes
 
 1. **Incremental Updates** (`maintain_data=true`):

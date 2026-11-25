@@ -52,6 +52,11 @@ class ShodanConfig(BaseConfigModel):
         description="Whether to verify SSL connections to the Shodan InternetDB API.",
         default=True,
     )
+    timeout: int = Field(
+        description="Timeout in seconds for requests to the Shodan InternetDB API.",
+        default=30,
+        gt=0,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

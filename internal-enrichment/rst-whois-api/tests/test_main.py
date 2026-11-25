@@ -2,8 +2,10 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, TemplateConnector
+from main import RSTWhoisApiConnector
 from pycti import OpenCTIConnectorHelper
+from pycti.connector import opencti_connector_helper
+from settings import ConnectorSettings
 
 
 @pytest.fixture
@@ -36,15 +38,20 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "connector": {
                     "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
+                    "name": "RST WHOIS API",
+                    "scope": "Domain-Name,Url,indicator",
+                    "log_level": "info",
                     "auto": True,
-                    "max_tlp": "TLP:CLEAR",
+                    "max_tlp": "TLP:AMBER",
                 },
-                "template": {
-                    "api_base_url": "http://test.com",
+                "rst_whois_api": {
                     "api_key": "test-api-key",
+                    "base_url": "https://api.rstcloud.net/v1/",
+                    "timeout": 30,
+                    "whois_output_object": "Description",
+                    "update_output_action": "Append",
+                    "output_format": "Extended",
+                    "output_include_raw": True,
                 },
             }
         )
@@ -76,24 +83,38 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_url == "http://localhost:8080/"
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
-    assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "test,connector"
-    assert helper.log_level == "ERROR"
-    assert helper.connect_auto == True
+    assert helper.connect_name == "RST WHOIS API"
+    assert helper.connect_scope == "Domain-Name,Url,indicator"
+    assert helper.log_level == "INFO"
+    assert helper.connect_auto is True
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper):
+def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     """
-    Test that the connector's main class can be instantiated successfully:
-        - the connector's main class MUST be able to access env/config vars through `self.config`
-        - the connector's main class MUST be able to access `pycti` API through `self.helper`
+    Test that the connector's main class builds its own settings and helper, and that
+    the configured values reach the attributes used to call the RST WHOIS API.
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
     """
-    settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    monkeypatch.setattr("main.ConnectorSettings", StubConnectorSettings)
 
-    connector = TemplateConnector(config=settings, helper=helper)
+    connector = RSTWhoisApiConnector()
 
-    assert connector.config == settings
-    assert connector.helper == helper
+    assert isinstance(connector.config, StubConnectorSettings)
+    assert isinstance(connector.helper, OpenCTIConnectorHelper)
+    assert connector.helper.connect_id == connector.config.connector.id
+    assert (
+        opencti_connector_helper.OpenCTIConnector.call_args.kwargs[
+            "playbook_compatible"
+        ]
+        is True
+    )
+    assert connector.base_url == "https://api.rstcloud.net/v1"
+    assert connector.api_key == "test-api-key"
+    assert connector.max_tlp == "TLP:AMBER"
+    assert connector.timeout == 30
+    assert connector.whois_output_object == "description"
+    assert connector.update_output_action == "append"
+    assert connector.output_format == "extended"
+    assert connector.include_raw is True
+    assert connector.connector_auto is True

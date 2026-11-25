@@ -6,7 +6,10 @@ import pytest
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from shodan_internetdb.connector import ShodanInternetDBConnector
-from shodan_internetdb.exceptions import ShodanInternetDbExtractAndCheckMarkingsError
+from shodan_internetdb.exceptions import (
+    ShodanInternetDbExtractAndCheckMarkingsError,
+    ShodanInternetDbRateLimitError,
+)
 from shodan_internetdb.settings import ConnectorSettings
 
 
@@ -185,3 +188,19 @@ def test_extract_and_check_markings_checks_every_tlp(
 
     with pytest.raises(ShodanInternetDbExtractAndCheckMarkingsError):
         connector.extract_and_check_markings(observable)
+
+
+def test_process_message_rate_limit_is_not_swallowed(
+    mocker: MockerFixture,
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    data: dict[str, Any],
+) -> None:
+    """A 429 must fail the work, not be reported as a processed message."""
+    response = mocker.Mock()
+    response.status_code = 429
+    response.headers = {"Retry-After": "3406"}
+    mocker.patch("requests.Session.get", return_value=response)
+    connector = ShodanInternetDBConnector(config=config, helper=helper)
+    with pytest.raises(ShodanInternetDbRateLimitError, match="Retry-After: 3406"):
+        connector.process_message(data=data)

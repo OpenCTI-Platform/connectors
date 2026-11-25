@@ -24,7 +24,7 @@ class CTM360CyberBlindSpotConnector:
         self._lock = threading.Lock()
         self._enable_tracking = config.ctm360_cbs.enable_status_tracking
         self._tracker = None
-        self._interval = config.ctm360_cbs.import_interval
+        self._interval = config.connector.duration_period.total_seconds()
         self._import_incidents = config.ctm360_cbs.import_incidents
         self._import_malware_logs = config.ctm360_cbs.import_malware_logs
         self._import_breached_creds = config.ctm360_cbs.import_breached_credentials

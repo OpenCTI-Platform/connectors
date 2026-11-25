@@ -3,15 +3,14 @@ SIEMRULES Connector
 """
 
 import json
-import os
 import traceback
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class SiemrulesException(Exception):
@@ -22,19 +21,12 @@ class SiemrulesConnector:
     def __init__(self):
         """Read in config variables"""
 
-        config_file_path = "config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip("/") + "/"
-        self.api_key = self._get_param("api_key")
-        detection_packs = self._get_param("detection_packs")
-        self.detection_packs = detection_packs.split(",") if detection_packs else []
-        self.interval_hours = self._get_param("interval_hours", is_number=True)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.base_url = str(self.config.siemrules.base_url).strip("/") + "/"
+        self.api_key = self.config.siemrules.api_key.get_secret_value()
+        self.detection_packs = self.config.siemrules.detection_packs
+        self.duration_period = self.config.connector.duration_period.total_seconds()
 
         if not self.detection_packs:
             self.helper.log_error("at least one id is required on detection_packs")
@@ -45,17 +37,6 @@ class SiemrulesConnector:
         self.session.headers = {
             "API-KEY": self.api_key,
         }
-
-    def _get_param(
-        self, param_name: str, is_number: bool = False, default_value: str = None
-    ) -> int | str:
-        return get_config_variable(
-            f"SIEMRULES_{param_name.upper()}",
-            ["siemrules", param_name.lower()],
-            self.helper.config,
-            is_number,
-            default_value,
-        )
 
     def list_detection_packs(self):
         try:
@@ -186,7 +167,7 @@ class SiemrulesConnector:
         self.helper.log_info("Starting Siemrules")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=self.interval_hours * 3600,
+            duration_period=self.duration_period,
         )
 
 

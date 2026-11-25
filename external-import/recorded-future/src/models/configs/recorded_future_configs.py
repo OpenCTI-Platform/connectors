@@ -9,6 +9,9 @@ from pydantic import (
     field_validator,
 )
 
+# Recorded Future risk score, from 0 to 100
+RiskScore = Annotated[int, Field(ge=0, le=100)]
+
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
     """Interface for loading Recorded Future dedicated configuration."""
@@ -98,7 +101,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=True,
         description="Whether to import risk scores as confidence scores in OpenCTI.",
     )
-    risk_threshold: Optional[Annotated[int, Field(ge=0, le=100)]] = Field(
+    risk_threshold: Optional[RiskScore] = Field(
         default=60,
         description=(
             "Minimum risk score (0-100) for the indicators (IP address, domain, URL, hash) "
@@ -129,9 +132,48 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=False,
         description="Whether to import risk rules as labels in OpenCTI.",
     )
-    risk_list_threshold: Optional[PositiveInt] = Field(
+    risk_list_threshold: Optional[RiskScore] = Field(
         default=70,
-        description="Minimum risk score threshold (0-100) for importing risk list entities.",
+        description=(
+            "Minimum risk score (0-100) for importing risk list entities. "
+            "Applies to every risk list without a threshold of its own "
+            "(`risk_list_threshold_<list>`). Set to 0 to import all entities."
+        ),
+    )
+    risk_list_threshold_ip: Optional[RiskScore] = Field(
+        default=None,
+        description=(
+            "Minimum risk score (0-100) for the IP address risk list. "
+            "Overrides `risk_list_threshold` for this list when set."
+        ),
+    )
+    risk_list_threshold_domain: Optional[RiskScore] = Field(
+        default=None,
+        description=(
+            "Minimum risk score (0-100) for the domain risk list. "
+            "Overrides `risk_list_threshold` for this list when set."
+        ),
+    )
+    risk_list_threshold_url: Optional[RiskScore] = Field(
+        default=None,
+        description=(
+            "Minimum risk score (0-100) for the URL risk list. "
+            "Overrides `risk_list_threshold` for this list when set."
+        ),
+    )
+    risk_list_threshold_hash: Optional[RiskScore] = Field(
+        default=None,
+        description=(
+            "Minimum risk score (0-100) for the hash risk list. "
+            "Overrides `risk_list_threshold` for this list when set."
+        ),
+    )
+    risk_list_threshold_vulnerability: Optional[RiskScore] = Field(
+        default=None,
+        description=(
+            "Minimum risk score (0-100) for the vulnerability risk list. "
+            "Overrides `risk_list_threshold` for this list when set."
+        ),
     )
     risklist_related_entities: Optional[ListFromString] = Field(
         default=["Malware", "Hash", "URL", "Threat Actor", "MitreAttackIdentifier"],

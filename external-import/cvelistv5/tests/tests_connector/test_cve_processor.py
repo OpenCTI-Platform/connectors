@@ -1,6 +1,10 @@
 """Tests for CVEProcessor utility methods."""
 
+from unittest.mock import MagicMock
+
+import stix2
 from cve_processor import CVEProcessor
+from pycti import Vulnerability
 
 
 class TestNormalizeDate:
@@ -134,3 +138,130 @@ class TestFormatVersion:
 
     def test_empty_dict(self):
         assert CVEProcessor._format_version({}) == ""
+
+
+class TestExtractFixedVersions:
+    def test_less_than_upper_bound_is_a_fix(self):
+        product = {
+            "versions": [{"version": "1.0", "status": "affected", "lessThan": "1.25.5"}]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == ["1.25.5"]
+
+    def test_less_than_or_equal_is_not_a_fix(self):
+        product = {
+            "versions": [
+                {"version": "1.0", "status": "affected", "lessThanOrEqual": "1.4"}
+            ]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == []
+
+    def test_unaffected_version_is_a_fix(self):
+        product = {
+            "versions": [
+                {"version": "2.3.1", "status": "affected"},
+                {"version": "2.3.2", "status": "unaffected"},
+            ]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == ["2.3.2"]
+
+    def test_change_to_unaffected_is_a_fix(self):
+        product = {
+            "versions": [
+                {
+                    "version": "5.0",
+                    "status": "affected",
+                    "lessThan": "5.*",
+                    "changes": [{"at": "5.0.3", "status": "unaffected"}],
+                }
+            ]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == ["5.0.3"]
+
+    def test_wildcards_zero_and_git_are_skipped(self):
+        product = {
+            "versions": [
+                {"version": "0", "status": "unaffected", "lessThan": "1.0"},
+                {"version": "1.0", "status": "affected", "lessThan": "1.*"},
+                {
+                    "version": "abc123",
+                    "status": "affected",
+                    "lessThan": "def456",
+                    "versionType": "git",
+                },
+            ]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == []
+
+    def test_duplicates_are_removed(self):
+        product = {
+            "versions": [
+                {"version": "1.0", "status": "affected", "lessThan": "1.2"},
+                {"version": "1.2", "status": "unaffected"},
+            ]
+        }
+        assert CVEProcessor._extract_fixed_versions(product) == ["1.2"]
+
+
+class TestRemediatesRelationship:
+    @staticmethod
+    def _vulnerability():
+        return stix2.Vulnerability(
+            id=Vulnerability.generate_id("CVE-2026-0001"), name="CVE-2026-0001"
+        )
+
+    def test_fixed_version_writes_software_remediates_vulnerability(self):
+        processor = CVEProcessor(MagicMock())
+        vulnerability = self._vulnerability()
+        product = {
+            "vendor": "Acme",
+            "product": "widget",
+            "versions": [
+                {"version": "1.0", "status": "affected", "lessThan": "1.25.5"}
+            ],
+        }
+        objects = processor._build_affected_objects(product, vulnerability)
+
+        softwares = {o["id"]: o for o in objects if o["type"] == "software"}
+        remediates = [
+            o
+            for o in objects
+            if o["type"] == "relationship" and o["relationship_type"] == "remediates"
+        ]
+        assert len(remediates) == 1
+        fixed = softwares[remediates[0]["source_ref"]]
+        assert fixed["version"] == "1.25.5"
+        assert fixed["name"] == "widget 1.25.5"
+        assert remediates[0]["target_ref"] == vulnerability.id
+        # The affected range keeps its existing `has` relationship.
+        has = [
+            o
+            for o in objects
+            if o["type"] == "relationship" and o["relationship_type"] == "has"
+        ]
+        assert len(has) == 1
+        assert softwares[has[0]["source_ref"]]["version"] == "<1.25.5"
+
+    def test_cpes_path_also_writes_remediates(self):
+        processor = CVEProcessor(MagicMock())
+        product = {
+            "vendor": "Acme",
+            "product": "widget",
+            "cpes": ["cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*"],
+            "versions": [{"version": "2.0", "status": "unaffected"}],
+        }
+        objects = processor._build_affected_objects(product, self._vulnerability())
+        types = [o["relationship_type"] for o in objects if o["type"] == "relationship"]
+        assert types.count("remediates") == 1
+
+    def test_no_fix_named_writes_no_remediates(self):
+        processor = CVEProcessor(MagicMock())
+        product = {
+            "vendor": "Acme",
+            "product": "widget",
+            "versions": [{"version": "1.0", "status": "affected"}],
+        }
+        objects = processor._build_affected_objects(product, self._vulnerability())
+        assert not any(
+            o["type"] == "relationship" and o["relationship_type"] == "remediates"
+            for o in objects
+        )

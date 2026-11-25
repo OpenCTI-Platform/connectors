@@ -506,7 +506,14 @@ def test_dwi_screenshot_external_references_are_removed(connector):
                         "source_name": "dwi-screenshot-2",
                         "url": "https://dwi.test/2.png",
                     },
+                    {
+                        "source_name": "dwi-screenshot-8",
+                        "url": "https://dwi.test/8.png",
+                    },
                     {"source_name": "dwi-post", "url": "https://dwi.test/post"},
+                    {"source_name": "dwi-screenshot-x", "url": "https://dwi.test/x"},
+                    {"source_name": "dwi-post-screenshot", "url": "https://dwi.test/p"},
+                    {"source_name": None, "url": "https://dwi.test/none"},
                 ],
             },
             {
@@ -537,14 +544,16 @@ def test_dwi_screenshot_external_references_are_removed(connector):
     by_id = {o["id"]: o for o in sent["objects"]}
 
     assert by_id["report--1"]["external_references"] == [
-        {"source_name": "dwi-post", "url": "https://dwi.test/post"}
+        {"source_name": "dwi-post", "url": "https://dwi.test/post"},
+        {"source_name": "dwi-post-screenshot", "url": "https://dwi.test/p"},
+        {"source_name": None, "url": "https://dwi.test/none"},
     ]
     assert "external_references" not in by_id["indicator--2"]
     assert by_id["malware--4"]["external_references"] == [
         {"source_name": "dwi-post", "url": "https://dwi.test/other"}
     ]
     assert "external_references" not in by_id["marking-definition--3"]
-    assert len(bundle["objects"][0]["external_references"]) == 3
+    assert len(bundle["objects"][0]["external_references"]) == 7
 
 
 def test_reinserted_dwi_author_has_no_screenshot_references(connector, helper):

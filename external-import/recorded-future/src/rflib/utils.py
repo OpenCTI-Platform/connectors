@@ -24,18 +24,18 @@ def make_markdown_table(array):
 
 
 def is_ip_v4_address(value: str) -> bool:
-    """Check if value is a valid IP V4 address."""
+    """Check if value is a valid IP V4 address or range (CIDR notation)."""
     try:
-        ipaddress.IPv4Address(value)
+        ipaddress.IPv4Network(value, strict=False)
         return True
-    except ipaddress.AddressValueError:
+    except ValueError:
         return False
 
 
 def is_ip_v6_address(value: str) -> bool:
-    """Check if value is a valid IP V6 address."""
+    """Check if value is a valid IP V6 address or range (CIDR notation)."""
     try:
-        ipaddress.IPv6Address(value)
+        ipaddress.IPv6Network(value, strict=False)
         return True
-    except ipaddress.AddressValueError:
+    except ValueError:
         return False
