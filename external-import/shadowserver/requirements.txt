@@ -1,4 +1,4 @@
-pycti==7.261119.0
+pycti==7.261124.0
 pydantic==2.14.4
 pydantic-settings~=2.16.2
 python-magic~=0.4.27; sys_platform == 'linux' or sys_platform == 'darwin'
