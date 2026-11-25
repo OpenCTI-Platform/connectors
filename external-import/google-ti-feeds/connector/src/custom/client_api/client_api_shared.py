@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
+from connector.src.custom.client_api.page_limits import subentity_page_limit
 
 LOG_PREFIX = "[FetcherShared]"
 
@@ -48,7 +49,7 @@ class ClientAPIShared(BaseClientAPI):
                 params = {
                     entity_name: entity_id,
                     "entity_type": subentity_type,
-                    "limit": 40,
+                    "limit": subentity_page_limit(subentity_type),
                 }
 
                 try:
