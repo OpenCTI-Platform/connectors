@@ -91,7 +91,7 @@ def test_record_error_while_not_recording_keeps_nothing():
     """Test that record_error keeps nothing and does not raise when not recording."""
     # Given recording off
     # When recording an error by hand
-    ErrorStore().record_error(DataConversionError("bad item"))
+    ErrorStore().record_error(ValueError("x"))
     # Then nothing should be kept
     assert ErrorStore().get_errors() == []
 
@@ -160,32 +160,29 @@ def test_stop_recording_when_not_recording_returns_an_empty_list():
 
 
 @pytest.mark.parametrize(
-    "value",
+    "error",
     [
-        pytest.param(ValueError("x"), id="exception"),
-        pytest.param(DataConversionError, id="error_class"),
-        pytest.param("data.conversion", id="string"),
+        pytest.param(ValueError("x"), id="builtin_exception"),
+        pytest.param(KeyError("missing"), id="lookup_error"),
     ],
 )
-def test_record_error_rejects_non_connector_errors(value):
-    """Test that recording anything but a ConnectorError fails and records nothing."""
-    # Given a store holding one error while recording
+def test_record_error_accepts_any_exception(error):
+    """Test that an exception that is not a ConnectorError is kept as it is."""
+    # Given recording on
     ErrorStore().start_recording()
-    error = DataConversionError("bad item")
+    # When recording another exception
     ErrorStore().record_error(error)
-    # When recording something that is not a ConnectorError
-    # Then a TypeError should be raised
-    with pytest.raises(TypeError, match="ConnectorError instances only"):
-        ErrorStore().record_error(value)
-    # And the store should be unchanged
-    assert ErrorStore().stop_recording() == [error]
+    # Then it should be returned as it is
+    errors = ErrorStore().stop_recording()
+    assert len(errors) == 1
+    assert errors[0] is error
 
 
 def test_same_error_recorded_twice_is_kept_twice():
     """Test that the store does not deduplicate."""
     # Given an error recorded twice while recording
     ErrorStore().start_recording()
-    error = DataConversionError("bad item")
+    error = ValueError("x")
     ErrorStore().record_error(error)
     ErrorStore().record_error(error)
     # Then it should be returned twice

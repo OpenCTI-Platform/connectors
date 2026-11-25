@@ -14,8 +14,6 @@ processes.
 import threading
 from typing import ClassVar, Self
 
-from connectors_sdk.exceptions.connector_errors import ConnectorError
-
 
 class ErrorStore:
     """Store of the errors kept while it is recording.
@@ -29,7 +27,7 @@ class ErrorStore:
 
     _lock: threading.Lock
     _recording: bool
-    _errors: list[ConnectorError]
+    _errors: list[Exception]
 
     def __new__(cls) -> Self:
         """Return the single store, creating it on the first call.
@@ -57,7 +55,7 @@ class ErrorStore:
             self._errors.clear()
             self._recording = True
 
-    def stop_recording(self) -> list[ConnectorError]:
+    def stop_recording(self) -> list[Exception]:
         """Stop recording errors and return the recorded ones.
 
         For the SDK only, after each call of the connector callback. Then the store
@@ -71,28 +69,21 @@ class ErrorStore:
             self._recording = False
             return errors
 
-    def record_error(self, error: ConnectorError) -> None:
+    def record_error(self, error: Exception) -> None:
         """Record one error, only while recording is on.
 
-        When recording is off, nothing is kept.
+        When recording is off, nothing is kept and nothing is raised.
 
         Args:
-            error: The error to record. The same error recorded twice is kept twice.
-
-        Raises:
-            TypeError: If ``error`` is not a ``ConnectorError``. Nothing is recorded.
+            error: The error to record. Any exception is accepted, as it is. The same
+                error recorded twice is kept twice.
         """
-        if not isinstance(error, ConnectorError):
-            raise TypeError(
-                f"ErrorStore records ConnectorError instances only, "
-                f"got {type(error).__name__}."
-            )
         with self._lock:
             # When recording is off, nobody would read or empty the store: keep nothing
             if self._recording:
                 self._errors.append(error)
 
-    def get_errors(self) -> list[ConnectorError]:
+    def get_errors(self) -> list[Exception]:
         """Return the recorded errors, in the order they were recorded.
 
         Returns:
