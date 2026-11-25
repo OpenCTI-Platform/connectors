@@ -4,6 +4,7 @@ This module provides a flexible processor that can work with any data type,
 handle configurable sizes and provide consistent work management.
 """
 
+import time
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +28,8 @@ class BatchProcessor:
         work_manager: "WorkManager",
         logger: "LoggerProtocol",
         batch_size: int,
+        max_retries: int = 3,
+        retry_delay: float = 5.0,
     ) -> None:
         """Initialize the generic batch processor.
 
@@ -34,6 +37,9 @@ class BatchProcessor:
             config: Configuration for the batch processor
             work_manager: The work manager object for OpenCTI operations
             logger: Logger for logging messages
+            max_retries: Number of retries of a failed batch before giving up
+            retry_delay: Delay in seconds before the first retry, doubled on
+                each following retry
 
         """
         self._work_manager = work_manager
@@ -49,6 +55,8 @@ class BatchProcessor:
         self._failed_items: list[Any] = []
 
         self.batch_size = batch_size
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
         self.work_name_template = "MISP - Batch #{batch_num}"
         self.entity_type = "stix_objects"
         self.display_name = "STIX objects"
@@ -434,25 +442,40 @@ class BatchProcessor:
             Configured exception class: If all retries fail
 
         """
-        last_exception = None
+        max_attempts = self.max_retries + 1
+        for attempt in range(1, max_attempts):
+            try:
+                return self._process_single_batch(batch_items, batch_num)
+            except Exception as err:
+                delay = self.retry_delay * 2 ** (attempt - 1)
+                self._logger.warning(
+                    "Batch attempt failed, retrying",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "batch_num": batch_num,
+                        "attempt": attempt,
+                        "max_attempts": max_attempts,
+                        "retry_delay_seconds": delay,
+                        "error": str(err),
+                    },
+                )
+                time.sleep(delay)
 
         try:
             return self._process_single_batch(batch_items, batch_num)
-
-        except Exception as e:
-            last_exception = e
-            self._logger.error(
+        except Exception as err:
+            self._logger.warning(
                 "Batch failed after all retries",
                 {
                     "prefix": LOG_PREFIX,
                     "batch_num": batch_num,
-                    "error": str(e),
+                    "attempts": max_attempts,
+                    "error": str(err),
                 },
             )
             self._failed_items.extend(batch_items)
-
-        msg = f"Batch #{batch_num} processing failed"
-        raise self.create_exception(msg) from last_exception
+            msg = f"Batch #{batch_num} processing failed after {max_attempts} attempts: {err}"
+            raise self.create_exception(msg, batch_number=batch_num) from err
 
     def _process_single_batch(self, batch_items: list[Any], batch_num: int) -> str:
         """Process a single batch without retries.
@@ -476,9 +499,20 @@ class BatchProcessor:
 
         work_id = self._initiate_work(work_name, batch_num, batch_items)
 
-        self._send_bundle(work_id, batch_items, batch_num)
+        try:
+            self._send_bundle(work_id, batch_items, batch_num)
+        except Exception:
+            # pycti registers the work expectations before sending the bundle,
+            # so a work whose bundle was not sent can never complete: delete it,
+            # as the connectors-sdk WorkManager does for a work with no bundle.
+            self._delete_work(work_id, batch_num)
+            raise
 
-        self._mark_work_for_processing(work_id, batch_num)
+        try:
+            self._mark_work_for_processing(work_id, batch_num)
+        except Exception as err:
+            self._mark_work_in_error(work_id, batch_num, err)
+            raise
 
         self._total_items_processed += len(batch_items)
         self._total_items_sent += len(batch_items)
@@ -604,6 +638,60 @@ class BatchProcessor:
             )
             msg = f"Failed to mark work for processing for batch #{batch_num}: {process_err}"
             raise self.create_exception(msg, work_id=work_id) from process_err
+
+    def _delete_work(self, work_id: str, batch_num: int) -> None:
+        """Delete a work whose bundle could not be sent.
+
+        This is best effort: the platform may be unreachable for the same reason
+        the batch failed, and the remaining works are closed at the end of the run.
+
+        Args:
+            work_id: Work ID
+            batch_num: Batch number for error context
+
+        """
+        try:
+            self._work_manager.delete_work(work_id=work_id)
+        except Exception as err:
+            self._logger.warning(
+                "Failed to delete work",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "work_id": work_id,
+                    "error": str(err),
+                },
+            )
+
+    def _mark_work_in_error(
+        self, work_id: str, batch_num: int, error: Exception
+    ) -> None:
+        """Close a work in error when its bundle was sent but it cannot be marked
+        for processing.
+
+        This is best effort: the platform may be unreachable for the same reason
+        the batch failed, and the remaining works are closed at the end of the run.
+
+        Args:
+            work_id: Work ID
+            batch_num: Batch number for error context
+            error: Error that made the batch fail
+
+        """
+        try:
+            self._work_manager.work_to_process(
+                work_id=work_id, error_flag=True, error_message=str(error)
+            )
+        except Exception as err:
+            self._logger.warning(
+                "Failed to mark work in error",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "work_id": work_id,
+                    "error": str(err),
+                },
+            )
 
     def _ensure_stix_format(self, item: Any) -> Any | None:
         """Ensure item is in STIX format by checking type and converting if needed.

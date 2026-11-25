@@ -208,6 +208,21 @@ class WorkManager:
             {"prefix": LOG_PREFIX, "work_id": work_id},
         )
 
+    def delete_work(self, work_id: str) -> None:
+        """Delete a work.
+
+        Args:
+            work_id (str): The ID of the work.
+
+        """
+        self._helper.api.work.delete(id=work_id)
+        if self._current_work_id == work_id:
+            self._current_work_id = None
+        self._logger.info(
+            "Deleted work whose bundle could not be sent",
+            {"prefix": LOG_PREFIX, "work_id": work_id},
+        )
+
     def process_all_remaining_works(
         self,
         error_flag: bool = False,
@@ -224,7 +239,10 @@ class WorkManager:
             connector_id=self._helper.connect_id,
         )
         for work in works:
-            if work["status"] != "complete":
+            # A work with a processed time was already reported by the connector
+            # and is only waiting for the workers: reporting it again would
+            # attach the run error to a batch that was sent successfully.
+            if work["status"] != "complete" and not work.get("processed_time"):
                 self.work_to_process(
                     work_id=work["id"],
                     error_flag=error_flag,

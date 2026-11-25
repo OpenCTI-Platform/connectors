@@ -190,11 +190,14 @@ class Misp:
     def _check_batch_size_and_flush(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
-    ) -> None:
+    ) -> bool:
         """Check if batch needs to be flushed and flush if necessary.
 
         Args:
             all_entities: list of entities to be added
+
+        Returns:
+            True if the batch was flushed, False otherwise
 
         """
         if self.batch_processor.should_flush_before_adding(
@@ -203,21 +206,26 @@ class Misp:
             max_batch_length=self.config.misp.batch_count * 2,
         ):
             self.batch_processor.flush()
+            return True
+        return False
 
     def _check_and_add_entities_to_batch(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-    ) -> None:
+    ) -> bool:
         """Add entities to the batch processor.
 
         Args:
             all_entities: list of entities to add
             author: Author of the entities
             markings: Markings of the entities
+
+        Returns:
+            True if the batch was flushed before adding the entities, False otherwise
         """
-        self._check_batch_size_and_flush(all_entities)
+        flushed = self._check_batch_size_and_flush(all_entities)
         if self.batch_processor.get_current_batch_length() == 0:
             # Add author and markings only at the beginning of a batch
             # to avoid duplicates in case of batch flush during the process.
@@ -225,21 +233,39 @@ class Misp:
             self.batch_processor.add_items(markings)
 
         self.batch_processor.add_items(all_entities)
+        return flushed
 
     def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the batch processor."""
-        try:
-            work_id = self.batch_processor.flush()
-            if work_id:
-                self.logger.debug(
-                    "Batch processor: Flushed remaining items",
-                    {"prefix": LOG_PREFIX},
-                )
-        except Exception as e:
-            self.logger.error(
-                "Failed to flush batch processor",
-                {"prefix": LOG_PREFIX, "error": str(e)},
+        """Flush any remaining items in the batch processor.
+
+        Raises:
+            MispWorkProcessingError: If the batch cannot be sent
+        """
+        if self.batch_processor.flush():
+            self.logger.debug(
+                "Batch processor: Flushed remaining items",
+                {"prefix": LOG_PREFIX},
             )
+
+    def _save_event_checkpoint(
+        self, event: "EventRestSearchListItem", remaining_objects_count: int
+    ) -> None:
+        """Save the resume point of the event being processed.
+
+        Only call it once the objects before this point have been sent, so that
+        a failed or interrupted run resumes from the first object not sent.
+
+        Args:
+            event: The MISP event being processed
+            remaining_objects_count: Number of objects of the event not sent yet
+        """
+        new_state: dict[str, str | int] = {
+            "last_event_date": self._get_event_datetime(event).isoformat(),
+            "remaining_objects_count": remaining_objects_count,
+        }
+        if self.config.misp.datetime_attribute == "date":
+            new_state["current_event_id"] = str(event.Event.id)
+        self.work_manager.update_state(state_update=new_state)
 
     def _validate_event(self, event: "EventRestSearchListItem") -> bool:
         """Validate the event.
@@ -475,6 +501,10 @@ class Misp:
             current_state.get("remaining_objects_count") or bundle_size
         )
         object_index = bundle_size - remaining_objects_count
+        # `remaining_objects_count` moves forward when objects are added to the
+        # batch, `unsent_objects_count` only once they are sent: the difference
+        # is buffered in the batch processor. Only the latter is saved in state.
+        unsent_objects_count = remaining_objects_count
         batch_chunk_size = self.config.misp.batch_count
 
         for i in range(
@@ -494,20 +524,6 @@ class Misp:
                     not self.work_manager.check_connector_run_and_terminate()
                     and self.work_manager.check_connector_buffering()
                 ):
-                    buffered_entities = 0
-                    current_batch_length = (
-                        self.batch_processor.get_current_batch_length()
-                    )
-                    if current_batch_length > 0:
-                        metadata_count = 1 + len(markings)
-                        buffered_entities = max(
-                            0, current_batch_length - metadata_count
-                        )
-
-                    remaining_objects_count = min(
-                        bundle_size,
-                        max(0, remaining_objects_count + buffered_entities),
-                    )
                     # Clear the current batch to avoid processing duplicated items
                     # during the next run.
                     self.batch_processor.clear_current_batch()
@@ -522,13 +538,7 @@ class Misp:
                     )
                     # Save the event date to restart from the current one in the
                     # next process.
-                    new_state = {
-                        "last_event_date": self._get_event_datetime(event).isoformat(),
-                        "remaining_objects_count": remaining_objects_count,
-                    }
-                    if self.config.misp.datetime_attribute == "date":
-                        new_state["current_event_id"] = event.Event.id
-                    self.work_manager.update_state(state_update=new_state)
+                    self._save_event_checkpoint(event, unsent_objects_count)
 
                     return ProcessingOutcome.BUFFERING
 
@@ -545,19 +555,14 @@ class Misp:
                     f" - Completion {completion_before_subchunk}%"
                 )
 
-                self._check_and_add_entities_to_batch(subchunk, author, markings)
-
-                new_state: dict[str, str | int] = {
-                    "last_event_date": self._get_event_datetime(event).isoformat()
-                }
-                if self.config.misp.datetime_attribute == "date":
-                    new_state["current_event_id"] = str(event.Event.id)
+                if self._check_and_add_entities_to_batch(subchunk, author, markings):
+                    # The flush sent every object before this subchunk.
+                    unsent_objects_count = remaining_objects_count
+                    self._save_event_checkpoint(event, unsent_objects_count)
 
                 remaining_objects_count = max(
                     0, remaining_objects_count - len(subchunk)
                 )
-                new_state["remaining_objects_count"] = remaining_objects_count
-                self.work_manager.update_state(state_update=new_state)
 
         # Ensure final flush displays completion at 100% for this event.
         now = datetime.now(tz=timezone.utc)
@@ -569,7 +574,7 @@ class Misp:
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
-        self.work_manager.update_state(state_update={"remaining_objects_count": 0})
+        self._save_event_checkpoint(event, 0)
 
         return ProcessingOutcome.COMPLETED
 
@@ -850,15 +855,13 @@ class Misp:
                                 },
                             )
 
-            except Exception as e:
-                self.logger.error(
-                    "Error while processing MISP events",
-                    {"prefix": LOG_PREFIX, "error": str(e)},
-                )
+            except Exception:
+                # The checkpoint does not cover the objects still buffered:
+                # drop them so that the next run sends them again, and let the
+                # error fail the run.
+                self.batch_processor.clear_current_batch()
                 self._current_bundle = None
-
-            finally:
-                self._flush_batch_processor()
+                raise
 
             return None
 

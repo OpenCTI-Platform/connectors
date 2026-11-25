@@ -12,6 +12,7 @@ from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
 from connector.connector import ProcessingOutcome
 from datasize import DataSize
+from exceptions import MispWorkProcessingError
 from freezegun import freeze_time
 from pycti import OpenCTIConnectorHelper
 
@@ -1282,7 +1283,6 @@ def test_process_events_checkpoint_keeps_the_highest_event_date(
                 "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
                 "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
                 "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
-                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
             ],
         ),
         (
@@ -1295,7 +1295,6 @@ def test_process_events_checkpoint_keeps_the_highest_event_date(
                 "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
                 "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
                 "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
-                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
             ],
         ),
     ],
@@ -2293,3 +2292,259 @@ class TestAttributeFilteringEndToEnd:
             )
             for ref in report["object_refs"]
         )
+
+
+# --------------------------------------------------------------------------- #
+#  Checkpoint and error handling when a batch cannot be sent
+# --------------------------------------------------------------------------- #
+
+
+def _make_timestamp_event(event_id: str) -> EventRestSearchListItem:
+    return EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": event_id,
+                "uuid": f"event-{event_id}",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+
+def _run_bundle_with_real_batch_processor(
+    connector, event, bundle_objects, author, state, send_bundle, buffering=None
+):
+    """Run `_process_bundle_in_batch` with the real batch processor, a
+    stateful work manager state and a fake `send_bundle`."""
+
+    def track_update_state(state_update=None, **kwargs):
+        state.update(state_update)
+
+    with (
+        patch.object(
+            connector.work_manager, "get_state", side_effect=lambda: dict(state)
+        ),
+        patch.object(
+            connector.work_manager, "update_state", side_effect=track_update_state
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=buffering is None,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            side_effect=buffering or [False],
+        ),
+        patch.object(connector.work_manager, "initiate_work", return_value="work"),
+        patch.object(connector.work_manager, "work_to_process"),
+        patch.object(connector.work_manager, "send_bundle", side_effect=send_bundle),
+        patch("utils.batch_processor.batch_processor.time.sleep"),
+    ):
+        return connector._process_bundle_in_batch(
+            event=event, bundle_objects=bundle_objects, author=author, markings=[]
+        )
+
+
+def test_process_bundle_in_batch_checkpoint_skips_no_object_when_send_fails(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    A batch that cannot be sent must not be covered by the checkpoint: the
+    next run resumes from the first object not sent, and no object is lost.
+
+    With `batch_count=2`, objects go to the batch by pairs and the batch is
+    flushed before the third pair is added (projected length >= 4).
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    bundle_objects = [_make_identity(name=f"entity-{i}") for i in range(1, 7)]
+    event = _make_timestamp_event("21")
+    state: dict = {}
+    sent_ids: list[str] = []
+
+    def send_once_then_fail(work_id, bundle):
+        if sent_ids:
+            raise ConnectionError("rabbitmq unreachable")
+        sent_ids.extend(obj.id for obj in bundle)
+
+    # First run: the first batch (author, entity-1, entity-2) is sent, every
+    # attempt to send the second one (entity-3, entity-4) fails.
+    with pytest.raises(MispWorkProcessingError):
+        _run_bundle_with_real_batch_processor(
+            connector, event, bundle_objects, author, state, send_once_then_fail
+        )
+
+    assert sent_ids == [author.id, bundle_objects[0].id, bundle_objects[1].id]
+    assert state["remaining_objects_count"] == 4
+    assert state["last_event_date"] == "2026-01-02T00:00:00+00:00"
+
+    # Second run: resumes at entity-3.
+    def send(work_id, bundle):
+        sent_ids.extend(obj.id for obj in bundle)
+
+    outcome = _run_bundle_with_real_batch_processor(
+        connector, event, bundle_objects, author, state, send
+    )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    assert {obj.id for obj in bundle_objects} <= set(sent_ids)
+    assert sent_ids[3:6] == [author.id, bundle_objects[2].id, bundle_objects[3].id]
+    assert state["remaining_objects_count"] == 0
+
+
+def test_process_bundle_in_batch_checkpoint_saved_only_after_successful_flush(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """Adding objects to the batch does not move the checkpoint, sending does."""
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "date"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    bundle_objects = [_make_identity(name=f"entity-{i}") for i in range(1, 7)]
+    event = EventRestSearchListItem.model_validate(
+        {"Event": {"id": "22", "uuid": "event-22", "date": "2026-01-02"}}
+    )
+    state: dict = {}
+    saved_states: list[dict] = []
+
+    def send(work_id, bundle):
+        saved_states.append(dict(state))
+
+    outcome = _run_bundle_with_real_batch_processor(
+        connector, event, bundle_objects, author, state, send
+    )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    # State as it was when each batch was sent: nothing saved before the first
+    # send, then the checkpoint of the objects sent by the previous batch.
+    assert saved_states == [
+        {},
+        {
+            "last_event_date": "2026-01-02T00:00:00+00:00",
+            "remaining_objects_count": 4,
+            "current_event_id": "22",
+        },
+        {
+            "last_event_date": "2026-01-02T00:00:00+00:00",
+            "remaining_objects_count": 2,
+            "current_event_id": "22",
+        },
+    ]
+    assert state == {
+        "last_event_date": "2026-01-02T00:00:00+00:00",
+        "remaining_objects_count": 0,
+        "current_event_id": "22",
+    }
+
+
+def test_process_bundle_in_batch_buffering_saves_only_sent_objects(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """When buffering stops an event, the objects still in the batch are
+    dropped and counted as remaining."""
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    bundle_objects = [_make_identity(name=f"entity-{i}") for i in range(1, 7)]
+    event = _make_timestamp_event("23")
+    state: dict = {}
+    sent_ids: list[str] = []
+
+    def send(work_id, bundle):
+        sent_ids.extend(obj.id for obj in bundle)
+
+    # Buffering is detected before the third pair: entity-1 and entity-2 are
+    # sent by the flush before the second pair, entity-3 and entity-4 are only
+    # buffered.
+    outcome = _run_bundle_with_real_batch_processor(
+        connector,
+        event,
+        bundle_objects,
+        author,
+        state,
+        send,
+        buffering=[False, False, True],
+    )
+
+    assert outcome is ProcessingOutcome.BUFFERING
+    assert sent_ids == [author.id, bundle_objects[0].id, bundle_objects[1].id]
+    assert state["remaining_objects_count"] == 4
+    assert connector.batch_processor.get_current_batch_length() == 0
+
+
+def test_process_events_fails_the_run_when_a_batch_cannot_be_sent(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """A batch that cannot be sent fails the run instead of being logged and
+    ignored, and the checkpoint of the run is not moved forward."""
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts = int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+    events = [
+        _make_publish_timestamp_event("1", ts),
+        _make_publish_timestamp_event("2", ts + 1),
+    ]
+
+    def fail_on_send(**kwargs):
+        # Objects left in the batch when the error happens are not sent.
+        connector.batch_processor.add_item(_make_identity(name="buffered"))
+        raise MispWorkProcessingError("Batch #1 processing failed")
+
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "converter") as mock_converter,
+        patch.object(
+            connector, "_process_bundle_in_batch", side_effect=fail_on_send
+        ) as mock_process,
+    ):
+        mock_helper.get_state.return_value = {}
+        mock_wm.get_state.return_value = {}
+        mock_api.search_events.return_value = iter(events)
+        mock_converter.process.return_value = (MagicMock(), [], [MagicMock()])
+
+        result = connector.process_events()
+
+    assert result == "MISP events processing failed: Batch #1 processing failed"
+    assert mock_process.call_count == 1
+    mock_wm.update_state.assert_not_called()
+    assert connector.batch_processor.get_current_batch_length() == 0
+    assert connector._current_bundle is None
+
+
+def test_process_fails_the_works_when_a_batch_cannot_be_sent(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    connector = fake_misp_connector(deepcopy(minimal_config_dict))
+
+    with (
+        patch.object(
+            connector,
+            "process_events",
+            return_value="MISP events processing failed: Batch #1 processing failed",
+        ),
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "helper"),
+    ):
+        connector.process()
+
+    mock_wm.process_all_remaining_works.assert_called_once_with(
+        error_flag=True,
+        error_message="MISP events processing failed: Batch #1 processing failed",
+    )
