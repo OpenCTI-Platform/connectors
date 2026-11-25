@@ -28,6 +28,7 @@ class ErrorStore:
     _lock: threading.Lock
     _recording: bool
     _errors: list[Exception]
+    _error_ids: set[int]
 
     def __new__(cls) -> Self:
         """Return the single store, creating it on the first call.
@@ -40,6 +41,7 @@ class ErrorStore:
                 if cls._instance is None:
                     instance = super().__new__(cls)
                     instance._errors = []
+                    instance._error_ids = set()
                     instance._recording = False
                     instance._lock = threading.Lock()
                     cls._instance = instance
@@ -53,6 +55,7 @@ class ErrorStore:
         """
         with self._lock:
             self._errors.clear()
+            self._error_ids.clear()
             self._recording = True
 
     def stop_recording(self) -> list[Exception]:
@@ -66,6 +69,7 @@ class ErrorStore:
         """
         with self._lock:
             errors, self._errors = self._errors, []
+            self._error_ids.clear()
             self._recording = False
             return errors
 
@@ -75,13 +79,16 @@ class ErrorStore:
         When recording is off, nothing is kept and nothing is raised.
 
         Args:
-            error: The error to record. Any exception is accepted, as it is. The same
-                error recorded twice is kept twice.
+            error: The error to record. Any exception is accepted, as it is. An error
+                that is already in the store is not added again.
         """
         with self._lock:
-            # When recording is off, nobody would read or empty the store: keep nothing
-            if self._recording:
+            # When recording is off, nobody would read or empty the store: keep nothing.
+            # Ids are compared, not the errors themselves: a class could redefine `==`.
+            # An id is unique here, since the list keeps every stored error alive.
+            if self._recording and id(error) not in self._error_ids:
                 self._errors.append(error)
+                self._error_ids.add(id(error))
 
     def get_errors(self) -> list[Exception]:
         """Return the recorded errors, in the order they were recorded.
@@ -97,3 +104,4 @@ class ErrorStore:
         """Remove every recorded error. Recording stays on if it was on."""
         with self._lock:
             self._errors.clear()
+            self._error_ids.clear()

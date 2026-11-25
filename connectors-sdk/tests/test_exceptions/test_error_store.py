@@ -178,15 +178,47 @@ def test_record_error_accepts_any_exception(error):
     assert errors[0] is error
 
 
-def test_same_error_recorded_twice_is_kept_twice():
-    """Test that the store does not deduplicate."""
+def test_same_error_recorded_twice_is_kept_once():
+    """Test that recording an error already in the store does not add it again."""
     # Given an error recorded twice while recording
     ErrorStore().start_recording()
     error = ValueError("x")
     ErrorStore().record_error(error)
     ErrorStore().record_error(error)
-    # Then it should be returned twice
-    assert ErrorStore().stop_recording() == [error, error]
+    # Then it should be returned once
+    assert ErrorStore().stop_recording() == [error]
+
+
+def test_equal_but_distinct_errors_are_all_kept():
+    """Test that two errors with the same class and message are both kept."""
+    # Given two items failing with the same message while recording
+    ErrorStore().start_recording()
+    first = DataConversionError("missing field")
+    second = DataConversionError("missing field")
+    ErrorStore().record_error(first)
+    ErrorStore().record_error(second)
+    # Then both errors should be returned
+    errors = ErrorStore().stop_recording()
+    assert len(errors) == 2
+    assert errors[0] is first
+    assert errors[1] is second
+
+
+def test_emptied_store_accepts_the_same_error_again():
+    """Test that an error can be recorded again once the store was emptied."""
+    error = ValueError("x")
+    # Given an error recorded in a previous call
+    ErrorStore().start_recording()
+    ErrorStore().record_error(error)
+    ErrorStore().stop_recording()
+    # When recording it in a new call, and again after clear()
+    ErrorStore().start_recording()
+    ErrorStore().record_error(error)
+    assert ErrorStore().get_errors() == [error]
+    ErrorStore().clear()
+    ErrorStore().record_error(error)
+    # Then it should be returned
+    assert ErrorStore().stop_recording() == [error]
 
 
 def test_get_errors_returns_a_copy():
