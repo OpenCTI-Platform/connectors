@@ -263,3 +263,37 @@ def test_analyst_comment_note_has_deterministic_id(
     note2 = _find_notes(result2)[0]
     assert note1.id == note2.id  # noqa: S101
     assert note1.id.startswith("note--")  # noqa: S101
+
+
+@pytest.mark.order(1)
+def test_html_analyst_comment_note_content_is_markdown(
+    mock_organization, mock_tlp_marking
+):
+    """Test that an HTML analyst_comment is stored as Markdown, which OpenCTI renders."""
+    # GIVEN: A GTI report whose analyst_comment is HTML with a GTI link
+    report = GTIReportDataFactory.build(
+        attributes=ReportModelFactory.build(
+            name="News Analysis Report",
+            collection_type="report",
+            private=False,
+            report_type="News Analysis",
+            analyst_comment=(
+                '<p>GTIG tracks <a href="https://www.virustotal.com/gui/collection/'
+                'threat-actor--2930cc24-2abe-59a4-80f4-8a6dec724e65">UNC6240</a>.</p>'
+                "<p><strong>Rating:</strong> moderate.</p>"
+            ),
+        )
+    )
+    mapper = _given_composite_mapper(report, mock_organization, mock_tlp_marking)
+
+    # WHEN: Converting the report to STIX entities
+    result = _when_convert_to_stix(mapper)
+
+    # THEN: The Note content is Markdown, without HTML tags
+    note = _find_notes(result)[0]
+    assert "<" not in note.content  # noqa: S101
+    assert (  # noqa: S101
+        "[UNC6240](https://www.virustotal.com/gui/collection/"
+        "threat-actor--2930cc24-2abe-59a4-80f4-8a6dec724e65)" in note.content
+    )
+    assert "**Rating:** moderate." in note.content  # noqa: S101
