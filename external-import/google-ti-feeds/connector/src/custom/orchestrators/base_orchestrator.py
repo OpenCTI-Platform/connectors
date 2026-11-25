@@ -8,6 +8,9 @@ from connector.src.custom.client_api.inline_relationships import (
     is_subentity_call_needed,
 )
 from connector.src.custom.configs import GTIConfig
+from connector.src.custom.models.gti.gti_attack_technique_id_model import (
+    GTIAttackTechniqueIDData,
+)
 from connector.src.octi.work_manager import WorkManager
 
 LOG_PREFIX = "[BaseOrchestrator]"
@@ -38,6 +41,49 @@ class BaseOrchestrator:
         self.tlp_level = tlp_level.lower()
 
         self.client_api = ClientAPI(config, logger)
+
+    def _build_attack_technique_data(
+        self, attack_technique_entities: list[Any]
+    ) -> GTIAttackTechniqueIDData | None:
+        """Build the ID-only attack technique data from GTI attack technique entities.
+
+        Every entity with an ID is kept in ``ids``. Only those with a non-empty
+        ``attributes.name`` string get an entry in ``names``. The name is required
+        downstream: the attack pattern ID depends on the MITRE ID alone, so a
+        technique named after its own ID would overwrite the real MITRE technique
+        name. A technique without a name is skipped by the mapper.
+
+        Args:
+            attack_technique_entities: GTI attack technique entities.
+
+        Returns:
+            The attack technique IDs and names, or None when no entity has an ID.
+
+        """
+        ids: list[str] = []
+        names: dict[str, str] = {}
+        for attack_technique in attack_technique_entities:
+            technique_id = getattr(attack_technique, "id", None)
+            if not technique_id:
+                continue
+            ids.append(technique_id)
+            name = getattr(getattr(attack_technique, "attributes", None), "name", None)
+            if isinstance(name, str) and name.strip():
+                names[technique_id] = name
+
+        if not ids:
+            return None
+
+        missing_name_count = len(ids) - len(names)
+        if missing_name_count:
+            self.logger.warning(
+                "Skipping attack techniques without a name",
+                {
+                    "prefix": LOG_PREFIX,
+                    "attack_technique_without_name_count": missing_name_count,
+                },
+            )
+        return GTIAttackTechniqueIDData.from_id_list(ids, names=names)
 
     def _log_relationships_summary(
         self,
