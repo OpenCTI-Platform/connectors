@@ -126,8 +126,9 @@ Related objects are linked to the alert Incident with `related-to` relationships
 Observables that belong to the customer (monitored assets, certificates, subdomains) never get an Indicator: an
 Indicator would push the customer's own infrastructure into detection tooling as malicious.
 
-Leaked passwords, cookies and tokens are masked before anything is sent to OpenCTI, both under named fields and inside
-free text such as combo-list lines or `email:password` pairs in chat messages. The mask keeps the first and last two
+Leaked passwords, cookies, tokens and API keys are masked before anything is sent to OpenCTI, both under named fields
+and inside free text such as combo-list lines, `email:password` pairs in chat messages and quoted assignments in leaked
+source code (`"password": "..."`, `API_KEY = '...'`). The mask keeps the first and last two
 characters and the length (`Pa***23 (10 chars)`), enough to tell whether a password is still current, and the full
 value stays in Cyble Vision behind the alert's deep link. Usernames, URLs, domains, breach sources and malware families
 are imported as is. Set `CYBLE_VISION_INCLUDE_PLAINTEXT_CREDENTIALS=true` only if every OpenCTI user, stream consumer

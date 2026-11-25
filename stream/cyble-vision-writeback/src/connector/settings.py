@@ -11,7 +11,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -54,9 +54,19 @@ class CybleVisionWritebackConfig(BaseConfigModel):
         description="Cyble Vision API bearer token with permission to update alerts.",
     )
     import_user_ids: ListFromString = Field(
-        description="ID(s) of the OpenCTI user the Cyble Vision import connector runs as. Only Incidents created by this user are written back, and changes made by this user are never echoed back to Vision.",
-        min_length=1,
+        description="ID(s) of the OpenCTI user the Cyble Vision import connector runs as (required). Only Incidents created by this user are written back, and changes made by this user are never echoed back to Vision.",
+        default=[],
     )
+
+    # The OpenCTI UI cannot render a list setting without a default, so the
+    # field defaults to empty and is required here instead. BaseConfigModel
+    # validates defaults, so an unset value still fails at startup.
+    @field_validator("import_user_ids")
+    @classmethod
+    def _require_import_user_ids(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("at least one import user ID is required")
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

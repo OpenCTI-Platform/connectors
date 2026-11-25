@@ -57,6 +57,13 @@ class CybleVisionClient(BaseClientApi):
                     {"count": len(batch), "error": str(err)},
                 )
                 raise
+            # Vision reports a rejected update with HTTP 200 and success=false.
+            if isinstance(response, dict) and response.get("success") is False:
+                self._logger.error(
+                    "Cyble Vision rejected the alert update",
+                    {"count": len(batch), "message": response.get("message")},
+                )
+                raise ApiClientError("Cyble Vision alerts API returned success=false")
             self._logger.info(
                 "Updated Cyble Vision alerts",
                 {"count": len(batch)},

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from connector.mapping import build_update, changed_fields, creator_ids
+from connector.mapping import build_update, changed_fields, creator_ids, patch_values
 from connector.settings import ConnectorSettings
 from cyble_client import CybleVisionClient
 from pycti import OpenCTIConnectorHelper
@@ -63,9 +63,8 @@ class CybleVisionWritebackConnector:
             return
 
         context = payload.get("context")
-        fields = changed_fields(
-            context.get("patch") if isinstance(context, dict) else None
-        )
+        patch = context.get("patch") if isinstance(context, dict) else None
+        fields = changed_fields(patch)
         if not fields:
             self.helper.connector_logger.debug(
                 "Skipping write-back, neither severity nor workflow status changed",
@@ -83,7 +82,13 @@ class CybleVisionWritebackConnector:
             )
             return
 
-        update = build_update(snapshot, fields) or build_update(entity, fields)
+        # The values come from this event's patch: the reloaded Incident may
+        # already carry a later change, e.g. by the import user, which must not
+        # be sent to Vision as this analyst's override.
+        values = patch_values(patch)
+        update = build_update(snapshot, fields, values) or build_update(
+            entity, fields, values
+        )
         if update is None:
             self.helper.connector_logger.debug(
                 "Skipping write-back, Incident has no Vision alert ID or service",

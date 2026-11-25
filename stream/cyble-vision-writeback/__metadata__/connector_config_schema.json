@@ -94,19 +94,18 @@
       "writeOnly": true
     },
     "CYBLE_VISION_WRITEBACK_IMPORT_USER_IDS": {
-      "description": "ID(s) of the OpenCTI user the Cyble Vision import connector runs as. Only Incidents created by this user are written back, and changes made by this user are never echoed back to Vision.",
+      "default": [],
+      "description": "ID(s) of the OpenCTI user the Cyble Vision import connector runs as (required). Only Incidents created by this user are written back, and changes made by this user are never echoed back to Vision.",
       "items": {
         "type": "string"
       },
-      "minItems": 1,
       "type": "array"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CYBLE_VISION_WRITEBACK_API_TOKEN",
-    "CYBLE_VISION_WRITEBACK_IMPORT_USER_IDS"
+    "CYBLE_VISION_WRITEBACK_API_TOKEN"
   ],
   "additionalProperties": true
 }

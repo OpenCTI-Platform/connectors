@@ -64,7 +64,7 @@ def map_alert(
     try:
         if not include_plaintext_credentials:
             alert = redact_alert(alert)
-        context = build_context(alert, author, marking, portal_url_template)
+        context = build_context(alert, author, marking, portal_url_template, logger)
         payload = extract_payload(alert)
         mapper = MAPPERS.get(alert.get("service", ""), GenericMapper())
         try:

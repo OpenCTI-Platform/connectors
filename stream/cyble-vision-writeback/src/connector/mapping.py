@@ -151,26 +151,52 @@ def changed_fields(patch: Any) -> set[str]:
     return fields
 
 
+def patch_values(patch: Any) -> dict[str, str]:
+    """Return the Vision values an update event's JSON patch sets.
+
+    OpenCTI patches ``/severity`` and, next to ``workflow_id``, the
+    ``workflow_status_name`` of the new status, so neither needs a lookup.
+    """
+    values: dict[str, str] = {}
+    for operation in patch if isinstance(patch, list) else []:
+        if not isinstance(operation, dict):
+            continue
+        key = str(operation.get("path") or "").rsplit("/", 1)[-1]
+        if key == "severity":
+            severity = vision_severity(operation.get("value"))
+            if severity:
+                values[USER_SEVERITY] = severity
+        elif key == "workflow_status_name":
+            status = vision_status(operation.get("value"))
+            if status:
+                values[STATUS] = status
+    return values
+
+
 def build_update(
-    entity: dict[str, Any], fields: Collection[str] = ALL_FIELDS
+    entity: dict[str, Any],
+    fields: Collection[str] = ALL_FIELDS,
+    values: dict[str, str] | None = None,
 ) -> dict[str, str] | None:
     """Build a Vision update dict, or None when this is not a Cyble alert.
 
     Only ``fields`` are sent, so an analyst who changes severity does not
-    also overwrite the Vision status (and vice versa).
+    also overwrite the Vision status (and vice versa). ``values`` taken from
+    the event win over the entity's current ones.
     """
     alert_id = vision_alert_id(entity)
     service = vision_service(entity)
     if not alert_id or not service:
         return None
 
+    values = values or {}
     update: dict[str, str] = {"id": alert_id, "service": service}
     if USER_SEVERITY in fields:
-        severity = vision_severity(entity.get("severity"))
+        severity = values.get(USER_SEVERITY) or vision_severity(entity.get("severity"))
         if severity:
             update[USER_SEVERITY] = severity
     if STATUS in fields:
-        status = vision_status(workflow_name_from_entity(entity))
+        status = values.get(STATUS) or vision_status(workflow_name_from_entity(entity))
         if status:
             update[STATUS] = status
     if USER_SEVERITY not in update and STATUS not in update:

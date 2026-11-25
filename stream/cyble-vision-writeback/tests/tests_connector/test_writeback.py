@@ -6,9 +6,11 @@ from connector import CybleVisionWritebackConnector
 from connector.mapping import (
     build_update,
     changed_fields,
+    patch_values,
     vision_alert_id,
     vision_status,
 )
+from connectors_sdk import ApiClientError
 from cyble_client import CybleVisionClient
 
 ALERT_ID = "b2c3d4e5-f6a7-8901-bcde-f23456789012"
@@ -212,7 +214,7 @@ def test_changed_fields_reads_opencti_patch_paths():
 def test_severity_change_sends_only_severity():
     sent = []
     _connector(sent).process_message(_message("update", _incident()))
-    assert sent == [{"id": ALERT_ID, "service": "github", "user_severity": "LOW"}]
+    assert sent == [{"id": ALERT_ID, "service": "github", "user_severity": "HIGH"}]
 
 
 def test_status_change_sends_only_status():
@@ -232,7 +234,7 @@ def test_both_changes_in_one_event_send_both_fields():
         {
             "id": ALERT_ID,
             "service": "github",
-            "user_severity": "LOW",
+            "user_severity": "HIGH",
             "status": "RESOLVED",
         }
     ]
@@ -302,4 +304,50 @@ def test_creator_is_read_from_the_stream_extension():
         },
     )
     _connector(sent).process_message(_message("update", entity))
-    assert sent == [{"id": ALERT_ID, "service": "github", "user_severity": "LOW"}]
+    assert sent == [{"id": ALERT_ID, "service": "github", "user_severity": "HIGH"}]
+
+
+def test_patch_values_reads_the_new_severity_and_status():
+    assert patch_values(SEVERITY_PATCH) == {"user_severity": "HIGH"}
+    assert patch_values(STATUS_PATCH) == {"status": "RESOLVED"}
+    assert patch_values(DESCRIPTION_PATCH) == {}
+    assert patch_values(None) == {}
+
+
+def test_values_come_from_the_event_not_the_reloaded_incident():
+    """A later change, e.g. by the import user, must not be sent as this edit."""
+    sent = []
+    connector = _connector(sent)
+    connector._refresh_incident = lambda entity: _incident(
+        severity="low", status={"template": {"name": "In progress"}}
+    )
+    connector.process_message(
+        _message("update", _incident(), patch=SEVERITY_PATCH + STATUS_PATCH)
+    )
+    assert sent == [
+        {
+            "id": ALERT_ID,
+            "service": "github",
+            "user_severity": "HIGH",
+            "status": "RESOLVED",
+        }
+    ]
+
+
+def test_status_falls_back_to_the_incident_when_the_patch_has_no_name():
+    sent = []
+    patch = [op for op in STATUS_PATCH if not op["path"].endswith("status_name")]
+    _connector(sent).process_message(_message("update", _incident(), patch=patch))
+    assert sent == [{"id": ALERT_ID, "service": "github", "status": "RESOLVED"}]
+
+
+def test_update_alerts_raises_when_vision_rejects_the_update():
+    client = CybleVisionClient(
+        base_url="https://bifrost.cyble.ai", api_token="test", logger=_Logger()
+    )
+    client._put = lambda path, json=None: {"success": False, "message": "denied"}
+
+    with pytest.raises(ApiClientError):
+        client.update_alerts(
+            [{"id": ALERT_ID, "service": "github", "status": "RESOLVED"}]
+        )

@@ -115,3 +115,21 @@ def test_newsfeed_checkpoint_follows_post_date_not_created_at():
 
     # post_date is 2025-07-14; created_at (2025-08-28) must not move the cursor.
     assert processor.state.last_newsfeed_post_date.startswith("2025-07-14")
+
+
+def test_unrecognised_created_at_neither_crashes_nor_moves_the_checkpoint(
+    connector_settings,
+):
+    good = json.loads((FIXTURES / "ssl_expiry.json").read_text())
+    bad = {**good, "id": "bad-timestamp-alert", "created_at": "yesterday"}
+    processor = _alerts_processor(connector_settings, {})
+    processor.author = OrganizationAuthor(name="Cyble")
+    processor.tlp_marking = TLPMarking(level="amber")
+
+    batches = list(processor.transform(iter([("ssl_expiry", [good, bad])])))
+
+    assert len(batches) == 1
+    checkpoint = processor.state.last_alert_created_at["ssl_expiry"]
+    assert datetime.fromisoformat(checkpoint) == datetime.fromisoformat(
+        good["created_at"].replace("Z", "+00:00")
+    )

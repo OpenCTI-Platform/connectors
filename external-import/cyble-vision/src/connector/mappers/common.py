@@ -54,6 +54,14 @@ def parse_datetime(value: Any) -> datetime | None:
     return datetime.fromisoformat(text)
 
 
+def try_parse_datetime(value: Any) -> datetime | None:
+    """Like ``parse_datetime``, but None for an unrecognised value."""
+    try:
+        return parse_datetime(value)
+    except ValueError:
+        return None
+
+
 def extract_payload(alert: dict[str, Any]) -> dict[str, Any]:
     """Return the usable content dict for a Vision alert.
 
@@ -162,6 +170,7 @@ def build_context(
     author: OrganizationAuthor,
     marking: TLPMarking,
     portal_url_template: str,
+    logger: Any = None,
 ) -> AlertContext:
     """Map the stable envelope fields of any Vision alert."""
     service = alert["service"]
@@ -189,9 +198,22 @@ def build_context(
         labels=labels,
         external_references=[reference],
         severity=severity,
-        created=parse_datetime(alert.get("created_at")),
-        updated=parse_datetime(alert.get("updated_at")),
+        created=_envelope_datetime(alert, "created_at", logger),
+        updated=_envelope_datetime(alert, "updated_at", logger),
         asset=alert.get("asset") or alert.get("keyword_name"),
         description=alert.get("description"),
         raw=alert,
     )
+
+
+def _envelope_datetime(alert: dict[str, Any], key: str, logger: Any) -> datetime | None:
+    # Raising here would bypass the generic fallback and drop the alert for
+    # good, since its service checkpoint still moves on.
+    value = alert.get(key)
+    parsed = try_parse_datetime(value)
+    if parsed is None and value and logger is not None:
+        logger.warning(
+            "Ignoring unrecognised Vision timestamp",
+            {"alert_id": alert.get("id"), "field": key, "value": str(value)},
+        )
+    return parsed

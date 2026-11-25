@@ -21,6 +21,14 @@ _SENSITIVE_KEY_PARTS = (
     "token",
     "authorization",
     "cookie",
+    "api_key",
+    "apikey",
+    "api-key",
+    "access_key",
+    "accesskey",
+    "access-key",
+    "private_key",
+    "privatekey",
     "credit_card",
     "card_number",
     "cvv",
@@ -31,18 +39,24 @@ _SENSITIVE_KEY_PARTS = (
 _MIN_KNOWN_SECRET_LENGTH = 3
 _MIN_SUBSTRING_SECRET_LENGTH = 6
 
-# "Password: x", "pass=x", "token=x", "api_key: x"
+# A quoted value, with escaped quotes inside: "a b\"c" or 'a b'.
+_QUOTED = r"\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'"
+# "Password: x", "pass=x", "DB_PASSWORD=x", "api_key: x", and quoted
+# assignments in leaked source code: {"password": "x y"}, api_key = 'x'.
 _LABELED_SECRET = re.compile(
-    r"(?i)\b(pass(?:word|wd)?|pwd|token|secret|api[_-]?key|access[_-]?key)"
-    r"(\s*[:=]\s*)(\S+)"
+    r"(?i)(?<![a-z0-9])(pass(?:word|wd)?|pwd|token|secret|api[_-]?key|access[_-]?key)"
+    r"(['\"]?\s*[:=]\s*)(" + _QUOTED + r"|\S+)"
 )
 # Header-style values span spaces and semicolons: "Cookie: a=1; b=2",
-# "Authorization: Bearer x". The rest of the line is masked.
+# "Authorization: Bearer x". Unless quoted, the rest of the line is masked.
 _HEADER_SECRET = re.compile(
-    r"(?i)\b(cookie|set-cookie|authorization)(\s*[:=]\s*)([^\r\n]+)"
+    r"(?i)\b(cookie|set-cookie|authorization)(['\"]?\s*[:=]\s*)("
+    + _QUOTED
+    + r"|[^\r\n]+)"
 )
-# "user@example.com:secret". A numeric suffix is a port, not a password.
-_EMAIL_SECRET = re.compile(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+):(?!\d+\b)(\S+)")
+# "user@example.com:secret", including all-digit passwords.
+_EMAIL_SECRET = re.compile(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+):(\S+)")
+_PORT = re.compile(r"\d+\b")
 
 
 def mask_secret(value: str) -> str:
@@ -62,12 +76,13 @@ def redact_alert(alert: dict[str, Any]) -> dict[str, Any]:
 def scrub_text(text: str, known_secrets: list[str]) -> str:
     """Mask credentials that appear inside a free-text value."""
     text = _HEADER_SECRET.sub(
-        lambda m: f"{m.group(1)}{m.group(2)}{mask_secret(m.group(3).strip())}", text
+        lambda m: f"{m.group(1)}{m.group(2)}{_mask_value_text(m.group(3).strip())}",
+        text,
     )
     text = _LABELED_SECRET.sub(
-        lambda m: f"{m.group(1)}{m.group(2)}{mask_secret(m.group(3))}", text
+        lambda m: f"{m.group(1)}{m.group(2)}{_mask_value_text(m.group(3))}", text
     )
-    text = _EMAIL_SECRET.sub(lambda m: f"{m.group(1)}:{mask_secret(m.group(2))}", text)
+    text = _EMAIL_SECRET.sub(_mask_email_secret, text)
     for secret in known_secrets:
         if secret not in text:
             continue
@@ -78,6 +93,22 @@ def scrub_text(text: str, known_secrets: list[str]) -> str:
                 rf"(?<!\w){re.escape(secret)}(?!\w)", mask_secret(secret), text
             )
     return text
+
+
+def _mask_value_text(value: str) -> str:
+    """Mask a matched value, keeping the quotes around a quoted one."""
+    if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
+        inner = value[1:-1]
+        return f"{value[0]}{mask_secret(inner)}{value[0]}" if inner else value
+    return mask_secret(value)
+
+
+def _mask_email_secret(match: re.Match) -> str:
+    # In scheme://user@host:8443 the digits are a port, not a password.
+    before = match.string[: match.start()]
+    if before.endswith("://") and _PORT.match(match.group(2)):
+        return match.group(0)
+    return f"{match.group(1)}:{mask_secret(match.group(2))}"
 
 
 def _is_sensitive_key(key: Any) -> bool:

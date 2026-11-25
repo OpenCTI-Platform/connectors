@@ -97,7 +97,9 @@ For every `update` event on an Incident, the connector:
    so an Incident created by hand with a forged `Cyble Vision` reference and `cyble:` label is never written back.
 4. Reads the Vision alert ID from the `Cyble Vision` external reference and the Vision service from the
    `cyble:<service>` label set by the import connector. Incidents without both are skipped.
-5. Sends `PUT /y/alerts` to Cyble Vision with only the field(s) that changed:
+5. Sends `PUT /y/alerts` to Cyble Vision with only the field(s) that changed, using the values from the event itself
+   rather than the reloaded Incident, which may already carry a later change. A response with `success: false` is
+   logged as an error:
 
 | OpenCTI | Cyble Vision |
 |---|---|

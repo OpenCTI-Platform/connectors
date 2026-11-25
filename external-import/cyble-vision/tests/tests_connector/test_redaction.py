@@ -60,7 +60,50 @@ def test_short_secrets_reveal_only_their_length():
 
 
 def test_ports_are_not_mistaken_for_passwords():
-    assert scrub_text("admin@example.com:8443", []) == "admin@example.com:8443"
+    text = "see https://admin@example.com:8443/login"
+    assert scrub_text(text, []) == text
+
+
+def test_numeric_combo_passwords_are_masked():
+    masked = scrub_text("dump: user@example.com:12345678 and more", [])
+    assert "12345678" not in masked
+    assert "user@example.com:" in masked
+
+
+@pytest.mark.parametrize(
+    "text, secret",
+    [
+        ('{"password": "ExamplePassword42!"}', "ExamplePassword42!"),
+        ('{"api_key": "sk-live-example123456"}', "sk-live-example123456"),
+        ("DB_PASSWORD = 'correct horse battery'", "correct horse battery"),
+        ('cfg = {"token": "abc\\"def123456"}', "def123456"),
+        ('headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9"}', "eyJhbGci"),
+    ],
+)
+def test_quoted_assignments_in_source_code_are_masked(text, secret):
+    masked = scrub_text(text, [])
+    assert secret not in masked
+    assert "chars)" in masked
+
+
+def test_quoted_header_masking_stops_at_the_closing_quote():
+    masked = scrub_text('{"Cookie": "sid=abc123def456", "user": "alice"}', [])
+    assert "abc123def456" not in masked
+    assert '"user": "alice"' in masked
+
+
+@pytest.mark.parametrize(
+    "key", ["api_key", "apiKey", "x-api-key", "access_key", "private_key"]
+)
+def test_api_key_fields_are_masked_everywhere(key):
+    alert = json.loads((FIXTURES / "telegram_mentions.json").read_text())
+    alert["data"][key] = "sk-live-0123456789abcdef"
+    alert["data"]["message"] = "key is sk-live-0123456789abcdef"
+    text = "".join(
+        entity.to_stix2_object().serialize()
+        for entity in map_alert(alert, AUTHOR, MARKING)
+    )
+    assert "sk-live-0123456789abcdef" not in text
 
 
 def test_short_passwords_are_masked_as_whole_words_only():

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Generator
 
 from connector.mappers import AlertConversionError, map_alert
-from connector.mappers.common import parse_datetime
+from connector.mappers.common import parse_datetime, try_parse_datetime
 from connectors_sdk import ApiClientError, BaseDataProcessor
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from cyble_client import CybleVisionClient
@@ -101,7 +101,9 @@ class AlertsProcessor(BaseDataProcessor):
                             logger=self.logger,
                         )
                     )
-                    last_created = alert.get("created_at") or last_created
+                    last_created = (
+                        try_parse_datetime(alert.get("created_at")) or last_created
+                    )
                 except AlertConversionError as err:
                     # Only reached when the generic fallback also failed.
                     self.logger.error(
@@ -114,9 +116,7 @@ class AlertsProcessor(BaseDataProcessor):
                     )
 
             if last_created:
-                parsed = parse_datetime(last_created)
-                if parsed:
-                    self._advance_checkpoint(service, parsed)
+                self._advance_checkpoint(service, last_created)
 
             if stix_objects:
                 self.work_name = f"Cyble Vision alerts import - {service}"

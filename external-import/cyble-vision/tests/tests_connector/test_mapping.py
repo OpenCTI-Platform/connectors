@@ -231,3 +231,24 @@ def test_failing_service_mapper_falls_back_to_a_generic_incident(monkeypatch):
     assert incident["external_references"][0]["external_id"] == ALERT["id"]
     assert note["object_refs"] == [incident["id"]]
     assert warnings and warnings[0][1]["alert_id"] == ALERT["id"]
+
+
+def test_unrecognised_timestamp_still_imports_the_alert():
+    """A bad envelope timestamp must not bypass the fallback and drop the alert."""
+    warnings = []
+
+    class _Logger:
+        def warning(self, message, meta=None):
+            warnings.append(meta)
+
+    alert = copy.deepcopy(ALERT)
+    alert["updated_at"] = "last Tuesday"
+    objects = [
+        entity.to_stix2_object()
+        for entity in map_alert(alert, AUTHOR, MARKING, logger=_Logger())
+    ]
+
+    assert any(obj["type"] == "incident" for obj in objects)
+    assert warnings == [
+        {"alert_id": ALERT["id"], "field": "updated_at", "value": "last Tuesday"}
+    ]
