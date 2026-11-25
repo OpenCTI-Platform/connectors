@@ -15,9 +15,10 @@ Creates extensive STIX 2.1 objects including:
 """
 
 import ipaddress
+import json
 import traceback
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import stix2
@@ -1516,6 +1517,91 @@ class ConverterToStix:
             ),
             "confidence": 30,
             "created_by_ref": self.author.id,
+        }
+
+    # ============= URL / DOMAIN / IP OBSERVABLE METHODS =============
+
+    # OpenCTI entity type -> STIX cyber-observable type used in patterns
+    _NETWORK_PATTERN_TYPES = {
+        "Url": "url",
+        "Domain-Name": "domain-name",
+        "IPv4-Addr": "ipv4-addr",
+        "IPv6-Addr": "ipv6-addr",
+    }
+
+    def create_network_indicator(
+        self, observable_type: str, value: str, scan: dict[str, Any]
+    ) -> dict | None:
+        """Create an Indicator for a URL, domain or IP flagged by PolySwarm engines."""
+        stix_type = self._NETWORK_PATTERN_TYPES.get(observable_type)
+        if not stix_type or not value:
+            return None
+
+        escaped = value.replace("\\", "\\\\").replace("'", "\\'")
+        pattern = f"[{stix_type}:value = '{escaped}']"
+        now = datetime.now(timezone.utc)
+        current_time = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        valid_until = (now + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        malicious = scan.get("malicious", 0)
+        total = scan.get("total", 0)
+
+        indicator = {
+            "type": "indicator",
+            "spec_version": "2.1",
+            "id": Indicator.generate_id(pattern),
+            "created": current_time,
+            "modified": current_time,
+            "created_by_ref": self.author.id,
+            "name": value,
+            "description": (
+                f"{malicious} of {total} PolySwarm engines classified this value "
+                f"as malicious in the scan of {scan.get('scan_date') or 'unknown date'}."
+            ),
+            "pattern": pattern,
+            "pattern_type": "stix",
+            "valid_from": current_time,
+            "valid_until": valid_until,
+            "labels": ["polyswarm-network-scan", "polyswarm-malicious"],
+            "confidence": 50,
+            "x_opencti_main_observable_type": observable_type,
+            "x_opencti_detection": True,
+        }
+        if scan.get("x_opencti_score") is not None:
+            indicator["x_opencti_score"] = scan["x_opencti_score"]
+        if scan.get("permalink"):
+            indicator["external_references"] = [
+                self.create_scan_reference(scan, "PolySwarm scan results")
+            ]
+        return indicator
+
+    @staticmethod
+    def create_scan_reference(scan: dict[str, Any], description: str) -> dict:
+        """External reference to a PolySwarm scan permalink."""
+        reference = {
+            "source_name": "PolySwarm",
+            "url": scan["permalink"],
+            "description": description,
+        }
+        if scan.get("polyswarm_id"):
+            reference["external_id"] = scan["polyswarm_id"]
+        return reference
+
+    def create_related_file(self, sha256: str) -> dict:
+        """Create a file observable for a SHA-256 PolySwarm links to an IP or domain.
+
+        The ID follows the STIX 2.1 deterministic SCO ID rule (UUIDv5 of the
+        canonical ``hashes`` property), so it matches the platform's own ID.
+        """
+        hashes = {"SHA-256": sha256.lower()}
+        canonical = json.dumps(
+            {"hashes": hashes}, sort_keys=True, separators=(",", ":")
+        )
+        return {
+            "type": "file",
+            "spec_version": "2.1",
+            "id": f"file--{uuid.uuid5(SOFTWARE_NAMESPACE, canonical)}",
+            "hashes": hashes,
+            "x_opencti_created_by_ref": self.author.id,
         }
 
     # ============= UTILITY METHODS =============
