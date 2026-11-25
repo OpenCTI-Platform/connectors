@@ -6,12 +6,15 @@ from unittest.mock import MagicMock, call
 
 import pytest
 from connector import AlienVaultOtxProcessor, ConnectorSettings
+from connector.observable_note import ObservableNote
 from connector.processor import OtxLookup
+from connector.summary_note import NOTE_TITLE, render_summary
 from connectors_sdk import EnrichmentMessage
 from connectors_sdk.exceptions.error import DataRetrievalError
-from connectors_sdk.models import URL, DomainName, IPV4Address
+from connectors_sdk.models import URL, DomainName, IPV4Address, Note
 from otx_client import OtxClient, OtxGeneral
 from pycti import Identity
+from pycti import Note as PyctiNote
 
 RESOURCES = Path(__file__).parent.parent / "resources"
 OCTI_ID = "0b7e1c5a-3f2d-4e6a-9b8c-1d2e3f4a5b6c"
@@ -348,7 +351,9 @@ def _lookup(fixture: str, entity_type: str | None = None) -> OtxLookup:
 
 class TestTransform:
     @pytest.mark.parametrize("entity_type", list(CASES))
-    def test_known_indicator_gives_author_marking_and_observable(self, entity_type):
+    def test_known_indicator_gives_author_marking_observable_and_note(
+        self, entity_type
+    ):
         model, _, _, _, fixture = CASES[entity_type]
         processor = _make_processor()
 
@@ -356,10 +361,11 @@ class TestTransform:
             _lookup(fixture, entity_type), _make_message(entity_type)
         )
 
-        assert len(result) == 3
+        assert len(result) == 4
         assert result[0] is processor.author
         assert result[1] is processor.tlp_marking
         assert isinstance(result[2], model)
+        assert isinstance(result[3], Note)
 
     @pytest.mark.parametrize("entity_type", list(CASES))
     def test_observable_has_the_id_of_the_entity_and_the_otx_reference(
@@ -441,11 +447,147 @@ class TestTransform:
     def test_no_data_gives_nothing(self):
         assert _make_processor().transform(None, _make_message()) == []
 
-    def test_every_reference_of_the_result_resolves_in_the_bundle(self):
+    @pytest.mark.parametrize("entity_type", list(CASES))
+    def test_note_is_attached_to_the_observable_with_the_summary(self, entity_type):
+        _, _, _, _, fixture = CASES[entity_type]
         processor = _make_processor()
-        message = _make_message("Url")
+        lookup = _lookup(fixture, entity_type)
+        message = _make_message(entity_type)
 
-        result = processor.transform(_lookup("general_url_known.json", "Url"), message)
+        observable, note = processor.transform(lookup, message)[2:]
+
+        stix = json.loads(note.to_stix2_object().serialize())
+        assert stix["type"] == "note"
+        assert stix["abstract"] == NOTE_TITLE == "AlienVault OTX Enrichment Results"
+        assert stix["content"] == render_summary(lookup.section, lookup.general)
+        assert stix["object_refs"] == [message.stix_entity.id] == [observable.id]
+        assert stix["created_by_ref"] == Identity.generate_id(
+            "AlienVault", "organization"
+        )
+        assert stix["object_marking_refs"] == [
+            processor.tlp_marking.to_stix2_object()["id"]
+        ]
+
+    def test_note_has_no_created_date_of_its_own(self):
+        processor = _make_processor()
+
+        note = processor.transform(
+            _lookup("general_ipv4_known.json", "IPv4-Addr"), _make_message()
+        )[3]
+
+        assert note.created is None
+
+    def test_note_uses_the_section_that_answered(self):
+        processor = _make_processor()
+
+        note = processor.transform(
+            _lookup("general_hostname_known.json"),
+            _make_message("Domain-Name", SUBDOMAIN),
+        )[3]
+
+        assert "- **Type**: hostname" in note.content
+        assert "Geolocation" not in note.content
+
+    def test_note_id_is_the_pycti_one_of_the_content_and_the_observable_id(self):
+        processor = _make_processor()
+        lookup = _lookup("general_ipv4_known.json", "IPv4-Addr")
+        message = _make_message()
+
+        first = processor.transform(lookup, message)[3]
+        second = processor.transform(lookup, _make_message())[3]
+
+        expected = PyctiNote.generate_id(
+            content=f"{render_summary(lookup.section, lookup.general)}"
+            f"\n{message.stix_entity.id}",
+            created=None,
+            abstract=NOTE_TITLE,
+        )
+        assert first.id == second.id == expected
+        assert first.to_stix2_object().id == second.to_stix2_object().id == expected
+
+    def test_note_content_sent_is_the_summary_without_the_observable_id(self):
+        processor = _make_processor()
+        lookup = _lookup("general_ipv4_known.json", "IPv4-Addr")
+        message = _make_message()
+
+        note = processor.transform(lookup, message)[3]
+
+        stix = json.loads(note.to_stix2_object().serialize())
+        assert stix["content"] == render_summary(lookup.section, lookup.general)
+        assert message.stix_entity.id not in stix["content"]
+
+    def test_two_observables_with_the_same_summary_get_different_notes(self):
+        processor = _make_processor()
+        lookup = _lookup("general_domain_known.json", "Domain-Name")
+        # A summary with nothing but its `General` section, shared by many domains
+        bare = OtxLookup(
+            lookup.section,
+            lookup.page_path,
+            OtxGeneral.model_validate({"pulse_info": {"count": 1}}),
+        )
+
+        first = processor.transform(bare, _make_message("Domain-Name"))[3]
+        second = processor.transform(
+            bare, _make_message("Domain-Name", "other.example")
+        )[3]
+
+        assert first.content == second.content == "## General\n\n- **Type**: domain"
+        assert first.id != second.id
+
+    def test_note_is_not_attached_to_anything_but_its_observable(self):
+        processor = _make_processor()
+        lookup = _lookup("general_ipv4_known.json", "IPv4-Addr")
+
+        note = processor.transform(lookup, _make_message())[3]
+
+        with pytest.raises(ValueError, match="exactly one object"):
+            ObservableNote(abstract=NOTE_TITLE, content="x", objects=[])
+        with pytest.raises(ValueError, match="exactly one object"):
+            ObservableNote(abstract=NOTE_TITLE, content="x", objects=[note, note])
+
+    def test_note_id_does_not_depend_on_the_order_of_the_pulses(self):
+        processor = _make_processor()
+        lookup = _lookup("general_ipv4_known.json", "IPv4-Addr")
+        pulses = lookup.general.pulse_info.pulses
+        reordered = OtxLookup(
+            lookup.section,
+            lookup.page_path,
+            lookup.general.model_copy(
+                update={
+                    "pulse_info": lookup.general.pulse_info.model_copy(
+                        update={"pulses": list(reversed(pulses))}
+                    )
+                }
+            ),
+        )
+
+        first = processor.transform(lookup, _make_message())[3]
+        second = processor.transform(reordered, _make_message())[3]
+
+        assert first.id == second.id
+
+    def test_note_id_changes_when_the_otx_data_changes(self):
+        processor = _make_processor()
+        lookup = _lookup("general_ipv4_known.json", "IPv4-Addr")
+        changed = OtxLookup(
+            lookup.section,
+            lookup.page_path,
+            lookup.general.model_copy(update={"country_name": "Germany"}),
+        )
+
+        first = processor.transform(lookup, _make_message())[3]
+        second = processor.transform(changed, _make_message())[3]
+
+        assert first.content != second.content
+        assert first.id != second.id
+
+    @pytest.mark.parametrize("entity_type", list(CASES))
+    def test_every_reference_of_the_result_resolves_in_the_bundle(self, entity_type):
+        _, _, _, _, fixture = CASES[entity_type]
+        processor = _make_processor()
+        message = _make_message(entity_type)
+
+        result = processor.transform(_lookup(fixture, entity_type), message)
 
         objects = _stix(result)
         ids = {obj["id"] for obj in objects}
@@ -471,7 +613,8 @@ class TestProcess:
         result = processor.process(_make_message())
 
         assert result[:2] == [processor.author, processor.tlp_marking]
-        assert len(result) == 3
+        assert len(result) == 4
+        assert isinstance(result[3], Note)
 
     def test_subdomain_known_only_in_hostname_gives_the_enriched_observable(self):
         processor = _make_processor()
@@ -482,8 +625,10 @@ class TestProcess:
 
         result = processor.process(_make_message("Domain-Name", SUBDOMAIN))
 
-        assert len(result) == 3
+        assert len(result) == 4
         assert isinstance(result[2], DomainName)
+        assert isinstance(result[3], Note)
+        assert "- **Type**: hostname" in result[3].content
 
     def test_subdomain_unknown_in_both_sections_gives_nothing(self):
         processor = _make_processor()
