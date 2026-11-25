@@ -44,8 +44,8 @@ class CVEListV5Connector:
     def _ensure_git_handler(self) -> GitHandler:
         if self.git_handler is None:
             self.helper.connector_logger.info(
-                "Initializing local clone of cvelistV5 repository (this may take a "
-                "few minutes on first run)...",
+                "Initializing local clone of cvelistV5 repository (about 8 GB, 15 "
+                "minutes or more on first run, no progress is logged meanwhile)...",
                 {"repo_url": self.repo_url, "local_path": self.local_path},
             )
             self.git_handler = GitHandler(
