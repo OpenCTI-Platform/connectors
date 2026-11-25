@@ -979,7 +979,10 @@ def test_process_bundle_in_batch_completion_starts_from_resume_object_index(
             connector.work_manager,
             "get_state",
             # Resume at object_index = 2 on bundle of 9
-            return_value={"remaining_objects_count": 7},
+            return_value={
+                "remaining_objects_count": 7,
+                "remaining_objects_event_id": "14",
+            },
         ),
         patch.object(
             connector.work_manager,
@@ -1090,7 +1093,7 @@ def _run_process_events(
 
     call_count = [0]
 
-    def process_bundle_side_effect(event, bundle_objects, author, markings):
+    def process_bundle_side_effect(event, bundle_objects, author, markings, **kwargs):
         idx = call_count[0]
         call_count[0] += 1
         if buffering_at_event_index is not None and idx == buffering_at_event_index:
@@ -1728,13 +1731,20 @@ def test_process_events_resume_with_attribute_filtering_does_not_crash(
     )
 
     # Pre-set _current_bundle to simulate a resume after buffering.
-    # The 4th element is filter_passed_count from the original filtering pass;
+    # The 5th element is filter_passed_count from the original filtering pass;
     # use None to simulate "no filtering was applied" (e.g. event not yet in
-    # OpenCTI on first ingestion).
+    # OpenCTI on first ingestion). The last one is the attribute filter applied.
     fake_author = MagicMock()
     fake_markings = []
     fake_bundle_objects = [MagicMock()]
-    connector._current_bundle = (fake_author, fake_markings, fake_bundle_objects, None)
+    connector._current_bundle = (
+        "1",
+        fake_author,
+        fake_markings,
+        fake_bundle_objects,
+        None,
+        None,
+    )
 
     initial_state = {
         "last_event_date": datetime(2026, 1, 14, tzinfo=timezone.utc).isoformat(),
@@ -2432,17 +2442,23 @@ def test_process_bundle_in_batch_checkpoint_saved_only_after_successful_flush(
         {
             "last_event_date": "2026-01-02T00:00:00+00:00",
             "remaining_objects_count": 4,
+            "remaining_objects_event_id": "22",
+            "remaining_objects_attribute_filter": None,
             "current_event_id": "22",
         },
         {
             "last_event_date": "2026-01-02T00:00:00+00:00",
             "remaining_objects_count": 2,
+            "remaining_objects_event_id": "22",
+            "remaining_objects_attribute_filter": None,
             "current_event_id": "22",
         },
     ]
     assert state == {
         "last_event_date": "2026-01-02T00:00:00+00:00",
         "remaining_objects_count": 0,
+        "remaining_objects_event_id": "22",
+        "remaining_objects_attribute_filter": None,
         "current_event_id": "22",
     }
 
@@ -2548,3 +2564,214 @@ def test_process_fails_the_works_when_a_batch_cannot_be_sent(
         error_flag=True,
         error_message="MISP events processing failed: Batch #1 processing failed",
     )
+
+
+# --------------------------------------------------------------------------- #
+#  Partial checkpoints are bound to their event and attribute filter
+# --------------------------------------------------------------------------- #
+
+
+def test_process_bundle_in_batch_ignores_partial_checkpoint_of_another_event(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """A saved position belongs to the interrupted event: another event (for
+    example one with the same timestamp) is sent entirely."""
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    bundle_objects = [_make_identity(name=f"entity-{i}") for i in range(1, 7)]
+    event = _make_timestamp_event("24")
+    state: dict = {
+        "last_event_date": "2026-01-02T00:00:00+00:00",
+        "remaining_objects_count": 4,
+        "remaining_objects_event_id": "99",
+    }
+    sent_ids: list[str] = []
+
+    def send(work_id, bundle):
+        sent_ids.extend(obj.id for obj in bundle)
+
+    outcome = _run_bundle_with_real_batch_processor(
+        connector, event, bundle_objects, author, state, send
+    )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    assert {obj.id for obj in bundle_objects} <= set(sent_ids)
+    assert state["remaining_objects_event_id"] == "24"
+    assert state["remaining_objects_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "datetime_attribute, state, expected",
+    [
+        # Partial checkpoint of this event.
+        (
+            "timestamp",
+            {"remaining_objects_count": 4, "remaining_objects_event_id": "7"},
+            True,
+        ),
+        # Partial checkpoint of another event.
+        (
+            "timestamp",
+            {"remaining_objects_count": 4, "remaining_objects_event_id": "8"},
+            False,
+        ),
+        # Event sent entirely.
+        (
+            "timestamp",
+            {"remaining_objects_count": 0, "remaining_objects_event_id": "7"},
+            False,
+        ),
+        # State saved before `remaining_objects_event_id` existed: the event of
+        # the position is unknown, the event is sent again from the start.
+        ("timestamp", {"remaining_objects_count": 4}, False),
+        # Same, in `date` mode, where `current_event_id` identifies it.
+        ("date", {"remaining_objects_count": 4, "current_event_id": "7"}, True),
+    ],
+)
+def test_get_partial_checkpoint(
+    mock_opencti_connector_helper, mock_py_misp, datetime_attribute, state, expected
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = datetime_attribute
+    connector = fake_misp_connector(config_dict)
+    event = EventRestSearchListItem.model_validate({"Event": {"id": "7"}})
+
+    with patch.object(connector.work_manager, "get_state", return_value=state):
+        partial_checkpoint = connector._get_partial_checkpoint(event)
+
+    assert (partial_checkpoint is not None) is expected
+
+
+def _run_process_events_for_resume(connector, event, state, already_ingested=True):
+    """Run `process_events` on a single event and return the mocks of the
+    converter, the attribute filter and `_process_bundle_in_batch`."""
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "converter") as mock_converter,
+        patch.object(connector, "batch_processor"),
+        patch.object(
+            connector,
+            "_filter_event_attributes_by_timestamp",
+            return_value=(2, 1),
+        ) as mock_filter,
+        patch.object(
+            connector,
+            "_process_bundle_in_batch",
+            return_value=ProcessingOutcome.COMPLETED,
+        ) as mock_process,
+    ):
+        mock_helper.get_state.return_value = state
+        mock_helper.api.query.return_value = {
+            "data": {
+                "externalReferences": {
+                    "edges": [{"node": {"id": "x"}}] if already_ingested else []
+                }
+            }
+        }
+        mock_wm.get_state.side_effect = lambda: dict(state)
+        mock_api.search_events.return_value = iter([event])
+        mock_converter.process.return_value = (MagicMock(), [], [MagicMock()])
+
+        result = connector.process_events()
+
+    assert result is None
+    return mock_converter, mock_filter, mock_process
+
+
+def test_process_events_does_not_reuse_buffered_bundle_of_another_event(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+    stale_bundle_objects = [MagicMock()]
+    connector._current_bundle = (
+        "99",
+        MagicMock(),
+        [],
+        stale_bundle_objects,
+        None,
+        None,
+    )
+    event = _make_publish_timestamp_event(
+        "1", int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+    )
+
+    mock_converter, _, mock_process = _run_process_events_for_resume(
+        connector, event, state={}
+    )
+
+    mock_converter.process.assert_called_once()
+    assert mock_process.call_args.kwargs["bundle_objects"] is not stale_bundle_objects
+
+
+@pytest.mark.parametrize("saved_filter", [None, 1_700_000_000])
+def test_process_events_resumes_partial_event_with_its_attribute_filter(
+    mock_opencti_connector_helper, mock_py_misp, saved_filter
+):
+    """
+    The saved position is only valid in the bundle built with the same filter.
+
+    Here the interrupted run did not have `last_attribute_timestamp` yet, so
+    the next run would fall back to `last_event_date` as threshold, and the
+    first batch made the event exist in OpenCTI: without the saved filter, the
+    event would be rebuilt with fewer objects and resumed at a wrong position.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["attribute_timestamp_filtering"] = True
+    connector = fake_misp_connector(config_dict)
+    ts = int(datetime(2026, 1, 15, tzinfo=timezone.utc).timestamp())
+    event = _make_event_with_attributes(
+        "1", ts, attributes=[{"id": "1", "timestamp": str(ts), "value": "1.2.3.4"}]
+    )
+    state = {
+        "last_event_date": datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(),
+        "remaining_objects_count": 4,
+        "remaining_objects_event_id": "1",
+        "remaining_objects_attribute_filter": saved_filter,
+    }
+
+    _, mock_filter, mock_process = _run_process_events_for_resume(
+        connector, event, state
+    )
+
+    if saved_filter is None:
+        mock_filter.assert_not_called()
+    else:
+        mock_filter.assert_called_once_with(event, saved_filter)
+    assert mock_process.call_args.kwargs["attribute_filter"] == saved_filter
+
+
+def test_process_events_filters_a_new_event_with_the_current_threshold(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["attribute_timestamp_filtering"] = True
+    connector = fake_misp_connector(config_dict)
+    ts = int(datetime(2026, 1, 15, tzinfo=timezone.utc).timestamp())
+    event = _make_event_with_attributes(
+        "2", ts, attributes=[{"id": "1", "timestamp": str(ts), "value": "1.2.3.4"}]
+    )
+    state = {
+        "last_event_date": datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(),
+        "last_attribute_timestamp": ts - 100,
+        # Partial checkpoint of another event.
+        "remaining_objects_count": 4,
+        "remaining_objects_event_id": "1",
+        "remaining_objects_attribute_filter": None,
+    }
+
+    _, mock_filter, mock_process = _run_process_events_for_resume(
+        connector, event, state
+    )
+
+    mock_filter.assert_called_once_with(event, ts - 100)
+    assert mock_process.call_args.kwargs["attribute_filter"] == ts - 100

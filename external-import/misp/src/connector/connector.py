@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
@@ -248,7 +248,10 @@ class Misp:
             )
 
     def _save_event_checkpoint(
-        self, event: "EventRestSearchListItem", remaining_objects_count: int
+        self,
+        event: "EventRestSearchListItem",
+        remaining_objects_count: int,
+        attribute_filter: int | None = None,
     ) -> None:
         """Save the resume point of the event being processed.
 
@@ -258,14 +261,46 @@ class Misp:
         Args:
             event: The MISP event being processed
             remaining_objects_count: Number of objects of the event not sent yet
+            attribute_filter: Attribute timestamp threshold applied to build the
+                event bundle, None if the attributes were not filtered
         """
-        new_state: dict[str, str | int] = {
+        new_state: dict[str, str | int | None] = {
             "last_event_date": self._get_event_datetime(event).isoformat(),
             "remaining_objects_count": remaining_objects_count,
+            # `remaining_objects_count` is a position in the bundle of this event,
+            # built with this attribute filter: both are needed to resume it.
+            "remaining_objects_event_id": str(event.Event.id),
+            "remaining_objects_attribute_filter": attribute_filter,
         }
         if self.config.misp.datetime_attribute == "date":
             new_state["current_event_id"] = str(event.Event.id)
         self.work_manager.update_state(state_update=new_state)
+
+    def _get_partial_checkpoint(
+        self, event: "EventRestSearchListItem"
+    ) -> dict[str, Any] | None:
+        """Return the saved state if this event was interrupted before being sent
+        entirely, None otherwise.
+
+        Args:
+            event: The MISP event about to be processed
+
+        Returns:
+            The connector state when it holds a partial checkpoint of this event
+        """
+        state = self.work_manager.get_state()
+        if not state.get("remaining_objects_count"):
+            return None
+        checkpoint_event_id = state.get("remaining_objects_event_id")
+        if (
+            checkpoint_event_id is None
+            and self.config.misp.datetime_attribute == "date"
+        ):
+            # State saved before `remaining_objects_event_id` existed.
+            checkpoint_event_id = state.get("current_event_id")
+        if str(checkpoint_event_id) != str(event.Event.id):
+            return None
+        return state
 
     def _validate_event(self, event: "EventRestSearchListItem") -> bool:
         """Validate the event.
@@ -480,6 +515,7 @@ class Misp:
         bundle_objects: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
+        attribute_filter: int | None = None,
     ) -> ProcessingOutcome:
         """Process a bundle of STIX objects in a batch.
 
@@ -488,6 +524,8 @@ class Misp:
             bundle_objects: list of STIX objects to process
             author: Author of the event
             markings: Markings of the event
+            attribute_filter: Attribute timestamp threshold applied to build the
+                bundle, None if the attributes were not filtered
 
         Returns:
             ProcessingOutcome.BUFFERING if the connector queue is full and
@@ -496,9 +534,11 @@ class Misp:
             ProcessingOutcome.COMPLETED when all chunks were sent successfully.
         """
         bundle_size = len(bundle_objects)
-        current_state = self.work_manager.get_state()
+        partial_checkpoint = self._get_partial_checkpoint(event)
         remaining_objects_count = (
-            current_state.get("remaining_objects_count") or bundle_size
+            min(partial_checkpoint["remaining_objects_count"], bundle_size)
+            if partial_checkpoint
+            else bundle_size
         )
         object_index = bundle_size - remaining_objects_count
         # `remaining_objects_count` moves forward when objects are added to the
@@ -538,7 +578,9 @@ class Misp:
                     )
                     # Save the event date to restart from the current one in the
                     # next process.
-                    self._save_event_checkpoint(event, unsent_objects_count)
+                    self._save_event_checkpoint(
+                        event, unsent_objects_count, attribute_filter
+                    )
 
                     return ProcessingOutcome.BUFFERING
 
@@ -558,7 +600,9 @@ class Misp:
                 if self._check_and_add_entities_to_batch(subchunk, author, markings):
                     # The flush sent every object before this subchunk.
                     unsent_objects_count = remaining_objects_count
-                    self._save_event_checkpoint(event, unsent_objects_count)
+                    self._save_event_checkpoint(
+                        event, unsent_objects_count, attribute_filter
+                    )
 
                 remaining_objects_count = max(
                     0, remaining_objects_count - len(subchunk)
@@ -574,7 +618,7 @@ class Misp:
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
-        self._save_event_checkpoint(event, 0)
+        self._save_event_checkpoint(event, 0, attribute_filter)
 
         return ProcessingOutcome.COMPLETED
 
@@ -691,6 +735,14 @@ class Misp:
                         max_event_datetime = event_datetime
                         curr_event_date = event_datetime.isoformat()
 
+                    # The bundle kept in memory after buffering belongs to the
+                    # interrupted event only.
+                    if (
+                        self._current_bundle is not None
+                        and self._current_bundle[0] != event.Event.id
+                    ):
+                        self._current_bundle = None
+
                     if self._current_bundle is None:
                         self.logger.info(
                             "MISP event found - Processing...", event_log_data
@@ -701,22 +753,25 @@ class Misp:
                         # high-water mark calculation (fallback attributes must
                         # not regress the watermark).
                         filter_passed_count: int | None = None
-                        if attribute_ts_filtering and since_attr_timestamp is not None:
+                        attribute_filter: int | None = None
+                        partial_checkpoint = self._get_partial_checkpoint(event)
+                        if (
+                            attribute_ts_filtering
+                            and partial_checkpoint is not None
+                            and "remaining_objects_attribute_filter"
+                            in partial_checkpoint
+                        ):
+                            # Resume the event with the filter of the interrupted
+                            # run: the saved position is only valid in the bundle
+                            # built with it.
+                            attribute_filter = partial_checkpoint[
+                                "remaining_objects_attribute_filter"
+                            ]
+                        elif (
+                            attribute_ts_filtering and since_attr_timestamp is not None
+                        ):
                             if self._event_already_exists_in_opencti(event):
-                                before, after = (
-                                    self._filter_event_attributes_by_timestamp(
-                                        event, int(since_attr_timestamp)
-                                    )
-                                )
-                                filter_passed_count = after
-                                self.logger.info(
-                                    "Attribute-level filtering applied",
-                                    {
-                                        **event_log_data,
-                                        "attributes_before_filter": before,
-                                        "attributes_after_filter": after,
-                                    },
-                                )
+                                attribute_filter = int(since_attr_timestamp)
                             else:
                                 self.logger.info(
                                     "Event not yet in OpenCTI, skipping "
@@ -724,40 +779,57 @@ class Misp:
                                     "all attributes",
                                     event_log_data,
                                 )
+                        if attribute_filter is not None:
+                            before, after = self._filter_event_attributes_by_timestamp(
+                                event, attribute_filter
+                            )
+                            filter_passed_count = after
+                            self.logger.info(
+                                "Attribute-level filtering applied",
+                                {
+                                    **event_log_data,
+                                    "attributes_before_filter": before,
+                                    "attributes_after_filter": after,
+                                },
+                            )
 
                         try:
-                            self._current_bundle = (
-                                author,
-                                markings,
-                                bundle_objects,
-                                filter_passed_count,
-                            ) = (
-                                *self.converter.process(
-                                    event=event,
-                                    include_relationships=(
-                                        len(event.Event.Attribute or [])
-                                        + len(event.Event.Object or [])
-                                    )
-                                    # TODO: Add a configuration for the maximum number of attributes and objects
-                                    < 10000,
-                                ),
-                                filter_passed_count,
+                            author, markings, bundle_objects = self.converter.process(
+                                event=event,
+                                include_relationships=(
+                                    len(event.Event.Attribute or [])
+                                    + len(event.Event.Object or [])
+                                )
+                                # TODO: Add a configuration for the maximum number of attributes and objects
+                                < 10000,
                             )
                         except ConverterError as err:
                             self.logger.error(
                                 f"Error while converting MISP event, skipping it. {err}",
                                 event_log_data,
                             )
-                            self._current_bundle = None
                             continue
+                        self._current_bundle = (
+                            event.Event.id,
+                            author,
+                            markings,
+                            bundle_objects,
+                            filter_passed_count,
+                            attribute_filter,
+                        )
                     else:
                         self.logger.info(
                             "Resuming processing of MISP event...",
                             event_log_data,
                         )
-                        author, markings, bundle_objects, filter_passed_count = (
-                            self._current_bundle
-                        )
+                        (
+                            _,
+                            author,
+                            markings,
+                            bundle_objects,
+                            filter_passed_count,
+                            attribute_filter,
+                        ) = self._current_bundle
 
                     self.logger.debug(
                         "Converted to STIX entities",
@@ -772,6 +844,7 @@ class Misp:
                         bundle_objects=bundle_objects,
                         author=author,
                         markings=markings,
+                        attribute_filter=attribute_filter,
                     )
                     if outcome is ProcessingOutcome.BUFFERING:
                         break
