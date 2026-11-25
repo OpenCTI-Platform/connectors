@@ -1,6 +1,7 @@
 """OpenCTI cvelistV5 connector settings module."""
 
 from datetime import timedelta
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -8,7 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class CVEListV5ConnectorConfig(BaseExternalImportConnectorConfig):
@@ -26,11 +27,23 @@ class CVEListV5ConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=["identity", "vulnerability", "software"],
     )
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
+        description="The minimum level of logs to display.",
+        default="info",
+    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector, "
-        "as an ISO 8601 duration (e.g. `PT1H` for one hour).",
+        "as an ISO 8601 duration (e.g. `PT1H` for one hour). Must be greater than zero: "
+        "the connector runs continuously and is not meant to run once and exit.",
         default=timedelta(hours=1),
     )
+
+    @field_validator("duration_period")
+    @classmethod
+    def _duration_period_must_be_positive(cls, value: timedelta) -> timedelta:
+        if value <= timedelta(0):
+            raise ValueError("duration_period must be greater than zero")
+        return value
 
 
 class CVEListV5Config(BaseConfigModel):

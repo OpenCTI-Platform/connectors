@@ -80,6 +80,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["identity", "vulnerability", "software"]
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(hours=1)
+    assert settings.connector.log_level == "info"
     assert settings.cvelistv5.repo_url == "https://github.com/CVEProject/cvelistV5.git"
     assert settings.cvelistv5.repo_branch == "main"
     assert settings.cvelistv5.local_path == "/opt/cvelistV5"
@@ -115,6 +116,20 @@ def test_settings_should_default_connector_id():
                 "cvelistv5": {"history_start_year": "not-a-year"},
             },
             id="history_start_year_not_an_int",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {"duration_period": "PT0S"},
+            },
+            id="duration_period_zero",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {"duration_period": "-PT1H"},
+            },
+            id="duration_period_negative",
         ),
     ],
 )

@@ -10,9 +10,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_NAME | `string` |  | string | `"CVEProject cvelistV5"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["identity", "vulnerability", "software"]` | The scope of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
-| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour). |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour). Must be greater than zero: the connector runs continuously and is not meant to run once and exit. |
 | CVELISTV5_REPO_URL | `string` |  | string | `"https://github.com/CVEProject/cvelistV5.git"` | Upstream git repository. Override only if you mirror cvelistV5 internally. |
 | CVELISTV5_REPO_BRANCH | `string` |  | string | `"main"` | Branch of the upstream git repository to follow. |
 | CVELISTV5_LOCAL_PATH | `string` |  | string | `"/opt/cvelistV5"` | Local path where the clone is kept. Must be writable by the connector; mount a volume there to keep the clone across restarts. |
