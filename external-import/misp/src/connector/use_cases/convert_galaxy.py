@@ -195,6 +195,8 @@ class GalaxyConverter:
                     "Microsoft Activity Group actor",
                     "ESET Threat Actor",
                 ]
+            ) or (
+                galaxy.namespace == "eset" and galaxy.type == "eset-threat-actor"
             ):
                 for galaxy_entity in galaxy.GalaxyCluster or []:
                     intrusion_set = self.create_intrusion_set(
