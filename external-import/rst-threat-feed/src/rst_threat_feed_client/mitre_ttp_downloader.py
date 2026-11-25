@@ -11,6 +11,23 @@ from requests import RequestException
 
 log = logging.getLogger("mitre_ttps")
 
+_MAPPING_FILENAME = "mitre_ttp_mapping.json"
+
+
+def _safe_path_within(base_dir: str, filename: str) -> str:
+    """Resolve filename under base_dir and reject path traversal."""
+    if not filename or filename != os.path.basename(filename) or ".." in filename:
+        raise ValueError("Invalid file path")
+    base = os.path.realpath(base_dir)
+    target = os.path.realpath(os.path.join(base, filename))
+    try:
+        contained = os.path.commonpath([base, target]) == base
+    except ValueError:
+        contained = False
+    if not contained:
+        raise ValueError("Invalid file path")
+    return target
+
 
 class MitreTtpDownloader:
     """
@@ -19,7 +36,7 @@ class MitreTtpDownloader:
     """
 
     def _mapping_path(self) -> str:
-        return os.path.join(os.path.dirname(__file__), "mitre_ttp_mapping.json")
+        return _safe_path_within(os.path.dirname(__file__), _MAPPING_FILENAME)
 
     def download_mitre_ttps(self) -> str:
         """Download and process MITRE ATT&CK TTPs, creating a mapping file."""
@@ -57,6 +74,8 @@ class MitreTtpDownloader:
             existing_data: Dict[str, str] = {}
             if os.path.exists(output_file):
                 try:
+                    if ".." in output_file:
+                        raise ValueError("Invalid file path")
                     with open(output_file, "r", encoding="utf-8") as handle:
                         existing_data = json.load(handle)
                     log.info("Loaded %d existing TTP mappings", len(existing_data))
@@ -64,6 +83,8 @@ class MitreTtpDownloader:
                     log.warning("Could not load existing mapping file: %s", exc)
 
             existing_data.update(output_data)
+            if ".." in output_file:
+                raise ValueError("Invalid file path")
             with open(output_file, "w", encoding="utf-8") as handle:
                 json.dump(existing_data, handle, indent=2, ensure_ascii=False)
 
@@ -92,6 +113,8 @@ class MitreTtpDownloader:
             return {}
 
         try:
+            if ".." in output_file:
+                raise ValueError("Invalid file path")
             with open(output_file, "r", encoding="utf-8") as handle:
                 mapping = json.load(handle)
             log.info("Loaded %d TTP mappings from file", len(mapping))

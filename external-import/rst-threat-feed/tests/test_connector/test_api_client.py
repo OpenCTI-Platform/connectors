@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-from rst_threat_feed_client.api_client import ThreatFeedClient
+import pytest
+
+from rst_threat_feed_client.api_client import ThreatFeedClient, _sanitize_output_path
 
 
 def test_client_without_explicit_proxy_does_not_override_env_proxies():
@@ -51,3 +53,18 @@ def test_get_feed_does_not_pass_proxies_kwarg(tmp_path):
     assert mock_get.call_count == 1
     _, kwargs = mock_get.call_args
     assert "proxies" not in kwargs
+
+
+def test_sanitize_output_path_rejects_traversal():
+    with pytest.raises(ValueError, match="Invalid file path"):
+        _sanitize_output_path("../etc/passwd")
+    with pytest.raises(ValueError, match="Invalid file path"):
+        _sanitize_output_path("feeds/../../secret")
+
+
+def test_sanitize_output_path_allows_safe_names(tmp_path):
+    safe = str(tmp_path / "out.json.gz")
+    assert _sanitize_output_path(safe) == safe
+    assert _sanitize_output_path("threatfeed_domain_latest.json.gz") == (
+        "threatfeed_domain_latest.json.gz"
+    )

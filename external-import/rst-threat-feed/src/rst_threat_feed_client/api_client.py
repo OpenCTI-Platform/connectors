@@ -1,9 +1,24 @@
 """RST Cloud Threat Feed HTTP client."""
 
+import os
 import zlib
 from typing import Any, Dict, Optional
 
 import requests
+
+
+def _sanitize_output_path(path: str) -> str:
+    """Reject path-traversal sequences before writing downloaded feed data."""
+    if not path or "\x00" in path or ".." in path:
+        raise ValueError("Invalid file path")
+    normalized = os.path.normpath(path)
+    # normpath collapses separators; reject any remaining parent references
+    parts = normalized.split(os.sep)
+    if os.altsep:
+        parts = [p for part in parts for p in part.split(os.altsep)]
+    if ".." in parts:
+        raise ValueError("Invalid file path")
+    return normalized
 
 
 class ThreatFeedClient:
@@ -51,6 +66,7 @@ class ThreatFeedClient:
             }
         if not path:
             path = f"threatfeed_{ioctype}_{mapping[fdate]}.{filetype}.gz"
+        path = _sanitize_output_path(path)
         apiurl = f"{self.api_url}/{ioctype}?type={filetype}&date={mapping[fdate]}"
         last_error: Optional[Exception] = None
         attempts = max(1, int(self.retry) + 1)
@@ -64,6 +80,8 @@ class ThreatFeedClient:
                 )
                 if response.status_code == 200:
                     data = zlib.decompress(response.content, 16 + zlib.MAX_WBITS)
+                    if ".." in path:
+                        raise ValueError("Invalid file path")
                     with open(path, "wb") as handle:
                         handle.write(data)
                     return {"status": "ok", "message": path}
