@@ -6,15 +6,15 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=ESET Cyber Threat Intelligence"
-      - CONNECTOR_SCOPE=eset
-      - CONNECTOR_LOG_LEVEL=error
-      - ESET_API_URL=eti.eset.com
+      #- "CONNECTOR_NAME=ESET Cyber Threat Intelligence"
+      #- CONNECTOR_SCOPE=eset
+      #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=PT1H
+      #- ESET_API_URL=eti.eset.com
       - ESET_USERNAME=ChangeMe
       - ESET_PASSWORD=ChangeMe
-      - ESET_COLLECTIONS=ei.misp,ei.cc,ei.urls
-      - ESET_IMPORT_APT_REPORTS=true
-      - ESET_IMPORT_START_DATE=2022-04-01
-      - ESET_CREATE_OBSERVABLES=true
-      - ESET_INTERVAL=60 # Required, in minutes
+      #- ESET_COLLECTIONS=ei.misp,ei.cc,ei.urls
+      #- ESET_IMPORT_APT_REPORTS=true
+      #- ESET_IMPORT_START_DATE=P30D
+      #- ESET_CREATE_OBSERVABLES=true
     restart: always

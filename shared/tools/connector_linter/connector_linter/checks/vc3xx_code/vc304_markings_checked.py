@@ -3,6 +3,10 @@
 Uses AST to detect ``check_max_tlp()`` calls (avoids false positives
 from comments/docstrings mentioning check_max_tlp).
 
+Connectors built on connectors-sdk's ``InternalEnrichmentConnector`` pass:
+the SDK checks the entity TLP against ``connector.max_tlp`` with
+``check_max_tlp`` before calling any processor.
+
 Scope: INTERNAL_ENRICHMENT only — enrichment connectors receive external
 entities and must verify TLP markings before processing them. Other
 connector types produce their own entities and set TLP themselves.
@@ -11,6 +15,9 @@ connector types produce their own entities and set TLP themselves.
 import ast
 from pathlib import Path
 
+from connector_linter.checks.vc3xx_code._helpers import (
+    find_sdk_internal_enrichment_connector,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -77,6 +84,18 @@ def check_markings_checked(ctx: ConnectorContext) -> list[CheckFinding]:
         return [no_python_sources_finding()]
 
     trees = ctx.python_trees
+
+    # The SDK base connector does it itself
+    sdk_import = find_sdk_internal_enrichment_connector(trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="TLP check delegated to connectors-sdk InternalEnrichmentConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     # ---------------------------------------------------------------------------
     # 3-tier detection:

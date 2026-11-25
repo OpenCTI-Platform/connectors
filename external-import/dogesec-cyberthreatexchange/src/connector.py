@@ -3,7 +3,6 @@ CYBERTHREATEXCHANGE Connector
 """
 
 import json
-import os
 import sys
 import traceback
 from contextlib import contextmanager
@@ -11,8 +10,8 @@ from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class CTXException(Exception):
@@ -23,19 +22,11 @@ class CyberThreatExchangeConnector:
     def __init__(self):
         """Read in config variables"""
 
-        config_file_path = "config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip("/") + "/"
-        self.api_key = self._get_param("api_key")
-        feed_ids = self._get_param("feed_ids")
-        self.feed_ids = feed_ids.split(",") if feed_ids else []
-        self.interval_hours = self._get_param("interval_hours", is_number=True)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.base_url = str(self.config.cyberthreatexchange.base_url).strip("/") + "/"
+        self.api_key = self.config.cyberthreatexchange.api_key.get_secret_value()
+        self.feed_ids = self.config.cyberthreatexchange.feed_ids
 
         if not self.feed_ids:
             self.helper.log_error("at least one feed id required")
@@ -46,17 +37,6 @@ class CyberThreatExchangeConnector:
         self.session.headers = {
             "API-KEY": self.api_key,
         }
-
-    def _get_param(
-        self, param_name: str, is_number: bool = False, default_value: str = None
-    ) -> int | str:
-        return get_config_variable(
-            f"CYBERTHREATEXCHANGE_{param_name.upper()}",
-            ["cyberthreatexchange", param_name.lower()],
-            self.helper.config,
-            is_number,
-            default_value,
-        )
 
     def list_subbed_feeds(self):
         try:
@@ -188,7 +168,7 @@ class CyberThreatExchangeConnector:
         self.helper.log_info("Starting CyberThreatExchange")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=self.interval_hours * 3600,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
 

@@ -36,3 +36,4 @@ connector:
 
 # stream:
 #   default_applicant_id: null # optional (default: null)
+#   include_files: false # optional (default: false), embed file contents in bundles

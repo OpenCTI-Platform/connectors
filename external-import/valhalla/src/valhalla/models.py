@@ -1,9 +1,13 @@
 """OpenCTI Valhalla connector models."""
 
+import re
 from datetime import datetime
 from typing import List
 
 from pydantic.v1 import BaseModel
+
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_IMPORT_DIRECTIVE = re.compile(r'^\s*import\s+"([^"]+)"', re.MULTILINE)
 
 
 class Status(BaseModel):
@@ -44,6 +48,31 @@ class YaraRule(BaseModel):
             f"Required Yara modules: {', '.join(self.required_modules)}"
         )
 
+    @property
+    def cti_pattern(self) -> str:
+        """
+        YARA rule content preceded by the `import` statements it requires.
+
+        Valhalla serves each rule without its `import` statements and lists the
+        modules in `required_modules` instead (its own client writes them in the
+        ruleset header), but an indicator pattern has to compile on its own. A
+        module the content already imports is not imported again, so that its
+        pattern, hence its indicator ID, stays the same.
+
+        Returns:
+            The rule content, unchanged when no import is missing
+        """
+        code = _BLOCK_COMMENT.sub("", self.content)
+        imported = set(_IMPORT_DIRECTIVE.findall(code))
+        imports = [
+            f'import "{module}"'
+            for module in dict.fromkeys(self.required_modules)
+            if module not in imported
+        ]
+        if not imports:
+            return self.content
+        return "\n".join(imports) + "\n\n" + self.content
+
 
 class ApiResponse(BaseModel):
     """Valhalla API Respose model"""
@@ -71,6 +100,10 @@ class StixObjects(BaseModel):
     type: str
     id: str
     external_references: List[ExternalReference] | None = None
+    revoked: bool | None = None
+    relationship_type: str | None = None
+    source_ref: str | None = None
+    target_ref: str | None = None
 
 
 class StixEnterpriseAttack(BaseModel):

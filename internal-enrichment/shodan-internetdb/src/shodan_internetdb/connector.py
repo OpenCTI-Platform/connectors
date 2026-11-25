@@ -28,7 +28,10 @@ class ShodanInternetDBConnector:
         """Constructor"""
         self.config = config
         self.helper = helper
-        self._client = ShodanInternetDbClient(verify=self.config.shodan.ssl_verify)
+        self._client = ShodanInternetDbClient(
+            verify=self.config.shodan.ssl_verify,
+            timeout=self.config.shodan.timeout,
+        )
         self.converter = ConverterToStix(self.helper)
 
     def extract_and_check_markings(self, observable: dict[str, Any]) -> None:

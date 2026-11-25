@@ -13,7 +13,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | AKAMAI_CLIENT_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid client token. |
 | AKAMAI_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid client secret. |
 | AKAMAI_ACCESS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | EdgeGrid access token. |
-| AKAMAI_CLIENT_LIST_ID | `string` | ✅ | string |  | Target Client List ID |
+| AKAMAI_CLIENT_LIST_ID | `string` | ✅ | string |  | Target IP Client List ID |
 | CONNECTOR_NAME | `string` |  | string | `"Akamai Connector"` | Connector name |
 | CONNECTOR_SCOPE | `array` |  | string | `["indicator"]` | Connector scope |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
@@ -23,3 +23,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LIVE_STREAM_START_TIMESTAMP | `integer` |  | integer | `null` | Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state). |
 | CONNECTOR_LIVE_STREAM_RECOVER | `boolean` |  | boolean | `true` | Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state). |
 | CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state). |
+| AKAMAI_ASN_CLIENT_LIST_ID | `string` |  | string | `null` | Optional target ASN Client List ID |

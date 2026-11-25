@@ -403,6 +403,48 @@ def test_vulnerability_class_should_not_accept_invalid_inputs(input_data, error_
     assert str(error_field) in str(err)
 
 
+@pytest.mark.parametrize(
+    "attack_vector, expected",
+    [
+        pytest.param("Adjacent Network", "ADJACENT_NETWORK", id="tenable_spelling"),
+        pytest.param("ADJACENT_NETWORK", "ADJACENT_NETWORK", id="nvd_spelling"),
+        pytest.param(" adjacent network ", "ADJACENT_NETWORK", id="any_case"),
+        pytest.param("Adjacent", "Adjacent", id="short_value_unchanged"),
+        pytest.param("NETWORK", "NETWORK", id="network_unchanged"),
+    ],
+)
+def test_vulnerability_class_should_accept_adjacent_network_attack_vector(
+    attack_vector, expected
+):
+    # Given: a vulnerability whose CVSS3 attack vector uses the Tenable spelling
+    vulnerability = Vulnerability(
+        author=Author(name="Valid Author"),
+        created=datetime(2023, 1, 1),
+        modified=datetime(2023, 1, 2),
+        name="CVE-2023-1234",
+        description="A vulnerability reachable from the adjacent network.",
+        cvss3_attack_vector=attack_vector,
+    )
+
+    # Then: it validates and the value reaches the STIX object
+    assert vulnerability.cvss3_attack_vector == expected
+    stix_object = vulnerability.to_stix2_object()
+    assert stix_object["x_opencti_cvss_attack_vector"] == expected
+
+
+def test_vulnerability_class_should_still_reject_unknown_attack_vector():
+    with pytest.raises(ValidationError) as err:
+        Vulnerability(
+            author=Author(name="Valid Author"),
+            created=datetime(2023, 1, 1),
+            modified=datetime(2023, 1, 2),
+            name="CVE-2023-1234",
+            description="A vulnerability.",
+            cvss3_attack_vector="Somewhere",
+        )
+    assert "cvss3_attack_vector" in str(err)
+
+
 # Valid input test cases for the RelatedToRelationship class
 @pytest.mark.parametrize(
     "input_data",

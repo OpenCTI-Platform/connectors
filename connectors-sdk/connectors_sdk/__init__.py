@@ -18,6 +18,36 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
+from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
+    BaseEnrichmentProcessor,
+)
+from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
+    EnrichmentMessage,
+)
+from connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector import (
+    InternalEnrichmentConnector,
+)
+from connectors_sdk.exceptions.connector_errors import (
+    ConnectorError,
+    Criticity,
+    DataConversionError,
+    DataError,
+    DataNotFoundError,
+    OctiError,
+    OctiUnreachableError,
+    ProviderApiAuthenticationError,
+    ProviderApiAuthorizationError,
+    ProviderApiConnectionError,
+    ProviderApiError,
+    ProviderApiInvalidResponseError,
+    ProviderApiNotFoundError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
+    ProviderApiUnknownError,
+    UnknownError,
+)
+from connectors_sdk.exceptions.error_store import ErrorStore
 from connectors_sdk.logger import (
     ConnectorLoggerAdapter,
     configure_logging,
@@ -31,10 +61,15 @@ from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    BaseInternalExportFileConnectorSettings,
     BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -62,6 +97,11 @@ __all__ = [
     "ApiUnauthorizedError",
     # Base Settings
     "BaseConnectorSettings",
+    "BaseExternalImportConnectorSettings",
+    "BaseInternalEnrichmentConnectorSettings",
+    "BaseInternalExportFileConnectorSettings",
+    "BaseInternalImportFileConnectorSettings",
+    "BaseStreamConnectorSettings",
     # Base Configs
     "BaseConfigModel",
     "BaseExternalImportConnectorConfig",
@@ -72,6 +112,26 @@ __all__ = [
     # Exceptions
     "ConfigError",
     "ConfigValidationError",
+    # Standardized connector errors
+    "Criticity",
+    "ConnectorError",
+    "UnknownError",
+    "ProviderApiError",
+    "ProviderApiAuthenticationError",
+    "ProviderApiAuthorizationError",
+    "ProviderApiNotFoundError",
+    "ProviderApiRateLimitError",
+    "ProviderApiServerError",
+    "ProviderApiTimeoutError",
+    "ProviderApiConnectionError",
+    "ProviderApiInvalidResponseError",
+    "ProviderApiUnknownError",
+    "OctiError",
+    "OctiUnreachableError",
+    "DataError",
+    "DataNotFoundError",
+    "DataConversionError",
+    "ErrorStore",
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
@@ -83,4 +143,7 @@ __all__ = [
     # Connector base classes
     "ExternalImportConnector",
     "BaseDataProcessor",
+    "InternalEnrichmentConnector",
+    "BaseEnrichmentProcessor",
+    "EnrichmentMessage",
 ]

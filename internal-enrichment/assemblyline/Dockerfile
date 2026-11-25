@@ -17,15 +17,14 @@ COPY src/requirements.txt /opt/opencti-connector-assemblyline/requirements.txt
 # need ``libxml2`` / ``libxslt`` (no ``lxml`` in the dependency tree), so
 # the matching ``-dev`` headers used to bloat the final image and widen
 # the vulnerability surface for nothing. Match the lean
-# ``internal-enrichment/joe-sandbox`` pattern: ``libmagic`` +
-# ``libffi-dev`` for the runtime, ``git`` + ``build-base`` only for
-# ``pip install`` (removed afterwards).
+# ``internal-enrichment/joe-sandbox`` pattern: ``git``, ``build-base``
+# and ``libffi-dev`` only for ``pip install`` (removed afterwards).
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev && \
+    apk --no-cache add git build-base libffi-dev && \
     cd /opt/opencti-connector-assemblyline && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 # Copy the rest of the source tree AFTER ``pip install`` so the
 # preceding dependency-install layer stays cache-friendly across

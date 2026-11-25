@@ -16,17 +16,19 @@ Architecture::
 
 import sys
 from datetime import datetime, timezone
+from typing import Generic, cast
 
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
+    SettingsT,
+    StateT,
 )
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
-from connectors_sdk.settings.base_settings import BaseConnectorSettings
 from connectors_sdk.states.states import ExternalImportConnectorState
 from pycti import OpenCTIConnectorHelper
 
 
-class ExternalImportConnector(_ClassLoggerMixin):
+class ExternalImportConnector(_ClassLoggerMixin, Generic[SettingsT, StateT]):
     """Base class for external import connectors.
 
     This class provides the common orchestration logic for external import connectors:
@@ -43,14 +45,22 @@ class ExternalImportConnector(_ClassLoggerMixin):
     A connector may have **multiple processors** to handle different data types
     (e.g. one for indicators, one for reports, one for vulnerabilities).
 
+    The class is generic over the settings type (``SettingsT``, a subclass of
+    ``BaseExternalImportConnectorSettings``) and the state type (``StateT``, a
+    subclass of ``ExternalImportConnectorState``). Type checkers infer them from the
+    arguments, so the settings, the state and every processor must share the same
+    parameters. Both default to the SDK base classes.
+
     Attributes:
         logger: A logger named after the module defining the connector class.
-        settings: The connector configuration (subclass of ``BaseConnectorSettings``).
-        state: The ``ExternalImportConnectorState`` for persisting connector state.
+        settings: The connector configuration (``SettingsT``).
+        state: The connector state (``StateT``) for persisting connector state.
         data_processors: The list of ``BaseDataProcessor`` instances.
 
     Example:
-        >>> class IndicatorProcessor(BaseDataProcessor):
+        >>> class IndicatorProcessor(
+        ...     BaseDataProcessor[MyConnectorSettings, MyConnectorState]
+        ... ):
         ...     work_name = "Indicators import"
         ...     def collect(self):
         ...         return api_client.get_indicators()
@@ -62,15 +72,16 @@ class ExternalImportConnector(_ClassLoggerMixin):
         >>> connector = ExternalImportConnector(
         ...     settings=settings,
         ...     data_processors=[IndicatorProcessor()],
+        ...     state=MyConnectorState(),
         ... )
         >>> connector.start()
     """
 
     def __init__(
         self,
-        settings: BaseConnectorSettings,
-        data_processors: list[BaseDataProcessor],
-        state: ExternalImportConnectorState | None = None,
+        settings: SettingsT,
+        data_processors: list[BaseDataProcessor[SettingsT, StateT]],
+        state: StateT | None = None,
     ) -> None:
         """Initialize the base external import connector.
 
@@ -80,14 +91,24 @@ class ExternalImportConnector(_ClassLoggerMixin):
         Args:
             settings: The connector configuration settings.
             data_processors: The list of ``BaseDataProcessor`` instances to run.
-            state: Optional custom state instance. If ``None``, a default
-                ``ExternalImportConnectorState`` is created in ``_init_dependencies()``.
+            state: Optional custom state instance. If ``None``, a base
+                ``ExternalImportConnectorState`` is created here, in ``__init__()``.
+                This is only correct when ``StateT`` is that class. A connector
+                that uses its own state class must pass an instance with
+                ``state=``: the type checker does not catch the omission, and
+                reading a custom field then raises ``AttributeError``.
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
         self.settings = settings
         self.data_processors = data_processors
-        self.state = state if state is not None else ExternalImportConnectorState()
+        # No `state`: assume StateT is ExternalImportConnectorState
+        # (see the `state` docstring).
+        self.state = (
+            state
+            if state is not None
+            else cast("StateT", ExternalImportConnectorState())
+        )
 
     def _init_dependencies(self) -> None:
         """Create the OpenCTI connector helper and wire up all components.
@@ -172,13 +193,13 @@ class ExternalImportConnector(_ClassLoggerMixin):
         until the queue is reduced.
 
         Note:
-            The ``settings.connector`` must be a ``BaseExternalImportConnectorConfig``
-            (or subclass) with a ``duration_period`` field.
+            ``settings.connector`` is a ``BaseExternalImportConnectorConfig``
+            (or subclass), which has the ``duration_period`` field.
         """
         self.logger.info("Connector starting")
 
         self._init_dependencies()
         self._helper.schedule_process(
             message_callback=self.callback,
-            duration_period=self.settings.connector.duration_period.total_seconds(),  # type: ignore[attr-defined]
+            duration_period=self.settings.connector.duration_period.total_seconds(),
         )

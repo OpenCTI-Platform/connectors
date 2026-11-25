@@ -3,6 +3,7 @@ import pytest
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 from stix2.v21 import Location as Stix2Location
 
@@ -88,6 +89,12 @@ def test_administrative_area_to_stix2_object(
         ],
         created=administrative_area.created,
         modified=administrative_area.modified,
+        extensions={
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "location_type": "Administrative-Area",
+            }
+        },
         custom_properties=dict(
             x_opencti_location_type="Administrative-Area",
         ),

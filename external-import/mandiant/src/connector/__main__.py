@@ -2,6 +2,7 @@ import traceback
 
 from connector.base import Mandiant
 from connector.models.configs.config_loader import ConfigLoader
+from deprecation_notice import warn_deprecated
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -14,6 +15,7 @@ if __name__ == "__main__":
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
+    warn_deprecated()
     try:
         config = ConfigLoader()
         helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())

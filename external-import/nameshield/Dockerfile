@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-nameshield
 
 # Install Python modules
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libxslt libxslt-dev libxml2 libxml2-dev && \
+    apk --no-cache add git build-base libxslt-dev libxml2-dev && \
     cd /opt/opencti-connector-nameshield && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base libxslt-dev libxml2-dev && \

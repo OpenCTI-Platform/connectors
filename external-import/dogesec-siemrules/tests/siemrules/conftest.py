@@ -14,16 +14,15 @@ def config_dict() -> dict[str, Any]:
         },
         "connector": {
             "id": "siemrules-connector-id",
-            "type": "EXTERNAL_IMPORT",
             "name": "Siemrules",
             "scope": "siemrules",
             "log_level": "info",
+            "duration_period": "PT1H",
         },
         "siemrules": {
             "base_url": "https://test-siemrules-url/",
             "api_key": "test-api-key",
             "detection_packs": "pack-1,pack-2",
-            "interval_hours": "1",
         },
     }
 

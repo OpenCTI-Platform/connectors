@@ -14,10 +14,10 @@ def config_dict() -> dict[str, Any]:
         },
         "connector": {
             "id": "vulmatch-connector-id",
-            "type": "EXTERNAL_IMPORT",
             "name": "Vulmatch",
             "scope": "vulmatch",
             "log_level": "info",
+            "duration_period": "P1D",
         },
         "vulmatch": {
             "base_url": "https://test-vulmatch-url/",
@@ -27,7 +27,6 @@ def config_dict() -> dict[str, Any]:
             "cvss_v3_score_min": "-1",
             "cvss_v4_score_min": "-1",
             "epss_score_min": "-1",
-            "interval_days": "1",
             "days_to_backfill": "7",
         },
     }
@@ -52,10 +51,3 @@ def mocked_helper(mocker: MockerFixture):
     helper.connect_id = "connector-id"
     helper.connect_name = "Vulmatch"
     yield helper
-
-
-@pytest.fixture
-def mock_session(mocker: MockerFixture) -> MagicMock:
-    session = MagicMock()
-    mocker.patch("connector.requests.Session", return_value=session)
-    return session

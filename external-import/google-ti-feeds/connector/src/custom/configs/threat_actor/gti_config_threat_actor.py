@@ -9,6 +9,9 @@ from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
     ALLOWED_THREAT_ACTOR_SUBENTITIES,
     GTIBaseConfig,
+    ListOfFromString,
+    Origin,
+    ThreatActorSubentity,
     validate_origins_list,
     validate_subentities_list,
 )
@@ -19,17 +22,17 @@ from pydantic import Field, field_validator
 class GTIThreatActorConfig(GTIBaseConfig):
     """Configuration for GTI threat actor imports."""
 
-    threat_actor_import_start_date: timedelta = Field(
-        default=timedelta(days=1),
-        description="ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
-    )
-
     import_threat_actors: bool = Field(
         default=False,
         description="Whether to enable importing threat actor data from GTI",
     )
 
-    threat_actor_origins: ListFromString = Field(
+    threat_actor_import_start_date: timedelta = Field(
+        default=timedelta(days=1),
+        description="ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
+    )
+
+    threat_actor_origins: ListOfFromString[Origin] = Field(
         default=["google threat intelligence"],
         description="Comma-separated list of threat actor origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
@@ -47,7 +50,7 @@ class GTIThreatActorConfig(GTIBaseConfig):
         examples=["name:APT28"],
     )
 
-    threat_actor_subentities: ListFromString = Field(
+    threat_actor_subentities: ListOfFromString[ThreatActorSubentity] = Field(
         default=[
             "malware_families",
             "attack_techniques",
@@ -60,15 +63,15 @@ class GTIThreatActorConfig(GTIBaseConfig):
         examples=["malware_families,attack_techniques", ""],
     )
 
-    @field_validator("threat_actor_origins", mode="after")
+    @field_validator("threat_actor_origins", mode="before")
     @classmethod
-    def validate_threat_actor_origins(cls, v: list[str]) -> list[str]:
+    def validate_threat_actor_origins(cls, v: str | list[str]) -> list[str]:
         """Validate threat actor origins against allowed values."""
         return validate_origins_list(v, "threat actor origin", ALLOWED_ORIGINS)
 
-    @field_validator("threat_actor_subentities", mode="after")
+    @field_validator("threat_actor_subentities", mode="before")
     @classmethod
-    def validate_threat_actor_subentities(cls, v: list[str]) -> list[str]:
+    def validate_threat_actor_subentities(cls, v: str | list[str]) -> list[str]:
         """Validate threat actor sub-entities against allowed values."""
         return validate_subentities_list(
             v, "threat actor subentity", ALLOWED_THREAT_ACTOR_SUBENTITIES

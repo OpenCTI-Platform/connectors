@@ -76,6 +76,12 @@
       "default": true,
       "description": "Whether to verify SSL connections to the Shodan InternetDB API.",
       "type": "boolean"
+    },
+    "SHODAN_TIMEOUT": {
+      "default": 30,
+      "description": "Timeout in seconds for requests to the Shodan InternetDB API.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
     }
   },
   "required": [

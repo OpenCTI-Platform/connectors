@@ -1,3 +1,5 @@
+# DEPRECATED: this connector is deprecated and will be removed in a future release.
+# The upstream data was removed and there is no replacement. See DEPRECATION.md.
 version: '3'
 services:
   connector-c2tracker:

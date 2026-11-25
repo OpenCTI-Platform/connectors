@@ -49,7 +49,7 @@ connector-sekoia:
       - SEKOIA_BASE_URL=ChangeMe # by default 'https://api.sekoia.io'
       - SEKOIA_API_KEY=<Replace_by_Sekoia_API_key>
       - SEKOIA_COLLECTION=d6092c37-d8d7-45c3-8aff-c4dc26030608
-      - SEKOIA_START_DATE=2022-01-01    # Optional, the date to start consuming data from. Maybe in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00
+      - SEKOIA_START_DATE=P90D          # Optional, the date to start consuming data from (first run only, when no state exists). ISO 8601 datetime or duration, e.g. 2023-05-01, 2023-05-01T00:00:00 or P90D - Default: P90D (90 days ago)
       - SEKOIA_LIMIT=100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
       - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
@@ -64,7 +64,7 @@ connector-sekoia:
   identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship =>
   Sekoia Intelligence elements set to be exported in OpenCTI that can be chosen from this list
 - SEKOIA_API_KEY = Sekoia API key with CTI_Permissions
-- SEKOIA_START_DATE = e.g. 2023-05-01
+- SEKOIA_START_DATE = e.g. 2023-05-01 or a duration such as P30D. Default: P90D (90 days ago). Only used on the first run: once the connector has a state, the last cursor takes precedence. Other formats, including an empty or null value, are rejected and stop the connector at startup.
 
 3. Build and launch Sekoia connector
 
@@ -91,7 +91,7 @@ Contact the Filigran support (support@filigran.com) to configure the Sekoia CTI 
 - Update date: Last update date of the connector in OpenCTI
 - Status: Status of the connector in OpenCTI
 - Perimeter: Sekoia Intelligence feed set for import in docker-compose.yml file under CONNECTOR_SCOPE
-- Last cursor: SEKOIA_START_DATE set in docker-compose.yml file in base64 format
+- Last cursor: on the first run, the date computed from SEKOIA_START_DATE (default: 90 days ago), in base64 format
   ![image](https://github.com/OpenCTI-Platform/connectors/assets/104078945/6b01a85d-464e-4e6c-a2f5-86bd6d9d6cda)
 
 2. Navigate the Sekoia Intelligence Feed

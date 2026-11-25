@@ -10,7 +10,7 @@ services:
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_INTERVAL=3
-      - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
+      - URLHAUS_AUTH_KEY=ChangeMe # From https://auth.abuse.ch
       - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80 # Optional: Defaults to 80.
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true
