@@ -48,7 +48,7 @@ def test_get_feed_does_not_pass_proxies_kwarg(tmp_path):
     fake_response.json.side_effect = ValueError("not json")
 
     with patch.object(client._session, "get", return_value=fake_response) as mock_get:
-        client.get_feed("domain", path=str(tmp_path / "out.json.gz"))
+        client.get_feed("domain", path=str(tmp_path / "out.json"))
 
     assert mock_get.call_count == 1
     _, kwargs = mock_get.call_args
@@ -63,8 +63,8 @@ def test_sanitize_output_path_rejects_traversal():
 
 
 def test_sanitize_output_path_allows_safe_names(tmp_path):
-    safe = str(tmp_path / "out.json.gz")
+    safe = str(tmp_path / "out.json")
     assert _sanitize_output_path(safe) == safe
-    assert _sanitize_output_path("threatfeed_domain_latest.json.gz") == (
-        "threatfeed_domain_latest.json.gz"
+    assert _sanitize_output_path("threatfeed_domain_latest.json") == (
+        "threatfeed_domain_latest.json"
     )

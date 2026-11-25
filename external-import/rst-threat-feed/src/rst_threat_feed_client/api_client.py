@@ -65,7 +65,7 @@ class ThreatFeedClient:
                 "message": f"Unsupported latest window: {fdate}",
             }
         if not path:
-            path = f"threatfeed_{ioctype}_{mapping[fdate]}.{filetype}.gz"
+            path = f"threatfeed_{ioctype}_{mapping[fdate]}.{filetype}"
         path = _sanitize_output_path(path)
         apiurl = f"{self.api_url}/{ioctype}?type={filetype}&date={mapping[fdate]}"
         last_error: Optional[Exception] = None
