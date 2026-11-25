@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from aiohttp import (
     ClientConnectorError,
     ClientError,
+    ClientPayloadError,
     ClientSession,
     ClientTimeout,
     ServerConnectionError,
@@ -26,6 +27,9 @@ LOG_PREFIX = "[API AioHttp]"
 
 NETWORK_ERROR_TYPES = (
     ClientConnectorError,
+    # Connection dropped mid-body ("Response payload is not completed"), e.g. by a
+    # proxy: transient, so retried as a network error instead of failing as HTTP 0.
+    ClientPayloadError,
     ServerDisconnectedError,
     ServerConnectionError,
     ConnectionError,
