@@ -62,6 +62,12 @@ class ConnectorURLhaus:
         """
         self.config = config
         self.helper = helper
+        if self.config.urlhaus.has_legacy_csv_url:
+            self.helper.connector_logger.warning(
+                "URLHAUS_CSV_URL points to the retired public download and is "
+                "ignored: the export URL is built from URLHAUS_AUTH_KEY. "
+                "Remove URLHAUS_CSV_URL from the configuration."
+            )
         self.state = ConnectorState()
         self.client = ConnectorClient(self.helper, self.config, self.state)
         self.converter_to_stix = ConverterToStix(
