@@ -54,7 +54,7 @@ Find all the configuration variables available here: [Connector Configurations](
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-In `config.yml`, these settings go in the `rst-whois-api` section.
+In `config.yml`, these settings go in the `rst_whois_api` section (the legacy `rst-whois-api` section name is still accepted).
 
 ---
 

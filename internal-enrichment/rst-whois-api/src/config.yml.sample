@@ -10,7 +10,7 @@ connector:
   # log_level: 'error'
   # max_tlp: 'TLP:AMBER+STRICT'
 
-rst-whois-api:
+rst_whois_api:
   api_key: 'ChangeMe'
   # base_url: 'https://api.rstcloud.net/v1'
   # timeout: 10
