@@ -55,11 +55,13 @@ class OtxLookup:
     """The answer of OTX to the lookup of an entity.
 
     Attributes:
+        section: OTX API section that answered (`IPv4`, `domain`, `hostname` or `url`).
         page_path: Path of the indicator page on the OTX website of the section that
             answered (`ip`, `domain`, `hostname` or `url`).
         general: The `general` section that answered.
     """
 
+    section: str
     page_path: str
     general: OtxGeneral
 
@@ -95,9 +97,10 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         returned nothing (HTTP 400 or 404).
 
         Returns:
-            The `general` section and the page it belongs to, `None` when OTX has no
-            such indicator or rejects its value. `OtxClient` raises
-            `DataRetrievalError` on any other failure, the fallback call included.
+            The `general` section, with the OTX section and the page it belongs to,
+            `None` when OTX has no such indicator or rejects its value. `OtxClient`
+            raises `DataRetrievalError` on any other failure, the fallback call
+            included.
         """
         observable_type = self._observable_type(message)
         self.logger.debug(
@@ -108,7 +111,7 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         general = self.client.get_general(observable_type.section, value)
         if general is None:
             return None
-        lookup = OtxLookup(observable_type.page_path, general)
+        lookup = OtxLookup(observable_type.section, observable_type.page_path, general)
         if general.pulse_info.is_known or observable_type.fallback is None:
             return lookup
         fallback_section, fallback_page_path = observable_type.fallback
@@ -119,7 +122,7 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         fallback_general = self.client.get_general(fallback_section, value)
         if fallback_general is None:
             return lookup
-        return OtxLookup(fallback_page_path, fallback_general)
+        return OtxLookup(fallback_section, fallback_page_path, fallback_general)
 
     def transform(
         self, data: OtxLookup | None, message: EnrichmentMessage

@@ -169,6 +169,7 @@ class TestCollect:
         result = processor.collect(_make_message(entity_type))
 
         assert isinstance(result, OtxLookup)
+        assert result.section == section
         assert result.general is general
         processor.client.get_general.assert_called_once_with(section, value)
 
@@ -200,7 +201,8 @@ class TestCollect:
 
         result = processor.collect(_make_message("Domain-Name"))
 
-        assert result == OtxLookup("domain", general)
+        assert result == OtxLookup("domain", "domain", general)
+        assert result.section == "domain"
         processor.client.get_general.assert_called_once_with(
             "domain", "malicious.example"
         )
@@ -213,7 +215,8 @@ class TestCollect:
 
         result = processor.collect(_make_message("Domain-Name", SUBDOMAIN))
 
-        assert result == OtxLookup("hostname", hostname)
+        assert result == OtxLookup("hostname", "hostname", hostname)
+        assert result.section == "hostname"
         assert processor.client.get_general.call_args_list == [
             call("domain", SUBDOMAIN),
             call("hostname", SUBDOMAIN),
@@ -236,7 +239,8 @@ class TestCollect:
 
         result = processor.collect(_make_message("Domain-Name", SUBDOMAIN))
 
-        assert result == OtxLookup("domain", domain)
+        assert result == OtxLookup("domain", "domain", domain)
+        assert result.section == "domain"
 
     def test_domain_rejected_by_otx_does_not_query_hostname(self):
         processor = _make_processor()
@@ -326,15 +330,20 @@ class TestCollect:
 
         result = processor.collect(_make_message("Domain-Name", SUBDOMAIN))
 
-        assert result == OtxLookup("hostname", hostname)
+        assert result == OtxLookup("hostname", "hostname", hostname)
+        assert result.section == "hostname"
         assert processor.client.get_general.call_count == 2
 
 
 def _lookup(fixture: str, entity_type: str | None = None) -> OtxLookup:
-    """The lookup of a fixture, on the page of the entity type (`hostname` otherwise)."""
+    """The lookup of a fixture, on the section and page of the entity type.
+
+    Without an entity type, the lookup is the one of the `hostname` section.
+    """
+    section = CASES[entity_type][2] if entity_type else "hostname"
     page_url = CASES[entity_type][3] if entity_type else "/indicator/hostname/"
     page_path = page_url.split("/indicator/")[1].split("/")[0]
-    return OtxLookup(page_path, load_general(fixture))
+    return OtxLookup(section, page_path, load_general(fixture))
 
 
 class TestTransform:
@@ -390,7 +399,9 @@ class TestTransform:
 
     def test_hostname_answer_without_pulse_gives_nothing(self):
         processor = _make_processor()
-        lookup = OtxLookup("hostname", load_general("general_domain_unknown.json"))
+        lookup = OtxLookup(
+            "hostname", "hostname", load_general("general_domain_unknown.json")
+        )
 
         assert processor.transform(lookup, _make_message("Domain-Name")) == []
 
@@ -422,7 +433,7 @@ class TestTransform:
     def test_negative_pulse_count_gives_nothing(self):
         processor = _make_processor()
         lookup = OtxLookup(
-            "ip", OtxGeneral.model_validate({"pulse_info": {"count": -1}})
+            "IPv4", "ip", OtxGeneral.model_validate({"pulse_info": {"count": -1}})
         )
 
         assert processor.transform(lookup, _make_message()) == []
