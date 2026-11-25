@@ -126,6 +126,16 @@ maintaining data completeness. The separation of concerns allows:
 
 - Gradual relationship mapping without blocking core ingestion
 
+### Revoked indicators
+
+When Sekoia.io revokes an indicator, the connector sends it with `revoked: true`, a `valid_until` set to the
+revocation date and a score of `0`, whatever `SEKOIA_CONFIDENCE_SCORE` is. Since OpenCTI 6.8.9, the platform ignores a
+revocation sent with an unchanged score, so the score of `0` is what lets the revocation through
+([#8616](https://github.com/OpenCTI-Platform/connectors/issues/8616)).
+
+Indicators revoked before this version of the connector stay active in OpenCTI. To revoke them, reset the connector
+state and set `SEKOIA_START_DATE` far enough in the past to import them again.
+
 ## Troubleshoot
 
 | Issue	                   | Action	                   | Linux command     |
