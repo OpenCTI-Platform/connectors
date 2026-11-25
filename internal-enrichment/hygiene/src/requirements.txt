@@ -1,5 +1,5 @@
 tldextract==5.4.0
-pycti==7.261119.0
+pycti==7.261124.0
 pydantic==2.14.4
 pydantic-settings==2.16.2
 git+http://github.com/MISP/PyMISPWarningLists.git@main#egg=pymispwarninglists

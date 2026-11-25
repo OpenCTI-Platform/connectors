@@ -21,10 +21,11 @@ def _build_context_manager_response(
     status: int,
     json_body=None,
     text_body: str = "",
+    headers: dict | None = None,
 ):
     response = MagicMock()
     response.status = status
-    response.headers = {}
+    response.headers = {} if headers is None else headers
     response.json = AsyncMock(return_value=json_body)
     response.text = AsyncMock(return_value=text_body)
 
@@ -64,3 +65,30 @@ async def test_request_404_uses_error_message_from_body():
     with patch.object(client, "_get_session", AsyncMock(return_value=mock_session)):
         with pytest.raises(Exception, match="CVE not found"):
             await client.request("https://fake.url")
+
+
+async def test_request_retries_status_without_resetting_shared_session():
+    """A retryable status backs off on the shared session (#8491)."""
+    client = _build_client()
+    mock_session = MagicMock()
+    mock_session.closed = False
+    payload = {"vulnerabilities": [{"cve": {"id": "CVE-2024-0001"}}]}
+    mock_session.get = MagicMock(
+        side_effect=[
+            _build_context_manager_response(
+                status=429,
+                headers={"Retry-After": "0"},
+            ),
+            _build_context_manager_response(status=200, json_body=payload),
+        ]
+    )
+
+    with (
+        patch.object(client, "_get_session", AsyncMock(return_value=mock_session)),
+        patch.object(client, "_reset_session", AsyncMock()) as reset_session,
+        patch("src.services.client.api.asyncio.sleep", AsyncMock()),
+    ):
+        result = await client.request("https://fake.url")
+
+    assert result == payload
+    reset_session.assert_not_awaited()
