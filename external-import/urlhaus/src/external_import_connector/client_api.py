@@ -1,9 +1,14 @@
 import csv
+from http import HTTPStatus
 from io import StringIO
 from typing import Generator
 
 import requests
+from connectors_sdk.exceptions.error import DataRetrievalError
 from dateutil.parser import parse
+
+# Seconds to wait for the server; the recent export is about 30 MB.
+REQUEST_TIMEOUT = 300
 
 
 class ConnectorClient:
@@ -22,25 +27,38 @@ class ConnectorClient:
         """
         Internal method to handle API requests
         :return: the HTTP response
-        :raises requests.RequestException: when the download fails, so that the
-            run is reported as failed instead of successful with no data
+        :raises DataRetrievalError: when the download fails, so that the run is
+            reported as failed instead of successful with no data
         """
+        # The export URL contains the Auth-Key: never log it, and re-raise with
+        # `from None`, because requests quotes the URL in its error messages
+        # (see "Use `from None` intentionally, to remove sensitive values" in
+        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
+        self.helper.connector_logger.info("[API] Downloading URLhaus export")
         try:
-            response = self.session.get(api_url, params=params)
-
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
-
+            response = self.session.get(api_url, params=params, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
             return response
-
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": api_url, "error": str(err)}
+        except requests.HTTPError as err:
+            status = err.response.status_code
+            # Use the standard phrase, not the server's reason, which a proxy
+            # could fill with the request URL.
+            try:
+                phrase = f" {HTTPStatus(status).phrase}"
+            except ValueError:
+                phrase = ""
+            hint = (
+                ": check URLHAUS_AUTH_KEY or URLHAUS_CSV_URL"
+                if status in (401, 403)
+                else ""
             )
-            raise
+            raise DataRetrievalError(
+                f"URLhaus export download failed: HTTP {status}{phrase}{hint}"
+            ) from None
+        except requests.RequestException as err:
+            raise DataRetrievalError(
+                f"URLhaus export download failed ({type(err).__name__})"
+            ) from None
 
     def get_entities(self, params=None) -> Generator[list, None, None]:
         """
@@ -50,7 +68,7 @@ class ConnectorClient:
         """
         # Errors are not swallowed here: a failed download or an unreadable
         # file must reach process_message() and mark the work in error.
-        response = self._request_data(self.config.urlhaus.csv_url, params=params)
+        response = self._request_data(self.config.urlhaus.export_url, params=params)
         file = StringIO(response.text)
         rdr = csv.reader(filter(lambda row: row[0] != "#", file))
 

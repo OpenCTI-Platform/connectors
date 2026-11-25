@@ -416,6 +416,8 @@ def test_process_callback_handles_exception():
         ("TLP:AMBER", [tlp_marking("TLP:RED"), tlp_marking("TLP:GREEN")], False),
         # pycti compares case-insensitively.
         ("TLP:AMBER", [tlp_marking("tlp:red")], False),
+        # A custom TLP cannot be compared, so it is refused.
+        ("TLP:RED", [tlp_marking("TLP:EX:CHEMICAL")], False),
     ],
 )
 def test_check_tlp_allowed(max_tlp, markings, allowed):

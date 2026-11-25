@@ -152,3 +152,20 @@ def test_empty_ipv4_value_skips_lookup():
     assert "No Metras fleet data" in msg
     conn.client.alerts_by_agent_ip.assert_not_called()
     conn.client.list_endpoints.assert_not_called()
+
+
+def test_tlp_gate_checks_every_tlp():
+    conn, _ = _enr(max_tlp=TLPLevel.AMBER)
+    tlp_green = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+    msg = conn.process_message(
+        {
+            "stix_entity": {
+                "type": "IPv4-Addr",
+                "id": IPV4_ID,
+                "value": "1.2.3.4",
+                "object_marking_refs": [TLP_RED, tlp_green],
+            }
+        }
+    )
+    assert "exceeds max" in msg
+    conn.client.alerts_by_agent_ip.assert_not_called()

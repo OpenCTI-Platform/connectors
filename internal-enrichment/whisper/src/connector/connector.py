@@ -28,6 +28,7 @@ from connector.result_parser import (
 )
 from connector.settings import ConnectorSettings
 from connector.whisper_client import WhisperClient
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 
 _ASN_NAME_RE = re.compile(r"^AS(\d+)$", re.IGNORECASE)
@@ -132,16 +133,17 @@ class WhisperConnector:
         the TLP ceiling would leak intel to a less-trusted Whisper
         account. Raises ``WhisperTlpError`` on violation.
         """
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        max_tlp = self.config.connector.max_tlp
         for marking in observable.get("objectMarking", []) or []:
-            if marking.get("definition_type") == "TLP" and not (
-                OpenCTIConnectorHelper.check_max_tlp(
-                    tlp=marking["definition"], max_tlp=max_tlp
-                )
+            if marking.get("definition_type") != "TLP":
+                continue
+            # One TLP at a time, so that the message names the TLP refused
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                [marking["definition"]], max_tlp
             ):
                 raise WhisperTlpError(
                     f"observable TLP marking {marking['definition']!r} "
-                    f"exceeds connector.max_tlp={max_tlp!r}"
+                    f"exceeds connector.max_tlp={max_tlp}"
                 )
 
     def _send_passthrough_bundle(self, stix_objects: list) -> str:

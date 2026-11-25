@@ -52,10 +52,19 @@
       "format": "duration",
       "type": "string"
     },
+    "URLHAUS_AUTH_KEY": {
+      "default": null,
+      "description": "abuse.ch Auth-Key, available at https://auth.abuse.ch. Required unless `csv_url` is set.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
     "URLHAUS_CSV_URL": {
-      "default": "https://urlhaus.abuse.ch/downloads/csv_recent/",
-      "description": "URLhaus CSV feed URL.",
-      "type": "string"
+      "default": null,
+      "description": "Override of the URLhaus CSV export URL. Defaults to https://urlhaus-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. The retired public URL (https://urlhaus.abuse.ch/downloads/...) is ignored.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "URLHAUS_DEFAULT_X_OPENCTI_SCORE": {
       "default": 80,

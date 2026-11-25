@@ -320,6 +320,19 @@ def test_indicator_above_max_tlp_is_not_enriched():
     assert connector.client.session.calls == []
 
 
+def test_indicator_with_one_tlp_above_max_tlp_is_not_enriched():
+    connector, _ = make_connector()
+    markings = [
+        {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+    ]
+
+    with pytest.raises(ValueError, match="MAX TLP"):
+        connector.process_message(indicator_event(markings=markings))
+
+    assert connector.client.session.calls == []
+
+
 def test_default_max_tlp_accepts_green(fake_dns):
     connector, _ = make_connector()
     markings = [{"definition_type": "TLP", "definition": "TLP:GREEN"}]

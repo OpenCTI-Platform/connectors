@@ -5,14 +5,14 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'BeaconBeagle'
   scope: 'beaconbeagle'
+  # duration_period: 'PT2H' # ISO-8601 duration between two runs
   log_level: 'info'
 
 
 beaconbeagle:
-  url: 'https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc'
+  # url: 'https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc'
   # Boolean fields must be real YAML booleans (``true`` / ``false`` without
   # quotes). Quoted ``'true'`` / ``'false'`` are YAML *strings*, and Python's
   # truthiness rules treat any non-empty string as ``True`` — so a
@@ -28,10 +28,9 @@ beaconbeagle:
   # ``asn`` / ``country`` for a C2 entry. Disable if outbound traffic
   # to ``bgp.tools`` is not allowed in your deployment (BGP / AS / country
   # linking will then only fire on entries that already carry the data).
-  search_bgpas: false
+  # search_bgpas: false
   # Suffix appended to the Text observable that tracks CobaltStrike licence
   # watermarks. Leave empty (or omit) to disable watermark tracking.
-  link_watermark: ''
-  links_duration: 24
-  interval: 2 # In hours
-  marking_definition: 'TLP:GREEN'
+  # link_watermark_txt: ''
+  # links_duration: 24
+  # marking: 'TLP:GREEN'

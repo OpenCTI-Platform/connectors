@@ -9,15 +9,9 @@ from datetime import datetime, timezone
 import cabby
 import eti_api
 import stix2
-import yaml
 from dateutil.parser import parse
-from pycti import (
-    Indicator,
-    Malware,
-    OpenCTIConnectorHelper,
-    Report,
-    get_config_variable,
-)
+from pycti import Indicator, Malware, OpenCTIConnectorHelper, Report
+from settings import ConnectorSettings
 
 TMP_DIR = "TMP"
 
@@ -34,61 +28,24 @@ OBSERVABLE_TYPES_MAP = {
 class Eset:
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         # Extra config
-        self.eset_api_url = get_config_variable(
-            "ESET_API_URL", ["eset", "api_url"], config
-        )
-        self.eset_username = get_config_variable(
-            "ESET_USERNAME", ["eset", "username"], config
-        )
-        self.eset_password = get_config_variable(
-            "ESET_PASSWORD", ["eset", "password"], config
-        )
-        self.eset_collections = get_config_variable(
-            "ESET_COLLECTIONS", ["eset", "collections"], config
-        )
-        self.eset_import_apt_reports = get_config_variable(
-            "ESET_IMPORT_APT_REPORTS",
-            ["eset", "import_apt_reports"],
-            config,
-            False,
-            True,
-        )
-        self.eset_import_start_date = get_config_variable(
-            "ESET_IMPORT_START_DATE",
-            ["eset", "import_start_date"],
-            config,
-        )
-        self.eset_create_observables = get_config_variable(
-            "ESET_CREATE_OBSERVABLES",
-            ["eset", "create_observables"],
-            config,
-        )
-        self.eset_interval = get_config_variable(
-            "ESET_INTERVAL", ["eset", "interval"], config, True
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+        self.eset_api_url = self.config.eset.api_url
+        self.eset_username = self.config.eset.username
+        self.eset_password = self.config.eset.password.get_secret_value()
+        self.eset_collections = self.config.eset.collections
+        self.eset_import_apt_reports = self.config.eset.import_apt_reports
+        self.eset_import_start_date = self.config.eset.import_start_date
+        self.eset_create_observables = self.config.eset.create_observables
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="ESET",
             description="ESET, s.r.o., is a software company specializing in cybersecurity.",
         )
-        self.added_after = int(parse(self.eset_import_start_date).timestamp())
+        self.added_after = int(self.eset_import_start_date.timestamp())
         # Init variables
         self.cache = {}
-        if self.eset_collections is not None:
-            self.eset_collections = self.eset_collections.split(",")
 
         # Create temporary dir and initialize logging.
         if sys.version_info.major == 2:  # Compatibility with Python 2.7.
@@ -98,7 +55,7 @@ class Eset:
             os.makedirs(TMP_DIR, exist_ok=True)
 
     def get_interval(self):
-        return int(self.eset_interval) * 60
+        return int(self.config.connector.duration_period.total_seconds())
 
     def _download_all_report_stuff(self, connection, report, base_path):
         """Download xml, pdf and adds (if available) from given *report* into paths starting with *base_path*."""
@@ -153,7 +110,6 @@ class Eset:
                     self.helper.log_debug("Objects to be sent " + str(bundle_objects))
                     self.helper.send_stix2_bundle(
                         self.helper.stix2_create_bundle(bundle_objects),
-                        update=self.update_existing_data,
                         bypass_split=True,
                         work_id=work_id,
                     )
@@ -277,7 +233,6 @@ class Eset:
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(
                         json.dumps(parsed_content),
-                        update=self.update_existing_data,
                         work_id=work_id,
                     )
             except Exception as e:

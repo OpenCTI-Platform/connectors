@@ -129,7 +129,10 @@ def test_report_attack_patterns_match_rule_type() -> None:
     converter = ConvertToSTIXReport(
         config=MagicMock(), logger=logging.getLogger(__name__), tlp_level="white"
     )
-    techniques = GTIAttackTechniqueIDData.from_id_list(["T1059"])
+    # (a technique without a name is skipped, see #8012)
+    techniques = GTIAttackTechniqueIDData.from_id_list(
+        ["T1059"], names={"T1059": "Command and Scripting Interpreter"}
+    )
     # When they are converted
     stix_objects = converter.convert_subentities_to_stix(
         {"attack_techniques": [techniques]}, main_entity="report"

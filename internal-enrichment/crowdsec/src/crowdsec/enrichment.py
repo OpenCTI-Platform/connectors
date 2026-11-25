@@ -8,6 +8,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin
 
 import yaml
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .builder import CrowdSecBuilder
@@ -232,12 +233,15 @@ class CrowdSecEnrichment:
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
         stix_observable = data["stix_entity"]
-        tlp = "TLP:WHITE"
-        for marking_definition in observable["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in observable["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

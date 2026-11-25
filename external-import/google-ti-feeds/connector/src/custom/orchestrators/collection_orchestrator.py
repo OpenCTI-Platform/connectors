@@ -17,9 +17,6 @@ from connector.src.custom.convert_to_stix.convert_to_stix_base import (
     BaseConvertToSTIX,
     ioc_threat_relationship_types,
 )
-from connector.src.custom.models.gti.gti_attack_technique_id_model import (
-    GTIAttackTechniqueIDData,
-)
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import (
@@ -245,27 +242,24 @@ class CollectionOrchestrator(BaseOrchestrator, ABC):
             self._flush_batch_processor()
 
     def _use_attack_technique_ids(self, subentities: dict[str, list[Any]]) -> None:
-        """Replace the fetched attack techniques by their IDs, in place.
+        """Replace the fetched attack techniques by their IDs and names, in place.
 
-        The attack patterns are built from the MITRE IDs alone (quota optimization).
+        The attack patterns are built from the MITRE IDs and the GTI technique
+        names alone (quota optimization); see `_build_attack_technique_data`.
         """
-        attack_technique_ids = [
-            attack_technique.id
-            for attack_technique in subentities.pop("attack_techniques", [])
-            if getattr(attack_technique, "id", None)
-        ]
-        if not attack_technique_ids:
+        attack_technique_data = self._build_attack_technique_data(
+            subentities.pop("attack_techniques", [])
+        )
+        if attack_technique_data is None:
             return
         self.logger.info(
             "Using ID-only approach for attack techniques (quota optimization)",
             {
                 "prefix": self.LOG_PREFIX,
-                "attack_technique_count": len(attack_technique_ids),
+                "attack_technique_count": len(attack_technique_data.ids),
             },
         )
-        subentities["attack_techniques"] = [
-            GTIAttackTechniqueIDData.from_id_list(attack_technique_ids)
-        ]
+        subentities["attack_techniques"] = [attack_technique_data]
 
     @staticmethod
     def _filter_subentity_types(subentity_types: list[str], entity: Any) -> list[str]:

@@ -1,5 +1,6 @@
 from typing import Dict
 
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from urlscan_enrichment_services.client import (
     UrlscanClient,
@@ -33,7 +34,6 @@ class UrlscanConnector:
         self.constants = UrlscanConstants
         self.utils = UrlscanUtils
         self.identity = None
-        self.tlp = None
 
     def extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
@@ -45,13 +45,14 @@ class UrlscanConnector:
                                including "objectMarking", the marking that the observable uses.
         :return: A boolean
         """
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                self.tlp = marking_definition["definition"]
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         )
-        return is_valid_max_tlp
 
     def _generate_labels(self, data: dict) -> list:
         """

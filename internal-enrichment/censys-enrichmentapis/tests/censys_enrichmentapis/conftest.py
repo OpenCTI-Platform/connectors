@@ -37,7 +37,6 @@ def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
     mocked_helper.stix2_create_bundle = MagicMock(
         side_effect=OpenCTIConnectorHelper.stix2_create_bundle
     )
-    mocked_helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
     # pycti's ``AppLogger`` only exposes these methods; a strict spec makes a
     # call to a non-existent method (e.g. ``exception``) fail the test instead
     # of silently passing on an auto-created MagicMock attribute.

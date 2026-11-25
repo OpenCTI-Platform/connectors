@@ -3,6 +3,7 @@ import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import ModatUtils
+from connectors_sdk import InternalEnrichmentConnector
 from modat_client import ModatClient, ModatHost
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -22,7 +23,6 @@ class ModatConnector:
         modat = config.modat
         self.api_base_url = str(modat.api_base_url)
         self.api_key = modat.api_key.get_secret_value()
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.default_score = int(modat.default_score)
         self.create_note = bool(modat.create_note)
         self.include_cves = bool(modat.include_cves)
@@ -48,16 +48,21 @@ class ModatConnector:
         )
 
     def _extract_and_check_markings(self, entity: dict) -> None:
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity.get("objectMarking", []):
-            if marking_definition.get("definition_type") == "TLP":
-                tlp = marking_definition.get("definition", tlp)
+        tlp_levels = [
+            marking_definition.get("definition")
+            for marking_definition in entity.get("objectMarking", [])
+            if marking_definition.get("definition_type") == "TLP"
+        ]
 
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
-        if not is_valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             self.helper.connector_logger.warning(
                 "[MODAT] Skipping enrichment: observable TLP exceeds MAX TLP",
-                {"observable_tlp": tlp, "max_tlp": self.max_tlp},
+                {
+                    "observable_tlp": tlp_levels,
+                    "max_tlp": self.config.connector.max_tlp,
+                },
             )
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"

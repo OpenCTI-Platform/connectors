@@ -9,7 +9,6 @@ import pytest
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from connector import ConnectorSettings, SafeBrowsingConnector
-from pycti import OpenCTIConnectorHelper
 
 BASE_CONFIG = {
     "opencti": {
@@ -58,7 +57,6 @@ def make_connector(make_settings):
     ) -> SafeBrowsingConnector:
         helper = MagicMock()
         helper.connect_scope = "Url,Domain-Name,Hostname"
-        helper.check_max_tlp.side_effect = OpenCTIConnectorHelper.check_max_tlp
         return SafeBrowsingConnector(
             config=make_settings(safe_browsing, **extra_sections), helper=helper
         )

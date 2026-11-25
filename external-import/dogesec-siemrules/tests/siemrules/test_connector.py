@@ -17,7 +17,7 @@ def test_connector_init(
     assert connector.base_url == "https://test-siemrules-url/"
     assert connector.api_key == "test-api-key"
     assert connector.detection_packs == ["pack-1", "pack-2"]
-    assert connector.interval_hours == 1
+    assert connector.duration_period == 3600
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
 

@@ -22,6 +22,7 @@ from connector.services.client_api import ProofpointEtIntelligenceClient
 from connector.services.converter_to_stix import ConverterToStix
 from connector.services.utils import DateTimeFormat, Utils
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 from tenacity import RetryError
@@ -723,34 +724,14 @@ class ProofpointEtIntelligenceConnector:
         Returns:
             None
         """
-        highest_tlp_entity = None
-        entity_marking = opencti_entity.get("objectMarking", [])
-
-        ordered_tlp_levels = [
-            "TLP:WHITE",
-            "TLP:CLEAR",
-            "TLP:GREEN",
-            "TLP:AMBER",
-            "TLP:AMBER+STRICT",
-            "TLP:RED",
+        tlp_levels = [
+            marking_definition.get("definition")
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition.get("definition_type") == "TLP"
         ]
 
-        for marking_definition in entity_marking:
-            if marking_definition.get("definition_type") != "TLP":
-                continue
-
-            current_tlp = marking_definition.get("definition")
-            current_tlp_index = ordered_tlp_levels.index(current_tlp)
-            highest_tlp_index = (
-                ordered_tlp_levels.index(highest_tlp_entity)
-                if highest_tlp_entity in ordered_tlp_levels
-                else -1
-            )
-            if current_tlp_index > highest_tlp_index:
-                highest_tlp_entity = current_tlp
-
-        valid_max_tlp = self.helper.check_max_tlp(
-            highest_tlp_entity, f"TLP:{self.config.connector.max_tlp.upper()}"
+        valid_max_tlp = InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         )
 
         if not valid_max_tlp:

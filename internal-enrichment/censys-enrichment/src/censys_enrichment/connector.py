@@ -8,6 +8,7 @@ from censys_enrichment.errors import (
     MaxTlpError,
 )
 from censys_enrichment.settings import ConfigLoader
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
 
@@ -46,10 +47,14 @@ class Connector:
         )
 
     def _is_entity_tlp_allowed(self, markings: list[dict[str, Any]]) -> bool:
-        """Return True if the entity's TLP is <= configured max TLP."""
-        return self.helper.check_max_tlp(
-            tlp=self._extract_tlp(markings=markings),
-            max_tlp=f"TLP:{self.config.connector.max_tlp.upper()}",
+        """Return True if every TLP of the entity is <= configured max TLP."""
+        tlp_levels = [
+            marking["definition"]
+            for marking in markings
+            if marking["definition_type"] == "TLP"
+        ]
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         )
 
     def _generate_octi_objects(

@@ -49,7 +49,11 @@ class CVEClient:
             await self._session.close()
 
     async def _reset_session(self) -> None:
-        """Drop current session so next retry gets a fresh TCP connection."""
+        """Close the session after a connection error so the next attempt opens a new one.
+
+        A retryable HTTP status does not call this. That response arrived on a
+        working connection, and concurrent CPE lookups share this session.
+        """
         if self._session and not self._session.closed:
             await self._session.close()
         self._session = None
@@ -151,7 +155,6 @@ class CVEClient:
                             f"[API] Retryable status {response.status}, "
                             f"waiting {wait:.2f}s (attempt {attempt + 1}/{max_retries})"
                         )
-                        await self._reset_session()
                         await asyncio.sleep(wait)
                         continue
 

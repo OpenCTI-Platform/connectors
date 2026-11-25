@@ -698,3 +698,39 @@ class TestExtractedFileDownload:
         upload.assert_called_once()
         assert upload.call_args.kwargs["data"] == b"file-content"
         assert upload.call_args.kwargs["file_name"] == "sample-123_memory/file.bin"
+
+
+class TestProcessMessageChecks:
+    """TLP check done before any call to Hatching Triage."""
+
+    @staticmethod
+    def _data(object_marking, entity_type="Url"):
+        return {
+            "event_type": "INTERNAL_ENRICHMENT",
+            "enrichment_entity": {
+                "entity_type": entity_type,
+                "objectMarking": object_marking,
+            },
+            "stix_objects": [],
+        }
+
+    def test_refuses_entity_with_one_tlp_above_max_tlp(self, connector):
+        """Every TLP of the entity is checked, not only the last one."""
+        connector._process_observable = MagicMock()
+        data = self._data(
+            [
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            ]
+        )
+
+        with pytest.raises(ValueError, match="greater than MAX TLP"):
+            connector._process_message(data)
+
+        connector._process_observable.assert_not_called()
+
+    def test_processes_supported_entity_without_tlp(self, connector):
+        connector._process_observable = MagicMock(return_value="done")
+
+        assert connector._process_message(self._data([], "StixFile")) == "done"
+        connector._process_observable.assert_called_once()

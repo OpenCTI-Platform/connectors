@@ -3,16 +3,13 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'CTIButler'
-  scope: 'ctibutler'
-  confidence_level: 70
-  update_existing_data: false
-  log_level: 'info'
+  # name: 'CTIButler'
+  # scope: 'ctibutler'
+  # log_level: 'error'
+  # duration_period: 'P7D' # ISO 8601 duration, how often to check if new versions have been added
 
 ctibutler:
-  base_url: 'https://api.ctibutler.com/'
-  api_key: ChangeMe
-  knowledgebases: "" # comma separated list of knowledge bases, e.g capec,cwe
-  interval_days: 1 # interval in days #how often to check if new versions have been added
+  # base_url: 'https://api.ctibutler.com/'
+  api_key: 'ChangeMe'
+  knowledgebases: 'ChangeMe' # comma separated list of knowledge bases, e.g. attack-enterprise,capec
