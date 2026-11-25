@@ -2,8 +2,8 @@
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     DeprecatedField,
     ListFromString,
 )
@@ -77,7 +77,7 @@ class RSTNoiseControlConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalEnrichmentConnectorSettings):
     """Settings of the RST Noise Control connector."""
 
     connector: RSTNoiseControlConnectorConfig = Field(
