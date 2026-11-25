@@ -1,12 +1,20 @@
 """Converts a list of GTI attack technique IDs to minimal STIX attack pattern objects.
 
 This is a simplified version of the attack technique mapper that only uses technique IDs
-to create minimal STIX attack patterns. This approach is used for quota optimization
-when we want to avoid making detailed API calls for attack technique data.
+and technique names to create minimal STIX attack patterns. This approach is used for
+quota optimization when we want to avoid making detailed API calls for attack technique
+data.
+
+The attack pattern ID is derived from the MITRE ID alone, so the object merges with the
+MITRE ATT&CK technique on the platform. The name must therefore be the real technique
+name, never the technique ID. A technique without a name is skipped.
 
 Example usage:
     mapper = GTIAttackTechniqueIDsToSTIXAttackPatterns(
-        attack_technique_ids=GTIAttackTechniqueIDData.from_id_list(["T1055", "T1078"]),
+        attack_technique_ids=GTIAttackTechniqueIDData.from_id_list(
+            ["T1055", "T1078"],
+            names={"T1055": "Process Injection", "T1078": "Valid Accounts"},
+        ),
         organization=organization_obj,
         tlp_marking=tlp_marking_obj
     )
@@ -27,7 +35,7 @@ from stix2.v21 import AttackPattern  # type: ignore
 
 
 class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
-    """Converts a list of GTI attack technique IDs to minimal STIX attack pattern objects."""
+    """Converts GTI attack technique IDs and names to minimal STIX attack pattern objects."""
 
     @staticmethod
     def create_relationship(
@@ -81,6 +89,8 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
     def to_stix(self) -> list[AttackPattern]:
         """Convert the GTI attack technique IDs to minimal STIX attack pattern objects.
 
+        A technique without a usable name (missing, None or blank) is skipped.
+
         Returns:
             list[AttackPattern]: list of minimal STIX attack pattern objects.
 
@@ -95,7 +105,9 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
             if not technique_id:
                 continue
 
-            name = technique_id
+            name = self.attack_technique_ids.names.get(technique_id)
+            if not name or not name.strip():
+                continue
 
             attack_pattern_model = OctiAttackPatternModel.create(
                 name=name,

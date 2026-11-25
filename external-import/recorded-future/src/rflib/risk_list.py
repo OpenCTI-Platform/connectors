@@ -4,7 +4,7 @@ import re
 import threading
 from datetime import datetime, timezone
 
-from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER
+from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER, RiskListType
 
 
 class RiskList(threading.Thread):
@@ -17,15 +17,29 @@ class RiskList(threading.Thread):
         risklist_related_entities,
         riskrules_as_label,
         ta_to_intrusion_set=False,
+        risk_list_thresholds=None,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold
+        # Per risk list thresholds, keyed by RiskListType
+        self.risk_list_thresholds = risk_list_thresholds or {}
         self.risklist_related_entities = risklist_related_entities
         self.riskrules_as_label = riskrules_as_label
         self.ta_to_intrusion_set = ta_to_intrusion_set
+
+    def _threshold_for(self, key):
+        """Return the risk score threshold of a risk list.
+
+        The threshold of the list itself wins, otherwise the global
+        risk_list_threshold applies. None means no filtering.
+        """
+        threshold = self.risk_list_thresholds.get(key)
+        if threshold is None:
+            return self.risk_list_threshold
+        return threshold
 
     def run(self):
         try:
@@ -56,7 +70,7 @@ class RiskList(threading.Thread):
             for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
 
                 # Check access to the vulnerability module
-                if key == "Vuln":
+                if key == RiskListType.VULN:
                     vuln_permission = self.rfapi.check_vul_entitlement()
                     if vuln_permission:
                         self.helper.connector_logger.info(
@@ -69,7 +83,11 @@ class RiskList(threading.Thread):
                         continue
 
                 self.helper.connector_logger.info(
-                    f"[RISK LISTS] Pulling {key} risk lists"
+                    "[RISK LISTS] Pulling risk list",
+                    meta={
+                        "risk_list": key,
+                        "risk_score_threshold": self._threshold_for(key),
+                    },
                 )
 
                 csv_file = self.rfapi.get_risk_list_CSV(risk_list_type["path"])
@@ -136,19 +154,23 @@ class RiskList(threading.Thread):
         Returns None when the row is filtered out by the risk score threshold
         or by date. Raises if the row is malformed, so the caller can skip it.
         """
-        # Filtered by score with a threshold
-        row_risk_score = None
-        if self.risk_list_threshold is not None:
+        # Filtered by score with the threshold of this risk list
+        threshold = self._threshold_for(key)
+        if threshold is not None:
             try:
                 row_risk_score = int(row["Risk"])
             except ValueError:
                 row_risk_score = 0
 
-            row_name = row["Name"]
-            if row_risk_score < self.risk_list_threshold:
+            if row_risk_score < threshold:
                 self.helper.connector_logger.info(
-                    f"[RISK LIST] Ignoring object '{row_name}' as its risk score ({row_risk_score}) is "
-                    f"lower than the defined risk list threshold ({self.risk_list_threshold}) "
+                    "[RISK LIST] Ignoring object below the risk list threshold",
+                    meta={
+                        "name": row["Name"],
+                        "risk_list": key,
+                        "risk_score": row_risk_score,
+                        "risk_score_threshold": threshold,
+                    },
                 )
                 return None
 
@@ -165,7 +187,7 @@ class RiskList(threading.Thread):
                 return None
 
         # Parse data
-        if key == "Vuln":
+        if key == RiskListType.VULN:
             description = (
                 "Triggered risk rules:"
                 + "\n\n"

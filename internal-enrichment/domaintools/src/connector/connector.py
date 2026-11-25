@@ -5,6 +5,7 @@ from typing import Dict
 
 import domaintools
 import validators
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import OrganizationAuthor
 from pycti import OpenCTIConnectorHelper
 
@@ -25,7 +26,6 @@ class DomainToolsConnector:
             self.config.domaintools.api_username,
             self.config.domaintools.api_key.get_secret_value(),
         )
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.author = OrganizationAuthor(
             name=self._DEFAULT_AUTHOR,
             description="DomainTools is a leading provider of Whois and other DNS profile data for "
@@ -193,11 +193,14 @@ class DomainToolsConnector:
 
     def _process_message(self, data: Dict):
         opencti_entity = data["enrichment_entity"]
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

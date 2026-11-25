@@ -76,9 +76,6 @@ class FakeHelper:
         self._sent = sent
         self._lock = lock
 
-    def check_max_tlp(self, tlp, max_tlp):
-        return True
-
     def stix2_create_bundle(self, objects):
         return objects
 

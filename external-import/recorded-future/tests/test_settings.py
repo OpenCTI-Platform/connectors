@@ -323,3 +323,94 @@ def test_risk_threshold_rejects_value_above_100():
         _ConfigLoaderRecordedFuture(**kwargs)
 
     assert "less than or equal to 100" in str(err.value)
+
+
+_PER_LIST_THRESHOLD_FIELDS = [
+    "risk_list_threshold_ip",
+    "risk_list_threshold_domain",
+    "risk_list_threshold_url",
+    "risk_list_threshold_hash",
+    "risk_list_threshold_vulnerability",
+]
+
+
+def test_risk_list_threshold_default_is_70():
+    """Regression guard: also passes at base, the default stays 70."""
+    config = _ConfigLoaderRecordedFuture(**_minimal_kwargs())
+
+    assert config.risk_list_threshold == 70
+
+
+def test_risk_list_threshold_accepts_zero():
+    kwargs = _minimal_kwargs()
+    kwargs["risk_list_threshold"] = 0
+
+    config = _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert config.risk_list_threshold == 0
+
+
+@pytest.mark.parametrize("value", [-1, 101])
+def test_risk_list_threshold_rejects_out_of_range_values(value):
+    kwargs = _minimal_kwargs()
+    kwargs["risk_list_threshold"] = value
+
+    with pytest.raises(ValidationError):
+        _ConfigLoaderRecordedFuture(**kwargs)
+
+
+@pytest.mark.parametrize("field", _PER_LIST_THRESHOLD_FIELDS)
+def test_per_risk_list_thresholds_default_to_none(field):
+    config = _ConfigLoaderRecordedFuture(**_minimal_kwargs())
+
+    assert getattr(config, field) is None
+
+
+@pytest.mark.parametrize("value", [0, 50, 100])
+@pytest.mark.parametrize("field", _PER_LIST_THRESHOLD_FIELDS)
+def test_per_risk_list_thresholds_accept_values_from_0_to_100(field, value):
+    kwargs = _minimal_kwargs()
+    kwargs[field] = value
+
+    config = _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert getattr(config, field) == value
+
+
+@pytest.mark.parametrize("value", [-1, 101])
+@pytest.mark.parametrize("field", _PER_LIST_THRESHOLD_FIELDS)
+def test_per_risk_list_thresholds_reject_out_of_range_values(field, value):
+    kwargs = _minimal_kwargs()
+    kwargs[field] = value
+
+    with pytest.raises(ValidationError):
+        _ConfigLoaderRecordedFuture(**kwargs)
+
+
+def test_per_risk_list_thresholds_are_read_from_env_vars(monkeypatch):
+    _given_required_env_vars(monkeypatch)
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD", "70")
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP", "80")
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN", "75")
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL", "65")
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH", "90")
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY", "0")
+
+    settings = _EnvConfigLoader()
+
+    rf_config = settings.recorded_future
+    assert rf_config.risk_list_threshold == 70
+    assert rf_config.risk_list_threshold_ip == 80
+    assert rf_config.risk_list_threshold_domain == 75
+    assert rf_config.risk_list_threshold_url == 65
+    assert rf_config.risk_list_threshold_hash == 90
+    assert rf_config.risk_list_threshold_vulnerability == 0
+
+
+def test_per_risk_list_threshold_empty_env_var_falls_back_to_none(monkeypatch):
+    _given_required_env_vars(monkeypatch)
+    monkeypatch.setenv("RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY", "")
+
+    settings = _EnvConfigLoader()
+
+    assert settings.recorded_future.risk_list_threshold_vulnerability is None

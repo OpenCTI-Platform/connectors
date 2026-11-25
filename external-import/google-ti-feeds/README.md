@@ -160,7 +160,7 @@ Additionally, `Location` and `Identity` (targeted countries, sectors) are extrac
 | `vulnerabilities`     | Vulnerability           |
 | `software_toolkits`   | Tool                    |
 
-The IOC delta packages already embed these relationships, so no extra API call is made to resolve them. `GTI_INDICATOR_SUBENTITIES` selects which ones are sent to OpenCTI. `attack_techniques` is excluded by default because it accounts for most of the relationships of the IOC feed (several techniques per IOC, on most IOCs); add it to `GTI_INDICATOR_SUBENTITIES` to import the Attack-Patterns and their `indicates` relationships.
+The IOC delta packages already embed these relationships, so no extra API call is made to resolve them. `GTI_INDICATOR_SUBENTITIES` selects which ones are sent to OpenCTI. `attack_techniques` is excluded by default because it accounts for most of the relationships of the IOC feed (several techniques per IOC, on most IOCs); adding it to `GTI_INDICATOR_SUBENTITIES` currently creates no Attack-Pattern or relationship, because the IOC delta feed carries no technique names (see the Note on Attack-Patterns in [Data mapping](#data-mapping)).
 
 #### Configurable filters
 
@@ -290,7 +290,7 @@ Unlike the other collections which use the `/collections` search endpoint, the I
 | Sub-entity type       | OpenCTI entity produced |
 |-----------------------|-------------------------|
 | `malware_families`    | Malware                 |
-| `attack_techniques`   | Attack-Pattern          |
+| `attack_techniques`   | Attack-Pattern (currently none, see the Note on Attack-Patterns in [Data mapping](#data-mapping)) |
 | `threat_actors`       | Intrusion-Set           |
 | `software_toolkits`   | Tool                    |
 
@@ -302,7 +302,7 @@ Unlike the other collections which use the `/collections` search endpoint, the I
 | `GTI_INDICATOR_MIN_SCORE`         | Minimum GTI score an indicator must have to be imported via Delta Sync            | `50`                               | Integer between `0` and `100`, or unset/`100` to disable the filter                                                          |
 | `GTI_INDICATOR_REQUIRE_MALWARE_FAMILY` | Only import indicators associated with at least one Malware Family           | `false`                            | `true` / `false`                                                                                                             |
 | `GTI_INDICATOR_REQUIRE_THREAT_ACTOR`   | Only import indicators associated with at least one Threat Actor             | `false`                            | `true` / `false`                                                                                                             |
-| `GTI_INDICATOR_SUBENTITIES`       | Comma-separated list of sub-entity types to link to each indicator. Does not change API quota usage. An empty value imports the indicators without any relationship. | `["malware_families", "threat_actors", "software_toolkits"]` | `malware_families`, `threat_actors`, `software_toolkits`, `attack_techniques` |
+| `GTI_INDICATOR_SUBENTITIES`       | Comma-separated list of sub-entity types to link to each indicator. Does not change API quota usage. An empty value imports the indicators without any relationship. | `["malware_families", "threat_actors", "software_toolkits"]` | `malware_families`, `threat_actors`, `software_toolkits`, `attack_techniques` (currently creates no Attack-Pattern, see the Note on Attack-Patterns in [Data mapping](#data-mapping)) |
 
 ---
 
@@ -315,6 +315,10 @@ This section describes how GTI entities are mapped to OpenCTI STIX 2.1 objects.
 > - **As a sub-entity** of another collection (e.g., a threat actor referenced by a campaign) — in this case, only **first-level attributes** are populated (typically: `name`, `description`, `created_by_ref`, and first-level relationships such as `targeted_region` or `targeted_industry`). Sub-entity relationships (e.g., malware used by a threat actor) are **not** fetched.
 >
 > To get the complete data for an entity type, enable its dedicated collection.
+
+> **Note on Attack-Patterns:** For every collection, Attack-Patterns are keyed by their MITRE ID, so they update the existing MITRE ATT&CK technique (with GTI's technique name) instead of creating a duplicate. A technique returned by GTI without a name is skipped.
+>
+> The GTI IOC delta feed does not carry attack technique names. With `attack_techniques` in `GTI_INDICATOR_SUBENTITIES`, no Attack-Patterns (and no relationships to them) are created for indicators. One warning per IOC package reports how many technique references were skipped.
 
 ### Intrusion-Set
 
@@ -627,7 +631,7 @@ Relationships are extracted directly from the IOC delta feed data (no additional
 | `malware_families`       | Indicator          | `indicates`       | Malware            |
 | `threat_actors`          | Indicator          | `indicates`       | Intrusion-Set      |
 | `software_toolkits`      | Indicator          | `indicates`       | Tool               |
-| `attack_techniques`      | Indicator          | `indicates`       | Attack-Pattern     |
+| `attack_techniques`      | Indicator          | `indicates`       | Attack-Pattern (currently none, see the Note on Attack-Patterns in [Data mapping](#data-mapping)) |
 
 ---
 

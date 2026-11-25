@@ -1,3 +1,4 @@
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from silentpush_client import SilentpushClient
 
@@ -64,7 +65,6 @@ class SilentpushConnector:
 
         # Define variables
         self.author = None
-        self.tlp = None
         self.stix_objects_list = []
 
     def _collect_intelligence(self, observable) -> list:
@@ -110,17 +110,15 @@ class SilentpushConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
-        self.tlp = None
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
-
-        if not valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[SilentPush] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of the connector user"

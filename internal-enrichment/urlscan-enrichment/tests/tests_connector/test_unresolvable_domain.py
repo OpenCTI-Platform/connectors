@@ -56,7 +56,6 @@ def _make_connector() -> UrlscanConnector:
     connector.config = MagicMock()
     connector.config.connector.max_tlp = "TLP:AMBER"
     connector.client = MagicMock()
-    connector.tlp = None
     return connector
 
 
@@ -83,3 +82,20 @@ def test_unresolvable_domain_sends_the_entity_back_unchanged():
     connector.helper.send_stix2_bundle.assert_called_once_with([stix_entity])
     connector.helper.connector_logger.warning.assert_called_once()
     assert "DNS Error" in result
+
+
+def test_extract_and_check_markings_checks_every_tlp():
+    connector = _make_connector()
+
+    assert connector.extract_and_check_markings({"objectMarking": []}) is True
+    assert (
+        connector.extract_and_check_markings(
+            {
+                "objectMarking": [
+                    {"definition_type": "TLP", "definition": "TLP:RED"},
+                    {"definition_type": "TLP", "definition": "TLP:GREEN"},
+                ]
+            }
+        )
+        is False
+    )

@@ -3,6 +3,7 @@ from typing import Dict
 
 import requests
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from dateutil.parser import parse
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -59,12 +60,15 @@ class ConnectorAbuseIPDB:
         opencti_entity = data["enrichment_entity"]
 
         # Extract TLP
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.config.abuseipdb.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.abuseipdb.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

@@ -10,6 +10,7 @@ from functools import wraps
 from typing import Any, Dict
 
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
 from pycti import (
@@ -93,18 +94,17 @@ class ReversingLabsSpectraAnalyzeConnector:
     """
 
     def _check_tlp_markings(self, entity):
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-
-            if not OpenCTIConnectorHelper.check_max_tlp(
-                tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-            ):
-                raise ValueError(
-                    f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"
-                )
-        return tlp
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
+            raise ValueError(
+                f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
 
     def _generate_stix_bundle(self, stix_objects, stix_entity):
         self.stix_objects = stix_objects

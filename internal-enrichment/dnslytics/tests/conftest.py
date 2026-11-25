@@ -121,16 +121,9 @@ def make_settings(**dnslytics: Any) -> ConnectorSettings:
 
 def make_helper() -> MagicMock:
     helper = MagicMock()
-    helper.check_max_tlp.side_effect = _check_max_tlp
     helper.stix2_create_bundle.side_effect = lambda objects: {"objects": list(objects)}
     helper.api.vocabulary.read.return_value = {"id": "vocab-id", "name": "dnslytics"}
     return helper
-
-
-def _check_max_tlp(tlp: str, max_tlp: str) -> bool:
-    from pycti import OpenCTIConnectorHelper
-
-    return OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp)
 
 
 def indicator_event(

@@ -69,42 +69,26 @@ The OpenCTI CTI Butler Connector can be used to replace the following connectors
 
 ### Configuration Variables
 
-#### OpenCTI Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### Base Connector Parameters
+`CONNECTOR_DURATION_PERIOD` defaults to `P7D`, which is recommended because knowledge bases change very infrequently.
+The deprecated `CTIBUTLER_INTERVAL_DAYS` is still accepted and converted to a duration in days.
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+#### Available Knowledge Bases
 
-#### Connector Extra Parameters
+Set `CTIBUTLER_KNOWLEDGEBASES` to a comma-separated list of knowledge bases, without spaces. The available knowledge bases are:
 
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `CTIBUTLER_BASE_URL` | `ctibutler.base_url` | Yes | `https://api.ctibutler.com/` | CTI Butler API URL |
-| API Key | `CTIBUTLER_API_KEY` | `ctibutler.api_key` | Yes | - | API key for authentication |
-| Knowledge Bases | `CTIBUTLER_KNOWLEDGEBASES` | `ctibutler.knowledgebases` | Yes | - | Comma-separated list of knowledge bases. See Available Knowledgebases section for a full list of available options. |
-| Interval Days | `CTIBUTLER_INTERVAL_DAYS` | `ctibutler.interval_days` | Yes | `7` | Polling interval in days. Minimum and recommended is `7` days is recommended (because knowledgebases change very infrequently). |
-
-##### Available Knowledge Bases
-
-| Knowledge Base | Description |
-|----------------|-------------|
-| `attack-enterprise` | MITRE ATT&CK for Enterprise |
-| `attack-mobile` | MITRE ATT&CK for Mobile |
-| `attack-ics` | MITRE ATT&CK for ICS |
-| `capec` | Common Attack Pattern Enumeration and Classification |
-| `disarm` | DISARM Framework |
-| `atlas` | MITRE ATLAS (AI/ML threats) |
-| `location` | Location data |
-| `sector` | Industry sector data |
+- `attack-enterprise`: MITRE ATT&CK for Enterprise
+- `attack-mobile`: MITRE ATT&CK for Mobile
+- `attack-ics`: MITRE ATT&CK for ICS
+- `capec`: Common Attack Pattern Enumeration and Classification
+- `disarm`: DISARM Framework
+- `atlas`: MITRE ATLAS (AI/ML threats)
+- `location`: Location data
+- `sector`: Industry sector data
 
 ---
 
@@ -124,10 +108,10 @@ services:
       - CONNECTOR_ID=${CONNECTOR_CTIBUTLER_ID}
       - CONNECTOR_NAME=CTIButler
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P7D
       - CTIBUTLER_BASE_URL=https://api.ctibutler.com/
       - CTIBUTLER_API_KEY=${CTIBUTLER_API_KEY}
       - CTIBUTLER_KNOWLEDGEBASES=attack-enterprise,capec
-      - CTIBUTLER_INTERVAL_DAYS=7
     restart: always
     depends_on:
       - opencti
@@ -148,12 +132,12 @@ connector:
   id: 'your-uuid'
   name: 'CTI Butler'
   log_level: 'info'
+  duration_period: 'P7D'
 
 ctibutler:
   base_url: 'https://api.ctibutler.com/'
   api_key: 'your-api-key'
   knowledgebases: 'attack-enterprise,capec'
-  interval_days: 7
 ```
 
 4. Run: `python main.py`
@@ -276,7 +260,7 @@ CTI Butler also has a CWE Knowledgebase. You cannot use this connector to import
    - Includes external references to source documentation
 
 3. **Update Frequency**:
-   - Controlled by `CTIBUTLER_INTERVAL_DAYS`
+   - Controlled by `CONNECTOR_DURATION_PERIOD`
    - Recommended: Weekly updates (7 days)
    - Knowledge bases are updated at source periodically
 

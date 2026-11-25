@@ -1,0 +1,1 @@
+# Connector settings tests package

@@ -1,5 +1,6 @@
 """Tests for the connector orchestration logic."""
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -13,7 +14,6 @@ def make_config(**overrides):
         api_base_url="https://cbs.example.com",
         api_key=SecretStr("secret"),
         enable_status_tracking=False,
-        import_interval=1,
         import_incidents=True,
         import_malware_logs=True,
         import_breached_credentials=True,
@@ -23,7 +23,8 @@ def make_config(**overrides):
     )
     for key, value in overrides.items():
         setattr(cbs, key, value)
-    return SimpleNamespace(ctm360_cbs=cbs)
+    connector = SimpleNamespace(duration_period=timedelta(seconds=1))
+    return SimpleNamespace(connector=connector, ctm360_cbs=cbs)
 
 
 @pytest.fixture

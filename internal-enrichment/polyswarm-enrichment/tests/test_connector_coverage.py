@@ -5,10 +5,16 @@ _collect_intelligence, process_message), client_api.py (CircuitBreaker),
 and attack_pattern_handler.py (error paths).
 """
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from conftest import StubHelper
+
+
+def _settings(max_tlp: str = "red") -> SimpleNamespace:
+    """The connector settings read by the TLP check."""
+    return SimpleNamespace(connector=SimpleNamespace(max_tlp=max_tlp))
 
 
 # ===========================================================================
@@ -25,8 +31,8 @@ class TestGetTlp:
         opencti_entity = {
             "objectMarking": [{"definition": "TLP:AMBER"}],
         }
-        result = self.ConnectorTemplate._get_tlp({}, opencti_entity)
-        assert result == "TLP:AMBER"
+        result = self.ConnectorTemplate._get_tlp_levels({}, opencti_entity)
+        assert result == ["TLP:AMBER"]
 
     def test_tlp_from_stix_marking_refs(self):
         stix_entity = {
@@ -34,12 +40,12 @@ class TestGetTlp:
                 "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
             ],
         }
-        result = self.ConnectorTemplate._get_tlp(stix_entity)
-        assert result == "TLP:GREEN"
+        result = self.ConnectorTemplate._get_tlp_levels(stix_entity)
+        assert result == ["TLP:GREEN"]
 
     def test_tlp_none_when_no_markings(self):
-        result = self.ConnectorTemplate._get_tlp({}, {})
-        assert result is None
+        result = self.ConnectorTemplate._get_tlp_levels({}, {})
+        assert result == []
 
     def test_tlp_opencti_takes_precedence(self):
         stix_entity = {
@@ -50,20 +56,20 @@ class TestGetTlp:
         opencti_entity = {
             "objectMarking": [{"definition": "TLP:RED"}],
         }
-        result = self.ConnectorTemplate._get_tlp(stix_entity, opencti_entity)
-        assert result == "TLP:RED"
+        result = self.ConnectorTemplate._get_tlp_levels(stix_entity, opencti_entity)
+        assert result == ["TLP:RED"]
 
     def test_tlp_ignores_non_tlp_markings(self):
         opencti_entity = {
             "objectMarking": [{"definition": "PAP:RED"}],
         }
-        result = self.ConnectorTemplate._get_tlp({}, opencti_entity)
-        assert result is None
+        result = self.ConnectorTemplate._get_tlp_levels({}, opencti_entity)
+        assert result == []
 
     def test_tlp_unknown_stix_ref(self):
         stix_entity = {"object_marking_refs": ["marking-definition--unknown"]}
-        result = self.ConnectorTemplate._get_tlp(stix_entity)
-        assert result is None
+        result = self.ConnectorTemplate._get_tlp_levels(stix_entity)
+        assert result == []
 
 
 # ===========================================================================
@@ -249,6 +255,7 @@ class TestProcessMessage:
         obj = object.__new__(ConnectorTemplate)
         obj.helper = StubHelper()
         obj.helper.connect_scope = "stixfile,artifact"
+        obj.settings = _settings()
         obj.stix_objects_list = []
         obj.converter_to_stix = ConverterToStix(obj.helper)
         obj.attack_pattern_handler = MagicMock()
@@ -265,7 +272,6 @@ class TestProcessMessage:
         obj.client = MagicMock()
         obj.client.get_profile.return_value = None
         obj.client.query_polyswarm.return_value = None
-        obj.max_tlp = "TLP:RED"
         obj.replace_with_lower_score = True
         obj.ioc_enabled = False
         return obj
@@ -300,7 +306,7 @@ class TestProcessMessage:
 
     def test_max_tlp_skips_high_tlp(self):
         c = self._make_connector()
-        c.max_tlp = "TLP:GREEN"
+        c.settings = _settings("green")
         data = {
             "enrichment_entity": {
                 "entity_type": "StixFile",
@@ -312,12 +318,30 @@ class TestProcessMessage:
                 "hashes": {"SHA-256": "a" * 64},
             },
         }
-        with patch(
-            "polyswarm_enrichment.connector.OpenCTIConnectorHelper.check_max_tlp",
-            return_value=False,
-        ):
-            result = c.process_message(data)
+        result = c.process_message(data)
         assert "max_tlp" in result
+        c.client.query_polyswarm.assert_not_called()
+
+    def test_max_tlp_checks_every_tlp(self):
+        c = self._make_connector()
+        c.settings = _settings("amber")
+        data = {
+            "enrichment_entity": {
+                "entity_type": "StixFile",
+                "objectMarking": [
+                    {"definition": "TLP:RED"},
+                    {"definition": "TLP:GREEN"},
+                ],
+            },
+            "stix_objects": [],
+            "stix_entity": {
+                "id": "file--1",
+                "hashes": {"SHA-256": "a" * 64},
+            },
+        }
+        result = c.process_message(data)
+        assert "max_tlp" in result
+        c.client.query_polyswarm.assert_not_called()
 
     def test_entity_not_in_scope(self):
         c = self._make_connector()
@@ -814,6 +838,7 @@ class TestProcessMessageScoreUpdate:
         obj = object.__new__(ConnectorTemplate)
         obj.helper = StubHelper()
         obj.helper.connect_scope = "stixfile,artifact"
+        obj.settings = _settings()
         obj.helper.api = MagicMock()
         obj.stix_objects_list = []
         obj.converter_to_stix = ConverterToStix(obj.helper)
@@ -830,7 +855,6 @@ class TestProcessMessageScoreUpdate:
         )
         obj.client = MagicMock()
         obj.client.get_profile.return_value = None
-        obj.max_tlp = "TLP:RED"
         obj.replace_with_lower_score = True
         obj.ioc_enabled = False
         return obj

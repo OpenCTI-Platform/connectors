@@ -22,6 +22,7 @@ from connector.article import (
     with_pdf,
 )
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 
 STIX_EXT_OCTI = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
@@ -54,17 +55,17 @@ class ReportArticleFetcherConnector:
 
     def _check_markings(self, opencti_entity: dict) -> None:
         """Refuse the report if any of its TLP markings is above the max TLP."""
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        tlps = [
+        tlp_levels = [
             marking_definition["definition"]
             for marking_definition in opencti_entity.get("objectMarking") or []
             if marking_definition.get("definition_type") == "TLP"
         ]
-        for tlp in tlps or [None]:
-            if not self.helper.check_max_tlp(tlp, max_tlp):
-                raise ValueError(
-                    "TLP of the report is greater than the connector's max TLP"
-                )
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
+            raise ValueError(
+                "TLP of the report is greater than the connector's max TLP"
+            )
 
     def _enrich(
         self, report: dict, timings: dict | None = None
