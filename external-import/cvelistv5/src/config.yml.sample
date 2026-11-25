@@ -1,13 +1,13 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
 #  name: 'CVEProject cvelistV5'
 #  scope: 'identity,vulnerability,software'
-#  log_level: 'error'
-#  duration_period: 'PT1H' # ISO 8601 duration period
+#  log_level: 'info'
+#  duration_period: 'PT1H' # ISO 8601 duration period, greater than zero
 
 cvelistv5:
   # Upstream git repository. Override only if you mirror cvelistV5 internally.

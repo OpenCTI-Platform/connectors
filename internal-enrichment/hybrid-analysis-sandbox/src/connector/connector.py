@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from hybrid_analysis_client import HybridAnalysisAPIError, HybridAnalysisClient
 from pycti import (
     AttackPattern,
@@ -29,8 +30,6 @@ class HybridAnalysis:
             token=self.config.hybrid_analysis_sandbox.token.get_secret_value(),
             environment_id=self.config.hybrid_analysis_sandbox.environment_id,
         )
-
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
         # Author to add to ingested objects
         self.identity = stix2.Identity(
@@ -387,13 +386,16 @@ class HybridAnalysis:
         self.stix_objects = stix_objects
         original_stix_objects = deepcopy(stix_objects)  # save a copy in case of error
 
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
         try:
-            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, self.config.connector.max_tlp
+            ):
                 self._send_bundle(original_stix_objects)
 
                 message = "Do not send any data, TLP of the observable is greater than MAX TLP"

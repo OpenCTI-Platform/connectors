@@ -1,6 +1,7 @@
 from typing import Any
 
 import validators
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from shodan_internetdb.client import ShodanInternetDbClient
 from shodan_internetdb.converter_to_stix import ConverterToStix
@@ -35,17 +36,18 @@ class ShodanInternetDBConnector:
         self.converter = ConverterToStix(self.helper)
 
     def extract_and_check_markings(self, observable: dict[str, Any]) -> None:
-        max_tlp_name = f"TLP:{self.config.connector.max_tlp.upper()}"
-        for marking_definition in observable.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP" and not (
-                OpenCTIConnectorHelper.check_max_tlp(
-                    tlp=marking_definition["definition"], max_tlp=max_tlp_name
-                )
-            ):
-                raise ShodanInternetDbExtractAndCheckMarkingsError(
-                    "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
-                    "the connector does not has access to this observable, please check the group of the connector user"
-                )
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in observable.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
+            raise ShodanInternetDbExtractAndCheckMarkingsError(
+                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
+                "the connector does not has access to this observable, please check the group of the connector user"
+            )
 
     def _send_bundle(self, stix_objects: list[Any]) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

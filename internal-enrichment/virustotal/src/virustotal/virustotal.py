@@ -4,6 +4,7 @@ import re
 from typing import TYPE_CHECKING, Dict
 
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import Identity, OpenCTIConnectorHelper
 from virustotal.client import VirusTotalClient
 from virustotal.models.configs.config_loader import ConfigLoader
@@ -251,12 +252,15 @@ class VirusTotalConnector:
         opencti_entity = data["enrichment_entity"]
 
         # TLP gate
-        tlp = "TLP:CLEAR"
-        for marking in opencti_entity.get("objectMarking", []):
-            if marking["definition_type"] == "TLP":
-                tlp = marking["definition"]
+        tlp_levels = [
+            marking["definition"]
+            for marking in opencti_entity.get("objectMarking", [])
+            if marking["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

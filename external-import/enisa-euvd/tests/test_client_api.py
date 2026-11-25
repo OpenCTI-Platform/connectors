@@ -1,12 +1,15 @@
 """Tests for `enisa_euvd.client_api.EnisaEuvdClient`."""
 
+import json
 from datetime import datetime, timezone
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from connectors_sdk import ApiServerError
+from connectors_sdk import ApiForbiddenError, ApiServerError, BaseClientApi
 from connectors_sdk.exceptions.error import DataRetrievalError
+from enisa_euvd import client_api
 from enisa_euvd.client_api import PAGE_SIZE, USER_AGENT, EnisaEuvdClient
 from enisa_euvd.models import EUVDInvalidItem, EUVDVulnerability
 
@@ -231,3 +234,141 @@ def test_iter_vulnerabilities_stops_at_an_invalid_item_older_than_the_watermark(
         pages = list(client.iter_vulnerabilities(updated_after=watermark))
 
     assert [[i.id for i in p] for p in pages] == [["EUVD-2024-00001"]]
+
+
+class FakeClock:
+    """Stands in for the `time` module: `sleep` records the delay, never blocks."""
+
+    def __init__(self) -> None:
+        self.sleeps: list[float] = []
+
+    def sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+
+
+@pytest.fixture
+def clock(monkeypatch) -> FakeClock:
+    fake_clock = FakeClock()
+    monkeypatch.setattr(client_api, "time", fake_clock)
+    return fake_clock
+
+
+def _response(status_code: int, body: Any = None) -> requests.Response:
+    """Build a real `requests.Response`: JSON for a dict body, HTML otherwise."""
+    response = requests.Response()
+    response.status_code = status_code
+    if isinstance(body, dict):
+        response._content = json.dumps(body).encode()
+        response.headers["Content-Type"] = "application/json"
+    else:
+        response._content = (body or "<html><body>Forbidden</body></html>").encode()
+        response.headers["Content-Type"] = "text/html"
+    return response
+
+
+def test_raw_request_retries_a_403_then_returns_the_next_response(clock, search_page):
+    logger = MagicMock()
+    client = _client(logger)
+    ok = _response(200, search_page)
+
+    with patch.object(
+        BaseClientApi, "_raw_request", side_effect=[_response(403), ok]
+    ) as mocked:
+        response = client._raw_request("GET", "/search", params={"page": 0})
+
+    assert response is ok
+    assert mocked.call_count == 2
+    assert clock.sleeps == [client_api.FORBIDDEN_BACKOFF]
+    logger.warning.assert_called_once()
+    message = logger.warning.call_args.args[0]
+    assert "403" in message
+    assert logger.warning.call_args.kwargs["meta"] == {
+        "path": "/search",
+        "attempt": 1,
+        "delay": client_api.FORBIDDEN_BACKOFF,
+    }
+
+
+def test_raw_request_returns_the_403_once_retries_are_exhausted(clock):
+    logger = MagicMock()
+    client = _client(logger)
+    responses = [_response(403) for _ in range(client_api.FORBIDDEN_MAX_RETRIES + 1)]
+
+    with patch.object(BaseClientApi, "_raw_request", side_effect=responses) as mocked:
+        response = client._raw_request("GET", "/search")
+
+    assert response is responses[-1]
+    assert mocked.call_count == client_api.FORBIDDEN_MAX_RETRIES + 1
+    assert clock.sleeps == [5.0, 10.0, 20.0, 40.0, 80.0]
+    assert logger.warning.call_count == client_api.FORBIDDEN_MAX_RETRIES
+
+
+def test_iter_vulnerabilities_raises_when_every_attempt_is_a_403(clock):
+    client = _client(MagicMock())
+    responses = [_response(403) for _ in range(client_api.FORBIDDEN_MAX_RETRIES + 1)]
+
+    with patch.object(BaseClientApi, "_raw_request", side_effect=responses) as mocked:
+        with pytest.raises(DataRetrievalError, match="page 0") as exc_info:
+            list(client.iter_vulnerabilities())
+
+    assert isinstance(exc_info.value.__cause__, ApiForbiddenError)
+    assert mocked.call_count == client_api.FORBIDDEN_MAX_RETRIES + 1
+    assert clock.sleeps == [5.0, 10.0, 20.0, 40.0, 80.0]
+
+
+def test_iter_vulnerabilities_does_not_retry_an_exception_from_the_request(clock):
+    logger = MagicMock()
+    client = _client(logger)
+    error = requests.ConnectionError("boom")
+
+    with patch.object(BaseClientApi, "_raw_request", side_effect=error) as mocked:
+        with pytest.raises(DataRetrievalError, match="page 0") as exc_info:
+            list(client.iter_vulnerabilities())
+
+    assert exc_info.value.__cause__ is error
+    assert mocked.call_count == 1
+    assert clock.sleeps == []
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.parametrize("status_code", [200, 404])
+def test_raw_request_does_not_retry_other_statuses(clock, status_code):
+    logger = MagicMock()
+    client = _client(logger)
+    expected = _response(status_code, {"items": []})
+
+    with patch.object(BaseClientApi, "_raw_request", side_effect=[expected]) as mocked:
+        response = client._raw_request("GET", "/search")
+
+    assert response is expected
+    mocked.assert_called_once()
+    assert clock.sleeps == []
+    logger.warning.assert_not_called()
+
+
+def test_iter_vulnerabilities_recovers_from_a_403_in_the_middle_of_the_pagination(
+    clock, search_page
+):
+    """#8168: the EUVD gateway answers short-lived 403s after a few hundred
+    pages. The page must be requested again instead of failing the whole run.
+    """
+    client = _client(MagicMock())
+    full_page = {"items": [search_page["items"][0]] * PAGE_SIZE, "total": 101}
+    short_page = {"items": [search_page["items"][1]], "total": 101}
+
+    with patch.object(
+        BaseClientApi,
+        "_raw_request",
+        side_effect=[
+            _response(200, full_page),
+            _response(403),
+            _response(200, short_page),
+        ],
+    ) as mocked:
+        pages = list(client.iter_vulnerabilities())
+
+    assert [len(page) for page in pages] == [PAGE_SIZE, 1]
+    assert mocked.call_count == 3
+    # The 403 re-requests page 1, it does not skip it or restart at page 0.
+    assert [c.kwargs["params"]["page"] for c in mocked.call_args_list] == [0, 1, 1]
+    assert clock.sleeps == [client_api.FORBIDDEN_BACKOFF]

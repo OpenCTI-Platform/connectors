@@ -5,6 +5,7 @@ import sys
 
 import stix2
 import utils
+from connectors_sdk import InternalEnrichmentConnector
 from datalake import AtomType, Datalake, Output
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -85,7 +86,6 @@ class OrangeCyberdefenseEnrichment:
         self.ocd_enrich_add_sightings = self.config.ocd_enrich.add_sightings
         self.ocd_enrich_add_createdby = self.config.ocd_enrich.add_createdby
         self.ocd_enrich_curate_labels = self.config.ocd_enrich.curate_labels
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
     def _init_variables(self):
         self.identity = None
@@ -278,15 +278,18 @@ class OrangeCyberdefenseEnrichment:
         stix_objects = data["stix_objects"]
         observable_object = data["stix_entity"]
 
-        tlp = "TLP:CLEAR"
-        for marking_definition in observable.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in observable.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             self.helper.log_info(
-                f"Not enriching '{value}' because {tlp} is higher than"
-                f" {self.max_tlp}"
+                f"Not enriching '{value}' because {', '.join(tlp_levels)} is higher"
+                f" than {self.config.connector.max_tlp}"
             )
             return
 

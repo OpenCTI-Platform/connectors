@@ -5,6 +5,7 @@ import ipaddress
 from connector.converter_to_stix import ConverterToStix
 from connector.risk_scorer import RiskScorer
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from ipgeolocation_client import IPGeolocationClient
 from pycti import OpenCTIConnectorHelper
 
@@ -54,11 +55,14 @@ class IPGeolocationConnector:
 
     def _check_tlp(self, opencti_entity: dict) -> None:
         """Refuse an observable whose TLP is above `max_tlp_level`."""
-        max_tlp = "TLP:" + self.config.ipgeolocation.max_tlp_level.upper()
+        max_tlp = self.config.ipgeolocation.max_tlp_level
         for marking in opencti_entity.get("objectMarking") or []:
             if marking.get("definition_type") != "TLP":
                 continue
-            if not self.helper.check_max_tlp(marking["definition"], max_tlp):
+            # One TLP at a time, so that the message names the TLP refused
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                [marking["definition"]], max_tlp
+            ):
                 raise ObservableTLPTooHighError(
                     f"Observable is {marking['definition']}, above the maximum "
                     f"{max_tlp}: not sent to IPGeolocation.io"

@@ -10,21 +10,13 @@ from typing import Any
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import refang
+from connectors_sdk import InternalEnrichmentConnector
 from metras_client import MetrasAPIError, MetrasClient
 from pycti import OpenCTIConnectorHelper
 
 
 class MetrasEnrichmentConnector:
 
-    # TLP levels by restrictiveness (keyed on the `connector.max_tlp` values).
-    _LEVEL_ORDER = {
-        "TLP:CLEAR": 0,
-        "TLP:WHITE": 0,
-        "TLP:GREEN": 1,
-        "TLP:AMBER": 2,
-        "TLP:AMBER+STRICT": 3,
-        "TLP:RED": 4,
-    }
     _MARKING_TO_LEVEL = {
         "marking-definition--613f2e26-407d-48c7-9eba-b56c171b6f0c": "TLP:WHITE",
         "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da": "TLP:GREEN",
@@ -48,9 +40,6 @@ class MetrasEnrichmentConnector:
             verify_ssl=cfg.verify_ssl,
         )
         self.converter = ConverterToStix(helper)
-        self._max_tlp = (
-            f"TLP:{config.connector.max_tlp.upper()}"  # 'TLP:XXX' upper case
-        )
         self._errors = []
         self._successes = 0
 
@@ -70,28 +59,22 @@ class MetrasEnrichmentConnector:
             # will surface auth errors clearly to the analyst.
         self.helper.listen(message_callback=self.process_message)
 
-    # --- Scope + TLP helpers (custom — never helper.check_max_tlp) ---
+    # --- Scope + TLP helpers ---
     def entity_in_scope(self, stix_type: str) -> bool:
         scopes = [s.lower() for s in self.config.connector.scope]
         entity_type = self._SCOPE_ALIASES.get(stix_type.lower(), stix_type.lower())
         return entity_type in scopes
 
-    def _get_tlp_level(self, stix_entity) -> str | None:
-        """Return the most restrictive TLP level ('TLP:XXX') on the entity, or None."""
+    def _get_tlp_levels(self, stix_entity) -> list[str]:
+        """Return the TLP levels ('TLP:XXX') of the known TLP markings of the entity."""
         markings = (stix_entity or {}).get("object_marking_refs") or []
-        highest, result = -1, None
+        levels = []
         for m in markings:
             mid = m if isinstance(m, str) else m.get("standard_id", m.get("id", ""))
             level = self._MARKING_TO_LEVEL.get(mid)
-            if level and self._LEVEL_ORDER.get(level, -1) > highest:
-                highest = self._LEVEL_ORDER[level]
-                result = level
-        return result
-
-    def _tlp_allowed(self, level: str) -> bool:
-        return self._LEVEL_ORDER.get(level, 0) <= self._LEVEL_ORDER.get(
-            self._max_tlp, 4
-        )
+            if level:
+                levels.append(level)
+        return levels
 
     def _safe(self, func: Callable, *args, **kwargs) -> Any:
         try:
@@ -138,16 +121,19 @@ class MetrasEnrichmentConnector:
                 self._send_bundle(stix_objects)
                 return "[CONNECTOR] No STIX id resolved; original bundle returned"
 
-            level = self._get_tlp_level(stix_entity)
-            if level and not self._tlp_allowed(level):
+            tlp_levels = self._get_tlp_levels(stix_entity)
+            max_tlp = self.config.connector.max_tlp
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, max_tlp
+            ):
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Skipped: TLP exceeds max",
-                    meta={"tlp": level, "max": self._max_tlp},
+                    meta={"tlp": tlp_levels, "max": max_tlp},
                 )
                 self._send_bundle(stix_objects)
                 return (
-                    f"[CONNECTOR] Skipped: TLP {level} exceeds max "
-                    f"{self._max_tlp}; original bundle returned"
+                    f"[CONNECTOR] Skipped: TLP {', '.join(tlp_levels)} exceeds max "
+                    f"{max_tlp}; original bundle returned"
                 )
 
             if not self.entity_in_scope(obs_type):

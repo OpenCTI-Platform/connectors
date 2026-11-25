@@ -1,5 +1,6 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from visionheight_client import VisionHeightClient
 
@@ -93,13 +94,14 @@ class VisionHeightConnector:
         Verify the observable's TLP marking does not exceed the configured cap.
         Raises ValueError if it does.
         """
-        tlp = None
-        for marking in opencti_entity.get("objectMarking", []):
-            if marking["definition_type"] == "TLP":
-                tlp = marking["definition"]
+        tlp_levels = [
+            marking["definition"]
+            for marking in opencti_entity.get("objectMarking", [])
+            if marking["definition_type"] == "TLP"
+        ]
 
-        if not self.helper.check_max_tlp(
-            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         ):
             raise ValueError(
                 "[CONNECTOR] TLP of the observable exceeds the connector's "

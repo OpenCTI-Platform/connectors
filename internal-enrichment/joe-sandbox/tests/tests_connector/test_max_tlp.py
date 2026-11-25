@@ -70,3 +70,28 @@ def test_process_message_should_enrich_entity_within_max_tlp(object_marking):
     # Then: The observable is submitted to Joe Sandbox
     process.assert_called_once_with(observable)
     assert result == "Done"
+
+
+def test_process_message_should_skip_entity_with_one_tlp_above_max_tlp():
+    # Given: A connector capped at TLP:AMBER and an artifact marked TLP:CLEAR and TLP:RED
+    connector = _make_connector(TLPLevel.AMBER)
+    observable = {
+        "entity_type": "Artifact",
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+        ],
+    }
+    data = {
+        "event_type": "INTERNAL_ENRICHMENT",
+        "enrichment_entity": observable,
+        "stix_objects": [],
+    }
+
+    # When: The enrichment message is processed
+    with patch.object(JoeSandboxConnector, "_process_observable") as process:
+        result = connector._process_message(data)
+
+    # Then: Nothing is submitted to Joe Sandbox
+    process.assert_not_called()
+    assert result == "Skipping enrichment: entity TLP is above the max TLP"

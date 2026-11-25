@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Location,
@@ -264,13 +265,13 @@ class IsMaliciousConnector:
             return self._skip(data, "Entity not in connector scope, skipping")
 
         # Check TLP
-        tlp = "TLP:CLEAR"
-        for marking in opencti_entity.get("objectMarking", []):
-            if marking.get("definition_type") == "TLP":
-                tlp = marking.get("definition", tlp)
-
-        if not OpenCTIConnectorHelper.check_max_tlp(
-            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        tlp_levels = [
+            marking.get("definition")
+            for marking in opencti_entity.get("objectMarking", [])
+            if marking.get("definition_type") == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         ):
             return self._skip(data, "TLP too high, skipping enrichment")
 

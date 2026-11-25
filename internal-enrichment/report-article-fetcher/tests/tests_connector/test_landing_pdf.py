@@ -166,7 +166,6 @@ def test_fetch_pdf_accepts_a_pdf_only(server, checked, monkeypatch):  # noqa: F8
 
 def _connector(**overrides):
     helper = MagicMock()
-    helper.check_max_tlp.return_value = True
     helper.stix2_create_bundle.side_effect = lambda objects: {"objects": objects}
     settings = dict(
         user_agent="test",

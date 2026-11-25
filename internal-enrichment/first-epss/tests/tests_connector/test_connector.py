@@ -16,7 +16,6 @@ VULNERABILITY = {
 def helper() -> MagicMock:
     helper = MagicMock()
     helper.connect_scope = "vulnerability"
-    helper.check_max_tlp.return_value = True
     helper.send_stix2_bundle.return_value = ["bundle"]
     return helper
 
@@ -25,6 +24,7 @@ def helper() -> MagicMock:
 def connector(helper: MagicMock) -> FirstEPSSConnector:
     config = MagicMock()
     config.first_epss.api_base_url = "https://api.first.org/data/v1/epss"
+    config.connector.max_tlp = "amber"
     connector = FirstEPSSConnector(config=config, helper=helper)
     connector.api = MagicMock()
     return connector
@@ -84,7 +84,6 @@ def test_process_message_should_not_reuse_tlp_of_previous_message(
     connector, helper, message
 ):
     connector.api.get_epss_scores.return_value = []
-    helper.check_max_tlp.side_effect = lambda tlp, max_tlp: tlp != "TLP:RED"
     red_message = {
         **message,
         "enrichment_entity": {
@@ -99,3 +98,17 @@ def test_process_message_should_not_reuse_tlp_of_previous_message(
     result = connector.process_message(message)
 
     assert result == "[CONNECTOR] No information found"
+
+
+def test_process_message_should_refuse_entity_with_one_tlp_above_max_tlp(
+    connector, helper, message
+):
+    message["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+    ]
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector.process_message(message)
+
+    connector.api.get_epss_scores.assert_not_called()

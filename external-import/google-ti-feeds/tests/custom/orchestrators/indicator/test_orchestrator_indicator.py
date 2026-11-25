@@ -425,6 +425,132 @@ async def test_process_package_with_empty_entries_returns_early(
     )
 
 
+# --- attack techniques without a name: one warning per package ---
+
+
+def _given_file_entries_with_techniques(
+    technique_names: list[str | None], entry_count: int
+) -> list[IOCDeltaEntry]:
+    """Build file IOC entries, each carrying one technique per given name."""
+    techniques = [
+        IOCDeltaRelationshipItem(
+            type="attack-technique",
+            id=f"T10{idx}",
+            attributes=(
+                IOCDeltaRelationshipItemAttributes(name=name)
+                if name is not None
+                else None
+            ),
+        )
+        for idx, name in enumerate(technique_names)
+    ]
+    return [
+        SAMPLE_FILE_ENTRY.model_copy(
+            update={
+                "relationships": IOCDeltaRelationships(
+                    attack_techniques=IOCDeltaRelationshipData(data=techniques)
+                )
+            }
+        )
+        for _ in range(entry_count)
+    ]
+
+
+def _skipped_techniques_warnings(caplog: Any) -> list[logging.LogRecord]:
+    return [
+        rec
+        for rec in caplog.records
+        if rec.getMessage().startswith("Skipping attack techniques without a name")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_process_package_logs_one_warning_for_techniques_without_name(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """Several nameless techniques in one package give exactly one warning."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    entries = _given_file_entries_with_techniques([None, "", "   "], entry_count=2)
+
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+        return entries
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _fetch, raising=True
+    )
+    gti_config.indicator_subentities = ["attack_techniques"]
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch._process_package("2025010100", "file")
+
+    warnings = _skipped_techniques_warnings(caplog)
+    assert len(warnings) == 1  # noqa: S101
+    assert warnings[0].levelno == logging.WARNING  # noqa: S101
+    message = warnings[0].getMessage()
+    assert "'attack_technique_without_name_count': 6" in message  # noqa: S101
+    assert "'package_id': '2025010100'" in message  # noqa: S101
+    assert "'ioc_type': 'file'" in message  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_process_package_counter_is_reset_between_packages(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """The count of a package does not leak into the warning of the next one."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    entries = _given_file_entries_with_techniques([None], entry_count=1)
+
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+        return entries
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _fetch, raising=True
+    )
+    gti_config.indicator_subentities = ["attack_techniques"]
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch._process_package("2025010100", "file")
+    await ind_orch._process_package("2025010101", "file")
+
+    warnings = _skipped_techniques_warnings(caplog)
+    assert len(warnings) == 2  # noqa: S101
+    expected = "'attack_technique_without_name_count': 1"
+    assert all(expected in w.getMessage() for w in warnings)  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_process_package_no_warning_when_all_techniques_have_a_name(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """No warning when every technique carries a name."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    entries = _given_file_entries_with_techniques(
+        ["Network Service Discovery", "Process Injection"], entry_count=2
+    )
+
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+        return entries
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _fetch, raising=True
+    )
+    gti_config.indicator_subentities = ["attack_techniques"]
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch._process_package("2025010100", "file")
+
+    assert not _skipped_techniques_warnings(caplog)  # noqa: S101
+
+
 # --- BaseOrchestrator._log_relationships_summary (base_orchestrator lines 55-57) ---
 
 

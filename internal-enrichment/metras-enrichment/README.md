@@ -22,7 +22,7 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 > library forbids a Sighting referencing an observable).
 
 ## Behavior & safety
-- **Custom TLP check** (not `helper.check_max_tlp`) — skips observables above `CONNECTOR_MAX_TLP`.
+- **TLP check** (`InternalEnrichmentConnector.is_entity_tlp_allowed` from connectors-sdk) — skips observables with any TLP above `CONNECTOR_MAX_TLP`.
 - **Refangs** values before querying Metras.
 - **Partial results**: each lookup is wrapped; if at least one succeeds, results are sent.
   If *all* lookups fail, a `ValueError` is raised so the failure is visible in the OpenCTI UI.

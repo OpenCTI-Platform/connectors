@@ -11,6 +11,7 @@ import magic
 import pycti
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -90,7 +91,6 @@ class HatchingTriageSandboxConnector:
         self.campaign_color = self.config.hatching_triage_sandbox.campaign_color
         self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
         self.max_attempts = self.config.hatching_triage_sandbox.max_attempts
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
     def _build_report_url(self, sample_id: str) -> str:
         """Build the link to an analysis on the sandbox web UI.
@@ -652,11 +652,14 @@ class HatchingTriageSandboxConnector:
         entity_type = observable["entity_type"].lower()
 
         # Extract TLP
-        tlp = "TLP:CLEAR"
-        for marking_definition in observable["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in observable["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

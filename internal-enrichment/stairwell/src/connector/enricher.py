@@ -8,8 +8,9 @@ from connector.file_enricher import FileEnricher
 from connector.ip_enricher import IpEnricher
 from connector.stairwell import StairwellClient
 from connector.stix_builder import TLP_IDS
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.exceptions.error import UseCaseError
-from pycti import OpenCTIConnectorHelper
+from connectors_sdk.models.enums import TLPLevel
 
 
 def observable_tlps(observable: dict[str, Any]) -> list[str]:
@@ -103,10 +104,9 @@ class Dispatcher:
         resolutions_limit: int,
         sightings_limit: int,
         opencti_base_url: str,
-        max_tlp: str,
+        max_tlp: TLPLevel | str,
     ) -> None:
-        """`max_tlp` is a canonical `TLP:*` level, as pycti's
-        `check_max_tlp` expects."""
+        """`max_tlp` is `connector.max_tlp`, in any form `TLPLevel` accepts."""
         self.helper = helper
         self.max_tlp = max_tlp
         self.file = FileEnricher(
@@ -147,7 +147,10 @@ class Dispatcher:
         # raised. A TLP that pycti does not recognise fails the check and is
         # refused.
         for tlp in [*observable_tlps(observable), *(extra_tlps or [])]:
-            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            # One TLP at a time, so that the message names the TLP refused
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                [tlp], self.max_tlp
+            ):
                 raise UseCaseError(
                     f"Observable is marked {tlp}, above the connector's max TLP "
                     f"{self.max_tlp}; not sent to Stairwell"

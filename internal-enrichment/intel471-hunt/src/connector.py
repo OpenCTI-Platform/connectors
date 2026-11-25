@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 from src import entity_mapper, stix_builder
 from src.cache import HuntCache
@@ -60,15 +61,16 @@ class HunterEnrichmentConnector:
 
     def _check_max_tlp(self, opencti_entity: dict[str, Any]) -> None:
         """Refuse to enrich an entity whose TLP exceeds the configured maximum."""
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity.get("objectMarking") or []:
-            if marking_definition.get("definition_type") == "TLP":
-                tlp = marking_definition["definition"]
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp):
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking") or []
+            if marking_definition.get("definition_type") == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             raise ValueError(
-                f"Do not send any data, TLP of the entity ({tlp}) is greater "
-                f"than MAX TLP ({max_tlp})"
+                f"Do not send any data, TLP of the entity ({', '.join(tlp_levels)}) "
+                f"is greater than MAX TLP ({max_tlp})"
             )
 
     def process_message(self, data: dict[str, Any]) -> str:

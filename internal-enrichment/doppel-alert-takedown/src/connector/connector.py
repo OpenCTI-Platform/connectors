@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import BaseIdentifiedObject
 from doppel_client import VALID_QUEUE_STATES, DoppelClient, DoppelClientError
 from pycti import OpenCTIConnectorHelper
@@ -119,12 +120,17 @@ class DoppelConnector:
         :param opencti_entity: Dict of the entity from OpenCTI
         :return: True if the observable's marking is within the limit, False otherwise.
         """
-        self.tlp = None
-        for marking_definition in opencti_entity.get("objectMarking") or []:
-            if marking_definition["definition_type"] == "TLP":
-                self.tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in (opencti_entity.get("objectMarking") or [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        # The last TLP of the entity marks the note created by the connector
+        self.tlp = tlp_levels[-1] if tlp_levels else None
 
-        return self.helper.check_max_tlp(self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}")  # type: ignore[arg-type]
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        )
 
     @staticmethod
     def _reference_values(reference: dict) -> tuple[str | None, str | None, str | None]:
@@ -362,7 +368,7 @@ class DoppelConnector:
             if not self.extract_and_check_markings(opencti_entity):
                 raise ValueError(
                     f"Entity TLP ({self.tlp}) exceeds "
-                    f"maximum allowed TLP (TLP:{self.config.connector.max_tlp.upper()})."
+                    f"maximum allowed TLP ({self.config.connector.max_tlp})."
                 )
 
             stix_entity = data["stix_entity"]

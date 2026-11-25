@@ -83,6 +83,26 @@ def test_tlp_above_max_is_refused(connector):
     connector.client.query.assert_not_called()
 
 
+def test_one_tlp_above_max_is_refused(connector):
+    # Every TLP of the entity is checked, not only the last one
+    data = _message(
+        enrichment_entity={
+            "entity_type": "Intrusion-Set",
+            "name": "TeamPCP",
+            "standard_id": "intrusion-set--x",
+            "objectMarking": [
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            ],
+        }
+    )
+
+    result = connector.process_message(data)
+
+    assert "Error" in result and "TLP" in result
+    connector.client.query.assert_not_called()
+
+
 def test_tlp_within_max_is_processed(connector):
     connector.client.query.return_value = []
     data = _message(
