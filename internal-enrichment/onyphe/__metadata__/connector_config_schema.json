@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/onyphe_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "ONYPHE",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ipv4-addr",
+        "ipv6-addr",
+        "indicator",
+        "hostname",
+        "x509-certificate",
+        "text"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
+    "ONYPHE_API_KEY": {
+      "description": "The ONYPHE API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ONYPHE_BASE_URL": {
+      "default": "https://www.onyphe.io/api/v2/",
+      "description": "The ONYPHE API base URL (with a trailing slash).",
+      "type": "string"
+    },
+    "ONYPHE_MAX_TLP": {
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
+      "type": "string"
+    },
+    "ONYPHE_CATEGORY": {
+      "default": "ctiscan",
+      "description": "The ONYPHE data category to query: `ctiscan` or `riskscan`.",
+      "type": "string"
+    },
+    "ONYPHE_TIME_SINCE": {
+      "default": "1w",
+      "description": "The time window of the ONYPHE data to retrieve (OQL `-since` value, e.g. `1w`).",
+      "type": "string"
+    },
+    "ONYPHE_DEFAULT_SCORE": {
+      "default": 50,
+      "description": "The default score of the created observables.",
+      "type": "integer"
+    },
+    "ONYPHE_IMPORT_SEARCH_RESULTS": {
+      "default": true,
+      "description": "Whether to import the search results as observables when enriching an indicator.",
+      "type": "boolean"
+    },
+    "ONYPHE_CREATE_NOTE": {
+      "default": false,
+      "description": "Whether to attach the enrichment summary as a note on observables, instead of their description.",
+      "type": "boolean"
+    },
+    "ONYPHE_IMPORT_FULL_DATA": {
+      "default": false,
+      "description": "Whether to import the full raw application response text (can produce large data).",
+      "type": "boolean"
+    },
+    "ONYPHE_PIVOT_THRESHOLD": {
+      "default": 10,
+      "description": "The maximum number of results of an observable enrichment: above it, nothing is imported.",
+      "type": "integer"
+    },
+    "ONYPHE_INDICATOR_MAX_RESULTS": {
+      "default": 1000,
+      "description": "The maximum number of results of an indicator enrichment: above it, the query is considered too imprecise and nothing is imported.",
+      "type": "integer"
+    },
+    "ONYPHE_PATTERN_TYPE": {
+      "default": "onyphe",
+      "description": "The vocabulary entry of the ONYPHE indicator pattern type.",
+      "type": "string"
+    },
+    "ONYPHE_ENRICHMENT_TYPES": {
+      "default": [],
+      "description": "Comma-separated list of OpenCTI object types to create during enrichment, empty for all types. Valid values: Domain-Name, Hostname, IPv4-Address, IPv6-Address, Autonomous-System, X509-Certificate, Text, Vulnerability.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "ONYPHE_TEXT_FINGERPRINTS": {
+      "default": [],
+      "description": "Comma-separated list of fingerprint pivot labels to create as Text observables, empty for the default sha256-preferred set (e.g. hhhash-sha256, favicon-sha256, ssh-fingerprint-sha256).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ONYPHE_API_KEY"
+  ],
+  "additionalProperties": true
+}
