@@ -64,7 +64,8 @@ itself is still written as one `Software` whose version is the range text
 - OpenCTI Platform version 6.6 or higher
 - Outbound HTTPS access to `github.com` so the connector can clone and pull
   the upstream repository
-- A persistent volume for the clone (a few GB) when running in Docker
+- A persistent volume for the clone (about 8 GB) when running in Docker or
+  from the connector catalog
 
 ### Configuration variables
 
@@ -136,8 +137,12 @@ python3 main.py
 
 #### Initial population
 
-For the first run, the connector clones `CVEProject/cvelistV5`. Depending on
-network throughput this can take a few minutes. Once the clone is complete,
+For the first run, the connector clones `CVEProject/cvelistV5` (about 8 GB).
+This takes 15 minutes or more depending on network throughput and CPU
+(about 14 min 30 s with 4 CPUs on a local stack), and the clone logs no
+progress while it runs. Without a volume at `CVELISTV5_LOCAL_PATH` the clone
+is redone on every container restart, so mount one in production, including
+for a deployment from the connector catalog. Once the clone is complete,
 the connector walks the `cves/<year>/` folders starting from
 `history_start_year` and converts every CVE record into a STIX bundle which
 is sent to OpenCTI.
