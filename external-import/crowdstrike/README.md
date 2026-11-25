@@ -348,3 +348,5 @@ Log output includes:
 - **Large Historical Imports**: Use start timestamps to limit initial data volume
 - **Rate Limits**: CrowdStrike API has rate limits; connector handles them automatically
 - **Missing Actors/Reports**: Ensure your API credentials have appropriate permissions
+
+<!-- Temporary change to trigger the deptry check, do not merge. -->
