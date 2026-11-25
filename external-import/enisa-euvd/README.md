@@ -62,6 +62,8 @@ The following are not configurable and are documented here for transparency
 | Rate limit    | 2/s    | Proactive throttle; ENISA documents no rate limit, so this is defensive. |
 | Max retries   | 5      | On 408/429/5xx, with exponential backoff.                          |
 | Backoff factor| 2.0    |                                                                      |
+| 403 retries   | 5      | The API gateway sometimes answers a short-lived `403 Forbidden`; the request is retried. |
+| 403 backoff   | 5s     | Doubled on each retry (5, 10, 20, 40, 80 s), about 155 s of waiting between attempts. |
 | Timeout       | 60s    |                                                                      |
 | User-Agent    | `OpenCTI-ENISA-EUVD-Connector/1.0 (+https://github.com/OpenCTI-Platform/connectors)` | |
 
@@ -168,6 +170,11 @@ granularity.
   not move), so the failed item is fetched again on the next run. An item
   whose `dateUpdated` itself cannot be read cannot be placed: it is logged and
   skipped.
+- On a large window, the API gateway can block requests for a few seconds
+  with a `403 Forbidden` (generic HTML page, no `Retry-After`). The connector
+  logs a warning and requests the same page again after an increasing delay
+  (see [In-code constants](#in-code-constants)), then goes on with the
+  pagination.
 
 ## Known caveats
 
@@ -181,7 +188,9 @@ granularity.
   is only saved after a fully successful run, so the next run walks again
   from `page=0` with the previous watermark. This is safe (deterministic STIX
   ids) but a failure near the end of a large first import (90 days by
-  default) sends that whole window again.
+  default) sends that whole window again. This also applies to a `403` that
+  lasts longer than the full backoff (about 155 s of waiting between attempts): the run
+  fails, and the next run restarts from the previous watermark.
 - **Item that keeps failing validation or conversion**: the watermark stays below it, so
   every following run sends it and every newer item again until it converts.
   Each failure is logged as a warning with its EUVD id.
