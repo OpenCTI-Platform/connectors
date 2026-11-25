@@ -3,6 +3,7 @@ from typing import Dict
 from urllib.parse import urlparse
 
 import requests
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 from settings import ConnectorSettings
 
@@ -16,7 +17,7 @@ class RSTIocLookupConnector:
         )
         self.base_url = self.config.rst_ioc_lookup.base_url.rstrip("/")
         self.api_key = self.config.rst_ioc_lookup.api_key.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        self.max_tlp = self.config.connector.max_tlp
 
         self.update_confidence = self.config.rst_ioc_lookup.update_confidence
 
@@ -294,12 +295,15 @@ class RSTIocLookupConnector:
     def _process_message(self, data: Dict) -> str:
         opencti_entity = data["enrichment_entity"]
 
-        tlp = "TLP:WHITE"
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError("TLP of the value is greater than MAX TLP")
 
         self.helper.log_debug(f"Data Entity {data}")

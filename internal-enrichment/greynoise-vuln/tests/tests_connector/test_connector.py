@@ -149,6 +149,20 @@ def test_extract_and_check_markings_no_tlp_marking(connector):
     connector._extract_and_check_markings(OPENCTI_ENTITY_NO_TLP)
 
 
+def test_extract_and_check_markings_one_tlp_above_max_raises(connector):
+    """Every TLP of the entity is checked, not only the last one."""
+    entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:WHITE"},
+        ]
+    }
+    with pytest.raises(
+        ValueError, match="TLP of the observable is greater than MAX TLP"
+    ):
+        connector._extract_and_check_markings(entity)
+
+
 # ---------------------------------------------------------------------------
 # _generate_stix_relationship
 # ---------------------------------------------------------------------------

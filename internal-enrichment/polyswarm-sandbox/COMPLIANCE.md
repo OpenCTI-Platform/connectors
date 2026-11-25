@@ -31,8 +31,8 @@
 | T2.1 | Artifact entities in scope | ✅ | `CONNECTOR_SCOPE=Artifact` in docker-compose |
 | T2.2 | Non-artifact types rejected | ✅ | `_entity_in_scope()` checks against `connect_scope` |
 | T2.3 | Out-of-scope returns original bundle | ✅ | `_send_original_bundle(stix_objects)` — `polyswarm_connector.py:199-200` |
-| T2.4 | `max_tlp=TLP:AMBER` blocks TLP:RED | ✅ | `check_max_tlp()` — `polyswarm_connector.py:602` |
-| T2.5 | `max_tlp=TLP:AMBER` allows TLP:GREEN | ✅ | `check_max_tlp()` returns True for lower TLP |
+| T2.4 | `max_tlp=TLP:AMBER` blocks TLP:RED | ✅ | SDK `is_entity_tlp_allowed()` in `_enrich_file()` |
+| T2.5 | `max_tlp=TLP:AMBER` allows TLP:GREEN | ✅ | SDK `is_entity_tlp_allowed()` returns True for lower TLP |
 | T2.6 | No `max_tlp` → all TLPs allowed | ✅ | `if max_tlp and stix_objects:` guard — `polyswarm_connector.py:595` |
 | T2.7 | TLP check before file download | ✅ | TLP check at line 594, download at line 614 |
 

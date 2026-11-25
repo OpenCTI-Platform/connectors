@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock
 
 import pytest
+from connectors_sdk.models.enums import TLPLevel
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 from connector import KasperskyConnector
@@ -19,6 +20,7 @@ def setup_config(request):
     """
     request.cls.mock_helper = MagicMock()
     request.cls.mock_config = Mock()
+    request.cls.mock_config.connector.max_tlp = TLPLevel.RED
     request.cls.connector = KasperskyConnector(
         config=request.cls.mock_config, helper=request.cls.mock_helper
     )

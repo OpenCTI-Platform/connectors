@@ -86,7 +86,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.helper.connect_id == "connector-id"
     assert connector.base_url == "https://api.example.com/v1"
     assert connector.api_key == "test-api-key"
-    assert connector.max_tlp == "TLP:AMBER+STRICT"
+    assert connector.max_tlp == "amber+strict"
     assert connector.timeout == 15
     assert connector.update_confidence is False
     assert connector.update_score is True

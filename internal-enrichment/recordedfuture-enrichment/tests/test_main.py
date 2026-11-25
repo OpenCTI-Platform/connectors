@@ -105,3 +105,42 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:GREEN"}],
+        # Every TLP of the entity is checked, not only the last one
+        [
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+        ],
+    ],
+)
+def test_process_message_skips_entity_above_max_tlp(
+    mock_opencti_connector_helper, object_marking
+):
+    """An entity with any TLP above the max TLP (clear) is never sent to RF."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.send_stix2_bundle = MagicMock()
+    connector = RFEnrichmentConnector(config=settings, helper=helper)
+    connector.enrich_observable = MagicMock()
+
+    message = connector._process_message(
+        {
+            "stix_objects": [],
+            "enrichment_entity": {
+                "entity_type": "IPv4-Addr",
+                "standard_id": "ipv4-addr--1",
+                "objectMarking": object_marking,
+            },
+        }
+    )
+
+    assert message.startswith("Do not send any data")
+    assert message.endswith("which is greater than MAX TLP: (clear)")
+    connector.enrich_observable.assert_not_called()
+    # The original bundle is sent back, for playbooks
+    helper.send_stix2_bundle.assert_called_once()

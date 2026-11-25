@@ -4,6 +4,7 @@ from typing import Dict
 import pycountry
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from dateutil.parser import parse
 from greynoise.api import APIConfig, GreyNoise
 from greynoise.exceptions import RequestFailure
@@ -30,7 +31,6 @@ class GreyNoiseConnector:
 
         # Greynoise configuration
         self.greynoise_key = self.config.greynoise.key.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.sighting_not_seen = self.config.greynoise.sighting_not_seen
         self.no_sightings = self.config.greynoise.no_sightings
         self.greynoise_ent_name = self.config.greynoise.name
@@ -42,7 +42,6 @@ class GreyNoiseConnector:
         self.indicator_score_benign = self.config.greynoise.indicator_score_benign
 
         self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
-        self.tlp = None
         self.stix_objects = []
 
     def _get_indicator_score(self, classification):
@@ -55,11 +54,14 @@ class GreyNoiseConnector:
         return self.indicator_score
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                self.tlp = marking_definition["definition"]
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.max_tlp)
-        return is_valid_max_tlp
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        )
 
     def _generate_stix_relationship(
         self,

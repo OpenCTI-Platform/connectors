@@ -97,3 +97,44 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:RED"}],
+        [
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+        ],
+    ],
+)
+def test_process_message_refuses_entity_above_max_tlp(
+    mock_opencti_connector_helper, object_marking
+):
+    """An entity with any TLP above the max TLP (amber) is never sent to DomainTools."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = DomainToolsConnector(config=settings, helper=helper)
+    connector._process_file = MagicMock()
+
+    data = {
+        "enrichment_entity": {"objectMarking": object_marking},
+        "stix_objects": [],
+    }
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector._process_message(data)
+
+    connector._process_file.assert_not_called()
+
+
+def test_process_message_accepts_entity_without_tlp(mock_opencti_connector_helper):
+    """An entity without TLP is enriched."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = DomainToolsConnector(config=settings, helper=helper)
+    connector._process_file = MagicMock(return_value="done")
+
+    data = {"enrichment_entity": {"objectMarking": []}, "stix_objects": []}
+
+    assert connector._process_message(data) == "done"

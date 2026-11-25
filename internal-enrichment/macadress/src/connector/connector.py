@@ -10,6 +10,7 @@ import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import MacadressUtils
+from connectors_sdk import InternalEnrichmentConnector
 from macadress_client import MacadressAPIError, MacadressClient
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -28,7 +29,6 @@ class MacadressConnector:
 
         macadress = config.macadress
         self.api_base_url = str(macadress.api_base_url)
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.default_score = int(macadress.default_score)
         self.create_note = bool(macadress.create_note)
         self.create_vendor_identity = bool(macadress.create_vendor_identity)
@@ -42,15 +42,21 @@ class MacadressConnector:
         self.converter = ConverterToStix(self.author, self.default_score)
 
     def _extract_and_check_markings(self, entity: dict) -> None:
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity.get("objectMarking", []):
-            if marking_definition.get("definition_type") == "TLP":
-                tlp = marking_definition.get("definition", tlp)
+        tlp_levels = [
+            marking_definition.get("definition")
+            for marking_definition in entity.get("objectMarking", [])
+            if marking_definition.get("definition_type") == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             self.helper.connector_logger.warning(
                 "[MACADRESS] Skipping enrichment: observable TLP exceeds MAX TLP",
-                {"observable_tlp": tlp, "max_tlp": self.max_tlp},
+                {
+                    "observable_tlp": tlp_levels,
+                    "max_tlp": self.config.connector.max_tlp,
+                },
             )
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"

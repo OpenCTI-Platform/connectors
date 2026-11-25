@@ -140,7 +140,40 @@ def test_connector_is_instantiated(
     assert connector.ocd_enrich_add_createdby is False
     assert connector.ocd_enrich_curate_labels is False
     assert connector.ocd_enrich_threat_actor_as_intrusion_set is False
-    assert connector.max_tlp == "TLP:AMBER"
+    assert connector.config.connector.max_tlp == "amber"
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:RED"}],
+        # Every TLP of the entity is checked, not only the last one
+        [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ],
+    ],
+)
+def test_process_message_skips_entity_above_max_tlp(
+    monkeypatch, mock_opencti_connector_helper, mock_datalake, object_marking
+):
+    """An entity with any TLP above the max TLP (amber) is never sent to Datalake."""
+    monkeypatch.setattr("main.ConnectorSettings", StubConnectorSettings)
+    connector = OrangeCyberdefenseEnrichment()
+
+    connector._process_message(
+        {
+            "enrichment_entity": {
+                "entity_type": "IPv4-Addr",
+                "observable_value": "1.2.3.4",
+                "objectMarking": object_marking,
+            },
+            "stix_objects": [],
+            "stix_entity": {"id": "ipv4-addr--1", "type": "ipv4-addr"},
+        }
+    )
+
+    connector.datalake_instance.Threats.lookup.assert_not_called()
 
 
 def test_connector_normalizes_scope(

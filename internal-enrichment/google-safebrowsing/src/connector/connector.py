@@ -1,5 +1,6 @@
 import requests
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import CustomObservableHostname, OpenCTIConnectorHelper
 from stix2 import URL, DomainName
 
@@ -152,13 +153,14 @@ class SafeBrowsingConnector:
         return entity_type in scopes
 
     def _is_tlp_allowed(self, opencti_entity: dict) -> bool:
-        """Check that the entity TLP is lower than or equal to the configured max TLP."""
-        tlp = None
-        for marking_definition in opencti_entity.get("objectMarking") or []:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        return self.helper.check_max_tlp(
-            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        """Check that every TLP of the entity is lower than or equal to the max TLP."""
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking") or []
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         )
 
     def _send_bundle(self, stix_objects: list) -> list:

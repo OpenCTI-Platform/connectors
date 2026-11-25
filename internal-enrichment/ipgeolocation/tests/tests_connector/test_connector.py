@@ -29,14 +29,6 @@ class StubConnectorSettings(ConnectorSettings):
 def connector():
     helper = MagicMock()
     helper.connect_scope = "IPv4-Addr,IPv6-Addr"  # as pycti keeps it
-    helper.check_max_tlp.side_effect = lambda tlp, max_tlp: (
-        ["TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"].index(
-            tlp
-        )
-        <= ["TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"].index(
-            max_tlp
-        )
-    )
     helper.stix2_create_bundle.side_effect = lambda objects: {"objects": objects}
     helper.send_stix2_bundle.return_value = ["bundle"]
     connector = IPGeolocationConnector(config=StubConnectorSettings(), helper=helper)
@@ -122,9 +114,8 @@ def test_tlp_above_the_maximum_is_never_sent_to_the_api(connector):
     """An expected case: the work ends normally with a message, not an error."""
     result = connector.process_message(_message(tlp="TLP:RED"))
 
-    assert "above the maximum TLP:AMBER" in result
+    assert "above the maximum amber" in result
     connector.client.lookup.assert_not_called()
-    connector.helper.check_max_tlp.assert_called_with("TLP:RED", "TLP:AMBER")
     connector.helper.send_stix2_bundle.assert_not_called()
 
 
