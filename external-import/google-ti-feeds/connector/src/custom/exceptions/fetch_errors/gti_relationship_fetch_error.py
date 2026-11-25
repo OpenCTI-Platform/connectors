@@ -29,13 +29,13 @@ class GTIRelationshipFetchError(GTIApiError):
 
         """
         if source_id and relationship_type:
-            error_msg = "Error fetching relationships for source: {message}"
+            error_msg = f"Error fetching relationships for source: {message}"
         elif source_id:
-            error_msg = "Error fetching relationships for source: {message}"
+            error_msg = f"Error fetching relationships for source: {message}"
         elif relationship_type:
-            error_msg = "Error fetching relationships: {message}"
+            error_msg = f"Error fetching relationships: {message}"
         else:
-            error_msg = "Error fetching relationships: {message}"
+            error_msg = f"Error fetching relationships: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.source_id = source_id

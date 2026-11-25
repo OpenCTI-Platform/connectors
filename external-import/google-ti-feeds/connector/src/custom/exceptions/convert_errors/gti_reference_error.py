@@ -21,11 +21,11 @@ class GTIReferenceError(GTIConvertingError):
 
         """
         if source_id and target_id:
-            error_msg = "Failed to add reference: {message}"
+            error_msg = f"Failed to add reference: {message}"
         elif source_id:
-            error_msg = "Failed to add reference: {message}"
+            error_msg = f"Failed to add reference: {message}"
         elif target_id:
-            error_msg = "Failed to add reference: {message}"
+            error_msg = f"Failed to add reference: {message}"
         else:
             error_msg = f"Failed to add reference: {message}"
 

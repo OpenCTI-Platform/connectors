@@ -23,11 +23,11 @@ class GTIParsingError(GTIFetchingError):
 
         """
         if entity_type and endpoint:
-            error_msg = "Error parsing entity data from endpoint: {message}"
+            error_msg = f"Error parsing entity data from endpoint: {message}"
         elif entity_type:
-            error_msg = "Error parsing entity data: {message}"
+            error_msg = f"Error parsing entity data: {message}"
         elif endpoint:
-            error_msg = "Error parsing response from endpoint: {message}"
+            error_msg = f"Error parsing response from endpoint: {message}"
         else:
             error_msg = f"Error parsing response: {message}"
 

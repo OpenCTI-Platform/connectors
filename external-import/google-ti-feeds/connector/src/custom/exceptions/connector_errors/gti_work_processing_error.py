@@ -25,7 +25,7 @@ class GTIWorkProcessingError(GTIBaseError):
 
         """
         if work_id:
-            error_msg = "Error processing work: {message}"
+            error_msg = f"Error processing work: {message}"
         else:
             error_msg = message
 

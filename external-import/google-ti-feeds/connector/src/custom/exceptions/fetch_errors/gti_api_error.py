@@ -25,11 +25,11 @@ class GTIApiError(GTIFetchingError):
 
         """
         if endpoint and status_code:
-            error_msg = "API error at endpoint: {message}"
+            error_msg = f"API error at {endpoint} (status {status_code}): {message}"
         elif endpoint:
-            error_msg = "API error at endpoint: {message}"
+            error_msg = f"API error at {endpoint}: {message}"
         elif status_code:
-            error_msg = "API error: {message}"
+            error_msg = f"API error (status {status_code}): {message}"
         else:
             error_msg = message
 

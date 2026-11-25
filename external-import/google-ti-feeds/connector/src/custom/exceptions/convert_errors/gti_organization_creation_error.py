@@ -16,7 +16,7 @@ class GTIOrganizationCreationError(GTIConvertingError):
             details: Additional details about the error
 
         """
-        error_msg = "Failed to create organization Identity: {message}"
+        error_msg = f"Failed to create organization Identity: {message}"
         super().__init__(error_msg)
         self.details = details or {}
 

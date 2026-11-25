@@ -23,7 +23,7 @@ class GTIAsyncError(GTIBaseError):
 
         """
         if operation:
-            error_msg = "Async error during operation: {message}"
+            error_msg = f"Async error during operation: {message}"
         else:
             error_msg = message
 

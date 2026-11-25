@@ -23,7 +23,7 @@ class GTIStateManagementError(GTIBaseError):
 
         """
         if state_key:
-            error_msg = "State management error for key: {message}"
+            error_msg = f"State management error for key: {message}"
         else:
             error_msg = message
 

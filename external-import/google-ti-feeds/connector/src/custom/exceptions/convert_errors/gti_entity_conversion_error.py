@@ -24,11 +24,11 @@ class GTIEntityConversionError(GTIConvertingError):
 
         """
         if entity_id and entity_type:
-            error_msg = "Error converting entity: {message}"
+            error_msg = f"Error converting entity: {message}"
         elif entity_id:
-            error_msg = "Error converting entity: {message}"
+            error_msg = f"Error converting entity: {message}"
         elif entity_type:
-            error_msg = "Error converting entity: {message}"
+            error_msg = f"Error converting entity: {message}"
         else:
             error_msg = message
 

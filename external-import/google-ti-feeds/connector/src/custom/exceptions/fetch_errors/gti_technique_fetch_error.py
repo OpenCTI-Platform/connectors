@@ -27,9 +27,9 @@ class GTITechniqueFetchError(GTIApiError):
 
         """
         if technique_id:
-            error_msg = "Error fetching attack technique: {message}"
+            error_msg = f"Error fetching attack technique: {message}"
         else:
-            error_msg = "Error fetching attack techniques: {message}"
+            error_msg = f"Error fetching attack techniques: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.technique_id = technique_id

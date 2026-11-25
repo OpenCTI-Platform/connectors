@@ -27,9 +27,9 @@ class GTIActorFetchError(GTIApiError):
 
         """
         if actor_id:
-            error_msg = "Error fetching threat actor: {message}"
+            error_msg = f"Error fetching threat actor: {message}"
         else:
-            error_msg = "Error fetching threat actors: {message}"
+            error_msg = f"Error fetching threat actors: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.actor_id = actor_id
