@@ -43,6 +43,8 @@ class ShodanConnector:
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
+        self.max_search_results = self.config.shodan.max_search_results
+        self.max_bundle_size_mb = self.config.shodan.max_bundle_size_mb
         self.create_note = self.config.shodan.create_note
         self.use_isp_name_for_asn = self.config.shodan.use_isp_name_for_asn
 
@@ -397,6 +399,42 @@ class ShodanConnector:
             self.stix_objects.append(stix_note)
         return stix_observable
 
+    @staticmethod
+    def _serialize_stix_object(stix_object) -> str:
+        if hasattr(stix_object, "serialize"):
+            return stix_object.serialize()
+        return json.dumps(stix_object)
+
+    def _estimate_object_transport_bytes(self, stix_object) -> int:
+        raw_json = self._serialize_stix_object(stix_object)
+        if getattr(self.helper, "playbook", None) is not None:
+            # Playbook GraphQL mutation sends `bundle` serialized as a JSON string
+            # inside the HTTP body, so quotes/newlines/backslashes are escaped again.
+            return len(json.dumps(raw_json).encode("utf-8")) + 2
+        return len(raw_json.encode("utf-8")) + 2
+
+    def _transport_base_overhead_bytes(self) -> int:
+        # STIX bundle wrapper + GraphQL mutation envelope margin (~8 KiB)
+        overhead = 8192
+        playbook = getattr(self.helper, "playbook", None)
+        if isinstance(playbook, dict):
+            prev_bundle = playbook.get("previous_bundle")
+            if isinstance(prev_bundle, str):
+                overhead += len(json.dumps(prev_bundle).encode("utf-8"))
+        return overhead
+
+    def _actual_transport_bytes(self, bundle_json: str) -> int:
+        playbook = getattr(self.helper, "playbook", None)
+        if isinstance(playbook, dict):
+            prev_bundle = playbook.get("previous_bundle")
+            prev_bytes = (
+                len(json.dumps(prev_bundle).encode("utf-8"))
+                if isinstance(prev_bundle, str)
+                else 0
+            )
+            return 4096 + prev_bytes + len(json.dumps(bundle_json).encode("utf-8"))
+        return len(bundle_json.encode("utf-8"))
+
     def _generate_stix_bundle(
         self, data, stix_objects, stix_entity, score=None, only_objects=False
     ):
@@ -447,6 +485,7 @@ class ShodanConnector:
                     response, bundle_objects, stix_entity
                 )
                 # Send STIX2 Bundle
+                self._bundle_sent = True
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except shodan.APIError as e:
@@ -454,6 +493,11 @@ class ShodanConnector:
                     "Shodan API error, skipping enrichment",
                     {"query": ip_value, "error": str(e)},
                 )
+                if getattr(self.helper, "playbook", None) is not None and stix_objects:
+                    self._bundle_sent = True
+                    self.helper.send_stix2_bundle(
+                        self.helper.stix2_create_bundle(stix_objects)
+                    )
                 return f"Skipped: {e}"
         elif (
             stix_entity["type"] == "indicator"
@@ -479,79 +523,190 @@ class ShodanConnector:
                 )
                 threats.append(indicates_stix_entity)
             try:
-                bundle_objects = []
-                number_processed = 1
+                max_bundle_bytes = self.max_bundle_size_mb * 1024 * 1024
+                shodan_identity_obj = self.shodan_identity.to_stix2_object()
+
+                # Seed base objects with Shodan author + incoming message STIX objects so
+                # playbook downstream steps always receive the enriched indicator even
+                # when 0 hosts match or all hosts exceed the size cap.
+                base_objects_by_id = {shodan_identity_obj["id"]: shodan_identity_obj}
+                for orig_obj in stix_objects:
+                    base_objects_by_id[orig_obj["id"]] = orig_obj
+
                 # Facets
-                result = self.shodanAPI.count(pattern_value, facets=FACETS)
+                count_result = self.shodanAPI.count(pattern_value, facets=FACETS)
+                total_results = count_result["total"]
                 note_title = "Shodan Summary Information"
-                note_content = (
+                base_note_content = (
                     "### Global\n"
                     "| Value | Count |\n|------|-------|\n"
-                    f"| Total Results | {result['total']} |\n"
+                    f"| Total Results | {total_results} |\n"
                 )
-                for facet in result["facets"]:
-                    note_content += (
+                for facet in count_result["facets"]:
+                    base_note_content += (
                         f"### {FACET_TITLES[facet]}\n\n"
                         "| Value | Count |\n|------|-------|\n"
                     )
-                    for term in result["facets"][facet]:
-                        note_content += f"| {term['value']} | {term['count']} |\n"
-                    note_content += "\n"
+                    for term in count_result["facets"][facet]:
+                        base_note_content += f"| {term['value']} | {term['count']} |\n"
+                    base_note_content += "\n"
 
-                # Generate Note
                 created = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-                note = stix2.Note(
-                    id=Note.generate_id(created, note_content),
+                worst_case_note_content = (
+                    base_note_content
+                    + f"> **Note:** Imported {total_results} of {total_results} matching "
+                    + f"hosts (capped by `max_bundle_size_mb ({self.max_bundle_size_mb} MiB)`).\n"
+                )
+                reserved_note_probe = stix2.Note(
+                    id=Note.generate_id(created, worst_case_note_content),
                     abstract=note_title,
-                    content=note_content,
+                    content=worst_case_note_content,
                     created_by_ref=self.shodan_identity.id,
                     object_refs=[stix_entity["id"]],
                 )
-                bundle_objects.append(note)
+                reserved_note_bytes = self._estimate_object_transport_bytes(
+                    reserved_note_probe
+                )
 
                 # Get Shodan API Response
+                accepted_host_batches = []
+                bundle_by_id = dict(base_objects_by_id)
+                truncation_reason = None
+
                 if self.import_search_results:
+                    current_bytes = (
+                        self._transport_base_overhead_bytes()
+                        + reserved_note_bytes
+                        + sum(
+                            self._estimate_object_transport_bytes(obj)
+                            for obj in bundle_by_id.values()
+                        )
+                    )
                     results = self.shodanAPI.search_cursor(pattern_value)
-                    for result in results:
-                        stix_entity_ip = json.loads(
-                            stix2.IPv4Address(
-                                type="ipv4-addr", value=result["ip_str"]
-                            ).serialize()
-                        )
-                        stix_objects.append(stix_entity_ip)
-                        rel = self._generate_stix_relationship(
-                            stix_entity_ip["id"], "related-to", stix_entity["id"]
-                        )
-                        stix_objects.append(rel)
-
-                        for threat in threats:
-                            rel = self._generate_stix_relationship(
-                                stix_entity_ip["id"], "related-to", threat["id"]
+                    for search_hit in results:
+                        hosts_enriched = len(accepted_host_batches)
+                        if (
+                            self.max_search_results > 0
+                            and hosts_enriched >= self.max_search_results
+                        ):
+                            truncation_reason = (
+                                f"max_search_results ({self.max_search_results})"
                             )
-                            stix_objects.append(rel)
+                            self.helper.connector_logger.warning(
+                                "Reached SHODAN_MAX_SEARCH_RESULTS cap; truncating indicator host enrichment",
+                                {
+                                    "query": pattern_value,
+                                    "total_results": total_results,
+                                    "hosts_enriched": hosts_enriched,
+                                    "max_search_results": self.max_search_results,
+                                },
+                            )
+                            break
 
+                        ip_str = search_hit["ip_str"]
                         try:
-                            response = self.shodanAPI.host(result["ip_str"])
+                            response = self.shodanAPI.host(ip_str)
                         except Exception:
                             continue
 
-                        # Generate a stix bundle
-                        bundle_objects = bundle_objects + self._generate_stix_bundle(
-                            response, stix_objects, stix_entity_ip, score, True
+                        stix_entity_ip = json.loads(
+                            stix2.IPv4Address(
+                                type="ipv4-addr", value=ip_str
+                            ).serialize()
                         )
-                        number_processed = number_processed + 1
-                else:
-                    # If import_search_results is False, we only generate the stix bundle from the pattern
-                    bundle_objects = self._generate_stix_bundle(
-                        {"data": []}, stix_objects, stix_entity, score, True
+                        host_seed_objects = [
+                            stix_entity_ip,
+                            self._generate_stix_relationship(
+                                stix_entity_ip["id"], "related-to", stix_entity["id"]
+                            ),
+                        ]
+                        for threat in threats:
+                            host_seed_objects.append(
+                                self._generate_stix_relationship(
+                                    stix_entity_ip["id"], "related-to", threat["id"]
+                                )
+                            )
+
+                        host_objects = self._generate_stix_bundle(
+                            response, host_seed_objects, stix_entity_ip, score, True
+                        )
+                        added_bytes = sum(
+                            self._estimate_object_transport_bytes(obj)
+                            - (
+                                self._estimate_object_transport_bytes(
+                                    bundle_by_id[obj["id"]]
+                                )
+                                if obj["id"] in bundle_by_id
+                                else 0
+                            )
+                            for obj in host_objects
+                        )
+                        # Apply cap to EVERY host (including the first host) so an
+                        # oversized single host does not blow past the budget.
+                        if current_bytes + added_bytes > max_bundle_bytes:
+                            truncation_reason = (
+                                f"max_bundle_size_mb ({self.max_bundle_size_mb} MiB)"
+                            )
+                            self.helper.connector_logger.warning(
+                                "Reached SHODAN_MAX_BUNDLE_SIZE_MB limit; truncating indicator host enrichment",
+                                {
+                                    "query": pattern_value,
+                                    "total_results": total_results,
+                                    "hosts_enriched": hosts_enriched,
+                                    "max_bundle_size_mb": self.max_bundle_size_mb,
+                                },
+                            )
+                            break
+
+                        accepted_host_batches.append(host_objects)
+                        for obj in host_objects:
+                            bundle_by_id[obj["id"]] = obj
+                        current_bytes += added_bytes
+
+                # Build the finalized bundle and, if exact serialized transport size still
+                # exceeds `max_bundle_bytes`, evict trailing host batches until it fits.
+                while True:
+                    hosts_enriched = len(accepted_host_batches)
+                    note_content = base_note_content
+                    if truncation_reason is not None:
+                        note_content += (
+                            f"> **Note:** Imported {hosts_enriched} of {total_results} matching "
+                            f"hosts (capped by `{truncation_reason}`).\n"
+                        )
+                    note = stix2.Note(
+                        id=Note.generate_id(created, note_content),
+                        abstract=note_title,
+                        content=note_content,
+                        created_by_ref=self.shodan_identity.id,
+                        object_refs=[stix_entity["id"]],
+                    )
+                    final_by_id = dict(base_objects_by_id)
+                    for batch in accepted_host_batches:
+                        for obj in batch:
+                            final_by_id[obj["id"]] = obj
+                    final_by_id[note["id"]] = note
+
+                    uniq_bundles_objects = list(final_by_id.values())
+                    bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                    if (
+                        not isinstance(bundle, str)
+                        or self._actual_transport_bytes(bundle) <= max_bundle_bytes
+                    ):
+                        break
+                    if accepted_host_batches:
+                        accepted_host_batches.pop()
+                        if truncation_reason is None:
+                            truncation_reason = (
+                                f"max_bundle_size_mb ({self.max_bundle_size_mb} MiB)"
+                            )
+                        continue
+                    raise ValueError(
+                        f"Base Shodan STIX bundle exceeds SHODAN_MAX_BUNDLE_SIZE_MB "
+                        f"({self.max_bundle_size_mb} MiB)"
                     )
 
-                # Send STIX2 Bundle
-                bundle_objects.insert(0, self.shodan_identity.to_stix2_object())
-                uniq_bundles_objects = list(
-                    {obj["id"]: obj for obj in bundle_objects}.values()
-                )
-                bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                number_processed = 1 + len(accepted_host_batches)
+                self._bundle_sent = True
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 self.helper.log_info(
                     f"{number_processed} processed items, {len(bundles_sent)} generated bundle(s)"
@@ -562,6 +717,11 @@ class ShodanConnector:
                     "Shodan API error, skipping enrichment",
                     {"query": pattern_value, "error": str(e)},
                 )
+                if getattr(self.helper, "playbook", None) is not None and stix_objects:
+                    self._bundle_sent = True
+                    self.helper.send_stix2_bundle(
+                        self.helper.stix2_create_bundle(stix_objects)
+                    )
                 return f"Skipped: {e}"
 
         elif stix_entity["type"] == "indicator":
@@ -570,16 +730,21 @@ class ShodanConnector:
             raise ValueError(f"Unsupported type: {stix_entity['type']}")
 
     def process_message(self, data: Dict) -> str:
+        self._bundle_sent = False
+        original_objects = list(data.get("stix_objects") or [])
         try:
-            self._process_message(data)
+            return self._process_message(data)
         except Exception as e:
             self.helper.connector_logger.error(
                 "[CONNECTOR] An unexpected Error occurred", {"error_message": str(e)}
             )
-            # If an error occurs, we send the original stix objects back
-            self.helper.send_stix2_bundle(
-                self.helper.stix2_create_bundle(data["stix_objects"])
-            )
+            # Only send the original bundle back when no bundle has been sent yet
+            # (matches connectors-sdk BundleManager semantics to avoid re-sending a
+            # partial/duplicate bundle or masking transport rejections).
+            if not self._bundle_sent and original_objects:
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(original_objects)
+                )
             raise e
 
     def run(self):

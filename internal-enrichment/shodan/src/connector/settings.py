@@ -50,6 +50,16 @@ class ShodanConfig(BaseConfigModel):
         description="Returns the results of the search against the enriched indicator (Search the SHODAN database).",
         default=True,
     )
+    max_search_results: int = Field(
+        description="Maximum number of matching hosts to enrich for a Shodan indicator search (0 for unlimited).",
+        default=100,
+        ge=0,
+    )
+    max_bundle_size_mb: int = Field(
+        description="Maximum serialized request/STIX bundle size in MiB before stopping additional indicator search host enrichment.",
+        default=32,
+        gt=0,
+    )
     create_note: bool = Field(
         description="Adds Shodan results to a note, otherwise it is saved in the description.",
         default=True,

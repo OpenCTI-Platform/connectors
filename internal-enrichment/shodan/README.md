@@ -72,6 +72,8 @@ This connector enriches IPv4 observables and Shodan pattern indicators with comp
 | `shodan_token` | `SHODAN_TOKEN` | Yes | Shodan API token |
 | `shodan_default_score` | `SHODAN_DEFAULT_SCORE` | No | Default score for created indicators |
 | `shodan_import_search_results` | `SHODAN_IMPORT_SEARCH_RESULTS` | No | Import search results for indicators (default: true) |
+| `shodan_max_search_results` | `SHODAN_MAX_SEARCH_RESULTS` | No | Maximum number of matching hosts to enrich per indicator search, `0` for unlimited (default: 100) |
+| `shodan_max_bundle_size_mb` | `SHODAN_MAX_BUNDLE_SIZE_MB` | No | Maximum serialized request/STIX bundle size in MiB before stopping additional indicator host enrichment (default: 32) |
 | `shodan_create_note` | `SHODAN_CREATE_NOTE` | No | Create note with facets for indicators |
 | `shodan_use_isp_name` | `SHODAN_USE_ISP_NAME` | No | Use ISP name for ASN |
 
