@@ -1,6 +1,6 @@
 pycti==7.261124.0
 ciaops==1.1.0
-python-dotenv==1.2.2
+python-dotenv==1.2.4
 stix2==3.0.2
 PyYAML==6.0.3
 pydantic==2.14.4
