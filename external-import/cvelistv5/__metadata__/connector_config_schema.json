@@ -34,7 +34,7 @@
       "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "error",
+      "default": "info",
       "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
@@ -52,7 +52,7 @@
     },
     "CONNECTOR_DURATION_PERIOD": {
       "default": "PT1H",
-      "description": "The period of time to await between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour).",
+      "description": "The period of time to await between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour). Must be greater than zero: the connector runs continuously and is not meant to run once and exit.",
       "format": "duration",
       "type": "string"
     },
