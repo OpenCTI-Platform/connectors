@@ -372,6 +372,7 @@ IOC options apply to the IOCs (files, domains, URLs, IP addresses) imported by a
 | `GTI_IOC_IMPORT_THRESHOLD` | Maximum number of IOCs a report or campaign may reference for its IOCs to be fetched. Above it, the IOC sub-entities (`domains`, `files`, `urls`, `ip_addresses`) of that report or campaign are skipped and a warning is logged; its other sub-entities are still imported. Uses the `counters.iocs` value returned by GTI, so no extra API call is made | unset (disabled) | Integer `>= 1` |
 | `GTI_IOC_LINK_TO_THREATS` | Link the IOCs of a report or campaign to the intrusion sets and malware of that same report or campaign (and to its campaigns, for reports). See below | `false` | `true` / `false` |
 | `GTI_INTRUSION_SET_LINK_TO_CAPABILITIES` | Link the intrusion sets of a report or campaign to the malware, tools, attack patterns and vulnerabilities of that same report or campaign. See below | `false` | `true` / `false` |
+| `GTI_REPORT_LINK_TO_MENTIONED_THREATS` | Import the threat actors, malware families, campaigns and software toolkits a report links to in its text but GTI does not list in its relationships, and link the report to them with `related-to`. See below | `false` | `true` / `false` |
 | `GTI_EXTENDED_DESCRIPTIONS` | Append the GTI details that have no dedicated OpenCTI field to the descriptions of IOCs, vulnerabilities and malware families. See below. Can overwrite descriptions edited in OpenCTI, depending on the connector confidence level | `false` | `true` / `false` |
 
 Scoring strategies:
@@ -392,12 +393,19 @@ By default the connector leaves relationship descriptions empty, so it never ove
 | IOC Delta feed threat links                           | "Stated by GTI: the IOC deltas feed lists the malware 'X' among the relationships of this IOC."              |
 | Co-occurrence (`GTI_IOC_LINK_TO_THREATS`, `GTI_INTRUSION_SET_LINK_TO_CAPABILITIES`) | "Inferred by the connector, not stated by GTI: the intrusion set 'Y' and the malware 'X' are both referenced by the report 'Z'." |
 | IP links (`GTI_IP_LINK_TO_ASN`, `GTI_IP_LINK_TO_COUNTRY`) | The GTI autonomous system or country code of the IP                                                          |
+| Report text links (`GTI_REPORT_LINK_TO_MENTIONED_THREATS`), always described | "Inferred by the connector, not stated by GTI: the report 'Z' links to the intrusion set 'Y' in its text, but GTI does not list it among the related objects of the report." |
 
 IOC links to an intrusion set, malware or report, from a collection or the IOC Delta feed, also quote the GTI evidence of the IOC supporting the link: the explanation cards (`gti_assessment.gti_description_cards`) linking to that threat, by GTI ID or name, and the matching contributing factors, e.g. "Evidence: GTI explanation card 'Attributed to Mandiant Threat Actor' (high influence); contributing factor 'Associated with a tracked threat actor'." Links from a file to a malware family also quote the file sandbox verdicts (`sandbox_verdicts`) detecting that family, e.g. "sandbox 'Zenbox' detects Emotet (malicious, confidence 80)". Co-occurrence links from an IOC stay described as inferred, but quote the GTI evidence of the IOC when it supports the link, e.g. an explanation card attributing the IOC to the intrusion set of the same report.
 
 `targets` and `originates-from` relationships to countries and sectors always carry the GTI confidence, source and note of the targeting when GTI provides them, e.g. "GTI confidence: confirmed. Source: Mandiant. Targeted government ministries.", since this is GTI content and not a generated description. With `GTI_RELATIONSHIP_DESCRIPTIONS`, the GTI list they come from is stated first. The GTI first and last seen dates are the relationship start and stop times. The country and sector entities themselves get no description from the targeting: they are shared by every actor targeting them.
 
 The relationship ID does not depend on its description: when several reports lead to the same co-occurrence relationship, OpenCTI keeps the description of the last import, depending on the connector confidence level. The report contents still list every report it comes from.
+
+GTI reports often name threats in their content or analyst comment, with a link to their GTI page (`https://www.virustotal.com/gui/collection/threat-actor--<uuid>`), without listing them in the report relationships (`/collections/{report_id}/{type}` returns nothing for them). With `GTI_REPORT_LINK_TO_MENTIONED_THREATS` enabled:
+
+- The GTI collection IDs linked in `content`, `executive_summary` and `analyst_comment` are collected, leaving out those GTI already relates to the report. Names are not matched: the link gives the exact GTI collection, while threat names and aliases include common words.
+- Each linked collection is fetched (`GET /collections/{id}`, one API call per threat) and imported like a report sub-entity when its `collection_type` is among the `GTI_REPORT_SUBENTITIES` threat types (`threat_actors`, `malware_families`, `campaigns`, `software_toolkits`). Software toolkits have `malware--` IDs, so the type is read from the fetched collection.
+- The report gets a `related-to` relationship to each, always described as inferred (see the table above), with or without `GTI_RELATIONSHIP_DESCRIPTIONS`: the description is what tells these threats from those GTI lists. The co-occurrence options treat them like the other threats of the report.
 
 Relationships created by `GTI_IOC_LINK_TO_THREATS`:
 

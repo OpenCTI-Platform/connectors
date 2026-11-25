@@ -16,7 +16,9 @@ from connector.src.custom.configs.gti_config_common import IOC_SUBENTITY_TYPES
 from connector.src.custom.mappers.relationship_reasons import (
     co_occurrence_reason,
     display_name,
+    gti_collection_id,
     optional_reason,
+    report_text_link_reason,
     set_relationship_descriptions,
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
@@ -69,6 +71,10 @@ INTRUSION_SET_CAPABILITY_RELATIONSHIP_TYPES = {
     ("intrusion-set", "attack-pattern"): "uses",
     ("intrusion-set", "vulnerability"): "targets",
 }
+
+# STIX types of the threats a report can link to in its text: threat actors,
+# malware families, campaigns, software toolkits.
+REPORT_TEXT_LINK_TYPES = ("intrusion-set", "malware", "campaign", "tool")
 
 
 def ioc_threat_relationship_types(
@@ -339,3 +345,37 @@ class BaseConvertToSTIX:
             {"prefix": LOG_PREFIX, "count": len(relationships)},
         )
         return relationships
+
+    def create_report_text_link_relationships(
+        self,
+        report: Any,
+        stix_objects: list[Any],
+        linked_threat_ids: set[str],
+    ) -> list[RelationshipModel]:
+        """Link a report to the threats it links to only in its text.
+
+        Args:
+            report: The STIX report.
+            stix_objects: Converted sub-entities of the report.
+            linked_threat_ids: GTI collection IDs of the threats linked in its text.
+
+        Returns:
+            'related-to' relationships from the report, described as inferred.
+
+        """
+        now = datetime.now(timezone.utc)
+        return [
+            OctiRelationshipModel.create(
+                relationship_type="related-to",
+                source_ref=report.id,
+                target_ref=threat.id,
+                organization_id=self.organization.id,
+                marking_ids=[self.tlp_marking.id],
+                description=report_text_link_reason(report, threat),
+                created=now,
+                modified=now,
+            )
+            for threat in stix_objects
+            if getattr(threat, "type", None) in REPORT_TEXT_LINK_TYPES
+            and gti_collection_id(threat) in linked_threat_ids
+        ]

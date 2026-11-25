@@ -101,6 +101,19 @@ def gti_association_reason(context_entity: Any, entity: Any) -> str:
     )
 
 
+def report_text_link_reason(report: Any, threat: Any) -> str:
+    """Reason for a link from a report to a threat it links to only in its text.
+
+    Always written, with or without GTI_RELATIONSHIP_DESCRIPTIONS: it is what
+    tells these links from the report contents GTI lists.
+    """
+    return (
+        f"Inferred by the connector, not stated by GTI: {describe(report)} links to "
+        f"{describe(threat)} in its text, but GTI does not list it among the related "
+        "objects of the report."
+    )
+
+
 def ioc_delta_association_reason(target: Any) -> str:
     """Reason for a link from an IOC deltas feed indicator to an entity of its entry."""
     return (

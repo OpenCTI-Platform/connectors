@@ -127,6 +127,42 @@ class CollectionOrchestrator(BaseOrchestrator, ABC):
         """
         return []
 
+    async def _add_linked_subentities(
+        self, entity: Any, subentities: dict[str, list[Any]]
+    ) -> set[str]:
+        """Add sub-entities GTI does not list for the entity, in place. None by default.
+
+        Args:
+            entity: The GTI main entity.
+            subentities: GTI sub-entities of the main entity, by type.
+
+        Returns:
+            GTI collection IDs of the added sub-entities.
+
+        """
+        return set()
+
+    def _link_linked_entities(
+        self,
+        main_entities: list[Any],
+        subentity_stix: list[Any],
+        linked_ids: set[str],
+    ) -> list[Any]:
+        """Return relationships to the sub-entities added by `_add_linked_subentities`.
+
+        None by default.
+
+        Args:
+            main_entities: STIX objects of the main entity.
+            subentity_stix: Converted sub-entities of the main entity.
+            linked_ids: GTI collection IDs returned by `_add_linked_subentities`.
+
+        Returns:
+            The created relationships.
+
+        """
+        return []
+
     async def _finalize_entities(
         self, entity: Any, all_entities: list[Any]
     ) -> list[Any]:
@@ -177,6 +213,7 @@ class CollectionOrchestrator(BaseOrchestrator, ABC):
                             entity,
                         ),
                     )
+                    linked_ids = await self._add_linked_subentities(entity, subentities)
                     self._log_relationships_summary(subentities, idx, total)
                     self._use_attack_technique_ids(subentities)
 
@@ -191,6 +228,9 @@ class CollectionOrchestrator(BaseOrchestrator, ABC):
                     if subentity_stix:
                         subentity_stix += self._link_co_occurring_entities(
                             main_entities, subentity_stix, subentities
+                        )
+                        subentity_stix += self._link_linked_entities(
+                            main_entities, subentity_stix, linked_ids
                         )
 
                     all_entities = await self._finalize_entities(

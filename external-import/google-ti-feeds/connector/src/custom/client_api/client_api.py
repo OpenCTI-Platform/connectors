@@ -224,6 +224,23 @@ class ClientAPI:
             entity_name, entity_id, subentity_types
         )
 
+    async def fetch_linked_threats(
+        self, collection_ids: list[str], subentity_types: list[str]
+    ) -> dict[str, list[Any]]:
+        """Fetch GTI threat collections by ID, grouped by sub-entity type.
+
+        Args:
+            collection_ids: GTI collection IDs, e.g. linked in a report text.
+            subentity_types: Sub-entity types to keep, e.g. "threat_actors".
+
+        Returns:
+            The fetched collections, deserialized to their sub-entity model.
+
+        """
+        return await self.shared_client.fetch_linked_threats(
+            collection_ids, subentity_types
+        )
+
     async def fetch_ioc_delta_package(
         self, package_id: str, ioc_type: str
     ) -> list[dict[str, Any]] | None:

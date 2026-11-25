@@ -57,6 +57,21 @@ GTI_RELATIONSHIP_FETCHER_CONFIG = GenericFetcherConfig(
     response_key=None,
 )
 
+# Any GTI collection by ID, raw: its type is read from attributes.collection_type
+# (threat links of report text, see client_api/linked_threats.py).
+GTI_COLLECTION_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="collections",
+    endpoint="/collections/{entity_id}",
+    display_name="collections",
+    display_name_singular="collection",
+    exception_class=GTIRelationshipFetchError,
+    response_model=None,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key="data",
+)
+
 GTI_DOMAIN_FETCHER_CONFIG = GenericFetcherConfig(
     entity_type="domains",
     endpoint="/domains/{entity_id}",
@@ -122,6 +137,7 @@ GTI_SOFTWARE_TOOLKIT_FETCHER_CONFIG = GenericFetcherConfig(
 COMMON_FETCHER_CONFIGS = {
     "attack_techniques": GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG,
     "relationships": GTI_RELATIONSHIP_FETCHER_CONFIG,
+    "collections": GTI_COLLECTION_FETCHER_CONFIG,
     "domains": GTI_DOMAIN_FETCHER_CONFIG,
     "files": GTI_FILE_FETCHER_CONFIG,
     "urls": GTI_URL_FETCHER_CONFIG,

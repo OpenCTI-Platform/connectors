@@ -672,6 +672,11 @@
       },
       "type": "array"
     },
+    "GTI_REPORT_LINK_TO_MENTIONED_THREATS": {
+      "default": false,
+      "description": "Whether to import the threat actors, malware families, campaigns and software toolkits a report links to in its content, executive summary or analyst comment (links to their GTI page) when GTI does not list them in the report relationships. They are added to the report, which is linked to each with 'related-to', described as inferred by the connector, not stated by GTI. Only the types in report_subentities are imported; each linked threat costs one API call.",
+      "type": "boolean"
+    },
     "GTI_INDICATOR_SCORING": {
       "default": "threat_score",
       "description": "Strategy used to compute the score of IOC indicators and observables. 'threat_score': GTI threat score, then GTI confidence score, then Mandiant confidence score (deprecated by GTI). 'gti_derived': computed from the GTI verdict and severity. 'average_detection': computed from the share of AV engines flagging the IOC (last_analysis_stats). When the selected strategy has no data for an IOC, 'threat_score' is used.",

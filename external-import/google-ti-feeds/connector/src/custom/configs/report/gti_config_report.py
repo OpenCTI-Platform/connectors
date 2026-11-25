@@ -79,6 +79,17 @@ class GTIReportConfig(GTIBaseConfig):
         examples=["malware_families,threat_actors", ""],
     )
 
+    report_link_to_mentioned_threats: bool = Field(
+        default=False,
+        description="Whether to import the threat actors, malware families, "
+        "campaigns and software toolkits a report links to in its content, executive "
+        "summary or analyst comment (links to their GTI page) when GTI does not list "
+        "them in the report relationships. They are added to the report, which is "
+        "linked to each with 'related-to', described as inferred by the connector, "
+        "not stated by GTI. Only the types in report_subentities are imported; each "
+        "linked threat costs one API call.",
+    )
+
     @field_validator("report_types", mode="before")
     @classmethod
     def validate_report_types(cls, v: str | list[str]) -> list[str]:

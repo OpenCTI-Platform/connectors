@@ -25,4 +25,5 @@ gti:
   # ioc_import_threshold: 250
   # ioc_link_to_threats: false
   # intrusion_set_link_to_capabilities: false
+  # report_link_to_mentioned_threats: false
   # extended_descriptions: false
