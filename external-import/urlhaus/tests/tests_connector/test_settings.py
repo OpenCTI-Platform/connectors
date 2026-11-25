@@ -19,7 +19,7 @@ from external_import_connector import ConnectorSettings
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -32,15 +32,17 @@ from external_import_connector import ConnectorSettings
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {},
-                "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
-                    "default_x_opencti_score": 80,
-                    "import_offline": True,
-                    "interval": 3,
-                    "threats_from_labels": True,
-                },
+                "urlhaus": {"auth_key": "test-auth-key"},
             },
             id="minimal_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "urlhaus": {"csv_url": "https://example.com/key/recent.csv"},
+            },
+            id="csv_url_without_auth_key",
         ),
     ],
 )
@@ -84,7 +86,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -105,7 +107,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -114,6 +116,26 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "connector.id",
             id="invalid_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "urlhaus": {},
+            },
+            "urlhaus",
+            id="missing_auth_key_and_csv_url",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "urlhaus": {
+                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/"
+                },
+            },
+            "urlhaus",
+            id="legacy_csv_url_without_auth_key",
         ),
     ],
 )
