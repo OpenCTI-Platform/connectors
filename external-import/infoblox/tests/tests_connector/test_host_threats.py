@@ -38,19 +38,19 @@ def objects_of_type(bundle, stix_type) -> list:
     return [obj for obj in bundle.objects if obj["type"] == stix_type]
 
 
-def test_host_threat_with_domain_keeps_the_domain(connector):
-    """A HOST record with `domain` is converted as before."""
+def test_host_threat_with_host_and_domain_prefers_host(connector):
+    """When both are present, `host` wins over the registered `domain` (#7058)."""
     threat = make_host_threat(domain="bad.example.com", host="www.bad.example.com")
 
     bundle, _ = connector.create_stix_bundle("", "", {"threat": [threat]})
 
     (indicator,) = objects_of_type(bundle, "indicator")
     (domain,) = objects_of_type(bundle, "domain-name")
-    assert indicator.pattern == "[domain-name:value = 'bad.example.com']"
+    assert indicator.pattern == "[domain-name:value = 'www.bad.example.com']"
     assert indicator.id == Indicator.generate_id(
-        "[domain-name:value = 'bad.example.com']"
+        "[domain-name:value = 'www.bad.example.com']"
     )
-    assert domain.value == "bad.example.com"
+    assert domain.value == "www.bad.example.com"
 
 
 def test_host_threat_without_domain_uses_host(connector):
