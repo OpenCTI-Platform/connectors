@@ -111,7 +111,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     )
     assert connector.base_url == "https://api.rstcloud.net/v1"
     assert connector.api_key == "test-api-key"
-    assert connector.max_tlp == "TLP:AMBER"
+    assert connector.max_tlp == "amber"
     assert connector.timeout == 30
     assert connector.whois_output_object == "description"
     assert connector.update_output_action == "append"

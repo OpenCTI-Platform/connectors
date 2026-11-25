@@ -15,7 +15,7 @@ class RSTNoiseControlConnector:
         )
         self.base_url = self.config.rst_noise_control.base_url.rstrip("/")
         self.api_key = self.config.rst_noise_control.api_key.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        self.max_tlp = self.config.connector.max_tlp
 
         self.update_confidence = self.config.rst_noise_control.update_confidence
 

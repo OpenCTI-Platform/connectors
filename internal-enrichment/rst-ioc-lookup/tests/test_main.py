@@ -92,7 +92,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert mock_opencti_connector_helper.call_args.kwargs["playbook_compatible"]
     assert connector.base_url == "https://api.rstcloud.net/v1"
     assert connector.api_key == "test-api-key"
-    assert connector.max_tlp == "TLP:AMBER+STRICT"
+    assert connector.max_tlp == "amber+strict"
     assert connector.update_confidence is True
     assert connector.update_score is True
     assert connector.update_valid_from is True

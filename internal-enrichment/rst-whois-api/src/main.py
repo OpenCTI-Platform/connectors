@@ -21,7 +21,7 @@ class RSTWhoisApiConnector:
         )
         self.base_url = self.config.rst_whois_api.base_url.rstrip("/")
         self.api_key = self.config.rst_whois_api.api_key.get_secret_value()
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        self.max_tlp = self.config.connector.max_tlp
 
         self.domain_pattern = re.compile(r"value\s*=\s*(\'|\")([^\'\"]+)(\'|\")")
 
