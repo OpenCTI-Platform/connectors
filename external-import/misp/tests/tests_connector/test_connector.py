@@ -2092,8 +2092,11 @@ class TestAttributeFilteringEndToEnd:
         event_ts: int,
         attributes: list[dict],
         galaxy_name: str = "APT28",
+        galaxy_display_name: str = "Threat Actor",
+        galaxy_type: str = "threat-actor",
+        galaxy_namespace: str = "misp",
     ) -> EventRestSearchListItem:
-        """Build an event with attributes and a threat-actor galaxy."""
+        """Build an event with attributes and a configurable galaxy."""
         return EventRestSearchListItem.model_validate(
             {
                 "Event": {
@@ -2110,9 +2113,9 @@ class TestAttributeFilteringEndToEnd:
                     "Galaxy": [
                         {
                             "uuid": "11111111-2222-3333-4444-555555555555",
-                            "name": "Threat Actor",
-                            "type": "threat-actor",
-                            "namespace": "misp",
+                            "name": galaxy_display_name,
+                            "type": galaxy_type,
+                            "namespace": galaxy_namespace,
                             "GalaxyCluster": [
                                 {
                                     "uuid": "66666666-7777-8888-9999-aaaaaaaaaaaa",
@@ -2139,6 +2142,76 @@ class TestAttributeFilteringEndToEnd:
                 }
             }
         )
+
+    @pytest.mark.parametrize(
+        ("namespace", "galaxy_type", "display_name"),
+        [
+            ("mitre-attack", "mitre-intrusion-set", "Intrusion Set"),
+            ("misp", "threat-actor", "Threat Actor"),
+            ("eset", "eset-threat-actor", "Custom ESET display name"),
+        ],
+    )
+    def test_supported_intrusion_set_galaxies_are_converted(
+        self,
+        mock_opencti_connector_helper,
+        mock_py_misp,
+        namespace,
+        galaxy_type,
+        display_name,
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = self._make_event_with_galaxy(
+            "1",
+            1000,
+            attributes=[],
+            galaxy_name="Synthetic Actor",
+            galaxy_display_name=display_name,
+            galaxy_type=galaxy_type,
+            galaxy_namespace=namespace,
+        )
+
+        _, _, bundle_objects = connector.converter.process(
+            event=event, include_relationships=True
+        )
+
+        intrusion_sets = [
+            obj for obj in bundle_objects if obj["type"] == "intrusion-set"
+        ]
+        assert len(intrusion_sets) == 1
+        assert intrusion_sets[0]["name"] == "Synthetic Actor"
+
+    @pytest.mark.parametrize(
+        ("namespace", "galaxy_type"),
+        [
+            ("eset", "threat-actor"),
+            ("misp", "eset-threat-actor"),
+            ("other", "eset-threat-actor"),
+            ("eset", "other-type"),
+        ],
+    )
+    def test_mismatched_galaxies_are_not_converted_to_intrusion_sets(
+        self,
+        mock_opencti_connector_helper,
+        mock_py_misp,
+        namespace,
+        galaxy_type,
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = self._make_event_with_galaxy(
+            "1",
+            1000,
+            attributes=[],
+            galaxy_name="Synthetic Actor",
+            galaxy_display_name="Custom ESET display name",
+            galaxy_type=galaxy_type,
+            galaxy_namespace=namespace,
+        )
+
+        _, _, bundle_objects = connector.converter.process(
+            event=event, include_relationships=True
+        )
+
+        assert not any(obj["type"] == "intrusion-set" for obj in bundle_objects)
 
     @staticmethod
     def _ip_attribute(attr_id: str, timestamp: str, value: str) -> dict:
