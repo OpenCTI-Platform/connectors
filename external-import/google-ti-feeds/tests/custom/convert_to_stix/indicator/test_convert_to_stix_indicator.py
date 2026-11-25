@@ -1440,7 +1440,7 @@ class TestIndicatorSubentities:
         # Then – indicator + (malware + rel) only; the skip is counted, not logged
         _then_returns_n_objects(result, 3)
         _then_stix_type_absent(result, "attack-pattern")
-        assert converter.skipped_attack_techniques_without_name == 1  # noqa: S101
+        assert converter.pop_skipped_attack_technique_count() == 1  # noqa: S101
         warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert not warnings  # noqa: S101
 
@@ -1454,8 +1454,9 @@ class TestIndicatorSubentities:
         # When
         _when_convert(converter, _given_entry_with_malware_and_technique())
         _when_convert(converter, _given_entry_with_malware_and_technique())
-        # Then
-        assert converter.skipped_attack_techniques_without_name == 2  # noqa: S101
+        # Then – the count covers both entries, and popping it resets it
+        assert converter.pop_skipped_attack_technique_count() == 2  # noqa: S101
+        assert converter.pop_skipped_attack_technique_count() == 0  # noqa: S101
 
     def test_attack_technique_with_name_is_not_counted(
         self, logger: logging.Logger
@@ -1470,7 +1471,7 @@ class TestIndicatorSubentities:
             _given_entry_with_malware_and_technique(attack_technique_name="Name"),
         )
         # Then
-        assert converter.skipped_attack_techniques_without_name == 0  # noqa: S101
+        assert converter.pop_skipped_attack_technique_count() == 0  # noqa: S101
 
     def test_empty_subentities_keeps_indicator_only(
         self, logger: logging.Logger

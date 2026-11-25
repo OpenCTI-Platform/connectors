@@ -36,8 +36,8 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
     def __init__(self, config: "GTIConfig", logger: "logging.Logger", tlp_level: str):
         super().__init__(config, logger, tlp_level)
 
-        # Attack techniques skipped for lack of a name since the last reset
-        self.skipped_attack_techniques_without_name = 0
+        # Attack techniques skipped for lack of a name since the last pop
+        self._skipped_attack_technique_count = 0
 
         self._converter = {
             "domain": self._convert_domain,
@@ -116,6 +116,17 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             return has_threat_actor
         # Both required: OR logic — at least one must be present
         return has_malware or has_threat_actor
+
+    def pop_skipped_attack_technique_count(self) -> int:
+        """Return and reset the count of attack techniques skipped for lack of a name.
+
+        Returns:
+            The number of skipped attack technique references since the last call.
+
+        """
+        count = self._skipped_attack_technique_count
+        self._skipped_attack_technique_count = 0
+        return count
 
     def convert(self, ioc_data: dict[str, Any]) -> list[Any]:
         """Convert a single IOC delta entry to STIX objects."""
@@ -511,7 +522,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         if not attack_technique_name or not attack_technique_name.strip():
             # Counted, not logged: the IOC delta feed never carries technique names,
             # so the orchestrator logs one warning per package from this counter.
-            self.skipped_attack_techniques_without_name += 1
+            self._skipped_attack_technique_count += 1
             return []
 
         attack_pattern = AttackPattern(

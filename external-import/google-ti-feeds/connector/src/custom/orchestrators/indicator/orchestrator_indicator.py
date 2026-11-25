@@ -130,12 +130,14 @@ class OrchestratorIndicator(BaseOrchestrator):
             )
 
             all_stix: list[Any] = []
-            self.converter.skipped_attack_techniques_without_name = 0
-            for entry_data in raw_entries:
-                stix_objects = self.converter.convert(entry_data)
-                all_stix.extend(stix_objects)
+            try:
+                for entry_data in raw_entries:
+                    stix_objects = self.converter.convert(entry_data)
+                    all_stix.extend(stix_objects)
+            finally:
+                # Always reset, so a failed package does not leak into the next one
+                skipped_count = self.converter.pop_skipped_attack_technique_count()
 
-            skipped_count = self.converter.skipped_attack_techniques_without_name
             if skipped_count:
                 self.logger.warning(
                     "Skipping attack techniques without a name",
