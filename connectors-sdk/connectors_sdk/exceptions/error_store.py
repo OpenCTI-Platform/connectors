@@ -1,6 +1,8 @@
-"""Store of the errors recorded during one call of a connector callback.
+"""Store of the errors created during one call of a connector callback.
 
 ``ErrorStore`` is a singleton: it always returns the same store instance.
+Connector code never calls it: a ``ConnectorError`` records itself in the store when
+it is created, so the connector only raises (or handles) the error.
 
 The store keeps errors only while it is recording. Only the SDK starts and stops
 recording, around each call of the callback that pycti runs (a scheduled run, an
@@ -9,6 +11,17 @@ of the call, to report them to OpenCTI.
 
 The store and its recording flag are shared by the threads of a process, not across
 processes.
+
+Examples:
+    A connector only raises or handles the error. It never calls the store::
+
+        from connectors_sdk import DataConversionError
+
+        for item in items:
+            try:
+                ...
+            except DataConversionError as err:  # recorded when it was created
+                logger.warning("Skipping item", meta={"code": err.code})
 """
 
 import threading
@@ -16,7 +29,7 @@ from typing import ClassVar, Self
 
 
 class ErrorStore:
-    """Store of the errors kept while it is recording.
+    """Store of the errors created while it is recording.
 
     Every ``ErrorStore()`` call returns the same instance, and calling it again never
     discards the recorded errors. Every method is thread-safe.
@@ -76,7 +89,8 @@ class ErrorStore:
     def record_error(self, error: Exception) -> None:
         """Record one error, only while recording is on.
 
-        When recording is off, nothing is kept and nothing is raised.
+        A ``ConnectorError`` calls this itself when it is created. When recording is
+        off, nothing is kept and nothing is raised.
 
         Args:
             error: The error to record. Any exception is accepted, as it is. An error

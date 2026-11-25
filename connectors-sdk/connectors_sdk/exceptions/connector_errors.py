@@ -29,6 +29,13 @@ import logging
 from enum import IntEnum
 from typing import Any, ClassVar, Self
 
+from connectors_sdk.exceptions.error_store import ErrorStore
+
+# A plain `logging.Logger`, like `_setup_logger` in `logger/_logger.py`: the exceptions
+# never import the SDK logger package, so no circular import can appear, and an error
+# never sets up the logging of the process (the SDK adapter does it on its first log).
+_recording_logger = logging.getLogger(__name__)
+
 
 class Criticity(IntEnum):
     """How bad a connector error is.
@@ -59,6 +66,9 @@ class ConnectorError(Exception):
     marker is not inherited. An abstract class cannot be instantiated. A concrete
     class must define, or inherit from a concrete class, a ``code`` and a
     ``criticity``, otherwise a ``TypeError`` is raised when the class is defined.
+
+    When the ``ErrorStore`` is recording, creating an error records it there. A
+    subclass that overrides ``__init__`` must call ``super().__init__()``.
 
     Attributes:
         code: Standardized error code, e.g. ``api.timeout``.
@@ -103,6 +113,25 @@ class ConnectorError(Exception):
                 "raise one of its concrete subclasses."
             )
         return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, *args: Any) -> None:
+        """Create the error and record it in the ``ErrorStore``.
+
+        The error is kept only while the store is recording. Recording never raises:
+        a failure is logged instead.
+
+        Args:
+            *args: The exception arguments, usually one message.
+        """
+        super().__init__(*args)
+        try:
+            ErrorStore().record_error(self)
+        except Exception:
+            # Never replace the error being created: log the SDK failure instead
+            _recording_logger.exception(
+                "Failed to record a connector error in the ErrorStore",
+                extra={"attributes": {"error": self}},
+            )
 
     def convert_to_pycti_format(self) -> dict[str, Any]:
         """Return the error as pycti expects it, to report it to OpenCTI.
