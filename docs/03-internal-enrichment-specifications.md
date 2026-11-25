@@ -736,9 +736,11 @@ When fixing a legacy connector without migrating it, keep these rules:
   the original `data["stix_objects"]`. Only then set `playbook_compatible=True` on the helper and
   `"playbook_supported": true` in the manifest.
 - **Bundles**: send results only through `stix2_create_bundle()` and `send_stix2_bundle()`.
-- **Entity updates**: add the enriched entity to the bundle with its id instead of modifying
-  `data["stix_entity"]` in place. Outside playbooks, `stix_entity` is usually not the object inside
-  `stix_objects`, so an in-place change is lost.
+- **Entity updates**: put the enriched entity in the bundle in place of the original one (same id),
+  instead of modifying `data["stix_entity"]` in place. Outside playbooks, `stix_entity` is usually
+  not the object inside `stix_objects`, so an in-place change is lost. Never send both versions:
+  OpenCTI merges the enriched entity with the stored one, but it does not deduplicate two objects
+  with the same id within a bundle, so in a playbook both go to the next steps.
 
 A legacy connector's `process_message()` typically looks like this:
 
@@ -779,7 +781,11 @@ def process_message(self, data: dict) -> str:
             self._send_bundle(stix_objects)
         return "No enrichment data found"
 
-    self._send_bundle(stix_objects + new_objects)
+    # Keyed by id: the enriched entity replaces the original one instead of
+    # being sent next to it
+    bundle_objects = {obj["id"]: obj for obj in stix_objects}
+    bundle_objects.update({obj["id"]: obj for obj in new_objects})
+    self._send_bundle(list(bundle_objects.values()))
     return f"Entity enriched with {len(new_objects)} objects"
 ```
 
