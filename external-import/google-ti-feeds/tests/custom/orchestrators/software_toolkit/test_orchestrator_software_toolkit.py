@@ -260,6 +260,45 @@ class TestFlushBatchProcessor:
 
 
 # =====================
+# _build_attack_technique_data tests
+# =====================
+
+
+class TestBuildAttackTechniqueData:
+    """Tests for BaseOrchestrator._build_attack_technique_data."""
+
+    @pytest.mark.parametrize(
+        "attack_technique_entities",
+        [
+            pytest.param([], id="no-entity"),
+            pytest.param([MagicMock(id=None)], id="entity-without-id"),
+        ],
+    )
+    def test_given_no_entity_with_an_id_when_build_then_returns_none(
+        self, attack_technique_entities
+    ):
+        """Without any technique ID, there is nothing to convert."""
+        orch, _ = _make_orchestrator()
+
+        assert orch._build_attack_technique_data(attack_technique_entities) is None
+
+    def test_given_entity_without_id_when_build_then_entity_ignored(self):
+        """An entity without an ID is left out of both ids and names."""
+        orch, _ = _make_orchestrator()
+        named_technique = MagicMock(id="T1046")
+        named_technique.attributes.name = "Network Service Discovery"
+        technique_without_id = MagicMock(id=None)
+        technique_without_id.attributes.name = "Process Injection"
+
+        attack_technique_data = orch._build_attack_technique_data(
+            [named_technique, technique_without_id]
+        )
+
+        assert attack_technique_data.ids == ["T1046"]
+        assert attack_technique_data.names == {"T1046": "Network Service Discovery"}
+
+
+# =====================
 # run() tests
 # =====================
 
