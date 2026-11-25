@@ -187,7 +187,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed conn
 - STIX bundle generation details
 
 Common issues:
-- **Invalid API Key**: Ensure you have an valid API key
+- **Invalid API Key**: Ensure you have a valid API key
 - **Rate Limit Error**: Ensure the connector is set to manual enrichment and only enrich within the weekly limits allowed for Free Tier users
 - **TLP Restrictions**: Check that observable TLP does not exceed `CONNECTOR_MAX_TLP` (replaces the deprecated `GREYNOISE_MAX_TLP`)
 
