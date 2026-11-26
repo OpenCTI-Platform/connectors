@@ -32,14 +32,13 @@ class MasterYaraImporter(BaseImporter):
         client: KasperskyClient,
         author: Identity,
         tlp_marking: MarkingDefinition,
-        update_existing_data: bool,
         master_yara_fetch_weekday: Optional[int],
         master_yara_include_report: bool,
         master_yara_report_type: str,
         master_yara_report_status: int,
     ) -> None:
         """Initialize Kaspersky Master YARA importer."""
-        super().__init__(helper, client, author, tlp_marking, update_existing_data)
+        super().__init__(helper, client, author, tlp_marking)
 
         self.master_yara_fetch_weekday = master_yara_fetch_weekday
         self.master_yara_include_report = master_yara_include_report
@@ -51,8 +50,7 @@ class MasterYaraImporter(BaseImporter):
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
         self._info(
-            "Running Kaspersky Master YARA importer (update data: {0}, include report: {1})...",  # noqa: E501
-            self.update_existing_data,
+            "Running Kaspersky Master YARA importer (include report: {0})...",
             self.master_yara_include_report,
         )
 

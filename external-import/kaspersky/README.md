@@ -37,50 +37,10 @@ The OpenCTI Kaspersky connector imports threat intelligence from the Kaspersky T
 
 ## Configuration
 
-The connector can be configured with the following variables:
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI Parameters
-
-| Parameter      | Docker Environment Variable | Mandatory | Description                          |
-|----------------|----------------------------|-----------|--------------------------------------|
-| OpenCTI URL    | `OPENCTI_URL`              | Yes       | URL of the OpenCTI platform         |
-| OpenCTI Token  | `OPENCTI_TOKEN`            | Yes       | API token for the OpenCTI platform  |
-
-### Base Connector Parameters
-
-| Parameter         | Docker Environment Variable | Default | Mandatory | Description                               |
-|-------------------|-----------------------------|---------|-----------|-------------------------------------------|
-| Connector ID      | `CONNECTOR_ID`              |         | Yes       | Unique identifier (UUIDv4)               |
-| Connector Name    | `CONNECTOR_NAME`            |         | Yes       | Name of the connector                    |
-| Connector Scope   | `CONNECTOR_SCOPE`           |         | Yes       | Connector scope                          |
-| Log Level         | `CONNECTOR_LOG_LEVEL`       | info    | No        | Log verbosity                            |
-
-### Kaspersky Connector Parameters
-
-| Config Parameter                           | Docker Environment Variable                          | Default                       | Description                                                            |
-|--------------------------------------------|------------------------------------------------------|-------------------------------|------------------------------------------------------------------------|
-| `base_url`                                 | `KASPERSKY_BASE_URL`                                 | `https://tip.kaspersky.com`   | Kaspersky TIP API base URL                                            |
-| `user`                                     | `KASPERSKY_USER`                                     |                               | Kaspersky TIP username                                                |
-| `password`                                 | `KASPERSKY_PASSWORD`                                 |                               | Kaspersky TIP password                                                |
-| `certificate_path`                         | `KASPERSKY_CERTIFICATE_PATH`                         |                               | Full path to client certificate                                       |
-| `tlp`                                      | `KASPERSKY_TLP`                                      | `Amber`                       | TLP marking for imported objects                                      |
-| `create_observables`                       | `KASPERSKY_CREATE_OBSERVABLES`                       | `true`                        | Create observables from IoCs                                          |
-| `create_indicators`                        | `KASPERSKY_CREATE_INDICATORS`                        | `true`                        | Create indicators from IoCs                                           |
-| `scopes`                                   | `KASPERSKY_SCOPES`                                   | `publication,master_ioc,master_yara` | Data scopes to import                                         |
-| `publication_start_timestamp`              | `KASPERSKY_PUBLICATION_START_TIMESTAMP`              | `0`                           | Import publications updated after this timestamp (Unix epoch)        |
-| `publication_report_type`                  | `KASPERSKY_PUBLICATION_REPORT_TYPE`                  | `threat-report`               | Report type in OpenCTI                                                |
-| `publication_report_status`                | `KASPERSKY_PUBLICATION_REPORT_STATUS`                | `New`                         | Report status in OpenCTI                                              |
-| `publication_report_ignore_prefixes`       | `KASPERSKY_PUBLICATION_REPORT_IGNORE_PREFIXES`       | `Monthly APT activity report` | Exclude reports starting with these prefixes                          |
-| `publication_excluded_ioc_indicator_types` | `KASPERSKY_PUBLICATION_EXCLUDED_IOC_INDICATOR_TYPES` | `Md5sum,FileItem/Sha1sum`     | OpenIOC indicator types to exclude                                    |
-| `master_ioc_fetch_weekday`                 | `KASPERSKY_MASTER_IOC_FETCH_WEEKDAY`                 | `1`                           | ISO weekday to fetch Master IoC (1=Monday, empty=every run)          |
-| `master_ioc_excluded_ioc_indicator_types`  | `KASPERSKY_MASTER_IOC_EXCLUDED_IOC_INDICATOR_TYPES`  | `md5Hash,sha1Hash`            | OpenIOC indicator types to exclude                                    |
-| `master_ioc_report_type`                   | `KASPERSKY_MASTER_IOC_REPORT_TYPE`                   | `threat-report`               | Report type for Master IoC publications                               |
-| `master_ioc_report_status`                 | `KASPERSKY_MASTER_IOC_REPORT_STATUS`                 | `New`                         | Report status for Master IoC publications                             |
-| `master_yara_fetch_weekday`                | `KASPERSKY_MASTER_YARA_FETCH_WEEKDAY`                | `2`                           | ISO weekday to fetch Master YARA (empty=every run)                   |
-| `master_yara_include_report`               | `KASPERSKY_MASTER_YARA_INCLUDE_REPORT`               | `true`                        | Include related reports with YARA rules                               |
-| `master_yara_report_type`                  | `KASPERSKY_MASTER_YARA_REPORT_TYPE`                  | `threat-report`               | Report type for Master YARA publications                              |
-| `master_yara_report_status`                | `KASPERSKY_MASTER_YARA_REPORT_STATUS`                | `New`                         | Report status for Master YARA publications                            |
-| `interval_sec`                             | `KASPERSKY_INTERVAL_SEC`                             | `43200`                       | Import interval in seconds (default: 12 hours)                        |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 **Note**: It is not recommended to use the default value `0` for `publication_start_timestamp` due to large data volumes.
 
@@ -110,6 +70,7 @@ services:
       - CONNECTOR_NAME=Kaspersky
       - CONNECTOR_SCOPE=kaspersky
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - KASPERSKY_BASE_URL=https://tip.kaspersky.com
       - KASPERSKY_USER=ChangeMe
       - KASPERSKY_PASSWORD=ChangeMe
@@ -119,7 +80,6 @@ services:
       - KASPERSKY_CREATE_INDICATORS=true
       - KASPERSKY_SCOPES=publication,master_ioc,master_yara
       - KASPERSKY_PUBLICATION_START_TIMESTAMP=1704067200
-      - KASPERSKY_INTERVAL_SEC=43200
     volumes:
       - /path/to/certificate.pem:/path/to/certificate.pem:ro
     restart: always
@@ -139,10 +99,10 @@ cd external-import/kaspersky
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 ```
 
-4. Create a `config.yml` from `config.yml.sample` and configure variables
+4. Create `src/config.yml` from `src/config.yml.sample` and configure variables
 5. Run the connector:
 
 ```bash
