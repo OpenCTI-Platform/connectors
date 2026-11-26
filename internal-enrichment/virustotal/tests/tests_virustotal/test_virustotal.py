@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import stix2
 from pycti import Identity
+from virustotal.processors.file import FileProcessor
 from virustotal.processors.ip_address import IPProcessor
 from virustotal.virustotal import VirusTotalConnector
 
@@ -286,3 +287,38 @@ class TestEnrichGtiRelationships(unittest.TestCase):
         builder.create_intrusion_set.assert_not_called()
         builder.create_campaign.assert_not_called()
         builder.create_report.assert_not_called()
+
+
+class TestFileEnrichWithoutSha256(unittest.TestCase):
+    """FileProcessor._enrich when VT returns no "sha256" attribute."""
+
+    def setUp(self):
+        self.connector = _make_connector()
+        self.connector.file_import_yara = False
+        self.connector.file_create_note_full_report = False
+
+    def _enrich(self, hashes: dict) -> MagicMock:
+        processor = FileProcessor(
+            self.connector,
+            [],
+            {"id": "x", "hashes": hashes},
+            {"entity_type": "StixFile", "observable_value": "value"},
+            False,
+        )
+        builder = MagicMock()
+        processor._enrich(builder, {"data": {"attributes": {}}})
+        return builder
+
+    def test_uses_observable_sha256(self):
+        builder = self._enrich({"SHA-256": "a" * 64})
+        builder.create_indicator_based_on.assert_called_once_with(
+            self.connector.file_indicator_config,
+            f"[file:hashes.'SHA-256' = '{'a' * 64}']",
+        )
+        builder.update_labels.assert_called_once_with()
+
+    def test_skips_indicator_when_no_sha256_is_known(self):
+        builder = self._enrich({"MD5": "b" * 32})
+        builder.create_indicator_based_on.assert_not_called()
+        builder.update_labels.assert_called_once_with()
+        self.connector.helper.connector_logger.warning.assert_called_once()

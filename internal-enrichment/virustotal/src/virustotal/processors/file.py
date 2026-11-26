@@ -46,10 +46,20 @@ class FileProcessor(EntityProcessor):
                 self.opencti_entity["entity_type"] == "StixFile"
                 and not self.opencti_entity.get("name")
             )
-            builder.create_indicator_based_on(
-                self.connector.file_indicator_config,
-                f"""[file:hashes.'SHA-256' = '{attributes["sha256"]}']""",
-            )
+            # VT can omit "sha256" from the report: update_hashes then leaves
+            # the SHA-256 already known on the observable, if there is one.
+            known_sha256 = self.stix_entity.get("hashes", {}).get("SHA-256")
+            sha256 = attributes.get("sha256") or known_sha256
+            if sha256:
+                builder.create_indicator_based_on(
+                    self.connector.file_indicator_config,
+                    f"[file:hashes.'SHA-256' = '{sha256}']",
+                )
+            else:
+                self.helper.connector_logger.warning(
+                    "[VirusTotal] No SHA-256 available, indicator not created",
+                    {"hash": self._resolve_hash()},
+                )
 
         builder.update_labels()
 
