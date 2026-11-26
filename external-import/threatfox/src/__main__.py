@@ -308,7 +308,7 @@ class ThreatFox:
         # instead of `from err`: chaining would print the original message,
         # and so the key, in the logged traceback (see "Use `from None`
         # intentionally, to remove sensitive values" in
-        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
+        # connectors-sdk/docs/HOW_TO_Handle_errors_in_connectors.md).
         try:
             with urllib.request.urlopen(
                 self.threatfox_csv_url,

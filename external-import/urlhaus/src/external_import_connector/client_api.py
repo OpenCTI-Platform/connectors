@@ -33,7 +33,7 @@ class ConnectorClient:
         # The export URL contains the Auth-Key: never log it, and re-raise with
         # `from None`, because requests quotes the URL in its error messages
         # (see "Use `from None` intentionally, to remove sensitive values" in
-        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
+        # connectors-sdk/docs/HOW_TO_Handle_errors_in_connectors.md).
         self.helper.connector_logger.info("[API] Downloading URLhaus export")
         try:
             response = self.session.get(api_url, params=params, timeout=REQUEST_TIMEOUT)
