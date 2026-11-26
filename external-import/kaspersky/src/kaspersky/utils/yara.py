@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime
 from io import StringIO
-from typing import Any, List, Mapping, Optional, Tuple
+from typing import Any, Iterator, List, Mapping, Optional, Tuple
 
 from kaspersky.models import Yara, YaraRule
 from kaspersky.utils.stix2 import create_indicator
@@ -228,7 +228,7 @@ def _split_yara_rules(yara_rules_str: str, imports_at_top: bool = False) -> List
     rule_buffer = None
 
     result = []
-    for line in StringIO(yara_rules_str).readlines():
+    for line in _get_rule_lines(yara_rules_str):
         if rule_buffer is None and (
             line.startswith(_RULE_STARTS)
             or (not imports_at_top and line.startswith(_IMPORT_STARTS))
@@ -249,6 +249,19 @@ def _split_yara_rules(yara_rules_str: str, imports_at_top: bool = False) -> List
             rule_buffer = None
 
     return result
+
+
+def _get_rule_lines(yara_rules_str: str) -> Iterator[str]:
+    # The feed may start a rule on the line closing the previous one
+    # ("}rule next_rule {"), so yield the brace and the header separately.
+    for line in StringIO(yara_rules_str).readlines():
+        while line.startswith(_RULE_ENDS):
+            rest = line[1:].lstrip()
+            if not rest.startswith(_RULE_STARTS):
+                break
+            yield line[0] + "\n"
+            line = rest
+        yield line
 
 
 def _get_imports(yara_rules_str: str) -> str:
