@@ -240,3 +240,72 @@ def test_iter_new_items_asc_includes_objects_with_cursor_timestamp():
         "malware--same",
         "malware--new",
     ]
+
+
+def test_client_with_explicit_proxy_sets_session_proxies():
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    client = ThreatLibraryClient(
+        helper,
+        base_url="http://test.com/v1",
+        api_key="secret",
+        proxy="http://corp-proxy:8080",
+    )
+    assert client._session.proxies == {
+        "http": "http://corp-proxy:8080",
+        "https": "http://corp-proxy:8080",
+    }
+
+
+def test_iter_pages_yields_multiple_pages_then_stops():
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    client = ThreatLibraryClient(
+        helper,
+        base_url="http://test.com/v1",
+        api_key="secret",
+        page_size=2,
+        retry=0,
+    )
+    pages = [
+        _FakeResponse(
+            200,
+            {
+                "data": [
+                    {"standard_id": "malware--1"},
+                    {"standard_id": "malware--2"},
+                ],
+                "total": 3,
+            },
+        ),
+        _FakeResponse(
+            200,
+            {"data": [{"standard_id": "malware--3"}], "total": 3},
+        ),
+    ]
+    client._session.get = MagicMock(side_effect=pages)
+
+    got = list(client.iter_all_items("malware"))
+
+    assert [item["standard_id"] for item in got] == [
+        "malware--1",
+        "malware--2",
+        "malware--3",
+    ]
+    assert client._session.get.call_count == 2
+
+
+def test_iter_pages_stops_on_empty_page():
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    client = ThreatLibraryClient(
+        helper,
+        base_url="http://test.com/v1",
+        api_key="secret",
+        page_size=100,
+        retry=0,
+    )
+    client._session.get = MagicMock(return_value=_FakeResponse(200, {"data": []}))
+
+    assert list(client.iter_all_items("malware")) == []
+    client._session.get.assert_called_once()

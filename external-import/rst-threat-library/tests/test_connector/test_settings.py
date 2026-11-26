@@ -175,3 +175,49 @@ def test_settings_rejects_negative_retry():
 
     with pytest.raises(ConfigValidationError):
         FakeConnectorSettings()
+
+
+def test_settings_migrates_hyphen_namespace():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                    },
+                    "rst-threat-library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "migrated-key",
+                        "merge_split": True,
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.rst_threat_library.apikey.get_secret_value() == "migrated-key"
+    assert settings.rst_threat_library.merge_split is True
+
+
+def test_settings_requires_api_key():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                    },
+                    "rst_threat_library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "",
+                    },
+                }
+            )
+
+    with pytest.raises((ConfigValidationError, ValueError)):
+        FakeConnectorSettings()
