@@ -154,12 +154,12 @@ docker compose up -d connector-ctm360-cyberblindspot
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `CONNECTOR_ID` | Unique UUID for this connector instance | — | Yes |
+| `CONNECTOR_ID` | Unique UUID for this connector instance | `d601481f-81dc-4146-995b-15af01187c02` | No |
 | `CONNECTOR_NAME` | Display name shown in the OpenCTI UI | `CTM360-CyberBlindSpot` | No |
-| `CONNECTOR_SCOPE` | Connector scope identifier (the provided `docker-compose.yml` sets it to `CTM360-CyberBlindSpot`) | — | Yes |
+| `CONNECTOR_SCOPE` | Connector scope identifier | `CTM360-CyberBlindSpot` | No |
 | `CONNECTOR_TYPE` | Connector type (must be `EXTERNAL_IMPORT`) | `EXTERNAL_IMPORT` | No |
 | `CONNECTOR_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error` | `error` | No |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration required by the SDK base config (the provided `docker-compose.yml` sets it to `PT24H`; runtime scheduling actually uses `CTM360_CBS_IMPORT_INTERVAL`) | — | Yes |
+| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration to wait between two import cycles, for example `PT24H` | `PT24H` | No |
 
 ### CTM360 CyberBlindSpot Variables
 
@@ -167,7 +167,7 @@ docker compose up -d connector-ctm360-cyberblindspot
 |----------|-------------|---------|----------|
 | `CTM360_CBS_API_KEY` | API key for CyberBlindSpot authentication | — | Yes |
 | `CTM360_CBS_API_BASE_URL` | CyberBlindSpot API base URL | `https://cbs.ctm360.com` | No |
-| `CTM360_CBS_IMPORT_INTERVAL` | Interval in seconds between imports | `86400` (24h) | No |
+| `CTM360_CBS_IMPORT_INTERVAL` | **Deprecated**, use `CONNECTOR_DURATION_PERIOD`. Interval in seconds between imports, only read when `CONNECTOR_DURATION_PERIOD` is not set | — | No |
 | `CTM360_CBS_IMPORT_INCIDENTS` | Enable importing incidents | `true` | No |
 | `CTM360_CBS_IMPORT_MALWARE_LOGS` | Enable importing malware logs | `true` | No |
 | `CTM360_CBS_IMPORT_BREACHED_CREDENTIALS` | Enable importing breached credentials | `true` | No |
@@ -175,6 +175,21 @@ docker compose up -d connector-ctm360-cyberblindspot
 | `CTM360_CBS_IMPORT_DOMAIN_PROTECTION` | Enable importing domain protection findings | `true` | No |
 | `CTM360_CBS_ENABLE_STATUS_TRACKING` | Enable background polling for incident status changes | `true` | No |
 | `CTM360_CBS_STATUS_POLL_INTERVAL` | Interval in seconds between status polling cycles | `3600` (1h) | No |
+
+### Upgrade notes
+
+**Import interval: `CONNECTOR_DURATION_PERIOD` now takes precedence.** The
+import loop reads `CONNECTOR_DURATION_PERIOD` (default `PT24H`).
+`CTM360_CBS_IMPORT_INTERVAL` is deprecated and is only migrated to it when
+`CONNECTOR_DURATION_PERIOD` is not set. When both are set, the SDK emits a
+deprecation warning and ignores `CTM360_CBS_IMPORT_INTERVAL`.
+
+Earlier versions of the sample `docker-compose.yml` already set
+`CONNECTOR_DURATION_PERIOD=PT24H`, which the connector ignored. If you copied
+it and only tuned `CTM360_CBS_IMPORT_INTERVAL` (for example `3600`), the
+connector now imports once a day instead of hourly. To keep your cadence,
+replace `CTM360_CBS_IMPORT_INTERVAL=3600` with
+`CONNECTOR_DURATION_PERIOD=PT1H`.
 
 ---
 
@@ -300,7 +315,7 @@ before failing.
 
 - The connector is configured with a 512 MB memory limit (`mem_limit: 512m`).
 - If large data volumes (> 10,000 records per category) cause memory pressure,
-  reduce `CTM360_CBS_IMPORT_INTERVAL` to import more frequently in smaller
+  reduce `CONNECTOR_DURATION_PERIOD` to import more frequently in smaller
   batches.
 
 ### Debug logging

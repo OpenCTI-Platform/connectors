@@ -2,6 +2,7 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
+from connector.client_api import IncidentsFetchError
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
 # ---------------------------------------------------------------------------
@@ -14,7 +15,8 @@ def test_set_oauth_token_success(client):
     mock_response.text = json.dumps({"access_token": "my-bearer-token"})
     with patch("requests.post", return_value=mock_response):
         client.set_oauth_token()
-    assert client.session.headers.get("Authorization") == "my-bearer-token"
+    # RFC 6750 form: the scheme precedes the token
+    assert client.session.headers.get("Authorization") == "Bearer my-bearer-token"
 
 
 def test_set_oauth_token_missing_access_token_raises(client):
@@ -91,39 +93,52 @@ def test_pagination_incidents_multiple_pages(client):
     assert len(result) == 2
 
 
-def test_pagination_incidents_retry_error_returns_empty(client):
-    client.session.get = Mock(side_effect=RetryError("max retries exceeded"))
-    result = client.pagination_incidents("https://example.com/incidents")
-    assert result == []
+@pytest.mark.parametrize(
+    "error",
+    [
+        RetryError("max retries exceeded"),
+        HTTPError("404 Not Found"),
+        Timeout("request timed out"),
+        ConnectionError("connection refused"),
+        Exception("unexpected failure"),
+    ],
+)
+def test_pagination_incidents_error_on_first_page_raises(client, error):
+    client.session.get = Mock(side_effect=error)
+    with pytest.raises(IncidentsFetchError) as exc_info:
+        client.pagination_incidents("https://example.com/incidents")
+    assert exc_info.value.incidents == []
     client.helper.connector_logger.error.assert_called()
 
 
-def test_pagination_incidents_http_error_returns_empty(client):
-    client.session.get = Mock(side_effect=HTTPError("404 Not Found"))
-    result = client.pagination_incidents("https://example.com/incidents")
-    assert result == []
-    client.helper.connector_logger.error.assert_called()
+def test_pagination_incidents_error_on_second_page_raises_with_partial(client):
+    page1 = Mock()
+    page1.raise_for_status = Mock()
+    page1.json.return_value = {
+        "value": [{"id": "inc-newest"}],
+        "@odata.nextLink": "https://example.com/incidents?page=2",
+    }
+    page2 = Mock()
+    page2.raise_for_status = Mock(side_effect=HTTPError("500 Server Error"))
+    client.session.get = Mock(side_effect=[page1, page2])
+    with pytest.raises(IncidentsFetchError) as exc_info:
+        client.pagination_incidents("https://example.com/incidents")
+    assert exc_info.value.incidents == [{"id": "inc-newest"}]
 
 
-def test_pagination_incidents_timeout_returns_empty(client):
-    client.session.get = Mock(side_effect=Timeout("request timed out"))
-    result = client.pagination_incidents("https://example.com/incidents")
-    assert result == []
-    client.helper.connector_logger.error.assert_called()
-
-
-def test_pagination_incidents_connection_error_returns_empty(client):
-    client.session.get = Mock(side_effect=ConnectionError("connection refused"))
-    result = client.pagination_incidents("https://example.com/incidents")
-    assert result == []
-    client.helper.connector_logger.error.assert_called()
-
-
-def test_pagination_incidents_generic_exception_returns_empty(client):
-    client.session.get = Mock(side_effect=Exception("unexpected failure"))
-    result = client.pagination_incidents("https://example.com/incidents")
-    assert result == []
-    client.helper.connector_logger.error.assert_called()
+def test_get_incidents_propagates_incomplete_fetch(client):
+    page1 = Mock()
+    page1.raise_for_status = Mock()
+    page1.json.return_value = {
+        "value": [{"id": "inc-newest"}],
+        "@odata.nextLink": "https://example.com/incidents?page=2",
+    }
+    page2 = Mock()
+    page2.raise_for_status = Mock(side_effect=HTTPError("500 Server Error"))
+    client.session.get = Mock(side_effect=[page1, page2])
+    with pytest.raises(IncidentsFetchError) as exc_info:
+        client.get_incidents(1704067200)
+    assert exc_info.value.incidents == [{"id": "inc-newest"}]
 
 
 # ---------------------------------------------------------------------------

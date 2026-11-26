@@ -108,16 +108,16 @@
       "minLength": 1,
       "type": "string"
     },
+    "GTI_IMPORT_SOFTWARE_TOOLKITS": {
+      "default": false,
+      "description": "Whether to enable importing software toolkit data from GTI",
+      "type": "boolean"
+    },
     "GTI_SOFTWARE_TOOLKIT_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_SOFTWARE_TOOLKITS": {
-      "default": false,
-      "description": "Whether to enable importing software toolkit data from GTI",
-      "type": "boolean"
     },
     "GTI_SOFTWARE_TOOLKIT_ORIGINS": {
       "default": [
@@ -130,6 +130,11 @@
         "google threat intelligence"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -156,6 +161,10 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -174,6 +183,12 @@
       ],
       "description": "Comma-separated list of IOC types to import. Allowed: file, ip, url, domain",
       "items": {
+        "enum": [
+          "file",
+          "ip",
+          "url",
+          "domain"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -201,16 +216,38 @@
       "description": "Only import indicators that have at least one association with a Threat Actor. Combined with indicator_require_malware_family using OR logic, and with indicator_min_score using AND logic.",
       "type": "boolean"
     },
-    "GTI_CAMPAIGN_IMPORT_START_DATE": {
-      "default": "P1D",
-      "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
-      "format": "duration",
-      "type": "string"
+    "GTI_INDICATOR_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "threat_actors",
+        "software_toolkits"
+      ],
+      "description": "Comma-separated list of sub-entity types to link to each indicator. The IOC delta packages already embed these relationships, so this setting does not change API quota usage: it only controls which related entities and relationships are sent to OpenCTI. attack_techniques is excluded by default because it accounts for most of the relationships of the IOC feed. An empty list imports the indicators without any relationship. Allowed values: malware_families, threat_actors, software_toolkits, attack_techniques",
+      "examples": [
+        "malware_families,threat_actors,software_toolkits,attack_techniques",
+        ""
+      ],
+      "items": {
+        "enum": [
+          "malware_families",
+          "threat_actors",
+          "software_toolkits",
+          "attack_techniques"
+        ],
+        "type": "string"
+      },
+      "type": "array"
     },
     "GTI_IMPORT_CAMPAIGNS": {
       "default": false,
       "description": "Whether to enable importing campaign data from GTI",
       "type": "boolean"
+    },
+    "GTI_CAMPAIGN_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
     },
     "GTI_CAMPAIGN_ORIGINS": {
       "default": [
@@ -224,6 +261,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -253,20 +296,32 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "vulnerabilities",
+          "threat_actors",
+          "domains",
+          "files",
+          "urls",
+          "ip_addresses",
+          "software_toolkits",
+          "reports"
+        ],
         "type": "string"
       },
       "type": "array"
+    },
+    "GTI_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to enable importing vulnerability data from GTI",
+      "type": "boolean"
     },
     "GTI_VULNERABILITY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import vulnerabilities (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_VULNERABILITIES": {
-      "default": false,
-      "description": "Whether to enable importing vulnerability data from GTI",
-      "type": "boolean"
     },
     "GTI_VULNERABILITY_GET_RELATED_SOFTWARES": {
       "default": false,
@@ -285,6 +340,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -312,20 +373,25 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "threat_actors"
+        ],
         "type": "string"
       },
       "type": "array"
+    },
+    "GTI_IMPORT_MALWARE_FAMILIES": {
+      "default": false,
+      "description": "Whether to enable importing malware family data from GTI",
+      "type": "boolean"
     },
     "GTI_MALWARE_FAMILY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import malware families (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_MALWARE_FAMILIES": {
-      "default": false,
-      "description": "Whether to enable importing malware family data from GTI",
-      "type": "boolean"
     },
     "GTI_MALWARE_FAMILY_ORIGINS": {
       "default": [
@@ -339,6 +405,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -371,20 +443,25 @@
         ""
       ],
       "items": {
+        "enum": [
+          "threat_actors",
+          "attack_techniques",
+          "vulnerabilities"
+        ],
         "type": "string"
       },
       "type": "array"
+    },
+    "GTI_IMPORT_THREAT_ACTORS": {
+      "default": false,
+      "description": "Whether to enable importing threat actor data from GTI",
+      "type": "boolean"
     },
     "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_THREAT_ACTORS": {
-      "default": false,
-      "description": "Whether to enable importing threat actor data from GTI",
-      "type": "boolean"
     },
     "GTI_THREAT_ACTOR_ORIGINS": {
       "default": [
@@ -398,6 +475,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -431,20 +514,26 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "vulnerabilities",
+          "software_toolkits"
+        ],
         "type": "string"
       },
       "type": "array"
+    },
+    "GTI_IMPORT_REPORTS": {
+      "default": true,
+      "description": "Whether to enable importing report data from GTI",
+      "type": "boolean"
     },
     "GTI_REPORT_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_REPORTS": {
-      "default": true,
-      "description": "Whether to enable importing report data from GTI",
-      "type": "boolean"
     },
     "GTI_REPORT_TYPES": {
       "default": [
@@ -457,6 +546,26 @@
         "Threat Activity Alert"
       ],
       "items": {
+        "enum": [
+          "All",
+          "Actor Profile",
+          "Country Profile",
+          "Cyber Physical Security Roundup",
+          "Event Coverage/Implication",
+          "Industry Reporting",
+          "Malware Profile",
+          "Net Assessment",
+          "Network Activity Reports",
+          "News Analysis",
+          "OSINT Article",
+          "Patch Report",
+          "Strategic Perspective",
+          "TTP Deep Dive",
+          "Threat Activity Alert",
+          "Threat Activity Report",
+          "Trends and Forecasting",
+          "Weekly Vulnerability Exploitation Report"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -478,6 +587,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -512,6 +627,18 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "threat_actors",
+          "attack_techniques",
+          "vulnerabilities",
+          "campaigns",
+          "domains",
+          "files",
+          "urls",
+          "ip_addresses",
+          "software_toolkits"
+        ],
         "type": "string"
       },
       "type": "array"

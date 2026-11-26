@@ -1,5 +1,6 @@
 from typing import Dict
 
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import ExternalReference, OrganizationAuthor
 from pure_signal_scout.client_api import PureSignalScoutClient
 from pure_signal_scout.settings import ConnectorSettings
@@ -11,14 +12,12 @@ class PureSignalScoutConnectorConfig:
     def __init__(self, config):
         self.api_base_url = config.pure_signal_scout.api_url.rstrip("/")
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
 
 
 class PureSignalScoutConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.config = config
-        self.tlp = None
 
         # Initialize API client
         self.client = PureSignalScoutClient(
@@ -53,16 +52,15 @@ class PureSignalScoutConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: None
         """
-        if opencti_entity.get("objectMarking"):
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition.get("definition_type") == "TLP":
-                    self.tlp = marking_definition.get("definition")
+        tlp_levels = [
+            marking.get("definition")
+            for marking in opencti_entity.get("objectMarking") or []
+            if marking.get("definition_type") == "TLP"
+        ]
 
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
-
-        if not valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not have access to this observable, please check the group of the connector user"

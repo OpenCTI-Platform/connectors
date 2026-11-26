@@ -73,3 +73,45 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
         == "test-api-key"
     )
     assert connector.config.connector.max_tlp == TLPLevel.AMBER_STRICT
+
+
+@pytest.fixture
+def connector(mock_opencti_connector_helper) -> ProofpointEtIntelligenceConnector:
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(
+        config=settings.to_helper_config(), playbook_compatible=True
+    )
+    return ProofpointEtIntelligenceConnector(config=settings, helper=helper)
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [],
+        [{"definition_type": "TLP", "definition": "TLP:AMBER+STRICT"}],
+        [{"definition_type": "PAP", "definition": "PAP:RED"}],
+    ],
+)
+def test_extract_and_check_markings_accepts_entity_within_max_tlp(
+    connector, object_marking
+):
+    connector._extract_and_check_markings({"objectMarking": object_marking})
+
+
+@pytest.mark.parametrize(
+    "object_marking",
+    [
+        [{"definition_type": "TLP", "definition": "TLP:RED"}],
+        [
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+        ],
+        # A custom TLP cannot be compared with the max TLP, so it is refused
+        [{"definition_type": "TLP", "definition": "TLP:EX:CHEMICAL"}],
+    ],
+)
+def test_extract_and_check_markings_refuses_entity_above_max_tlp(
+    connector, object_marking
+):
+    with pytest.raises(ValueError, match="greater than the MAX TLP"):
+        connector._extract_and_check_markings({"objectMarking": object_marking})

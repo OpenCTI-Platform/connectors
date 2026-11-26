@@ -48,7 +48,6 @@ def test_entity_in_scope_false():
 
 def test_extract_and_check_markings_raises_when_tlp_exceeds_cap():
     connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
-    connector.helper.check_max_tlp.return_value = False
     # A non-TLP marking must be ignored; the TLP definition must be the one checked.
     entity = {
         "objectMarking": [
@@ -60,33 +59,34 @@ def test_extract_and_check_markings_raises_when_tlp_exceeds_cap():
     with pytest.raises(ValueError):
         connector.extract_and_check_markings(entity)
 
-    # The extracted TLP and the configured cap must be what gets checked.
-    connector.helper.check_max_tlp.assert_called_once_with(
-        "TLP:RED", "TLP:AMBER+STRICT"
-    )
+
+def test_extract_and_check_markings_checks_every_tlp():
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
+    entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+    }
+
+    with pytest.raises(ValueError):
+        connector.extract_and_check_markings(entity)
 
 
 def test_extract_and_check_markings_passes_within_cap():
     connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
-    connector.helper.check_max_tlp.return_value = True
     entity = {"objectMarking": [{"definition_type": "TLP", "definition": "TLP:GREEN"}]}
 
     # Must not raise.
     connector.extract_and_check_markings(entity)
 
-    connector.helper.check_max_tlp.assert_called_once_with(
-        "TLP:GREEN", "TLP:AMBER+STRICT"
-    )
 
+def test_extract_and_check_markings_no_marking_passes():
+    """With no markings at all, there is no cap to enforce."""
+    connector = _make_connector(max_tlp="TLP:CLEAR")
 
-def test_extract_and_check_markings_no_marking_checks_none():
-    """With no markings at all, the TLP passed to the cap check must be None."""
-    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
-    connector.helper.check_max_tlp.return_value = True
-
+    # Must not raise.
     connector.extract_and_check_markings({"objectMarking": []})
-
-    connector.helper.check_max_tlp.assert_called_once_with(None, "TLP:AMBER+STRICT")
 
 
 # ---------- _collect_intelligence ----------
@@ -170,7 +170,6 @@ def _enrichment_data(scope_id="IPv4-Addr--x", markings=None, **extra):
 
 def test_process_message_in_scope_sends_bundle():
     connector = _make_connector()
-    connector.helper.check_max_tlp.return_value = True
     connector.helper.send_stix2_bundle.return_value = ["b"]
     connector.converter_to_stix.author = _author()
     connector.client.get_ip.return_value = {"risk": {}}
@@ -185,7 +184,6 @@ def test_process_message_in_scope_sends_bundle():
 
 def test_process_message_in_scope_no_information_found():
     connector = _make_connector()
-    connector.helper.check_max_tlp.return_value = True
     connector.client.get_ip.return_value = None  # API failure -> empty bundle
 
     result = connector.process_message(_enrichment_data())
@@ -195,7 +193,6 @@ def test_process_message_in_scope_no_information_found():
 
 def test_process_message_tlp_exceeds_returns_error_string():
     connector = _make_connector()
-    connector.helper.check_max_tlp.return_value = False
     data = _enrichment_data(
         markings=[{"definition_type": "TLP", "definition": "TLP:RED"}]
     )
@@ -207,7 +204,6 @@ def test_process_message_tlp_exceeds_returns_error_string():
 
 def test_process_message_out_of_scope_playbook_passthrough():
     connector = _make_connector(scope="domain-name")  # IPv4 is out of scope
-    connector.helper.check_max_tlp.return_value = True
     connector.helper.send_stix2_bundle.return_value = ["b"]
     data = _enrichment_data()
     data["stix_objects"] = ["passthrough"]
@@ -219,7 +215,6 @@ def test_process_message_out_of_scope_playbook_passthrough():
 
 def test_process_message_out_of_scope_with_event_type_returns_error_string():
     connector = _make_connector(scope="domain-name")
-    connector.helper.check_max_tlp.return_value = True
     data = _enrichment_data(event_type="create")
 
     result = connector.process_message(data)

@@ -12,11 +12,11 @@ COPY main.py .connector_version.jso[n] /opt/
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt && \
     pip3 install --no-cache-dir . && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

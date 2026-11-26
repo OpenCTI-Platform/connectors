@@ -12,6 +12,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import Reference, TLPMarking
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
@@ -133,9 +134,14 @@ class XposedOrNotConnector:
         return values
 
     def _validate_tlp(self, values: list[Any]) -> None:
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        max_tlp = self.config.connector.max_tlp
         for tlp in values:
-            if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
+            # One TLP at a time, so that the message names the TLP refused
+            is_readable = isinstance(tlp, str)
+            if (
+                not is_readable
+                or not InternalEnrichmentConnector.is_entity_tlp_allowed([tlp], max_tlp)
+            ):
                 raise MaxTlpError(
                     f"TLP marking {tlp!r} of the observable is unreadable or above"
                     f" the maximum allowed ({max_tlp}); skipping"

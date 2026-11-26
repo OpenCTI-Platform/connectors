@@ -44,24 +44,7 @@ def make_helper() -> MagicMock:
     helper = MagicMock()
     helper.connector_logger = Mock(spec=PYCTI_LOGGER_METHODS)
     helper.stix2_create_bundle.return_value = "BUNDLE"
-    helper.check_max_tlp.side_effect = _check_max_tlp
     return helper
-
-
-def _check_max_tlp(tlp: str | None, max_tlp: str | None) -> bool:
-    order = [
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ]
-    if tlp is None or max_tlp is None:
-        return True
-    if tlp not in order:
-        return False
-    return order.index(tlp) <= max(order.index(max_tlp), 1)
 
 
 def make_settings(**overrides: Any) -> ConnectorSettings:

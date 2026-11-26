@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from paloalto_wildfire_client import PaloaltoWildfireClient, WildfireAPIError
 from pycti import (
     Identity,
@@ -88,7 +89,6 @@ class PaloaltoWildfireConnector:
             api_key=self.config.paloalto_wildfire.api_key.get_secret_value(),
             base_url=self.config.paloalto_wildfire.api_base_url,
         )
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.max_file_size = self.config.paloalto_wildfire.max_file_size
 
         self.identity = stix2.Identity(
@@ -308,13 +308,16 @@ class PaloaltoWildfireConnector:
         self.stix_objects = stix_objects
         original_stix_objects = deepcopy(stix_objects)
 
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
         try:
-            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, self.config.connector.max_tlp
+            ):
                 self._send_bundle(original_stix_objects)
                 message = "Do not send any data, TLP of the observable is greater than MAX TLP"
                 self.helper.connector_logger.info(f"[CONNECTOR] {message}")

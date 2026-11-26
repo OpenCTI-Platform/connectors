@@ -50,11 +50,21 @@
       ],
       "type": "string"
     },
-    "THREATFOX_CSV_URL": {
-      "default": "https://threatfox.abuse.ch/export/csv/recent/",
-      "description": "The Threat Fox URL",
+    "THREATFOX_AUTH_KEY": {
+      "default": null,
+      "description": "abuse.ch Auth-Key, available at https://auth.abuse.ch. Required unless `csv_url` is set.",
+      "format": "password",
       "minLength": 1,
-      "type": "string"
+      "type": "string",
+      "writeOnly": true
+    },
+    "THREATFOX_CSV_URL": {
+      "default": null,
+      "description": "Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. The retired public URL (https://threatfox.abuse.ch/export/...) is ignored.",
+      "format": "password",
+      "minLength": 1,
+      "type": "string",
+      "writeOnly": true
     },
     "THREATFOX_IMPORT_OFFLINE": {
       "default": true,

@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 from .settings import ConnectorSettings
@@ -51,7 +52,6 @@ class EsetConnector:
         """
         self.config = ConnectorSettings()
 
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.eset_api_key = self.config.eset.api_key.get_secret_value()
         self.eset_api_secret = self.config.eset.api_secret.get_secret_value()
         self.host = str(self.config.eset.api_host)
@@ -83,16 +83,15 @@ class EsetConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
-        tlp = "TLP:CLEAR"
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    tlp = marking_definition["definition"]
-
-        valid_max_tlp = self.helper.check_max_tlp(tlp, self.max_tlp)
-
-        if not valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of the connector user"

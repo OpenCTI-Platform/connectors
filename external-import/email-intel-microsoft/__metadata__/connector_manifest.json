@@ -18,7 +18,7 @@
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/email-intel-microsoft",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/email-intel-microsoft",
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-email-intel-microsoft",

@@ -16,6 +16,7 @@ from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.sandbox_processor import SandboxProcessor
 from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 
 
@@ -35,7 +36,6 @@ class PolySwarmConnector:
         self._local = threading.local()
 
         ps = config.polyswarm
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.replace_with_lower_score = ps.replace_with_lower_score
 
         self.polyswarm_client = PolySwarmClient(
@@ -203,8 +203,10 @@ class PolySwarmConnector:
 
         try:
             result = self._enrich_file(entity_id, entity, opencti_entity, stix_objects)
-            if result and result.get("status") == "error":
-                error_msg = result.get("error", "Unknown error")
+            if result and result.get("status") in ("error", "skipped"):
+                error_msg = result.get("error") or result.get(
+                    "message", "Unknown error"
+                )
                 self.helper.connector_logger.warning(f"[CONNECTOR] {error_msg}")
                 self._send_original_bundle(stix_objects)
                 return json.dumps(result)
@@ -1234,17 +1236,19 @@ class PolySwarmConnector:
                 )
 
             # ── TLP CHECK (#38)
-            max_tlp = self.max_tlp
+            max_tlp = self.config.connector.max_tlp
             if max_tlp and stix_objects:
-                markings = entity.get("object_marking_refs", [])
-                if not markings:
-                    obj_markings = opencti_entity.get("objectMarking", [])
-                    markings = [
-                        m.get("standard_id") or m.get("id", "")
-                        for m in obj_markings
-                        if isinstance(m, dict)
-                    ]
-                if markings and not self.helper.check_max_tlp(markings, max_tlp):
+                # Check the TLP definitions ("TLP:GREEN"), not the marking ids
+                tlp_levels = [
+                    m["definition"]
+                    for m in opencti_entity.get("objectMarking") or []
+                    if isinstance(m, dict)
+                    and m.get("definition_type") == "TLP"
+                    and m.get("definition")
+                ]
+                if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                    tlp_levels, max_tlp
+                ):
                     self.helper.connector_logger.info(
                         f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
                     )

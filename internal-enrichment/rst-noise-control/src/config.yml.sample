@@ -4,19 +4,18 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'RST Noise Control'
-  scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
-  auto: false # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+  #name: 'RST Noise Control'
+  #scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
+  #auto: false # Enable/disable auto-enrichment of observables
+  #log_level: 'error'
+  #max_tlp: 'TLP:AMBER+STRICT' # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
-rst-noise-control:
-  base_url: 'https://api.rstcloud.net/v1'
+rst_noise_control:
   api_key: 'ChangeMe'
-  timeout: 10
-  max_tlp: 'TLP:AMBER+STRICT'
-  update_confidence: true
-  update_score: true
-  change_action_score_change: 10
-  drop_action_score_change: 50
-  drop_action_detection_flag: true
+  #base_url: 'https://api.rstcloud.net/v1'
+  #timeout: 10
+  #update_confidence: true
+  #update_score: true
+  #change_action_score_change: 10
+  #drop_action_score_change: 50
+  #drop_action_detection_flag: true

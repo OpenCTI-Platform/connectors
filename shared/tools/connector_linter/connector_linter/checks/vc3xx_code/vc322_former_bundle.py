@@ -4,6 +4,9 @@ For playbook compatibility the connector must read ``data["stix_objects"]``
 (the original bundle) early in ``process_message`` so it can be returned
 in **every** code path: success, not-in-scope, and error.
 
+Connectors built on connectors-sdk's ``InternalEnrichmentConnector`` pass:
+the SDK sends the ``stix_objects`` received back in every bundle it sends.
+
 Scope: INTERNAL_ENRICHMENT only.
 Severity: ERROR.
 """
@@ -12,6 +15,7 @@ import re
 
 from connector_linter.checks.vc3xx_code._helpers import (
     find_pattern_locations,
+    find_sdk_internal_enrichment_connector,
 )
 from connector_linter.models import (
     CheckFinding,
@@ -59,6 +63,18 @@ def check_former_bundle(ctx: ConnectorContext) -> list[CheckFinding]:
     sources = ctx.python_sources
     if not sources:
         return [no_python_sources_finding()]
+
+    # The SDK base connector does it itself
+    sdk_import = find_sdk_internal_enrichment_connector(ctx.python_trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Former bundle handling delegated to connectors-sdk InternalEnrichmentConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     locations = find_pattern_locations(sources, [_STIX_OBJECTS_DATA])
 

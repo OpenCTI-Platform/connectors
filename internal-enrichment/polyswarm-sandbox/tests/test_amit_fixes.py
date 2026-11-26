@@ -62,10 +62,6 @@ class _StubHelper:
     def send_stix2_bundle(self, bundle, **kwargs):
         return ["bundle-1"]
 
-    @staticmethod
-    def check_max_tlp(markings, max_tlp):
-        return True
-
 
 def _make_builder(**kw) -> StixBuilder:
     helper = _StubHelper()

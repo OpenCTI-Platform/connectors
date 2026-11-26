@@ -8,6 +8,7 @@ from typing import Dict
 
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -44,9 +45,6 @@ class ReversingLabsSpectraIntelConnector:
         self.reversinglabs_spectra_intelligence_password = (
             cfg.password.get_secret_value()
         )
-        self.reversinglabs_spectra_intelligence_max_tlp = (
-            f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
         self.reversinglabs_sandbox_platform = cfg.sandbox_os
         self.reversinglabs_sandbox_internet_sim = cfg.sandbox_internet_sim
         self.reversinglabs_create_indicators = cfg.create_indicators
@@ -68,18 +66,17 @@ class ReversingLabsSpectraIntelConnector:
         self.helper.listen(message_callback=self._process_message)
 
     def _check_tlp_markings(self, entity):
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-
-            if not OpenCTIConnectorHelper.check_max_tlp(
-                tlp, self.reversinglabs_spectra_intelligence_max_tlp
-            ):
-                raise ValueError(
-                    f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"
-                )
-        return tlp
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
+            raise ValueError(
+                f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
 
     def _generate_stix_bundle(self, stix_objects, stix_entity):
         self.stix_objects = stix_objects

@@ -11,7 +11,6 @@ from doppel_client import DoppelClientError
 def connector():
     instance = DoppelConnector.__new__(DoppelConnector)
     instance.helper = MagicMock()
-    instance.helper.check_max_tlp.return_value = True
     instance.helper.playbook = False
     instance.helper.connector_id = "connector--doppel-takedown"
     instance.helper.api.query.return_value = {
@@ -309,3 +308,24 @@ def test_process_message_returns_incident_playbook_bundle_without_doppel_write(
     connector._send_bundle.assert_called_once_with([incident])
     connector.client.get_alert.assert_not_called()
     connector.client.request_takedown.assert_not_called()
+
+
+def test_extract_and_check_markings_refuses_one_tlp_above_max_tlp(connector):
+    connector.config.connector.max_tlp = TLPLevel.AMBER
+    opencti_entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+    }
+
+    assert not connector.extract_and_check_markings(opencti_entity)
+    assert connector.tlp == "TLP:GREEN"
+
+
+def test_extract_and_check_markings_accepts_entity_without_tlp(connector):
+    connector.config.connector.max_tlp = TLPLevel.CLEAR
+    connector.tlp = "TLP:RED"
+
+    assert connector.extract_and_check_markings({"objectMarking": []})
+    assert connector.tlp is None

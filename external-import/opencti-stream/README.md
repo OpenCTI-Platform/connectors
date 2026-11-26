@@ -41,6 +41,7 @@ written into the bundle file and remapped on the target instance via
     - [Data flow](#data-flow)
     - [Event handling](#event-handling)
     - [Applicant propagation](#applicant-propagation)
+    - [File contents](#file-contents)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -129,6 +130,7 @@ These parameters live under the `stream:` section of `config.yml`.
 | Parameter            | config.yml           | Docker environment variable          | Default | Mandatory | Description                                                                                                                                                                                                 |
 |----------------------|----------------------|--------------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Default Applicant ID | default_applicant_id | `STREAM_DEFAULT_APPLICANT_ID`        |         | No        | Fallback `applicant_id` (an OpenCTI user UUID) used when a stream event has no `origin.user_id`. Defaults to empty, which leaves `applicant_id` null. Set it to avoid emitting bundles with a null applicant, which the `diode-import` connector rejects. |
+| Include Files        | include_files        | `STREAM_INCLUDE_FILES`               | false   | No        | Whether to embed the content of the files attached to each object (base64-encoded) in the forwarded bundle, so that the target instance also receives the files. See [File contents](#file-contents). |
 
 ## Deployment
 
@@ -303,6 +305,30 @@ applicant. Set `STREAM_DEFAULT_APPLICANT_ID` (`stream.default_applicant_id`)
 to a user UUID to use as a fallback applicant in that case — useful because a null
 applicant otherwise causes the target `diode-import` connector to reject the bundle.
 When `origin.user_id` is present, it always takes precedence over the configured default.
+
+### File contents
+
+Live stream events only reference the files attached to an object (name, MIME type,
+version, markings and a `/storage/get/...` URI), not their content. Without file
+contents, the target instance receives the object but not its files.
+
+Set `STREAM_INCLUDE_FILES=true` to also replicate the files. For each file
+referenced by a forwarded object, the connector downloads the content from the source
+OpenCTI (`CONNECTOR_LIVE_STREAM_OPENCTI_URL`, or `OPENCTI_URL` when unset, with the
+matching token) and adds it base64-encoded as the file's `data` field. The target
+instance uploads the file when it ingests the bundle, in every output mode (queue,
+directory and S3).
+
+Things to know:
+
+- Every create and update event of an object carries all its files, so a large file
+  is sent again each time its object changes. Base64 encoding adds each file to the
+  bundle at about 4/3 of its size, which counts against the RabbitMQ message size
+  limit in queue mode.
+- A file that cannot be downloaded is logged at warning level and forwarded without
+  content, as with the option disabled. The event itself is still forwarded.
+- Only the files of the forwarded object are included. Files attached to external
+  references are not part of the live stream.
 
 ## Debugging
 

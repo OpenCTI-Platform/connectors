@@ -122,6 +122,11 @@
       "default": false,
       "description": "Whether indicators from reports should be set for detection or not.",
       "type": "boolean"
+    },
+    "RST_REPORT_HUB_NO_FILE_TRIGGER_IMPORT": {
+      "default": true,
+      "description": "Whether the PDF attached to imported reports should not trigger file import connectors. Set to false to trigger them.",
+      "type": "boolean"
     }
   },
   "required": [

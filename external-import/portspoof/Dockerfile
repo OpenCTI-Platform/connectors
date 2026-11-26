@@ -4,9 +4,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 # Copy the connector
 COPY src /opt/opencti-connector-portspoof
 
-# Install system + Python dependencies. ``libmagic`` is required at
-# runtime by ``pycti``; ``git`` + ``build-base`` are required *at
-# install time* because the repository's image build action rewrites
+# Install system + Python dependencies. ``git`` + ``build-base`` are
+# required *at install time* because the repository's image build action rewrites
 # the pinned ``pycti==X.Y.Z`` line to ``pycti @ git+https://...``
 # for rolling / prerelease builds (see
 # ``.github/actions/build-connector-image/action.yml``),
@@ -16,11 +15,11 @@ COPY src /opt/opencti-connector-portspoof
 # final image stays small.
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-portspoof && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

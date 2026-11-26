@@ -105,4 +105,4 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.eset_api_key == "test-api-key"
     assert connector.eset_api_secret == "test-api-secret"
     assert connector.host == "https://eti.eset.com/"
-    assert connector.max_tlp == "TLP:AMBER"
+    assert connector.config.connector.max_tlp == "amber"

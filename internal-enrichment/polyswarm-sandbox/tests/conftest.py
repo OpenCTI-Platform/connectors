@@ -117,10 +117,6 @@ class StubHelper:
     def send_stix2_bundle(self, bundle, **kwargs):
         return ["bundle-1"]
 
-    @staticmethod
-    def check_max_tlp(markings, max_tlp):
-        return True
-
 
 @pytest.fixture
 def stub_helper():

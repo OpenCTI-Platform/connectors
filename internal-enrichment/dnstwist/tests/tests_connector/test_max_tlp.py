@@ -52,3 +52,23 @@ def test_process_message_should_enrich_entity_within_max_tlp(object_marking):
     # Then: DNSTwist is run
     enrichment.assert_called_once()
     assert result == "Success"
+
+
+def test_process_message_should_skip_entity_with_one_tlp_above_max_tlp():
+    # Given: A connector capped at TLP:AMBER and a domain marked TLP:CLEAR and TLP:RED
+    connector = _make_connector(TLPLevel.AMBER)
+    connector.helper.api.stix_cyber_observable.read.return_value = {
+        **DOMAIN_MARKED_RED,
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+        ],
+    }
+
+    # When: The enrichment message is processed
+    with patch.object(DnsTwistConnector, "dns_twist_enrichment") as enrichment:
+        result = connector.process_message({"entity_id": "domain-name--1"})
+
+    # Then: DNSTwist is never run
+    enrichment.assert_not_called()
+    assert result == "Skipping enrichment: entity TLP is above the max TLP"

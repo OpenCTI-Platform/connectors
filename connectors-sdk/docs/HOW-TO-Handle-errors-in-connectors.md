@@ -67,6 +67,63 @@
 
     → Ensures **essential finalization and state recording** happen even if an error occurs.
 
+## Standardized connector errors
+
+The SDK defines a shared set of errors so that every connector describes a failure the same way. Each error carries a standardized `code` and a `criticity`:
+
+| Criticity | Value | Meaning |
+|---|---|---|
+| `Criticity.CRITICAL` | 50 | The run fails and will keep failing until someone intervenes |
+| `Criticity.ERROR` | 40 | The run fails, but a later attempt may succeed |
+| `Criticity.WARNING` | 30 | One item fails; the run skips it and continues |
+
+The values are the matching `logging` levels.
+
+All errors derive from `ConnectorError`, grouped into categories:
+
+| Category | Error | Code | Criticity |
+|---|---|---|---|
+| `ProviderApiError` (the source the connector reads) | `ProviderApiAuthenticationError` | `api.authentication` | CRITICAL |
+| | `ProviderApiAuthorizationError` | `api.authorization` | CRITICAL |
+| | `ProviderApiNotFoundError` | `api.not_found` | CRITICAL |
+| | `ProviderApiRateLimitError` | `api.rate_limit` | ERROR |
+| | `ProviderApiServerError` | `api.server` | ERROR |
+| | `ProviderApiTimeoutError` | `api.timeout` | ERROR |
+| | `ProviderApiConnectionError` | `api.connection` | ERROR |
+| | `ProviderApiInvalidResponseError` | `api.invalid_response` | ERROR |
+| | `ProviderApiUnknownError` | `api.unknown` | ERROR |
+| `OctiError` | `OctiUnreachableError` | `octi.unreachable` | ERROR |
+| `DataError` (one item) | `DataNotFoundError` | `data.not_found` | WARNING |
+| | `DataConversionError` | `data.conversion` | WARNING |
+| none | `UnknownError` | `other.unknown` | CRITICAL |
+
+The SDK only defines the errors connectors use. When none fits, propose a new error in the SDK rather than a connector-specific code.
+
+- **Raise the concrete errors, catch the categories**
+
+    → `ConnectorError` and the categories are abstract: instantiating them raises a `TypeError`. Use them only in `except` clauses to handle a whole family.
+
+    ```python
+    from connectors_sdk import DataError, DataConversionError, ProviderApiError
+
+    for item in items:
+        try:
+            stix_objects.extend(converter.convert(item))
+        except DataError as err:  # one item fails: log it, skip it, keep going
+            logger.warning("Skipping item", {"code": err.code, "error": str(err)})
+
+
+    def convert(item):
+        try:
+            ...
+        except KeyError as err:
+            raise DataConversionError(f"Missing field in {item['id']}") from err
+    ```
+
+- **Specialize a standard error rather than inventing a code**
+
+    → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
+
 ## Example
 
 Non working example of error handling in a connector:

@@ -30,6 +30,9 @@ class FlashpointConnector:
             import_extracted_config_domains_urls=(
                 self.config.flashpoint.import_extracted_config_domains_urls
             ),
+            import_attack_patterns=(
+                self.config.flashpoint.import_indicator_attack_patterns
+            ),
         )
 
     @staticmethod

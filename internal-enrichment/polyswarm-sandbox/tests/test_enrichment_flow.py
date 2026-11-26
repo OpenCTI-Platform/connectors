@@ -8,6 +8,8 @@ verifies the full pipeline end-to-end with mocked dependencies.
 from unittest.mock import MagicMock, patch
 
 import pytest
+from connectors_sdk import InternalEnrichmentConnector
+from connectors_sdk.models.enums import TLPLevel
 
 from tests.test_connector import make_connector
 
@@ -36,6 +38,89 @@ def _opencti_entity():
             }
         ],
     }
+
+
+# ── TLP check ───────────────────────────────────────────────────────────────
+# The connector checks the TLP definitions (such as "TLP:GREEN") with the SDK
+# helper, which uses pycti's real check_max_tlp (#7955).
+
+
+def _marked(*definitions):
+    entity = _opencti_entity()
+    entity["objectMarking"] = [
+        {
+            "standard_id": f"marking-definition--{i}",
+            "definition_type": definition.split(":")[0],
+            "definition": definition,
+        }
+        for i, definition in enumerate(definitions)
+    ]
+    return entity
+
+
+def _reaches_download(c, opencti_entity):
+    """Run _enrich_file with download disabled; True if it got past the TLP check."""
+    c.artifact_handler.download_artifact = MagicMock(
+        return_value=(None, "Download disabled")
+    )
+    result = c._enrich_file(
+        ENTITY_ID, _entity(), opencti_entity, [{"type": "identity"}]
+    )
+    return (
+        c.artifact_handler.download_artifact.called
+        and "disabled" in (result.get("error") or "").lower()
+    )
+
+
+class TestTlpCheck:
+    """The TLP definitions of the entity are checked, not its marking ids."""
+
+    @pytest.mark.parametrize("level", list(TLPLevel))
+    def test_every_configurable_max_tlp_is_accepted_by_the_helper(self, level):
+        """Every CONNECTOR_MAX_TLP value can be given to the SDK TLP check."""
+        assert InternalEnrichmentConnector.is_entity_tlp_allowed(["TLP:CLEAR"], level)
+
+    @pytest.mark.parametrize("tlp", ["TLP:CLEAR", "TLP:WHITE", "TLP:GREEN"])
+    def test_marked_artifact_within_max_tlp_is_enriched(self, tlp):
+        c = make_connector()
+        assert _reaches_download(c, _marked(tlp, "PAP:GREEN"))
+
+    def test_non_tlp_marking_only_is_enriched(self):
+        c = make_connector()
+        assert _reaches_download(c, _marked("PAP:RED"))
+
+    def test_unmarked_artifact_is_enriched(self):
+        c = make_connector()
+        assert _reaches_download(c, _opencti_entity())
+
+    @pytest.mark.parametrize(
+        "markings", [("TLP:RED",), ("TLP:GREEN", "TLP:RED"), ("TLP:AMBER+STRICT",)]
+    )
+    def test_marked_artifact_above_max_tlp_is_skipped(self, markings):
+        c = make_connector()
+        result = c._enrich_file(
+            ENTITY_ID, _entity(), _marked(*markings), [{"type": "identity"}]
+        )
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
+    def test_skipped_artifact_forwards_original_bundle(self):
+        """A TLP skip must still forward the bundle so playbooks do not stall."""
+        c = make_connector()
+        c._entity_in_scope = MagicMock(return_value=True)
+        c._send_original_bundle = MagicMock()
+        stix_objects = [{"type": "identity"}]
+        c.artifact_handler.download_artifact = MagicMock()
+        c._process_message(
+            {
+                "enrichment_entity": _marked("TLP:RED"),
+                "stix_entity": _entity(),
+                "stix_objects": stix_objects,
+                "entity_id": ENTITY_ID,
+            }
+        )
+        c._send_original_bundle.assert_called_once_with(stix_objects)
+        c.artifact_handler.download_artifact.assert_not_called()
 
 
 # ── _phase_download ─────────────────────────────────────────────────────────

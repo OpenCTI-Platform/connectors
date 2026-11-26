@@ -92,7 +92,6 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
         side_effect=lambda objs: {"type": "bundle", "objects": objs}
     )
     c.helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
-    c.helper.check_max_tlp = MagicMock(return_value=True)
 
     config = MagicMock()
     config.polyswarm = _mock_polyswarm_config(**(polyswarm_overrides or {}))
@@ -100,7 +99,6 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
     c.config = config
 
     # Set attributes normally assigned in __init__ from config
-    c.max_tlp = config.connector.max_tlp
     c.replace_with_lower_score = config.polyswarm.replace_with_lower_score
 
     c.polyswarm_client = MagicMock()

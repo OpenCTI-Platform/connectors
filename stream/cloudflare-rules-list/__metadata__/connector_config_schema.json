@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cloudflare-rules-list_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Cloudflare Rules List",
+      "description": "The name of the connector as shown in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "cloudflare"
+      ],
+      "description": "Connector scope (comma-separated).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_START_TIMESTAMP": {
+      "default": null,
+      "description": "Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state).",
+      "type": "integer"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER": {
+      "default": true,
+      "description": "Whether to replay historical stream events on first start. It only controls the stream replay: the connector always runs a full sync of the existing IPv4 indicators and observables at startup, whatever this value. Only applied on the connector's first run (no existing state).",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE": {
+      "default": null,
+      "description": "ISO 8601 date up to which historical stream events are replayed when recover is enabled. Leave empty to replay all existing events. Ignored when recover is disabled, and it does not limit the startup full sync. Only applied on the connector's first run (no existing state).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "description": "Cloudflare account ID that owns the Rules List.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Cloudflare API token with the 'Account > Account Filter Lists > Edit' permission.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CLOUDFLARE_LIST_ID": {
+      "description": "ID of the existing Cloudflare Rules List (IP kind) to sync into.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_BASE_URL": {
+      "default": "https://api.cloudflare.com/client/v4",
+      "description": "Base URL of the Cloudflare API. Override only for testing against a mock server or a Cloudflare-compatible gateway.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CLOUDFLARE_SYNC_INTERVAL": {
+      "default": "PT1H",
+      "description": "Minimum interval between snapshot uploads to Cloudflare. Accepts ISO-8601 duration like 'PT30M', 'PT1H', 'PT1H30M', etc.",
+      "format": "duration",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_LIST_ID"
+  ],
+  "additionalProperties": true
+}

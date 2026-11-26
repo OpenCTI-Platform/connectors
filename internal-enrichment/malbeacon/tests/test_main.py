@@ -1,6 +1,7 @@
 from typing import Any
 
 import malbeacon_config_variables
+import pytest
 from main import MalBeaconConnector
 from malbeacon_config_variables import ConfigMalbeacon
 from pycti import OpenCTIConnectorHelper
@@ -89,5 +90,35 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.config.api_key == "test-api-key"
     assert connector.config.api_base_url == "https://api.malbeacon.com/v1/"
     assert connector.config.indicator_score_level == 50
-    assert connector.config.max_tlp == "TLP:AMBER"
+    assert connector.config.settings.connector.max_tlp == "amber"
     assert connector.config.connector_scope == "IPv4-Addr,IPv6-Addr,Domain-Name"
+
+
+@pytest.fixture
+def connector(mock_opencti_connector_helper, monkeypatch) -> MalBeaconConnector:
+    """A connector built from the stubbed config (max TLP: amber)."""
+    monkeypatch.setattr(
+        malbeacon_config_variables, "ConnectorSettings", StubConnectorSettings
+    )
+    return MalBeaconConnector()
+
+
+def test_extract_and_check_markings_checks_every_tlp(connector):
+    entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+    }
+
+    assert connector.extract_and_check_markings(entity) is False
+
+
+def test_extract_and_check_markings_does_not_reuse_previous_tlp(connector):
+    red_entity = {
+        "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}]
+    }
+    assert connector.extract_and_check_markings(red_entity) is False
+
+    # A following entity without any marking must not inherit TLP:RED
+    assert connector.extract_and_check_markings({"objectMarking": []}) is True

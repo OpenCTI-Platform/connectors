@@ -9,6 +9,7 @@ from censys_enrichmentapis.errors import (
     MaxTlpError,
 )
 from censys_enrichmentapis.settings import ConfigLoader
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import BaseObject
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
@@ -55,12 +56,16 @@ class Connector:
         )
 
     def _validate_entity_tlp(self, markings: list[dict[str, Any]]) -> None:
-        """Reject an entity whose TLP exceeds the configured maximum."""
-        entity_tlp = self._extract_tlp(markings=markings)
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        if not self.helper.check_max_tlp(tlp=entity_tlp, max_tlp=max_tlp):
+        """Reject an entity with a TLP above the configured maximum."""
+        tlp_levels = [
+            marking["definition"]
+            for marking in markings
+            if marking["definition_type"] == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             raise MaxTlpError(
-                f"TLP {entity_tlp} of observable exceeds MAX TLP {max_tlp}"
+                f"TLP {', '.join(tlp_levels)} of observable exceeds MAX TLP {max_tlp}"
             )
 
     @staticmethod

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from virustotal.client import VirusTotalQuotaExceededError
 from virustotal.processors.entity import EntityProcessor
 
 if TYPE_CHECKING:
@@ -54,9 +55,16 @@ class FileProcessor(EntityProcessor):
 
         if self.connector.file_import_yara:
             for yara in attributes.get("crowdsourced_yara_results", []):
-                ruleset = self.connector._retrieve_yara_ruleset(
-                    yara.get("ruleset_id", "No ruleset id provided")
-                )
+                try:
+                    ruleset = self.connector._retrieve_yara_ruleset(
+                        yara.get("ruleset_id", "No ruleset id provided")
+                    )
+                except VirusTotalQuotaExceededError:
+                    self.helper.connector_logger.warning(
+                        "[VirusTotal] Quota exceeded, skipping YARA ruleset",
+                        {"ruleset_id": yara.get("ruleset_id")},
+                    )
+                    continue
                 builder.create_yara(
                     yara,
                     ruleset,
@@ -117,8 +125,7 @@ class FileProcessor(EntityProcessor):
             f"The file {hash_value} was not found in VirusTotal repositories. "
             "Beginning upload and analysis."
         )
-        self.helper.api.work.to_received(self.helper.work_id, message)
-        self.helper.log_debug(message)
+        self._report_progress(message)
 
         artifact_url = (
             f"{self.helper.opencti_url.rstrip('/')}/storage/get/{file_meta['id']}"
@@ -134,6 +141,8 @@ class FileProcessor(EntityProcessor):
             analysis_id = self.client.upload_artifact(file_meta["name"], artifact)
             # Queuing the file info call triggers more immediate analysis.
             self.client.get_file_info(hash_value)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError(
                 "[VirusTotal] Error uploading artifact to VirusTotal."
@@ -141,6 +150,8 @@ class FileProcessor(EntityProcessor):
 
         try:
             self.client.check_upload_status("artifact", hash_value, analysis_id)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError(
                 "[VirusTotal] Error waiting for VirusTotal to analyse artifact."

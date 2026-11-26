@@ -1,9 +1,7 @@
 """OpenCTI CrowdStrike Snort master importer module."""
 
 import itertools
-import zipfile
 from datetime import datetime
-from io import BytesIO
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -22,6 +20,11 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
+from crowdstrike_feeds_services.utils.rule_file import (
+    RuleFileFormatError,
+    describe_download,
+    extract_rule_file,
+)
 from crowdstrike_feeds_services.utils.snort_parser import SnortParser, SnortRule
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition
@@ -50,6 +53,7 @@ class SnortMasterImporter(BaseImporter):
 
     _E_TAG = "snort_master_e_tag"
     _LAST_MODIFIED = "snort_master_last_modified"
+    _RULE_FILE_NAME = "crowdstrike_intel_snort.rules"
 
     _KEY_ID = "id"
     _KEY_INDICATOR_PATTERN = "pattern"
@@ -180,9 +184,9 @@ class SnortMasterImporter(BaseImporter):
             )
             return None
 
-        download_converted = BytesIO(download)
+        rules = self._parse_download(download)
         return SnortMaster(
-            rules=self._parse_download(download_converted),
+            rules=rules,
             e_tag=None,
             last_modified=None,
         )
@@ -203,16 +207,18 @@ class SnortMasterImporter(BaseImporter):
             self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
         )
 
-    def _parse_download(self, download) -> List[SnortRule]:
-        snort_str = self._unzip_content(download)
-        return self._parse_snort_rules(snort_str)
-
-    @staticmethod
-    def _unzip_content(compressed_content: BytesIO) -> str:
-        snort_master_filename = "crowdstrike_intel_snort.rules"
-        with zipfile.ZipFile(compressed_content) as z:
-            with z.open(snort_master_filename) as snort_master:
-                return snort_master.read().decode("utf-8")
+    def _parse_download(self, download: bytes) -> List[SnortRule]:
+        snort_str = extract_rule_file(
+            download, self._RULE_FILE_NAME, excluded=("suricata",)
+        )
+        rules = self._parse_snort_rules(snort_str)
+        if not rules:
+            # An empty body or a proxy error page decodes as text but holds
+            # no rule: fail the work instead of reporting an empty success.
+            raise RuleFileFormatError(
+                f"No Snort rule in the download ({describe_download(download)})"
+            )
+        return rules
 
     @staticmethod
     def _parse_snort_rules(snort_rules: str) -> List[SnortRule]:

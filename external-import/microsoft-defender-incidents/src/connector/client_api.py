@@ -7,6 +7,19 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 
+class IncidentsFetchError(Exception):
+    """
+    Raised when the incidents could not all be fetched (a page failed).
+
+    The incidents collected before the failure are kept in `incidents`: they can be sent (their STIX ids are
+    deterministic), but the connector state must not move, or the incidents never fetched would be skipped.
+    """
+
+    def __init__(self, message: str, incidents: list[dict]):
+        super().__init__(message)
+        self.incidents = incidents
+
+
 class ConnectorClient:
     def __init__(self, helper, config):
         """
@@ -33,7 +46,7 @@ class ConnectorClient:
 
             oauth_token = response_json["access_token"]
 
-            self.session.headers.update({"Authorization": oauth_token})
+            self.session.headers.update({"Authorization": f"Bearer {oauth_token}"})
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
@@ -77,11 +90,13 @@ class ConnectorClient:
         Retrieves all incidents from the API with pagination.
 
         Iteratively fetches incidents from the initial URL, following pagination links until all incidents have been
-        collected. If any request results in an error (retry error, HTTP error, timeout, or connection error), it will
-        log the issue and halt further pagination.
+        collected. If any request results in an error (retry error, HTTP error, timeout, connection error or any other
+        error), it logs the issue, halts further pagination and raises `IncidentsFetchError` carrying the incidents
+        collected so far, so the caller knows the list is incomplete.
 
         :param initial_url: The initial URL for retrieving incidents.
         :return: A list of all incidents as dictionaries containing mixed data types.
+        :raises IncidentsFetchError: when a page could not be fetched.
         """
         all_incidents = []
         next_page_url = initial_url
@@ -103,31 +118,31 @@ class ConnectorClient:
                     "A retry error occurred during incident recovery, maximum retries exceeded for url",
                     {"url": next_page_url, "retry_error": str(err)},
                 )
-                break
+                raise IncidentsFetchError(str(err), all_incidents) from err
             except HTTPError as err:
                 self.helper.connector_logger.error(
                     "A http error occurred during incident recovery",
                     {"url": next_page_url, "http_error": str(err)},
                 )
-                break
+                raise IncidentsFetchError(str(err), all_incidents) from err
             except Timeout as err:
                 self.helper.connector_logger.error(
                     "A timeout error has occurred during incident recovery",
                     {"url": next_page_url, "timeout_error": str(err)},
                 )
-                break
+                raise IncidentsFetchError(str(err), all_incidents) from err
             except ConnectionError as err:
                 self.helper.connector_logger.error(
                     "A connection error occurred during incident recovery",
                     {"url": next_page_url, "connection_error": str(err)},
                 )
-                break
+                raise IncidentsFetchError(str(err), all_incidents) from err
             except Exception as err:
                 self.helper.connector_logger.error(
                     "An unexpected error occurred during the recovery of all incidents",
                     {"url": next_page_url, "error": str(err)},
                 )
-                break
+                raise IncidentsFetchError(str(err), all_incidents) from err
         return all_incidents
 
     def get_incidents(self, last_incident_timestamp: int) -> list[dict]:
@@ -138,6 +153,7 @@ class ConnectorClient:
         Logs any unexpected errors encountered during the retrieval process.
 
         :return: A list of all incidents as dictionaries containing mixed data types.
+        :raises IncidentsFetchError: when a page could not be fetched (the partial list is attached).
         """
         try:
             self.retries_builder()
@@ -153,6 +169,8 @@ class ConnectorClient:
             all_incidents = self.pagination_incidents(request.url)
             return all_incidents
 
+        except IncidentsFetchError:
+            raise
         except Exception as err:
             self.helper.connector_logger.error(
                 "An unknown error occurred during the recovery of all incidents",

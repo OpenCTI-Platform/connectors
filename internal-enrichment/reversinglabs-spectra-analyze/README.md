@@ -78,6 +78,7 @@ Key features:
 | `reversinglabs_spectra_analyze_token` | `REVERSINGLABS_SPECTRA_ANALYZE_TOKEN` | Yes | API authentication token |
 | `reversinglabs_spectra_analyze_sandbox_os` | `REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS` | No | Sandbox OS (windows11, windows10, windows7, macos11, linux) |
 | `reversinglabs_spectra_analyze_cloud_analysis` | `REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS` | No | Use cloud analysis (default: true) |
+| `reversinglabs_spectra_analyze_ssl_verify` | `REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY` | No | Verify the SSL certificate of the appliance (default: true). Only set to `false` for an appliance with a self-signed certificate on a trusted network |
 
 ---
 
@@ -106,6 +107,7 @@ services:
       - REVERSINGLABS_SPECTRA_ANALYZE_TOKEN=ChangeMe
       - REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS=windows10
       - REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS=true
+      - REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY=true
     restart: always
 ```
 

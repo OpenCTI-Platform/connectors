@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from crowdstrike_feeds_services.utils import CrowdStrikeAPIError
 from falconpy import Intel as CrowdstrikeIntel
 
 if TYPE_CHECKING:
@@ -25,10 +26,13 @@ class BaseCrowdstrikeClient:
             base_url=str(self.config.crowdstrike.base_url),
         )
 
-    def handle_api_error(self, response: dict) -> None:
+    def handle_api_error(self, response: dict, raise_on_error: bool = False) -> None:
         """
         Handle API error from Crowdstrike
         :param response: Response in dict
+        :param raise_on_error: Raise CrowdStrikeAPIError after logging, for
+            callers that cannot continue without the response (paginated
+            queries). Other callers handle the error response themselves.
         :return: None
         """
 
@@ -74,3 +78,6 @@ class BaseCrowdstrikeClient:
                 "[API] Error while querying CrowdStrike API",
                 {"error_message": error_message, "status_code": status_code},
             )
+
+        if raise_on_error:
+            raise CrowdStrikeAPIError(error_message, status_code)

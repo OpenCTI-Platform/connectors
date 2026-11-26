@@ -1,19 +1,15 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
-  type: 'EXTERNAL_IMPORT'
-  name: 'SIEM Rules'
-  scope: 'siemrules'
-  confidence_level: 70
-  update_existing_data: false
-  log_level: 'info'
-  queue_protocol: 'api'
+  id: 'ChangeMe'
+  # name: 'SIEM Rules'
+  # scope: 'siemrules'
+  # log_level: 'error'
+  # duration_period: 'PT1H'
 
 siemrules:
-  base_url: 'https://api.siemrules.com/'
-  api_key: CHANGEME
-  detection_packs: '' # comma separated dossier ids
-  interval_hours: 1 # interval in hours
+  api_key: 'ChangeMe'
+  detection_packs: '' # comma-separated Detection Pack IDs
+  # base_url: 'https://api.siemrules.com/'

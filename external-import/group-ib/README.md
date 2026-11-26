@@ -1,4 +1,9 @@
-# OpenCTI Group-IB Connector
+# OpenCTI Group-IB Connector (Deprecated)
+
+> [!CAUTION]
+> **This connector is DEPRECATED.** It will be removed in a future release.
+> Migrate to **[group-ib-ti](../group-ib-ti)**.
+> See the [deprecation notice](#deprecation-notice) and [DEPRECATION.md](./DEPRECATION.md).
 
 | Status | Date | Comment |
 |--------|------|---------|
@@ -8,8 +13,9 @@ The Group-IB connector imports threat intelligence from Group-IB's Threat Intell
 
 ## Table of Contents
 
-- [OpenCTI Group-IB Connector](#opencti-group-ib-connector)
+- [OpenCTI Group-IB Connector (Deprecated)](#opencti-group-ib-connector-deprecated)
   - [Table of Contents](#table-of-contents)
+  - [Deprecation notice](#deprecation-notice)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -21,6 +27,20 @@ The Group-IB connector imports threat intelligence from Group-IB's Threat Intell
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+
+## Deprecation notice
+
+| Item | Value |
+|------|-------|
+| Status | Deprecated since [DEPRECATION_DATE] |
+| Planned removal | Not scheduled yet, announced in advance |
+| Recommended alternative | [group-ib-ti](../group-ib-ti) |
+| Support contact | [SUPPORT_CONTACT] |
+
+Support until the removal: [SUPPORT_POLICY].
+
+At runtime the connector logs a `[DEPRECATED]` warning at startup and at every
+run. The migration steps are in [DEPRECATION.md](./DEPRECATION.md).
 
 ## Introduction
 

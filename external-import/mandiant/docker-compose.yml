@@ -1,3 +1,5 @@
+# DEPRECATED: this connector is deprecated, its support ends in April 2027, and it will be removed in a future release.
+# Migrate to google-ti-feeds. See DEPRECATION.md.
 version: '3'
 services:
   connector-mandiant:

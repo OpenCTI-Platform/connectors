@@ -18,12 +18,12 @@ def config_dict() -> dict[str, Any]:
             "name": "Obstracts",
             "scope": "obstracts",
             "log_level": "info",
+            "duration_period": "PT1H",
         },
         "obstracts": {
             "base_url": "https://test-obstracts-url/",
             "api_key": "test-api-key",
             "feed_ids": "feed-1,feed-2",
-            "interval_hours": "1",
             "days_to_backfill": "7",
         },
     }
