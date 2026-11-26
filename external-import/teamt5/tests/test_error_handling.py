@@ -487,12 +487,12 @@ def test_work_close_failure_is_reported(connector_with_mock_handler, helper):
 
     errors = connector.process_message()
 
-    # The close was attempted; its failure is reported after the error that
+    # The close was attempted; its failure is reported before the error that
     # stopped the run, instead of crashing the error handling
     helper.api.work.to_processed.assert_called_once_with(
         "work-1", "Unhandled exception: Bundle download failed", in_error=True
     )
-    assert [error["code"] for error in errors] == ["other.unknown", "octi.unreachable"]
-    assert errors[1]["message"] == (
+    assert [error["code"] for error in errors] == ["octi.unreachable", "other.unknown"]
+    assert errors[0]["message"] == (
         "Failed to mark work work-1 as in_error: OpenCTI unreachable"
     )

@@ -243,7 +243,7 @@ class TestReturnRunErrorList:
     def test_no_error_returns_empty_list(self):
         assert TeamT5Connector._return_run_error_list() == []
 
-    def test_run_error_comes_first_then_recorded_errors(self, empty_error_store):
+    def test_recorded_errors_come_first_then_run_error(self, empty_error_store):
         empty_error_store.record_error(ProviderApiServerError("page 1"))
         empty_error_store.record_error(ProviderApiTimeoutError("page 2"))
 
@@ -252,11 +252,6 @@ class TestReturnRunErrorList:
         )
 
         assert errors == [
-            {
-                "code": "api.authentication",
-                "message": "token",
-                "criticity": int(Criticity.CRITICAL),
-            },
             {
                 "code": "api.server",
                 "message": "page 1",
@@ -267,7 +262,26 @@ class TestReturnRunErrorList:
                 "message": "page 2",
                 "criticity": int(Criticity.ERROR),
             },
+            {
+                "code": "api.authentication",
+                "message": "token",
+                "criticity": int(Criticity.CRITICAL),
+            },
         ]
+
+    def test_run_error_wins_over_a_recorded_error_with_the_same_code(
+        self, empty_error_store
+    ):
+        """pycti keeps one error per code, the last one: the error that stopped
+        the run must be the one kept."""
+        empty_error_store.record_error(ProviderApiTimeoutError("page 3 timed out"))
+
+        errors = TeamT5Connector._return_run_error_list(
+            ProviderApiTimeoutError("token request timed out")
+        )
+
+        kept = {error["code"]: error for error in errors}
+        assert kept["api.timeout"]["message"] == "token request timed out"
 
 
 class TestCloseWorkInError:
@@ -325,7 +339,7 @@ class TestProcessMessageReturnsErrors:
         # The flow is unchanged: a clean listing still advances the cursor
         helper.set_state.assert_called_once()
 
-    def test_standard_error_stopping_the_run_is_returned_first(self):
+    def test_standard_error_stopping_the_run_is_returned_last(self):
         connector, helper, report_handler, _ = _make_connector()
 
         def failed_run(last_run_timestamp):
@@ -338,14 +352,14 @@ class TestProcessMessageReturnsErrors:
 
         assert errors == [
             {
-                "code": "api.authentication",
-                "message": "token rejected",
-                "criticity": int(Criticity.CRITICAL),
-            },
-            {
                 "code": "api.server",
                 "message": "page 1",
                 "criticity": int(Criticity.ERROR),
+            },
+            {
+                "code": "api.authentication",
+                "message": "token rejected",
+                "criticity": int(Criticity.CRITICAL),
             },
         ]
         helper.set_state.assert_not_called()
@@ -372,7 +386,7 @@ class TestProcessMessageReturnsErrors:
 
         assert _run(connector) == []
 
-    def test_failure_to_close_work_is_returned_after_the_run_error(self):
+    def test_failure_to_close_work_is_returned_before_the_run_error(self):
         connector, helper, report_handler, _ = _make_connector(
             retrieved_refs=[{"stix_url": "https://example.com/bundle"}]
         )
@@ -382,8 +396,8 @@ class TestProcessMessageReturnsErrors:
         errors = _run(connector)
 
         assert [error["code"] for error in errors] == [
-            "other.unknown",
             "octi.unreachable",
+            "other.unknown",
         ]
         helper.api.work.to_processed.assert_called_once_with(
             "work--abc", "Unhandled exception: push failed", in_error=True

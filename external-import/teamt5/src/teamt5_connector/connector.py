@@ -51,11 +51,14 @@ class TeamT5Connector:
         """Return the errors of the run in the pycti format.
 
         :param run_error: The error that stopped the run, if any.
-        :return: The error that stopped the run, if any, then the errors recorded in
-            the ErrorStore during the run, in the order they were recorded.
+        :return: The errors recorded in the ErrorStore during the run, in the order
+            they were recorded, then the error that stopped the run, if any. It
+            comes last because pycti keeps one error per code, the last one: an
+            earlier error with the same code must not replace it.
         """
-        errors = [run_error] if run_error is not None else []
-        errors.extend(ErrorStore().get_errors())
+        errors = list(ErrorStore().get_errors())
+        if run_error is not None:
+            errors.append(run_error)
         return [error.convert_to_pycti_format() for error in errors]
 
     def _close_work_in_error(self, work_id: Optional[str], err: Exception) -> None:
@@ -92,9 +95,9 @@ class TeamT5Connector:
     def process_message(self) -> list[dict[str, Any]]:
         """Run one scheduled import of TeamT5 reports and indicator bundles.
 
-        :return: The errors of the run, in the pycti format, reported to OpenCTI
-            with the connector's ping: the error that stopped the run, if any, then
-            the errors handled during the run. Empty when nothing failed.
+        :return: The errors of the run, in the pycti format: the errors handled
+            during the run, then the error that stopped the run, if any. Empty when
+            nothing failed.
         """
         # A run starts with an empty store: the errors of the previous run are not
         # reported again
