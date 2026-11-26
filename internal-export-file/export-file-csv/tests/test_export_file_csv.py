@@ -246,6 +246,32 @@ class TestExportDictListToCsv:
         )
 
 
+class TestRenderValue:
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("text", "text"),
+            (3, "3"),
+            (1.5, "1.5"),
+            (["a", "b"], "a,b"),
+            ([{"name": "n1"}, {"name": None}], "n1,"),
+            ([{"definition": "TLP:RED"}, {"definition": None}], "TLP:RED,"),
+            ([{"value": "v1"}, {"value": None}], "v1,"),
+            ([{"observable_value": "1.2.3.4"}, {"observable_value": None}], "1.2.3.4,"),
+            ([{"source_name": None}], ""),
+            ([], ""),
+            ([1, 2], ""),
+            ({"name": "n"}, "n"),
+            ({"value": "v"}, "v"),
+            ({"observable_value": "o"}, "o"),
+            ({"other": "x"}, ""),
+            (None, ""),
+        ],
+    )
+    def test_render_value(self, value, expected):
+        assert ExportFileCsv._render_value(value) == expected
+
+
 class TestExportDictListToCsvBom:
 
     def test_no_bom_when_attribute_missing(self):

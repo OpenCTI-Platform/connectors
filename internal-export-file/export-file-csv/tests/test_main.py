@@ -114,3 +114,26 @@ def test_connector_uses_configured_delimiter(
     assert connector.export_file_csv_delimiter == ","
     csv_output = connector.export_dict_list_to_csv([{"name": "foo", "value": "bar"}])
     assert csv_output.splitlines()[0] == '"name","value"'
+
+
+def test_main_guard_prints_traceback_when_startup_fails(monkeypatch, capsys):
+    """A failing startup prints the full traceback instead of exiting silently."""
+    import runpy
+    import time
+
+    import settings
+
+    class FailingSettings:
+        def __init__(self):
+            raise RuntimeError("invalid configuration")
+
+    monkeypatch.setattr(settings, "ConnectorSettings", FailingSettings)
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_path(_SRC, run_name="__main__")
+
+    assert exit_info.value.code == 0
+    stderr = capsys.readouterr().err
+    assert "Traceback" in stderr
+    assert "RuntimeError: invalid configuration" in stderr
