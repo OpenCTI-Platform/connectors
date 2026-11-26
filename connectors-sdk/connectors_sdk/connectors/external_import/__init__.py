@@ -4,4 +4,6 @@ This module provides the foundational classes for building OpenCTI connectors:
 - WorkManager: Work lifecycle management (initiate, send bundles, complete)
 - BaseDataProcessor: Abstract base class for data collection/processing
 - ExternalImportConnector: Full orchestration for external import connectors
+- report_connector_errors: Error reporting for the callback of an external import
+  connector
 """

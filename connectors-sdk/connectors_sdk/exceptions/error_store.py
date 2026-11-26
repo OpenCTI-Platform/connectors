@@ -6,8 +6,9 @@ it is created, so the connector only raises (or handles) the error.
 
 The store keeps errors only while it is recording. Only the SDK starts and stops
 recording, around each call of the callback that pycti runs (a scheduled run, an
-enrichment message, a stream event, ...). ``stop_recording()`` returns the errors
-of the call, to report them to OpenCTI.
+enrichment message, a stream event, ...), for example with the
+``report_connector_errors`` decorator. ``stop_recording()`` returns the errors of the
+call, to report them to OpenCTI.
 
 The store and its recording flag are shared by the threads of a process, not across
 processes.

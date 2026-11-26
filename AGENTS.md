@@ -102,7 +102,7 @@ Older connectors still use `get_config_variable`, a monolithic single file or
 - **Errors:** use the SDK exceptions (`ConfigValidationError` at startup,
   `DataRetrievalError` for source failures, `UseCaseError` for conversion
   failures) and always `raise ... from err`. See
-  `connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md`.
+  `connectors-sdk/docs/HOW_TO_Handle_errors_in_connectors.md`.
 - Never pass a `datetime` to `Note.generate_id()`: use `created=None`. A
   timestamp creates a new note on every run and floods the RabbitMQ queue.
 - Environment variables are `<SECTION>_<FIELD>` in upper case, where the
