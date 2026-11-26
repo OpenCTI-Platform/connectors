@@ -231,6 +231,8 @@ graph LR
 Indicators are collected from Flashpoint Technical Intelligence API v2 endpoint `/technical-intelligence/v2/indicators`.
 The connector performs incremental ingestion using `modified_at` and maps each compatible IoC to STIX Indicators and observables in OpenCTI.
 
+Only the `type:` tags of the sightings (`type:backdoor`, `type:trojan`, ...) are imported as labels of the Indicators and observables. The other tags (`port:`, `mutex:`, `certificate:`, ...) are not sent as labels.
+
 > **Note — Migration from MISP-based ingestion:**  
 > Previous versions of this connector used a MISP-feed approach to ingest indicators, storing state under `misp_last_run` / `misp_last_event` keys.
 > The connector now automatically migrates: on first run after upgrade, if no `indicators_last_modified` state exists, it falls back to the legacy `misp_last_run` value to avoid re-importing all indicators from `import_start_date`.

@@ -1263,8 +1263,8 @@ def test_convert_indicator_to_stix_should_not_send_entity_tags_as_labels():
     observables = [obj for obj in octi_objects if isinstance(obj, IPV4Address)]
     assert len(indicators) == 1
     assert len(observables) == 1
-    assert sorted(indicators[0].labels) == ["source:feed", "type:trojan"]
-    assert sorted(observables[0].labels) == ["source:feed", "type:trojan"]
+    assert indicators[0].labels == ["type:trojan"]
+    assert observables[0].labels == ["type:trojan"]
     # The entities and their indicates relationships are still created.
     assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == ["berbew"]
     assert [obj.name for obj in octi_objects if isinstance(obj, IntrusionSet)] == [
@@ -1277,16 +1277,29 @@ def test_convert_indicator_to_stix_should_not_send_entity_tags_as_labels():
     assert {Malware, IntrusionSet} <= targets
 
 
-def test_convert_indicator_to_stix_should_keep_empty_entity_tags_as_labels():
-    """A tag that creates no entity (empty name) is left as it was."""
+def test_convert_indicator_to_stix_should_only_send_type_tags_as_labels():
+    """Issue #8655: sample parameters and unknown prefixes are not labels."""
     converter = _build_converter()
-    indicator = _build_mitre_indicator(tags=["malware:", "actor: "])
+    indicator = _build_mitre_indicator(
+        tags=[
+            "port:4444",
+            "mutex:abc",
+            "aes_key:00ff",
+            "unknown_prefix:value",
+            "malware:",
+            "type:",
+            "type: ",
+            "type:backdoor",
+            "type:RAT",
+        ]
+    )
 
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
     octi_indicator = next(obj for obj in octi_objects if isinstance(obj, Indicator))
-    assert sorted(octi_indicator.labels) == ["actor: ", "malware:"]
-    assert not any(isinstance(obj, (Malware, IntrusionSet)) for obj in octi_objects)
+    observable = next(obj for obj in octi_objects if isinstance(obj, IPV4Address))
+    assert sorted(octi_indicator.labels) == ["type:RAT", "type:backdoor"]
+    assert sorted(observable.labels) == ["type:RAT", "type:backdoor"]
 
 
 def test_convert_extracted_config_should_not_send_malware_tags_as_labels():

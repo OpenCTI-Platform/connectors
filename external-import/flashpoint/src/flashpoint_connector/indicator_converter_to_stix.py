@@ -651,27 +651,18 @@ class IndicatorConverterToStix:
 
         return actor_names, malware_names
 
-    @staticmethod
-    def _is_entity_tag(tag: str) -> bool:
-        """Tell whether a sighting tag is converted into an entity.
-
-        `actor:<name>` becomes an Intrusion-Set and `malware:<name>` a Malware
-        (see `_extract_entities_from_tags`). Such a tag is not sent as a label
-        too: the link to the family or actor is the relationship, and a label
-        would duplicate it and create one label per family or actor name.
-        """
-        for prefix in ("actor:", "malware:"):
-            if tag.startswith(prefix):
-                return bool(tag[len(prefix) :].strip())
-        return False
-
     @classmethod
     def _collect_label_tags(cls, indicator: dict) -> list[str]:
-        """Collect the sighting tags sent as labels (entity tags left out)."""
+        """Collect the sighting tags sent as labels (the `type:` ones only).
+
+        The other tags are mostly parameters extracted from one sample
+        (`port:`, `mutex:`, `aes_key:`, `certificate:`, ...), which would
+        create an unbounded number of labels.
+        """
         return [
             tag
             for tag in cls._collect_sighting_tags(indicator)
-            if not cls._is_entity_tag(tag)
+            if tag.startswith("type:") and tag[len("type:") :].strip()
         ]
 
     @classmethod
@@ -1005,11 +996,7 @@ class IndicatorConverterToStix:
             for name in sorted(malware_names)
         ]
 
-        base_labels = {
-            tag
-            for tag in self._collect_label_tags(indicator)
-            if tag.startswith("type:")
-        }
+        base_labels = set(self._collect_label_tags(indicator))
         observables = [
             self._create_network_observable(
                 endpoint.kind,
