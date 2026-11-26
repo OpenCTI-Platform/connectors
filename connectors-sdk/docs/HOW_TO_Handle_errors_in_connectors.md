@@ -126,11 +126,49 @@ The SDK only defines the errors connectors use. When none fits, propose a new er
 
 - **A `ConnectorError` records itself: never call the `ErrorStore`**
 
-    → Creating a `ConnectorError` records it in the `ErrorStore`, a singleton. The connector only raises the error, or handles it (for example, logs it and skips the item). The store keeps errors only while it is recording. Only the SDK starts and stops recording (`start_recording()` and `stop_recording()`), around each call of the callback that pycti runs (a scheduled run, an enrichment message, a stream event, ...), and `stop_recording()` returns the errors of the call. The SDK does not do it for any connector yet, so for now no error is kept.
+    → Creating a `ConnectorError` records it in the `ErrorStore`, a singleton. The connector only raises the error, or handles it (for example, logs it and skips the item). The store keeps errors only while it is recording. Only the SDK starts and stops recording (`start_recording()` and `stop_recording()`), around each call of the callback that pycti runs (a scheduled run, an enrichment message, a stream event, ...), and `stop_recording()` returns the errors of the call. For now, only the `report_connector_errors` decorator does it, for external import connectors (see below).
 
     → Recording never raises: creating an error can never crash a connector.
 
     → A subclass that overrides `__init__` must call `super().__init__()`, or its errors are not recorded.
+
+- **External import connector: put `report_connector_errors` on the callback, and re-raise**
+
+    → An external import connector gives a callback to `helper.schedule_process`. Use `report_connector_errors` on that callback, as a decorator or as a function that wraps it: it records errors during each run. The connector never creates, empties or reads the `ErrorStore`, and its callback returns nothing.
+
+    → The top-level `except` of the callback logs the error and re-raises it, instead of swallowing it. The decorator logs it again with its traceback and records it.
+
+    → At the end of a run that recorded errors, the decorator raises all of them at once in an `ExceptionGroup`, in the order they were recorded. This includes the errors the connector handled during the run, and runs where every error is a `WARNING`: raising is how the errors reach pycti, not a sign that the connector's run failed. pycti catches the group, sends the errors to OpenCTI with the connector's ping, and calls the callback again at the next schedule.
+
+    → `KeyboardInterrupt` and `SystemExit` are not connector errors: the decorator logs them and re-raises them as they are, and pycti handles the stop.
+
+    ```python
+    from connectors_sdk import DataConversionError, report_connector_errors
+
+
+    class MyConnector:
+        @report_connector_errors
+        def process_message(self) -> None:
+            try:
+                for item in self.client.get_items():
+                    try:
+                        self.send(self.converter.convert(item))
+                    except DataConversionError as err:  # reported at the end of the run
+                        self.helper.connector_logger.warning(
+                            "Skipping item", {"code": err.code, "error": str(err)}
+                        )
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    "Connector run failed", {"error": str(err)}
+                )
+                raise  # the error was swallowed before
+
+        def run(self) -> None:
+            self.helper.schedule_process(
+                message_callback=self.process_message,
+                duration_period=self.duration_period,
+            )
+    ```
 
 ## Example
 
