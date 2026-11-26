@@ -5,7 +5,6 @@ from connectors_sdk import (
     DataNotFoundError,
     ErrorStore,
     ProviderApiInvalidResponseError,
-    ProviderApiUnknownError,
 )
 
 # STIX 2.1 cyber observable types (SCOs). OpenCTI uses
@@ -35,11 +34,6 @@ _STIX_SCO_TYPES = frozenset(
     }
 )
 
-# Hard upper bound on consecutive failed pages before giving up on the
-# current handler run. A regular ``schedule_iso`` cycle will pick up where
-# we left off, so bailing out is safer than spinning forever.
-_MAX_PAGE_FAILURES = 5
-
 
 class BaseHandler(ABC):
 
@@ -67,8 +61,8 @@ class BaseHandler(ABC):
         # Per-run success flags consumed by ``TeamT5Connector.process_message``
         # to decide whether the persisted ``last_run`` cursor can be safely
         # advanced. ``aborted`` flips to ``True`` when
-        # ``retrieve_bundle_references`` bails out after
-        # ``_MAX_PAGE_FAILURES`` consecutive failed pages; ``partial_push``
+        # ``retrieve_bundle_references`` stops on a page that failed after
+        # the client's retries; ``partial_push``
         # flips to ``True`` when ``push_objects`` failed to push every
         # retrieved bundle (e.g. one of the per-bundle STIX downloads
         # returned ``None`` / contained no objects / had no ``stix_url``).
@@ -122,7 +116,6 @@ class BaseHandler(ABC):
         # even though token exchange already honours it.
         url = f"{self.config.teamt5.api_base_url.rstrip('/')}{self.url_suffix}"
         retrieved_bundle_refs = []
-        failure_count = 0
         # Reset success flags at the top of each retrieval pass so a
         # previous-cycle failure does not stick to the handler instance
         # (the connector instantiates each handler once and re-uses it
@@ -142,45 +135,29 @@ class BaseHandler(ABC):
             # downloads in ``push_objects`` — see
             # ``Teamt5Client.request_data`` docstring for the rationale.
             data = self.client.request_data(url, params, throttle=True)
-            if not data or not data.get("success"):
-                failure_count += 1
-                self.helper.connector_logger.warning(
-                    f"Unable to retrieve {self.name}: response from server was unsuccessful "
-                    f"(attempt {failure_count}/{_MAX_PAGE_FAILURES})"
+            if data is None or not data.get("success"):
+                # The client already retried the failed request (see
+                # ``RetryingAdapter``): a page that still fails
+                # stops the listing. Signal partial-failure to the caller so
+                # the connector's persisted ``last_run`` cursor is NOT
+                # advanced past the unprocessed listing tail — advancing it
+                # would silently skip every bundle that was published after
+                # ``last_run`` but before the page that failed.
+                self.helper.connector_logger.error(
+                    f"Giving up on {self.name} retrieval: response from server was "
+                    "unsuccessful; the next scheduled run will retry."
                 )
-                if failure_count >= _MAX_PAGE_FAILURES:
-                    self.helper.connector_logger.error(
-                        f"Giving up on {self.name} retrieval after {failure_count} consecutive "
-                        "failed pages; the next scheduled run will retry."
-                    )
-                    # Signal partial-failure to the caller so the
-                    # connector's persisted ``last_run`` cursor is NOT
-                    # advanced past the unprocessed listing tail —
-                    # advancing it would silently skip every bundle
-                    # that was published after ``last_run`` but before
-                    # the page that failed.
-                    self.aborted = True
-                    # The run continues with the next handler, so the abort is
-                    # recorded, not raised: it is reported with the run's errors.
-                    # A payload without ``success`` is an invalid response; no
-                    # payload at all is a failed request (its cause is recorded
-                    # by the client) or a ``null`` body, which cannot be told
-                    # apart here.
-                    error_class = (
-                        ProviderApiUnknownError
-                        if data is None
-                        else ProviderApiInvalidResponseError
-                    )
+                self.aborted = True
+                # ``None`` is a failure the client recorded. A payload without
+                # ``success`` raised nothing, so it is recorded here. The run
+                # continues with the next handler: recorded, not raised.
+                if data is not None:
                     ErrorStore().record_error(
-                        error_class(
-                            f"{self.name} retrieval aborted after {failure_count} "
-                            "consecutive failed pages"
+                        ProviderApiInvalidResponseError(
+                            f"{self.name} listing answered without success"
                         )
                     )
-                    break
-                continue
-
-            failure_count = 0
+                break
 
             # Using template method, map each bundle reference based on the retrieved data.
             bundle_refs = [

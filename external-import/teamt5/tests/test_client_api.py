@@ -31,6 +31,8 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
     ProviderApiUnknownError,
 )
+from requests.adapters import HTTPAdapter
+from teamt5_services.adapters import RetryingAdapter
 from teamt5_services.auth import JWTClientCredentialAuth, TokenRequestError
 from teamt5_services.client import Teamt5Client, _request_error_class
 
@@ -367,3 +369,113 @@ class TestRequestData:
 
         assert result is None
         mock_helper.connector_logger.warning.assert_called_once()
+
+
+LISTING_URL = "https://api.threatvision.org/api/v2/reports"
+
+
+def _http_response(status_code, body=b'{"success": true}'):
+    """A ``requests.Response`` as ``HTTPAdapter.send`` returns it."""
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = body
+    response._content_consumed = True  # no raw connection to read or close
+    response.encoding = "utf-8"
+    response.url = LISTING_URL
+    return response
+
+
+class TestSessionRetries:
+    """Every request of the session goes through a ``RetryingAdapter``, so
+    ``request_data`` reports a failure only once its retries are exhausted."""
+
+    @pytest.fixture
+    def client(self, mock_helper, mock_config_api_key):
+        return Teamt5Client(mock_helper, mock_config_api_key)
+
+    @pytest.fixture(autouse=True)
+    def no_sleep(self):
+        with (
+            patch("teamt5_services.adapters.time.sleep") as sleep,
+            patch("teamt5_services.client.time.sleep"),
+        ):
+            yield sleep
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            f"{LISTING_URL}?offset=0&date%5Bfrom%5D=0",
+            f"{LISTING_URL}/some-alias.stix",
+            "https://downloads.example.org/bundle.json?sig=abc",
+            "http://plain.example.org/bundle.json",
+        ],
+    )
+    def test_adapter_serves_every_url(self, client, url):
+        adapter = client.session.get_adapter(url)
+
+        assert isinstance(adapter, RetryingAdapter)
+        assert adapter.max_attempts == Teamt5Client._MAX_ATTEMPTS == 5
+        assert adapter.backoff == Teamt5Client._RETRY_BACKOFF_SEC == 1
+
+    def test_recovered_failure_returns_the_page_and_records_nothing(
+        self, client, empty_error_store
+    ):
+        with patch.object(
+            HTTPAdapter,
+            "send",
+            side_effect=[requests.exceptions.ReadTimeout("slow"), _http_response(200)],
+        ) as send:
+            payload = client.request_data(LISTING_URL, {"offset": 0}, throttle=True)
+
+        assert payload == {"success": True}
+        assert send.call_count == 2
+        assert empty_error_store.get_errors() == []
+
+    def test_exhausted_retries_return_none_and_record_the_last_error(
+        self, client, empty_error_store
+    ):
+        with patch.object(
+            HTTPAdapter,
+            "send",
+            side_effect=[_http_response(503, b"") for _ in range(5)],
+        ) as send:
+            payload = client.request_data(LISTING_URL, {"offset": 0}, throttle=True)
+
+        assert payload is None
+        assert send.call_count == 5
+        assert [type(e).code for e in empty_error_store.get_errors()] == ["api.server"]
+
+    def test_bundle_download_is_retried_too(self, client, empty_error_store):
+        with patch.object(
+            HTTPAdapter,
+            "send",
+            side_effect=[
+                _http_response(503, b""),
+                _http_response(200, b'{"objects": []}'),
+            ],
+        ) as send:
+            payload = client.request_data(f"{LISTING_URL}/some-alias.stix")
+
+        assert payload == {"objects": []}
+        assert send.call_count == 2
+        assert empty_error_store.get_errors() == []
+
+
+class TestRequestDataBodyNotAnObject:
+    """A body that is valid JSON but not an object is an invalid response, so
+    ``None`` always means a failure ``request_data`` recorded."""
+
+    @pytest.mark.parametrize("body", [None, [], ["a"], "text", 3])
+    def test_returns_none_and_records_an_invalid_response(
+        self, mock_helper, mock_config_api_key, empty_error_store, body
+    ):
+        with patch("teamt5_services.client.requests.Session"):
+            client = Teamt5Client(mock_helper, mock_config_api_key)
+        response = Mock()
+        response.json.return_value = body
+        client.session.get.return_value = response
+
+        assert client.request_data("https://api.threatvision.org/test") is None
+        errors = empty_error_store.get_errors()
+        assert [type(e).code for e in errors] == ["api.invalid_response"]
+        assert "not a JSON object" in str(errors[0])

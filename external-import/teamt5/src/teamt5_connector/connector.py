@@ -130,7 +130,7 @@ class TeamT5Connector:
                 )
 
             # ``last_run`` is only advanced when every handler completes
-            # without partial failure (no ``_MAX_PAGE_FAILURES`` bail-out
+            # without partial failure (no listing aborted on a failed page
             # AND every retrieved bundle was successfully pushed). Holding
             # the cursor at its previous value on partial failure lets the
             # next scheduled run retry the unprocessed tail — advancing
@@ -150,7 +150,7 @@ class TeamT5Connector:
                 )
 
                 if handler.aborted:
-                    # ``_MAX_PAGE_FAILURES`` bail-out — the listing did
+                    # Listing aborted on a failed page — the listing did
                     # not complete, so the cursor stays where it is.
                     had_partial_failure = True
 
@@ -178,8 +178,8 @@ class TeamT5Connector:
                     work_id = None
 
                 elif handler.aborted:
-                    # Distinct log line when the listing bailed out after
-                    # ``_MAX_PAGE_FAILURES`` consecutive failed pages —
+                    # Distinct log line when the listing bailed out on a
+                    # page that failed after the client's retries —
                     # the run actually FAILED to retrieve the upstream
                     # listing and the next scheduled cycle will retry,
                     # so logging "No new ... found" here would lie to
@@ -188,8 +188,8 @@ class TeamT5Connector:
                     # the abort flag flipped, so the cursor is also held
                     # at its previous value.
                     self.helper.connector_logger.warning(
-                        f"{handler.name} retrieval aborted after consecutive "
-                        f"failed pages; no objects were imported and "
+                        f"{handler.name} retrieval aborted on a failed page; "
+                        f"no objects were imported and "
                         f"last_run will be held at its previous value so "
                         f"the next scheduled run retries."
                     )

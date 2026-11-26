@@ -15,6 +15,7 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
     ProviderApiUnknownError,
 )
+from teamt5_services.adapters import RetryingAdapter
 from teamt5_services.auth import JWTClientCredentialAuth, TokenRequestError
 
 # The standardized error raised for each HTTP status the TeamT5 API answers with
@@ -75,6 +76,11 @@ class Teamt5Client:
     # is requested, so a token about to expire is never sent to the API.
     _TOKEN_EXPIRY_MARGIN_SEC = 60
 
+    # Attempts of a request, and the wait before the second one, in seconds,
+    # doubled before each next one (see ``RetryingAdapter``)
+    _MAX_ATTEMPTS = 5
+    _RETRY_BACKOFF_SEC = 1
+
     def __init__(self, helper, config) -> None:
         """
         Initialises the the Teamt5Client.
@@ -87,6 +93,15 @@ class Teamt5Client:
         self.config = config
 
         self.session = requests.Session()
+        # Every request of the session is retried on a network error, a timeout
+        # or a server error: the adapter replaces the default ones, mounted on
+        # these prefixes. ``request_data`` reports a failure once the retries
+        # are exhausted.
+        retrying_adapter = RetryingAdapter(
+            max_attempts=self._MAX_ATTEMPTS, backoff=self._RETRY_BACKOFF_SEC
+        )
+        self.session.mount("https://", retrying_adapter)
+        self.session.mount("http://", retrying_adapter)
 
         teamt5_cfg = self.config.teamt5
         self._api_base_url = teamt5_cfg.api_base_url
@@ -138,7 +153,7 @@ class Teamt5Client:
             on a run with many bundles, an unconditional one-second
             sleep after every GET would silently add minutes to the
             wall-clock time of every cycle.
-        :return: The decoded JSON body of the response on success, or ``None`` on failure (HTTP error, network error, or invalid JSON), recorded in the ``ErrorStore`` as the matching standardized error.
+        :return: The decoded JSON object of the response on success, or ``None`` on failure (HTTP error, network error, or a body that is not a JSON object), recorded in the ``ErrorStore`` as the matching standardized error. A request fails only once its retries are exhausted (see ``RetryingAdapter``).
         :raises ProviderApiError: If the OAuth token request fails, as the
             standardized error matching its cause (see ``_token_error_class``).
         """
@@ -148,6 +163,15 @@ class Teamt5Client:
             response = self.session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
             payload = response.json()
+            if not isinstance(payload, dict):
+                # A ``null`` body or a JSON array: ``None`` then always means a
+                # failure already recorded here
+                error_msg = (
+                    f"Invalid response from: {url}: the body is not a JSON object"
+                )
+                ErrorStore().record_error(ProviderApiInvalidResponseError(error_msg))
+                self.helper.connector_logger.warning(error_msg)
+                return None
             # Only the pagination caller opts into the throttle (see the
             # ``throttle`` argument docstring above) — bundle downloads
             # do NOT pay this cost.

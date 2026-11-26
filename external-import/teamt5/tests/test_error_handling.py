@@ -215,19 +215,15 @@ def test_request_exception_returns_errors(
 
     errors = connector.process_message()
 
-    # Every listing page fails, so both handlers abort after their retries: each
-    # abort is reported after the failed requests, as an unknown error since the
-    # handler got no payload
+    # Every listing page fails: each handler stops at its first page, whose
+    # failure is reported once, by the client, with its cause
     assert isinstance(errors, list)
-    aborts = [error for error in errors if "retrieval aborted" in error["message"]]
-    request_errors = [error for error in errors if error not in aborts]
-    assert [error["code"] for error in aborts] == ["api.unknown", "api.unknown"]
-    assert request_errors
-    for error in request_errors:
+    assert len(errors) == 2
+    for error in errors:
         assert "code" in error
         assert "criticity" in error
         assert message in error["message"]
-    assert expected_error.code in {error["code"] for error in request_errors}
+        assert error["code"] == expected_error.code
 
 
 def _response(payload):

@@ -6,17 +6,16 @@ Covers the pagination / failure-handling contract of
 * the listing URL is built from the user-configured ``teamt5.api_base_url``
   (not the previously hard-coded ``api.threatvision.org``),
 * successful pages accumulate until an empty page closes the loop,
-* a transient failure increments the failure counter, which then resets
-  to zero on the next successful page,
-* after ``_MAX_PAGE_FAILURES`` consecutive failed pages the loop bails
-  out so the next scheduled run can resume.
+* the client retries the failed requests, so a page that still fails
+  stops the listing, and the next scheduled run resumes it.
 """
 
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import pytest
 import requests
-from teamt5_connector.base_handler import _MAX_PAGE_FAILURES, BaseHandler
+from teamt5_connector.base_handler import BaseHandler
 from teamt5_services import Teamt5Client
 
 
@@ -100,48 +99,32 @@ class TestRetrieveBundleReferencesPagination:
         for call in client.request_data.call_args_list:
             assert call.args[1]["date[from]"] == 1700000000
 
-    def test_transient_failure_then_recovery_resets_counter(self):
-        """A successful page after a failure must reset the failure counter."""
+    def test_failed_page_stops_the_listing(self):
+        """The client already retried the page: a failure stops the listing,
+        keeping the references of the previous pages."""
         client = Mock()
         client.request_data.side_effect = [
-            {"success": False},
             {"success": True, "stubs": [{"id": 1}]},
-            {"success": True, "stubs": []},
+            None,
         ]
         handler = _make_handler(client)
 
         refs = handler.retrieve_bundle_references(last_run_timestamp=0)
 
         assert refs == [{"id": 1}]
-        assert client.request_data.call_count == 3
+        assert client.request_data.call_count == 2
+        assert handler.aborted is True
 
-    def test_recovered_failure_records_no_error(self, empty_error_store):
-        """A failed page followed by a successful retry does not abort: no error."""
+    def test_none_response_stops_the_listing(self):
+        """``client.request_data`` returning ``None`` (failure after retries) stops at once."""
         client = Mock()
-        client.request_data.side_effect = [
-            {"success": False},
-            {"success": True, "stubs": []},
-        ]
-        handler = _make_handler(client)
-
-        handler.retrieve_bundle_references(last_run_timestamp=0)
-
-        assert handler.aborted is False
-        assert empty_error_store.get_errors() == []
-
-    def test_none_response_counts_as_failure(self):
-        """``client.request_data`` returning ``None`` (transport error) is a failure page."""
-        client = Mock()
-        client.request_data.side_effect = [
-            None,
-            {"success": True, "stubs": []},
-        ]
+        client.request_data.side_effect = [None, {"success": True, "stubs": []}]
         handler = _make_handler(client)
 
         refs = handler.retrieve_bundle_references(last_run_timestamp=0)
 
         assert refs == []
-        assert client.request_data.call_count == 2
+        assert client.request_data.call_count == 1
 
 
 class TestAppendAuthorAndTlp:
@@ -223,74 +206,58 @@ class TestAppendAuthorAndTlp:
         ]
 
 
-class TestRetrieveBundleReferencesMaxFailuresAbort:
-    def test_bails_after_consecutive_failures(self):
-        """After _MAX_PAGE_FAILURES failed pages the loop exits."""
+class TestRetrieveBundleReferencesStopsOnFailedPage:
+    def test_stops_on_an_unsuccessful_page(self):
         client = Mock()
-        client.request_data.side_effect = [
-            {"success": False} for _ in range(_MAX_PAGE_FAILURES)
-        ]
+        client.request_data.return_value = {"success": False}
         handler = _make_handler(client)
 
         refs = handler.retrieve_bundle_references(last_run_timestamp=0)
 
         assert refs == []
-        assert client.request_data.call_count == _MAX_PAGE_FAILURES
+        assert client.request_data.call_count == 1
         handler.helper.connector_logger.error.assert_called_once()
 
-    def test_bails_after_consecutive_none_responses(self):
-        """``None`` responses also count toward the cap."""
+    def test_stops_on_a_none_response(self):
         client = Mock()
-        client.request_data.side_effect = [None for _ in range(_MAX_PAGE_FAILURES)]
+        client.request_data.return_value = None
         handler = _make_handler(client)
 
         refs = handler.retrieve_bundle_references(last_run_timestamp=0)
 
         assert refs == []
-        assert client.request_data.call_count == _MAX_PAGE_FAILURES
+        assert client.request_data.call_count == 1
         handler.helper.connector_logger.error.assert_called_once()
 
 
 class TestRetrieveBundleReferencesAbortRecordsError:
-    """When the retries are exhausted, the abort is recorded in the ``ErrorStore``,
-    so the run reports it even when no request raised."""
+    """A page answered without ``success`` raised nothing in the client, so the
+    handler records it; a ``None`` page is a failure the client recorded."""
 
-    def test_unsuccessful_payloads_record_an_invalid_response(self, empty_error_store):
+    @pytest.mark.parametrize(
+        "payload", [{"success": False}, {}], ids=["success-false", "empty-object"]
+    )
+    def test_unsuccessful_payload_records_an_invalid_response(
+        self, empty_error_store, payload
+    ):
         client = Mock()
-        client.request_data.return_value = {"success": False}
+        client.request_data.return_value = payload
         handler = _make_handler(client)
 
         handler.retrieve_bundle_references(last_run_timestamp=0)
 
         errors = empty_error_store.get_errors()
         assert [type(e).code for e in errors] == ["api.invalid_response"]
-        assert str(errors[0]) == (
-            f"Stub retrieval aborted after {_MAX_PAGE_FAILURES} consecutive failed pages"
-        )
+        assert str(errors[0]) == "Stub listing answered without success"
 
-    def test_missing_payloads_record_an_unknown_error(self, empty_error_store):
-        # ``request_data`` returns ``None`` for a ``null`` body, or for a failed
-        # request whose own error the client records
+    def test_none_response_records_nothing_more(self, empty_error_store):
         client = Mock()
         client.request_data.return_value = None
         handler = _make_handler(client)
 
         handler.retrieve_bundle_references(last_run_timestamp=0)
 
-        assert [type(e).code for e in empty_error_store.get_errors()] == ["api.unknown"]
-
-    def test_last_failure_decides_the_error(self, empty_error_store):
-        client = Mock()
-        client.request_data.side_effect = [None] * (_MAX_PAGE_FAILURES - 1) + [
-            {"success": False}
-        ]
-        handler = _make_handler(client)
-
-        handler.retrieve_bundle_references(last_run_timestamp=0)
-
-        assert [type(e).code for e in empty_error_store.get_errors()] == [
-            "api.invalid_response"
-        ]
+        assert empty_error_store.get_errors() == []
 
 
 class TestRetrieveBundleReferencesAbortedFlag:
@@ -300,7 +267,7 @@ class TestRetrieveBundleReferencesAbortedFlag:
     the persisted ``last_run`` cursor can be advanced — a stale ``True``
     from a previous-cycle bail-out would have silently held the cursor
     in place forever, so the flag is reset at the top of every retrieval
-    pass and only set when ``_MAX_PAGE_FAILURES`` is actually hit.
+    pass and only set when a page fails.
     """
 
     def test_aborted_false_after_clean_run(self):
@@ -312,11 +279,9 @@ class TestRetrieveBundleReferencesAbortedFlag:
 
         assert handler.aborted is False
 
-    def test_aborted_true_after_max_failures(self):
+    def test_aborted_true_after_a_failed_page(self):
         client = Mock()
-        client.request_data.side_effect = [
-            {"success": False} for _ in range(_MAX_PAGE_FAILURES)
-        ]
+        client.request_data.side_effect = [{"success": False}]
         handler = _make_handler(client)
 
         handler.retrieve_bundle_references(last_run_timestamp=0)
@@ -327,9 +292,7 @@ class TestRetrieveBundleReferencesAbortedFlag:
         """A clean run after a failed one must reset the flag."""
         client = Mock()
         # First run bails out — flag flips to True.
-        client.request_data.side_effect = [
-            {"success": False} for _ in range(_MAX_PAGE_FAILURES)
-        ]
+        client.request_data.side_effect = [{"success": False}]
         handler = _make_handler(client)
         handler.retrieve_bundle_references(last_run_timestamp=0)
         assert handler.aborted is True
@@ -638,13 +601,14 @@ class TestPushObjectsRecordsSkippedBundles:
 
 
 class TestRetrieveBundleReferencesRecordsErrors:
-    """Reporting errors leaves the retry flow unchanged.
+    """A page that fails is recorded once, by the client, with its cause.
 
     Uses a real ``Teamt5Client`` whose session fails, so the errors recorded by
-    ``request_data`` are the ones the run will report.
+    ``request_data`` are the ones the run will report. The session is a mock, so
+    the retries of the transport adapter do not apply here.
     """
 
-    def test_each_failed_page_attempt_is_recorded_and_flow_is_unchanged(
+    def test_failed_page_is_recorded_once_with_its_cause(
         self, mock_helper, mock_config_api_key, empty_error_store
     ):
         with patch("teamt5_services.client.requests.Session"):
@@ -659,8 +623,5 @@ class TestRetrieveBundleReferencesRecordsErrors:
 
         assert refs == []
         assert handler.aborted is True
-        assert client.session.get.call_count == _MAX_PAGE_FAILURES
-        # Each failed attempt, then the abort once the retries are exhausted
-        assert [type(e).code for e in empty_error_store.get_errors()] == [
-            "api.server"
-        ] * _MAX_PAGE_FAILURES + ["api.unknown"]
+        assert client.session.get.call_count == 1
+        assert [type(e).code for e in empty_error_store.get_errors()] == ["api.server"]
