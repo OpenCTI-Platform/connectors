@@ -12,8 +12,10 @@ from collections.abc import Iterable
 
 # GTI collection ID prefixes of threats. Software toolkits use "malware--" IDs,
 # so their type is only known once the collection is fetched (collection_type).
+# The scheme and host are matched whole, so lookalike hosts such as
+# notvirustotal.com are not GTI links.
 LINKED_THREAT_PATTERN = re.compile(
-    r"virustotal\.com/gui/collection/"
+    r"https?://(?:www\.)?virustotal\.com/gui/collection/"
     r"((?:threat-actor|malware|campaign)--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}"
     r"-[0-9a-f]{4}-[0-9a-f]{12})",
     re.IGNORECASE,

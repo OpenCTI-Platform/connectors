@@ -14,19 +14,28 @@ MARKDOWN_PATTERNS = tuple(
         r"^\s*[-*+]\s",  # bullet list
         r"^\s*\d+\.\s",  # numbered list
         r"\[[^\]]+\]\([^)]+\)",  # link
+        r"^\s*\|?\s*:?-{3,}:?\s*\|",  # table delimiter row
+        r"^\s*(?:```|~~~)",  # fenced code block
     )
+)
+# HTML code and preformatted elements hold literal text, e.g. wildcard IOCs such
+# as *.example.com, which is not Markdown syntax.
+HTML_LITERAL_PATTERN = re.compile(
+    r"<(code|pre)\b[^>]*>.*?</\1\s*>", re.IGNORECASE | re.DOTALL
 )
 MARKDOWN_EXTENSIONS = ["tables", "fenced_code", "sane_lists"]
 
 
 def is_html(text: str) -> bool:
-    """Return whether the text is HTML without Markdown syntax."""
+    """Return whether the text is HTML without Markdown syntax.
+
+    The content of HTML code and preformatted elements is ignored.
+    """
     stripped = text.strip()
-    return (
-        stripped.startswith("<")
-        and stripped.endswith(">")
-        and not any(pattern.search(stripped) for pattern in MARKDOWN_PATTERNS)
-    )
+    if not (stripped.startswith("<") and stripped.endswith(">")):
+        return False
+    prose = HTML_LITERAL_PATTERN.sub("", stripped)
+    return not any(pattern.search(prose) for pattern in MARKDOWN_PATTERNS)
 
 
 def markdown_to_html(text: str | None) -> str:

@@ -43,6 +43,19 @@ def test_linked_threat_ids_ignore_other_collections() -> None:
 
 
 @pytest.mark.parametrize(
+    "url",
+    [
+        f"https://notvirustotal.com/gui/collection/{ACTOR}",
+        f"https://www.notvirustotal.com/gui/collection/{ACTOR}",
+        f"https://virustotal.com.example.com/gui/collection/{ACTOR}",
+    ],
+)
+def test_linked_threat_ids_ignore_lookalike_hosts(url: str) -> None:
+    """Only links to the VirusTotal host are GTI links, not lookalike hosts."""
+    assert linked_threat_ids([f'<a href="{url}">UNC6240</a>']) == []  # noqa: S101
+
+
+@pytest.mark.parametrize(
     ("collection_type", "expected"),
     [
         ("threat-actor", "threat_actors"),
@@ -67,21 +80,20 @@ def _collection(collection_id: str, collection_type: str) -> dict[str, Any]:
     }
 
 
-@pytest.mark.asyncio
-async def test_fetch_linked_threats_groups_by_type_and_filters() -> None:
-    """Fetched collections are grouped by their type; disabled types are dropped."""
-    # Given GTI returning a threat actor, a malware family and a software toolkit
-    # (both with malware-- IDs)
+def _client(
+    collections: list[dict[str, Any]], invalid_ids: frozenset[str] = frozenset()
+) -> tuple[ClientAPIShared, MagicMock]:
+    """Client fetching the given raw collections; the model rejects invalid_ids."""
     collections_fetcher = MagicMock()
-    collections_fetcher.fetch_multiple = AsyncMock(
-        return_value=[
-            _collection(ACTOR, "threat-actor"),
-            _collection(MALWARE, "malware-family"),
-            _collection(TOOLKIT, "software-toolkit"),
-        ]
-    )
+    collections_fetcher.fetch_multiple = AsyncMock(return_value=collections)
+
+    def model_validate(collection: dict[str, Any]) -> SimpleNamespace:
+        if collection["id"] in invalid_ids:
+            raise ValueError("invalid collection")
+        return SimpleNamespace(id=collection["id"])
+
     typed_fetcher = MagicMock()
-    typed_fetcher.config.response_model = None
+    typed_fetcher.config.response_model.model_validate.side_effect = model_validate
 
     def create_fetcher_by_name(name: str, base_url: str) -> Any:
         return collections_fetcher if name == "collections" else typed_fetcher
@@ -94,6 +106,21 @@ async def test_fetch_linked_threats_groups_by_type_and_filters() -> None:
         api_client=MagicMock(),
         fetcher_factory=factory,
     )
+    return client, collections_fetcher
+
+
+@pytest.mark.asyncio
+async def test_fetch_linked_threats_groups_by_type_and_filters() -> None:
+    """Fetched collections are grouped by their type; disabled types are dropped."""
+    # Given GTI returning a threat actor, a malware family and a software toolkit
+    # (both with malware-- IDs)
+    client, collections_fetcher = _client(
+        [
+            _collection(ACTOR, "threat-actor"),
+            _collection(MALWARE, "malware-family"),
+            _collection(TOOLKIT, "software-toolkit"),
+        ]
+    )
 
     # When the linked threats are fetched, software toolkits disabled
     result = await client.fetch_linked_threats(
@@ -101,13 +128,34 @@ async def test_fetch_linked_threats_groups_by_type_and_filters() -> None:
     )
 
     # Then the collections are grouped by sub-entity type, the toolkit dropped
-    assert {k: [c["id"] for c in v] for k, v in result.items()} == {  # noqa: S101
+    assert {k: [c.id for c in v] for k, v in result.items()} == {  # noqa: S101
         "threat_actors": [ACTOR],
         "malware_families": [MALWARE],
     }
     collections_fetcher.fetch_multiple.assert_awaited_once_with(
         [ACTOR, MALWARE, TOOLKIT]
     )
+
+
+@pytest.mark.asyncio
+async def test_fetch_linked_threats_skips_collections_failing_validation() -> None:
+    """Collections that fail model validation are skipped, not returned as raw dicts."""
+    # Given GTI returning a valid threat actor and a malware family the model rejects
+    client, _ = _client(
+        [_collection(ACTOR, "threat-actor"), _collection(MALWARE, "malware-family")],
+        invalid_ids=frozenset({MALWARE}),
+    )
+
+    # When the linked threats are fetched
+    result = await client.fetch_linked_threats(
+        [ACTOR, MALWARE], ["threat_actors", "malware_families"]
+    )
+
+    # Then only the validated threat actor is returned, the empty type omitted
+    assert {k: [c.id for c in v] for k, v in result.items()} == {  # noqa: S101
+        "threat_actors": [ACTOR]
+    }
+    client.logger.warning.assert_called_once()
 
 
 @pytest.mark.asyncio

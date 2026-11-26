@@ -40,6 +40,39 @@ def test_html_with_markdown_is_converted() -> None:
     assert not is_html(text)  # noqa: S101
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("<p>Intro</p>\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n<p>End</p>", "<td>2</td>"),
+        ("<p>Intro</p>\n\n```\nrule x {}\n```\n\n<p>End</p>", "<pre><code>"),
+    ],
+)
+def test_markdown_blocks_between_html_are_converted(text: str, expected: str) -> None:
+    """Markdown tables and fenced code blocks between HTML paragraphs are rendered."""
+    # Given HTML paragraphs around a Markdown table or fenced code block
+    # When it is converted
+    # Then the block is rendered and the HTML paragraphs kept
+    html = markdown_to_html(text)
+    assert expected in html  # noqa: S101
+    assert "<p>End</p>" in html  # noqa: S101
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        "<p>Blocks <code>*.evil.com</code> and <code>*.bad.net/*</code></p>",
+        "<div><p>Rule</p>\n<pre>\n# comment\n- **/*.dll\n</pre></div>",
+    ],
+)
+def test_html_with_literal_code_is_kept_as_is(html: str) -> None:
+    """Markdown-like text in HTML code and pre elements does not make it Markdown."""
+    # Given HTML whose code elements hold wildcard IOCs or comment lines
+    # When it is converted
+    # Then it is unchanged
+    assert is_html(html)  # noqa: S101
+    assert markdown_to_html(html) == html  # noqa: S101
+
+
 @pytest.mark.parametrize("text", [None, "", "   "])
 def test_empty_text(text: str | None) -> None:
     """Empty text gives an empty string."""

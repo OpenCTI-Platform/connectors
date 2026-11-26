@@ -133,7 +133,8 @@ class ClientAPIShared(BaseClientAPI):
         """Fetch GTI threat collections by ID, grouped by sub-entity type.
 
         Collections of a type outside `subentity_types` are dropped. Collections
-        that cannot be fetched are skipped (see `GenericFetcher.fetch_multiple`).
+        that cannot be fetched are skipped (see `GenericFetcher.fetch_multiple`),
+        and so are those that fail model validation: callers read their attributes.
 
         Args:
             collection_ids: GTI collection IDs, e.g. linked in a report text.
@@ -155,10 +156,26 @@ class ClientAPIShared(BaseClientAPI):
             )
             if subentity_type in subentity_types:
                 raw_by_type.setdefault(subentity_type, []).append(collection)
-        return {
-            subentity_type: self._deserialize_subentities(subentity_type, collections)
-            for subentity_type, collections in raw_by_type.items()
-        }
+        linked: dict[str, list[Any]] = {}
+        for subentity_type, collections in raw_by_type.items():
+            # _deserialize_subentities keeps the raw dict when validation fails.
+            threats = [
+                threat
+                for threat in self._deserialize_subentities(subentity_type, collections)
+                if not isinstance(threat, dict)
+            ]
+            if len(threats) < len(collections):
+                self.logger.warning(
+                    "Skipping linked threats that failed model validation",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "subentity_type": subentity_type,
+                        "skipped": len(collections) - len(threats),
+                    },
+                )
+            if threats:
+                linked[subentity_type] = threats
+        return linked
 
     def _deserialize_subentities(
         self, subentity_type: str, entities: list[Any]
