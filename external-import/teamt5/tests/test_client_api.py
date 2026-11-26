@@ -356,7 +356,10 @@ class TestRequestData:
 
         mock_resp = Mock()
         mock_resp.raise_for_status = Mock()
-        mock_resp.json.side_effect = ValueError("Expecting value")
+        # ``Response.json`` raises requests' JSONDecodeError, a RequestException
+        mock_resp.json.side_effect = requests.exceptions.JSONDecodeError(
+            "Expecting value", "<html>", 0
+        )
         client.session.get.return_value = mock_resp
 
         with patch("teamt5_services.client.time.sleep"):

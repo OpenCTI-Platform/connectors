@@ -199,12 +199,6 @@ def _http_error(status_code):
             ProviderApiUnknownError,
             id="other-request-exception",
         ),
-        pytest.param(
-            ValueError("Invalid JSON body"),
-            "Invalid JSON body",
-            ProviderApiInvalidResponseError,
-            id="value-error",
-        ),
     ],
 )
 def test_request_exception_returns_errors(

@@ -213,11 +213,4 @@ class Teamt5Client:
             error_msg = f"Failed request to: {url} {err}"
             ErrorStore().record_error(_request_error_class(err)(error_msg))
             self.helper.connector_logger.warning(error_msg)
-        except ValueError as err:
-            # ``response.json()`` raises ValueError (a JSONDecodeError) when
-            # the body is not valid JSON; treat it like any other transport
-            # failure rather than crashing the connector run.
-            error_msg = f"Failed to decode JSON response from {url}: {err}"
-            ErrorStore().record_error(ProviderApiInvalidResponseError(error_msg))
-            self.helper.connector_logger.warning(error_msg)
         return None
