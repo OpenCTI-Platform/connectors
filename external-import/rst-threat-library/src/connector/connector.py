@@ -17,8 +17,6 @@ from connector.merge_split import (
     MergeCandidate,
     SplitCandidate,
     analyze_merge_split,
-    identifiers_from_api_item,
-    identifiers_from_opencti,
     pick_opencti_merge_survivor,
 )
 from connector.settings import ConnectorSettings
@@ -139,9 +137,14 @@ class RSTThreatLibrary:
         self._publish_connector_info(mark_last_run=False)
 
         current_state = self.helper.get_state() or {}
-        self._cycle(current_state, timestamp)
-
-        self._publish_connector_info(mark_last_run=True)
+        success = self._cycle(current_state, timestamp)
+        if success:
+            self._publish_connector_info(mark_last_run=True)
+        else:
+            self.helper.connector_logger.warning(
+                "Cycle completed with failures; not marking last run "
+                "(failed types remain retryable)"
+            )
 
         if self.helper.connect_run_and_terminate:
             self.helper.connector_logger.info("Connector stopped")
@@ -204,7 +207,7 @@ class RSTThreatLibrary:
             duration_period=duration_period_s,
         )
 
-    def _cycle(self, state: Dict[str, Any], timestamp: int) -> None:
+    def _cycle(self, state: Dict[str, Any], timestamp: int) -> bool:
         seed = self._seed_cursor()
         client = ThreatLibraryClient(
             self.helper,
@@ -221,11 +224,15 @@ class RSTThreatLibrary:
             proxy=self._client_config["proxy"],
         )
 
+        success = True
         for obj_type in self.object_types:
-            self._cycle_type(client, obj_type, state, timestamp, seed)
+            if not self._cycle_type(client, obj_type, state, timestamp, seed):
+                success = False
 
         if self.merge_split_enabled:
             self._apply_merge_split(client, state, timestamp)
+
+        return success
 
     @staticmethod
     def _entity_label_values(entity: Dict[str, Any]) -> List[str]:
@@ -547,12 +554,16 @@ class RSTThreatLibrary:
         state: Dict[str, Any],
         api_items: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
-        """Entities to compare with the API catalogue for merge/split."""
+        """Entities to compare with the API catalogue for merge/split.
+
+        Only connector-owned entities are included (sync labels or managed IDs).
+        Name/alias overlap alone is not treated as ownership, so unrelated
+        OpenCTI objects cannot be pulled into fusion via a shared alias.
+        ``api_items`` is accepted for call-site compatibility; ownership does
+        not use catalogue identifier overlap.
+        """
+        _ = api_items
         managed = set((state.get("managed_ids") or {}).get(obj_type_path, []))
-        api_idents: Set[str] = set()
-        if api_items:
-            for item in api_items:
-                api_idents |= set(identifiers_from_api_item(item))
 
         out: List[Dict[str, Any]] = []
         seen: Set[str] = set()
@@ -572,8 +583,6 @@ class RSTThreatLibrary:
             if self._sync_labels and any(sl in labels for sl in self._sync_labels):
                 include = True
             elif sid in managed:
-                include = True
-            elif api_idents and (set(identifiers_from_opencti(entity)) & api_idents):
                 include = True
             if include:
                 out.append(entity)
@@ -819,7 +828,18 @@ class RSTThreatLibrary:
                 continue
             sdo = self._upsert_sdo_from_prep(obj_type, prep)
             if sdo is None:
-                continue
+                sid = item.get("standard_id")
+                self.helper.connector_logger.error(
+                    f"[{obj_type}] split: failed to build SDO for {sid} "
+                    f"(name={item.get('name')})"
+                )
+                self._record_split_failure(
+                    split,
+                    obj_type,
+                    state,
+                    reason=f"failed to build SDO for {sid}",
+                )
+                return
             stix_objects.append(sdo)
             sid = item.get("standard_id")
             if sid:
@@ -934,11 +954,24 @@ class RSTThreatLibrary:
         item = merge.target_api_item
         target_sid = item.get("standard_id")
 
-        score_candidates: List[Dict[str, Any]] = list(merge.opencti_entities_to_merge)
+        score_candidates: List[Dict[str, Any]] = [
+            entity
+            for entity in merge.opencti_entities_to_merge
+            if self._should_allow_reconcile_delete(entity)
+        ]
         if target_sid:
             existing_api_entity = self._read_opencti_entity(obj_type, target_sid)
-            if existing_api_entity:
+            if existing_api_entity and self._should_allow_reconcile_delete(
+                existing_api_entity
+            ):
                 score_candidates.append(existing_api_entity)
+            elif existing_api_entity:
+                self.helper.connector_logger.info(
+                    f"[{obj_type}] merge: skip protected OpenCTI target "
+                    f"{target_sid} (name={existing_api_entity.get('name')}) as "
+                    "fusion survivor candidate — exclude-labels or createdBy "
+                    "allowlist"
+                )
 
         preferred_survivor = pick_opencti_merge_survivor(
             target_sid or "", score_candidates
@@ -1046,6 +1079,13 @@ class RSTThreatLibrary:
             return
 
         fusion_target_sid = fusion_target.get("standard_id")
+        if not self._should_allow_reconcile_delete(fusion_target):
+            self.helper.connector_logger.info(
+                f"[{obj_type}] merge: skip OpenCTI fusion into {fusion_target_sid} "
+                f"(name={fusion_target.get('name')}) — protected by exclude-labels "
+                "or createdBy allowlist"
+            )
+            return
         if self._analyst_locks_entity(
             fusion_target,
             obj_type_path=obj_type,
@@ -1092,7 +1132,8 @@ class RSTThreatLibrary:
         state: Dict[str, Any],
         timestamp: int,
         seed: str,
-    ) -> None:
+    ) -> bool:
+        """Import one object type. Return False on fetch/push/conversion failure."""
         cursor_key = f"cursor_{obj_type}"
         cursor_ids_key = f"cursor_ids_{obj_type}"
         cursor = state.get(cursor_key) or seed
@@ -1103,19 +1144,31 @@ class RSTThreatLibrary:
 
         stix_objects: List[Any] = []
         seen_identities: Dict[str, bool] = {}
+        identity_by_id: Dict[str, Any] = {}
         pushed_standard_ids: List[str] = []
         pushed_api_items: List[Dict[str, Any]] = []
         latest = cursor
         latest_ids: Set[str] = set(seen_at_cursor) if cursor else set()
         count = 0
         skipped_user_edit = 0
+        conversion_failures = 0
         batch_item_count = 0
         any_pushed = False
         batch_size = self._opencti_batch_size
 
+        def advance_checkpoint(mod: str, sid: str) -> None:
+            nonlocal latest, latest_ids
+            if not mod:
+                return
+            if not latest or mod > latest:
+                latest = mod
+                latest_ids = {sid} if sid else set()
+            elif mod == latest and sid:
+                latest_ids.add(sid)
+
         def flush_batch() -> bool:
             nonlocal stix_objects, pushed_standard_ids, pushed_api_items
-            nonlocal batch_item_count, any_pushed
+            nonlocal batch_item_count, any_pushed, seen_identities
             if not stix_objects:
                 return True
             ok = self._batch_send(stix_objects, timestamp, obj_type)
@@ -1132,6 +1185,8 @@ class RSTThreatLibrary:
             pushed_standard_ids = []
             pushed_api_items = []
             batch_item_count = 0
+            # Re-include referenced identities in every subsequent batch.
+            seen_identities = {}
             return True
 
         try:
@@ -1141,37 +1196,40 @@ class RSTThreatLibrary:
                 prep = self._prepare_upsert_item(obj_type, item, state)
                 mod = item.get("modified") or ""
                 sid = str(item.get("standard_id") or "")
-                if mod:
-                    if not latest or mod > latest:
-                        latest = mod
-                        latest_ids = {sid} if sid else set()
-                    elif mod == latest and sid:
-                        latest_ids.add(sid)
                 count += 1
                 if prep.skip:
+                    # Intentional skips are checkpointed; conversion failures are not.
+                    advance_checkpoint(mod, sid)
                     skipped_user_edit += 1
                     if prep.skip_reason:
-                        sid = item.get("standard_id")
                         self.helper.connector_logger.info(
-                            f"[{obj_type}] skip upsert for {sid} "
+                            f"[{obj_type}] skip upsert for {sid or item.get('standard_id')} "
                             f"(name={item.get('name')}) — {prep.skip_reason}"
                         )
                     continue
                 sdo = self._upsert_sdo_from_prep(obj_type, prep)
                 if sdo is None:
+                    conversion_failures += 1
+                    self.helper.connector_logger.warning(
+                        f"[{obj_type}] failed to build SDO for {sid or item.get('standard_id')} "
+                        f"(name={item.get('name')}); cursor will not advance past "
+                        "failed conversions"
+                    )
                     continue
+                advance_checkpoint(mod, sid)
                 stix_objects.append(sdo)
                 batch_item_count += 1
-                sid = item.get("standard_id")
                 if sid:
                     pushed_standard_ids.append(sid)
                     pushed_api_items.append(prep.api_item)
 
                 cb = item.get("createdBy") or {}
                 cb_id = cb.get("standard_id")
-                if cb_id and cb_id not in seen_identities:
-                    identity = self.converter.build_identity(cb)
-                    if identity is not None:
+                if cb_id:
+                    if cb_id not in identity_by_id:
+                        identity_by_id[cb_id] = self.converter.build_identity(cb)
+                    identity = identity_by_id[cb_id]
+                    if identity is not None and cb_id not in seen_identities:
                         stix_objects.append(identity)
                         seen_identities[cb_id] = True
                         batch_item_count += 1
@@ -1186,12 +1244,12 @@ class RSTThreatLibrary:
                         f"[{obj_type}] OpenCTI push failed; "
                         f"cursor not advanced (will retry on next cycle)"
                     )
-                    return
+                    return False
         except Exception as ex:
             self.helper.connector_logger.error(
                 f"[{obj_type}] fetch failed: {ex}\n{traceback.format_exc()}"
             )
-            return
+            return False
 
         if skipped_user_edit:
             self.helper.connector_logger.info(
@@ -1204,7 +1262,14 @@ class RSTThreatLibrary:
                 f"[{obj_type}] OpenCTI push failed; "
                 f"cursor not advanced (will retry on next cycle)"
             )
-            return
+            return False
+
+        if conversion_failures:
+            self.helper.connector_logger.warning(
+                f"[{obj_type}] {conversion_failures} conversion failure(s); "
+                "cursor not advanced so failed items remain retryable"
+            )
+            return False
 
         if any_pushed:
             state[cursor_key] = latest or cursor
@@ -1224,6 +1289,7 @@ class RSTThreatLibrary:
             )
         else:
             self.helper.connector_logger.info(f"[{obj_type}] no new objects this cycle")
+        return True
 
     def _item_to_sdo(self, item: Dict[str, Any], obj_type_path: str):
         return self.converter.item_to_sdo(item, obj_type_path, self._sync_labels)
@@ -1238,13 +1304,25 @@ class RSTThreatLibrary:
             return self._batch_send_stix_bundle(stix_objects, timestamp, obj_type)
 
         identities, rest = self._partition_identities(stix_objects)
-        ordered = identities + rest
-        if len(ordered) <= batch_size:
-            return self._batch_send_stix_bundle(ordered, timestamp, obj_type)
+        if not rest:
+            total_chunks = (len(identities) + batch_size - 1) // batch_size
+            for chunk_idx, offset in enumerate(range(0, len(identities), batch_size)):
+                chunk = identities[offset : offset + batch_size]
+                self.helper.connector_logger.info(
+                    f"[{obj_type}] OpenCTI push chunk "
+                    f"{chunk_idx + 1}/{total_chunks} "
+                    f"({len(chunk)} object(s))"
+                )
+                if not self._batch_send_stix_bundle(chunk, timestamp, obj_type):
+                    return False
+            return True
 
-        total_chunks = (len(ordered) + batch_size - 1) // batch_size
-        for chunk_idx, offset in enumerate(range(0, len(ordered), batch_size)):
-            chunk = ordered[offset : offset + batch_size]
+        # Keep each SDO chunk self-contained for cleanup_inconsistent_bundle:
+        # re-attach all referenced identities to every emitted chunk.
+        sdo_chunk_size = max(1, batch_size - len(identities)) if identities else batch_size
+        total_chunks = (len(rest) + sdo_chunk_size - 1) // sdo_chunk_size
+        for chunk_idx, offset in enumerate(range(0, len(rest), sdo_chunk_size)):
+            chunk = identities + rest[offset : offset + sdo_chunk_size]
             self.helper.connector_logger.info(
                 f"[{obj_type}] OpenCTI push chunk "
                 f"{chunk_idx + 1}/{total_chunks} "

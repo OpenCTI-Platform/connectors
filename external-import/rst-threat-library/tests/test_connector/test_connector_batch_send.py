@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from connector.connector import RSTThreatLibrary
@@ -452,7 +452,7 @@ def test_batch_send_splits_oversized_lists_into_chunks(connector):
     assert connector.helper.api.work.initiate_work.call_count == 3
 
 
-def test_batch_send_puts_identities_in_first_chunk_only(connector):
+def test_batch_send_includes_identities_in_every_sdo_chunk(connector):
     connector._opencti_batch_size = 2
     identity = MagicMock()
     identity.serialize.return_value = (
@@ -469,16 +469,15 @@ def test_batch_send_puts_identities_in_first_chunk_only(connector):
     ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
 
     assert ok is True
-    assert connector.helper.stix2_create_bundle.call_count == 2
+    # With 1 identity, SDO chunk size is max(1, 2-1)=1 → 3 SDO chunks.
+    assert connector.helper.stix2_create_bundle.call_count == 3
     marking = connector.converter.tlp_marking
-    first_chunk = connector.helper.stix2_create_bundle.call_args_list[0].args[0]
-    second_chunk = connector.helper.stix2_create_bundle.call_args_list[1].args[0]
-    assert first_chunk[0] is marking
-    assert first_chunk[1] is identity
-    assert len(first_chunk) == 3
-    assert identity not in second_chunk
-    assert second_chunk[0] is marking
-    assert len(second_chunk) == 3
+    chunks = [
+        call.args[0] for call in connector.helper.stix2_create_bundle.call_args_list
+    ]
+    for chunk in chunks:
+        assert chunk[0] is marking
+        assert identity in chunk
 
 
 def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
@@ -501,12 +500,10 @@ def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
     chunks = [
         call.args[0] for call in connector.helper.stix2_create_bundle.call_args_list
     ]
-    assert len(chunks) == 2
+    # All 3 identities are reattached to the SDO chunk (self-contained bundle).
+    assert len(chunks) == 1
     assert chunks[0][0] is marking
-    assert chunks[0][1:] == identities[:2]
-    assert chunks[1][0] is marking
-    assert chunks[1][1] is identities[2]
-    assert chunks[1][2] is malware
+    assert chunks[0][1:] == identities + [malware]
 
 
 def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
@@ -537,8 +534,9 @@ def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
     )
 
     state: dict = {}
-    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+    ok = connector._cycle_type(client, "malware", state, timestamp=1, seed="")
 
+    assert ok is True
     assert connector._batch_send.call_count == 3  # 2+2+1
     assert state["cursor_malware"] == "2024-01-05T00:00:00.000Z"
     assert state["cursor_ids_malware"] == ["malware--4"]
@@ -635,11 +633,96 @@ def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
     )
 
     state: dict = {"cursor_malware": "2023-01-01T00:00:00.000Z"}
-    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+    ok = connector._cycle_type(client, "malware", state, timestamp=1, seed="")
 
+    assert ok is False
     assert connector._batch_send.call_count == 2
     assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
     assert set(state["managed_ids"]["malware"]) == {"malware--0", "malware--1"}
+
+
+def test_cycle_type_does_not_advance_cursor_when_conversion_fails(connector):
+    connector._batch_send = MagicMock(return_value=True)
+    connector.converter.build_identity = MagicMock(return_value=None)
+
+    items = [
+        {
+            "standard_id": "malware--ok",
+            "name": "ok",
+            "modified": "2024-01-01T00:00:00.000Z",
+            "createdBy": {},
+        },
+        {
+            "standard_id": "malware--bad",
+            "name": "bad",
+            "modified": "2024-01-02T00:00:00.000Z",
+            "createdBy": {},
+        },
+    ]
+    client = MagicMock()
+    client.iter_new_items.return_value = iter(items)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: MagicMock(
+            skip=False, api_item=item, skip_reason=None
+        )
+    )
+    connector._upsert_sdo_from_prep = MagicMock(
+        side_effect=lambda _t, prep: (
+            None
+            if prep.api_item["standard_id"] == "malware--bad"
+            else MagicMock(name=prep.api_item["name"])
+        )
+    )
+
+    state: dict = {"cursor_malware": "2023-01-01T00:00:00.000Z"}
+    ok = connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    assert ok is False
+    assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
+    assert "cursor_ids_malware" not in state or state.get("cursor_ids_malware") != [
+        "malware--bad"
+    ]
+    assert "malware--ok" in state["managed_ids"]["malware"]
+    assert "malware--bad" not in state["managed_ids"]["malware"]
+
+
+def test_cycle_type_reincludes_shared_identity_in_later_batches(connector):
+    connector._opencti_batch_size = 2
+    connector._batch_send = MagicMock(return_value=True)
+    shared_identity = MagicMock(name="shared-author")
+    connector.converter.build_identity = MagicMock(return_value=shared_identity)
+
+    items = [
+        {
+            "standard_id": f"malware--{i}",
+            "name": f"m{i}",
+            "modified": f"2024-01-0{i + 1}T00:00:00.000Z",
+            "createdBy": {
+                "standard_id": "identity--shared",
+                "name": "Shared Author",
+            },
+        }
+        for i in range(2)
+    ]
+    client = MagicMock()
+    client.iter_new_items.return_value = iter(items)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: MagicMock(
+            skip=False, api_item=item, skip_reason=None
+        )
+    )
+    connector._upsert_sdo_from_prep = MagicMock(
+        side_effect=lambda _t, prep: MagicMock(name=prep.api_item["name"])
+    )
+
+    state: dict = {}
+    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    assert connector._batch_send.call_count == 2
+    for call in connector._batch_send.call_args_list:
+        batch = call.args[0]
+        assert shared_identity in batch
+        assert len(batch) == 2
 
 
 def test_process_message_marks_last_run_only_after_successful_cycle(
@@ -651,7 +734,7 @@ def test_process_message_marks_last_run_only_after_successful_cycle(
         mark_last_run_calls.append(mark_last_run)
 
     monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
-    monkeypatch.setattr(connector, "_cycle", MagicMock())
+    monkeypatch.setattr(connector, "_cycle", MagicMock(return_value=True))
     connector.helper.get_state.return_value = {}
     connector.helper.connect_run_and_terminate = False
 
@@ -680,3 +763,39 @@ def test_process_message_does_not_mark_last_run_when_cycle_fails(
         connector.process_message()
 
     assert mark_last_run_calls == [False]
+
+
+def test_process_message_does_not_mark_last_run_when_cycle_returns_false(
+    connector, monkeypatch
+):
+    mark_last_run_calls: list[bool] = []
+
+    def fake_publish(*, mark_last_run: bool) -> None:
+        mark_last_run_calls.append(mark_last_run)
+
+    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
+    monkeypatch.setattr(connector, "_cycle", MagicMock(return_value=False))
+    connector.helper.get_state.return_value = {}
+    connector.helper.connect_run_and_terminate = False
+
+    connector.process_message()
+
+    assert mark_last_run_calls == [False]
+    warn = " ".join(
+        str(c.args[0])
+        for c in connector.helper.connector_logger.warning.call_args_list
+        if c.args
+    )
+    assert "not marking last run" in warn
+
+
+def test_cycle_returns_false_when_any_type_fails(connector):
+    connector.object_types = ["malware", "tools"]
+    connector.merge_split_enabled = False
+    connector._cycle_type = MagicMock(side_effect=[True, False])
+
+    with patch("connector.connector.ThreatLibraryClient"):
+        ok = connector._cycle({}, timestamp=1)
+
+    assert ok is False
+    assert connector._cycle_type.call_count == 2

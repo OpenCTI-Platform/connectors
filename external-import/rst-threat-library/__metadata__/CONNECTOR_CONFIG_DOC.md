@@ -10,6 +10,7 @@ connector.
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | Yes | URL | | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | Yes | string | | The API token used to connect to OpenCTI. |
+| CONNECTOR_ID | `string` | Yes | UUID v4 | | A UUID v4 to identify the connector in OpenCTI. |
 | CONNECTOR_TYPE | `const` | | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | The OpenCTI connector type. |
 | CONNECTOR_NAME | `string` | | string | `"RST Threat Library"` | The connector name displayed in OpenCTI. |
 | CONNECTOR_SCOPE | `array` | | string | `["intrusion-set", "malware", "tool", "campaign"]` | The scope of the connector: STIX domain types emitted (`intrusion-set`, `malware`, `tool`, `campaign`). |

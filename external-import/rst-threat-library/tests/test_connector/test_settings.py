@@ -221,3 +221,15 @@ def test_settings_requires_api_key():
 
     with pytest.raises((ConfigValidationError, ValueError)):
         FakeConnectorSettings()
+
+
+def test_config_json_schema_includes_connector_id_and_password_apikey():
+    schema = ConnectorSettings.config_json_schema(
+        connector_name="RST Threat Library"
+    )
+    assert "CONNECTOR_ID" in schema["properties"]
+    assert schema["properties"]["CONNECTOR_ID"]["type"] == "string"
+    assert "CONNECTOR_ID" in schema["required"]
+    apikey = schema["properties"]["RST_THREAT_LIBRARY_APIKEY"]
+    assert apikey.get("format") == "password"
+    assert apikey.get("writeOnly") is True
