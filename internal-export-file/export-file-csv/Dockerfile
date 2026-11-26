@@ -12,7 +12,5 @@ RUN apk --no-cache upgrade && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-export-file-csv
+CMD ["python3", "main.py"]

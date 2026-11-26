@@ -1,7 +1,6 @@
 """Tests for the export-file-csv connector column-filtering logic.
 
-The connector module file name is hyphenated (`export-file-csv.py`) and is not
-importable as a normal package, so it is loaded by path via importlib.
+The connector module (`src/main.py`) is loaded by path via importlib.
 """
 
 import csv
@@ -12,12 +11,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "src", "export-file-csv.py")
-)
+_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "main.py"))
 _spec = importlib.util.spec_from_file_location("export_file_csv", _SRC)
 if _spec is None or _spec.loader is None:
-    raise ImportError(f"Could not load export-file-csv module from {_SRC}")
+    raise ImportError(f"Could not load main module from {_SRC}")
 export_file_csv = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(export_file_csv)
 ExportFileCsv = export_file_csv.ExportFileCsv

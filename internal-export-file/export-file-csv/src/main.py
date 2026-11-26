@@ -3,6 +3,7 @@ import io
 import json
 import sys
 import time
+import traceback
 
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2
 from settings import ConnectorSettings
@@ -208,8 +209,13 @@ class ExportFileCsv:
             {"visible_columns": visible_columns},
         )
         csv_data = self.export_dict_list_to_csv(entities_list, visible_columns)
-        self.helper.log_info(
-            "Uploading: " + entity_type + "/" + export_type + " to " + file_name
+        self.helper.connector_logger.info(
+            "Uploading",
+            {
+                "entity_type": entity_type,
+                "export_type": export_type,
+                "file_name": file_name,
+            },
         )
         if entity_type == "Stix-Cyber-Observable":
             self.helper.api.stix_cyber_observable.push_list_export(
@@ -410,7 +416,7 @@ if __name__ == "__main__":
     try:
         connectorExportFileCsv = ExportFileCsv()
         connectorExportFileCsv.start()
-    except Exception as e:
-        print(e)
+    except Exception:
+        traceback.print_exc()
         time.sleep(10)
         sys.exit(0)
