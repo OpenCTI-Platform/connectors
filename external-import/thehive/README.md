@@ -31,7 +31,8 @@ TheHive is a scalable security incident response platform designed for SOCs and 
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- TheHive 5.2+ instance
+- TheHive 5.2+ instance (TheHive 4 is not supported: the connector relies on
+  thehive4py 2.x, which only targets TheHive 5)
 - TheHive API key with read access
 
 ## Configuration variables
