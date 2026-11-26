@@ -365,6 +365,8 @@ class TestRequestData:
         errors = empty_error_store.get_errors()
         assert [type(error).code for error in errors] == [code]
         assert str(errors[0]) == f"Failed request to the TeamT5 API: {summary}"
+        # The original exception is kept as the cause of the recorded error
+        assert errors[0].__cause__ is err
         mock_helper.connector_logger.warning.assert_called_once_with(
             "Failed request to the TeamT5 API",
             meta={"url": "https://api.threatvision.org/test", "error": str(err)},

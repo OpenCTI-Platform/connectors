@@ -243,13 +243,14 @@ class Teamt5Client:
                 meta={"token_url": self.session.auth.token_url, "error": str(cause)},
             )
         # The log has a static message, with the URL and the full error in its
-        # ``meta``; the recorded error has no URL (see ``_failure_summary``).
+        # ``meta``; the recorded error has no URL (see ``_failure_summary``), and
+        # keeps the original exception as its cause.
         except requests.RequestException as err:
-            ErrorStore().record_error(
-                _request_error_class(err)(
-                    f"Failed request to the TeamT5 API: {_failure_summary(err)}"
-                )
+            error = _request_error_class(err)(
+                f"Failed request to the TeamT5 API: {_failure_summary(err)}"
             )
+            error.__cause__ = err
+            ErrorStore().record_error(error)
             self.helper.connector_logger.warning(
                 "Failed request to the TeamT5 API",
                 meta={"url": url, "error": str(err)},
