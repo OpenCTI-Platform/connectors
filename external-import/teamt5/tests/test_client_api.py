@@ -133,6 +133,19 @@ class TestInitOAuth:
         mock_session.headers.update.assert_not_called()
 
 
+def _oauth_error(body):
+    """An ``HTTPError`` for a 400 from the token endpoint, whose JSON body is ``body``,
+    or whose body is not JSON when ``body`` is ``None``."""
+    response = Mock(status_code=400)
+    if body is None:
+        response.json.side_effect = requests.exceptions.JSONDecodeError(
+            "Expecting value", "<html>", 0
+        )
+    else:
+        response.json.return_value = body
+    return requests.HTTPError("400 Client Error", response=response)
+
+
 def _token_request_error(cause):
     """The ``TokenRequestError`` the auth raises when its token request fails with ``cause``."""
     err = TokenRequestError(f"Failed to obtain a token: {cause}")
@@ -168,8 +181,22 @@ class TestTokenRequestFailures:
             (requests.exceptions.ConnectTimeout("slow"), ProviderApiTimeoutError),
             (requests.exceptions.ReadTimeout("slow"), ProviderApiTimeoutError),
             (requests.exceptions.TooManyRedirects("loop"), ProviderApiUnknownError),
-            # invalid_client is answered with a 400 as often as with a 401
-            (_http_error(400), ProviderApiAuthenticationError),
+            # Rejected credentials are answered with a 400 as often as with a 401
+            (_oauth_error({"error": "invalid_client"}), ProviderApiAuthenticationError),
+            (_oauth_error({"error": "invalid_grant"}), ProviderApiAuthenticationError),
+            (
+                _oauth_error({"error": "unauthorized_client"}),
+                ProviderApiAuthenticationError,
+            ),
+            # Any other 400 is not about the credentials
+            (_oauth_error({"error": "invalid_request"}), ProviderApiUnknownError),
+            (
+                _oauth_error({"error": "unsupported_grant_type"}),
+                ProviderApiUnknownError,
+            ),
+            (_oauth_error({"message": "bad request"}), ProviderApiUnknownError),
+            (_oauth_error(["invalid_client"]), ProviderApiUnknownError),
+            (_oauth_error(None), ProviderApiUnknownError),
             (_http_error(401), ProviderApiAuthenticationError),
             (_http_error(403), ProviderApiAuthorizationError),
             (_http_error(404), ProviderApiNotFoundError),

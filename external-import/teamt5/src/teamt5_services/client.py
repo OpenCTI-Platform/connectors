@@ -63,15 +63,34 @@ def _failure_summary(err: requests.exceptions.RequestException) -> str:
     return type(err).__name__
 
 
+# The OAuth 2.0 error codes (RFC 6749, section 5.2) of rejected client credentials
+_REJECTED_CREDENTIALS_ERRORS = frozenset(
+    {"invalid_client", "invalid_grant", "unauthorized_client"}
+)
+
+
+def _oauth_error_code(response: requests.Response) -> Optional[str]:
+    """Return the ``error`` field of an OAuth error response, if it has one."""
+    try:
+        body = response.json()
+    except ValueError:  # requests' JSONDecodeError is a ValueError
+        return None
+    error = body.get("error") if isinstance(body, dict) else None
+    return error if isinstance(error, str) else None
+
+
 def _token_error_class(
     err: requests.exceptions.RequestException | ValueError | KeyError,
 ) -> type[ProviderApiError]:
     """Return the standardized error matching a failed OAuth token exchange.
 
     The token endpoint answers rejected credentials (``invalid_client``) with a 400 as
-    often as with a 401, so a 400 is an authentication failure here only. A body that
-    is not JSON, or JSON without ``access_token`` or with an invalid ``expires_in``, is
-    an invalid response.
+    often as with a 401, but a 400 also answers a malformed request
+    (``invalid_request``, ``unsupported_grant_type``...). So a 400 is an
+    authentication failure only when its OAuth ``error`` field says the credentials
+    were rejected, and an unknown error otherwise. A body that is not JSON, or JSON
+    without ``access_token`` or with an invalid ``expires_in``, is an invalid
+    response.
     """
     if isinstance(err, requests.exceptions.RequestException):
         if (
@@ -79,7 +98,9 @@ def _token_error_class(
             and err.response is not None
             and err.response.status_code == 400
         ):
-            return ProviderApiAuthenticationError
+            if _oauth_error_code(err.response) in _REJECTED_CREDENTIALS_ERRORS:
+                return ProviderApiAuthenticationError
+            return ProviderApiUnknownError
         return _request_error_class(err)
     return ProviderApiInvalidResponseError
 
