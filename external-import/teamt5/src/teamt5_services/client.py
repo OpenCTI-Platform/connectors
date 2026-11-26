@@ -1,5 +1,4 @@
 import time
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
@@ -16,6 +15,7 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
     ProviderApiUnknownError,
 )
+from teamt5_services.auth import JWTClientCredentialAuth, TokenRequestError
 
 # The standardized error raised for each HTTP status the TeamT5 API answers with
 HTTP_STATUS_ERRORS: dict[int, type[ProviderApiError]] = {
@@ -71,8 +71,8 @@ def _token_error_class(
 
 class Teamt5Client:
 
-    # Safety margin (seconds) subtracted from the OAuth token expiry so we
-    # never present a token that is about to flip stale to the API.
+    # Safety margin (seconds) before the OAuth token expiry at which a new token
+    # is requested, so a token about to expire is never sent to the API.
     _TOKEN_EXPIRY_MARGIN_SEC = 60
 
     def __init__(self, helper, config) -> None:
@@ -105,76 +105,21 @@ class Teamt5Client:
             if teamt5_cfg.api_key is not None
             else None
         )
-        self._token: Optional[str] = None
-        self._token_expires_at: Optional[datetime] = None
 
         if self._client_id and self._client_secret:
-            # OAuth takes precedence when both auth paths are present.
-            self._refresh_token()
+            # OAuth takes precedence when both auth paths are present. The auth
+            # requests a token on the first request, requests a new one before it
+            # expires, and once when the API answers 401.
+            self.session.auth = JWTClientCredentialAuth(
+                token_url=f"{self._api_base_url.rstrip('/')}/oauth/token",
+                client_id=self._client_id,
+                client_secret=self._client_secret,
+                leeway=self._TOKEN_EXPIRY_MARGIN_SEC,
+            )
         elif self._api_key:
             self.session.headers.update({"Authorization": f"Bearer {self._api_key}"})
         # The settings model's validator guarantees one of the two paths is
         # populated, so no further branch is needed here.
-
-    def _refresh_token(self) -> None:
-        """Exchange OAuth client credentials for a fresh Bearer token.
-
-        Wraps the token POST + ``response.json()`` decode in a single
-        try/except so a failed exchange surfaces as the standardized
-        :class:`ProviderApiError` matching its cause (see
-        ``_token_error_class``), with the underlying cause logged
-        in a structured ``meta`` dict instead of crashing the
-        connector with an opaque ``requests.exceptions.*`` or
-        ``ValueError`` traceback. The narrower categories we already
-        care about (HTTP error from ``raise_for_status``, network
-        error from ``requests.post``, non-JSON body from
-        ``response.json``) all surface through
-        :class:`requests.RequestException` /
-        :class:`ValueError` — keeping the catch wide ensures any
-        future ``requests`` exception subclass added upstream still
-        produces an actionable startup log line.
-        """
-        token_url = f"{self._api_base_url.rstrip('/')}/oauth/token"
-        try:
-            response = requests.post(
-                token_url,
-                data={
-                    "grant_type": "client_credentials",
-                    "client_id": self._client_id,
-                    "client_secret": self._client_secret,
-                },
-                timeout=10,
-            )
-            response.raise_for_status()
-            data = response.json()
-            self._token = data["access_token"]
-            expires_in = int(data.get("expires_in", 3600))
-        except (requests.RequestException, ValueError, KeyError) as err:
-            # Log the failure context with the structured meta the
-            # rest of this connector uses, then re-raise as the
-            # standardized error matching the cause, so the run reports
-            # it to OpenCTI with its code and criticity.
-            self.helper.connector_logger.error(
-                "TeamT5 OAuth token exchange failed",
-                meta={"token_url": token_url, "error": str(err)},
-            )
-            raise _token_error_class(err)(
-                f"Failed to obtain OAuth token from TeamT5: {err}"
-            ) from err
-        self._token_expires_at = datetime.now(timezone.utc) + timedelta(
-            seconds=max(expires_in - self._TOKEN_EXPIRY_MARGIN_SEC, 0)
-        )
-        self.session.headers.update({"Authorization": f"Bearer {self._token}"})
-
-    def _ensure_valid_token(self) -> None:
-        """Refresh the OAuth token if it is missing or about to expire."""
-        if not (self._client_id and self._client_secret):
-            return
-        if (
-            self._token_expires_at is None
-            or datetime.now(timezone.utc) >= self._token_expires_at
-        ):
-            self._refresh_token()
 
     def request_data(
         self, url: str, params=None, throttle: bool = False
@@ -189,17 +134,17 @@ class Teamt5Client:
             (``BaseHandler.retrieve_bundle_references``) where back-to-back
             GETs against the same listing endpoint are paced to avoid
             hammering the upstream API. The default ``False`` keeps
-            STIX bundle downloads (``BaseHandler.push_objects``,
-            ``Teamt5Client._refresh_token`` callers, …) unthrottled —
+            STIX bundle downloads (``BaseHandler.push_objects``) unthrottled —
             on a run with many bundles, an unconditional one-second
             sleep after every GET would silently add minutes to the
             wall-clock time of every cycle.
         :return: The decoded JSON body of the response on success, or ``None`` on failure (HTTP error, network error, or invalid JSON), recorded in the ``ErrorStore`` as the matching standardized error.
+        :raises ProviderApiError: If the OAuth token request fails, as the
+            standardized error matching its cause (see ``_token_error_class``).
         """
         timeout = 15
 
         try:
-            self._ensure_valid_token()
             response = self.session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
             payload = response.json()
@@ -225,6 +170,17 @@ class Teamt5Client:
         # standardized error, without being raised, so the run reports it.
         # A body that is not JSON lands here too: ``requests``'
         # ``JSONDecodeError`` is a ``RequestException``.
+        # The OAuth token request failed. It is raised, not recorded: without a
+        # token no further request can succeed, so the run stops and reports it.
+        except TokenRequestError as err:
+            cause = err.__cause__
+            self.helper.connector_logger.error(
+                "TeamT5 OAuth token exchange failed",
+                meta={"token_url": self.session.auth.token_url, "error": str(cause)},
+            )
+            raise _token_error_class(cause)(
+                f"Failed to obtain OAuth token from TeamT5: {cause}"
+            ) from cause
         except requests.RequestException as err:
             error_msg = f"Failed request to: {url} {err}"
             ErrorStore().record_error(_request_error_class(err)(error_msg))
