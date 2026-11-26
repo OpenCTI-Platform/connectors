@@ -301,22 +301,34 @@ class TestRequestData:
         mock_helper.connector_logger.warning.assert_called_once()
 
     @pytest.mark.parametrize(
-        ("err", "code"),
+        ("err", "code", "summary"),
         [
-            (_http_error(401), "api.authentication"),
-            (_http_error(403), "api.authorization"),
-            (_http_error(404), "api.not_found"),
-            (_http_error(429), "api.rate_limit"),
-            (_http_error(500), "api.server"),
-            (requests.exceptions.ReadTimeout("read"), "api.timeout"),
-            (requests.exceptions.ConnectionError("dns"), "api.connection"),
-            (requests.exceptions.TooManyRedirects("loop"), "api.unknown"),
+            (_http_error(401), "api.authentication", "HTTP 401"),
+            (_http_error(403), "api.authorization", "HTTP 403"),
+            (_http_error(404), "api.not_found", "HTTP 404"),
+            (_http_error(429), "api.rate_limit", "HTTP 429"),
+            (_http_error(500), "api.server", "HTTP 500"),
+            (requests.exceptions.ReadTimeout("read"), "api.timeout", "ReadTimeout"),
+            (
+                requests.exceptions.ConnectionError("dns"),
+                "api.connection",
+                "ConnectionError",
+            ),
+            (
+                requests.exceptions.TooManyRedirects("loop"),
+                "api.unknown",
+                "TooManyRedirects",
+            ),
+            (requests.HTTPError("401"), "api.unknown", "HTTPError"),  # no response
         ],
     )
     def test_request_data_records_failed_request(
-        self, mock_helper, mock_config_api_key, empty_error_store, err, code
+        self, mock_helper, mock_config_api_key, empty_error_store, err, code, summary
     ):
-        """A failed request is recorded once as the matching error, and None is returned."""
+        """A failed request is recorded once as the matching error, and None is returned.
+
+        The recorded message has no URL; the log has a static message, with the URL
+        and the full error in its ``meta``."""
         client = self._make_client(mock_helper, mock_config_api_key)
         client.session.get.side_effect = err
 
@@ -325,8 +337,25 @@ class TestRequestData:
         assert result is None
         errors = empty_error_store.get_errors()
         assert [type(error).code for error in errors] == [code]
-        assert "https://api.threatvision.org/test" in str(errors[0])
-        mock_helper.connector_logger.warning.assert_called_once_with(str(errors[0]))
+        assert str(errors[0]) == f"Failed request to the TeamT5 API: {summary}"
+        mock_helper.connector_logger.warning.assert_called_once_with(
+            "Failed request to the TeamT5 API",
+            meta={"url": "https://api.threatvision.org/test", "error": str(err)},
+        )
+
+    def test_signed_url_stays_out_of_the_recorded_error(
+        self, mock_helper, mock_config_api_key, empty_error_store
+    ):
+        signed_url = "https://downloads.example.org/bundle.json?signature=secret"
+        client = self._make_client(mock_helper, mock_config_api_key)
+        client.session.get.side_effect = requests.HTTPError(
+            f"404 Client Error: Not Found for url: {signed_url}",
+            response=Mock(status_code=404),
+        )
+
+        client.request_data(signed_url)
+
+        assert "secret" not in str(empty_error_store.get_errors()[0])
 
     def test_request_data_records_requests_json_decode_error(
         self, mock_helper, mock_config_api_key, empty_error_store
@@ -369,7 +398,7 @@ class TestRequestData:
         mock_helper.connector_logger.warning.assert_called_once()
         errors = empty_error_store.get_errors()
         assert [type(error).code for error in errors] == ["api.invalid_response"]
-        assert "Expecting value" in str(errors[0])
+        assert str(errors[0]) == "Failed request to the TeamT5 API: JSONDecodeError"
 
     @pytest.mark.parametrize(
         "exc",

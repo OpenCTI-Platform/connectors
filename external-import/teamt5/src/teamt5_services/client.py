@@ -49,6 +49,20 @@ def _request_error_class(
     return ProviderApiUnknownError
 
 
+def _failure_summary(err: requests.exceptions.RequestException) -> str:
+    """Describe a failed request without its URL, for the error reported to OpenCTI.
+
+    The URL may be signed (a ``stix_url`` with a query signature), and ``str(err)``
+    of a ``requests`` exception often embeds it (``404 Client Error: Not Found for
+    url: ...``): the status code of an HTTP error is kept, the exception type
+    otherwise. The log keeps the URL and the full error in its ``meta``.
+    """
+    response = getattr(err, "response", None)
+    if isinstance(err, requests.exceptions.HTTPError) and response is not None:
+        return f"HTTP {response.status_code}"
+    return type(err).__name__
+
+
 def _token_error_class(
     err: requests.exceptions.RequestException | ValueError | KeyError,
 ) -> type[ProviderApiError]:
@@ -166,11 +180,9 @@ class Teamt5Client:
             if not isinstance(payload, dict):
                 # A ``null`` body or a JSON array: ``None`` then always means a
                 # failure already recorded here
-                error_msg = (
-                    f"Invalid response from: {url}: the body is not a JSON object"
-                )
+                error_msg = "Invalid response from the TeamT5 API: the body is not a JSON object"
                 ErrorStore().record_error(ProviderApiInvalidResponseError(error_msg))
-                self.helper.connector_logger.warning(error_msg)
+                self.helper.connector_logger.warning(error_msg, meta={"url": url})
                 return None
             # Only the pagination caller opts into the throttle (see the
             # ``throttle`` argument docstring above) — bundle downloads
@@ -209,8 +221,16 @@ class Teamt5Client:
                 "TeamT5 OAuth token exchange failed",
                 meta={"token_url": self.session.auth.token_url, "error": str(cause)},
             )
+        # The log has a static message, with the URL and the full error in its
+        # ``meta``; the recorded error has no URL (see ``_failure_summary``).
         except requests.RequestException as err:
-            error_msg = f"Failed request to: {url} {err}"
-            ErrorStore().record_error(_request_error_class(err)(error_msg))
-            self.helper.connector_logger.warning(error_msg)
+            ErrorStore().record_error(
+                _request_error_class(err)(
+                    f"Failed request to the TeamT5 API: {_failure_summary(err)}"
+                )
+            )
+            self.helper.connector_logger.warning(
+                "Failed request to the TeamT5 API",
+                meta={"url": url, "error": str(err)},
+            )
         return None

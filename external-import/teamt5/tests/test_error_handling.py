@@ -135,67 +135,67 @@ def _http_error(status_code):
     [
         pytest.param(
             requests.ConnectionError("Connection refused"),
-            "Connection refused",
+            "ConnectionError",
             ProviderApiConnectionError,
             id="connection-error",
         ),
         pytest.param(
             requests.ConnectTimeout("Connect timed out"),
-            "Connect timed out",
+            "ConnectTimeout",
             ProviderApiTimeoutError,
             id="connect-timeout",
         ),
         pytest.param(
             requests.ReadTimeout("Read timed out"),
-            "Read timed out",
+            "ReadTimeout",
             ProviderApiTimeoutError,
             id="read-timeout",
         ),
         pytest.param(
             _http_error(401),
-            "401 Error",
+            "HTTP 401",
             ProviderApiAuthenticationError,
             id="http-401",
         ),
         pytest.param(
             _http_error(403),
-            "403 Error",
+            "HTTP 403",
             ProviderApiAuthorizationError,
             id="http-403",
         ),
         pytest.param(
             _http_error(404),
-            "404 Error",
+            "HTTP 404",
             ProviderApiNotFoundError,
             id="http-404",
         ),
         pytest.param(
             _http_error(429),
-            "429 Error",
+            "HTTP 429",
             ProviderApiRateLimitError,
             id="http-429",
         ),
         pytest.param(
             _http_error(503),
-            "503 Error",
+            "HTTP 503",
             ProviderApiServerError,
             id="http-503",
         ),
         pytest.param(
             _http_error(418),
-            "418 Error",
+            "HTTP 418",
             ProviderApiUnknownError,
             id="http-418",
         ),
         pytest.param(
             requests.JSONDecodeError("Expecting value", "not json", 0),
-            "Expecting value",
+            "JSONDecodeError",
             ProviderApiInvalidResponseError,
             id="json-decode-error",
         ),
         pytest.param(
             requests.TooManyRedirects("Exceeded 30 redirects"),
-            "Exceeded 30 redirects",
+            "TooManyRedirects",
             ProviderApiUnknownError,
             id="other-request-exception",
         ),
@@ -218,6 +218,8 @@ def test_request_exception_returns_errors(
         assert "criticity" in error
         assert message in error["message"]
         assert error["code"] == expected_error.code
+        # The URL stays out of the reported message: it may be signed
+        assert "threatvision" not in error["message"]
 
 
 def _response(payload):
