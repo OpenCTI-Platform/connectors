@@ -457,3 +457,28 @@ class TestWorkerUpdateRoundTrip:
 
         connector._update_misp_event.assert_not_called()
         connector._create_misp_event.assert_called_once_with(container_data)
+
+
+class TestUpdateMispEventUuid:
+    """The update converts with the UUID of the updated MISP event."""
+
+    def test_converts_with_the_updated_event_uuid(self, connector):
+        container_data = _make_container_data(container_id="opencti-container-id")
+        connector.helper.get_attribute_in_extension.return_value = (
+            "opencti-container-id"
+        )
+        connector._resolve_container_references = MagicMock(
+            return_value={"type": "bundle", "objects": []}
+        )
+        connector.api.update_event.return_value = {"uuid": "original-misp-uuid"}
+
+        with patch(
+            "misp_intel_connector.connector.convert_stix_bundle_to_misp_event"
+        ) as mock_convert:
+            mock_convert.return_value = {"info": "test"}
+            assert connector._update_misp_event(container_data, "original-misp-uuid")
+
+        assert mock_convert.call_args[1]["custom_uuid"] == "original-misp-uuid"
+        connector.api.update_event.assert_called_once_with(
+            "original-misp-uuid", {"info": "test"}, tags_to_remove=None
+        )
