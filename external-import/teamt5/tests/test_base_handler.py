@@ -570,6 +570,73 @@ class TestPushObjectsPartialPushFlag:
         assert handler.partial_push is True
 
 
+class TestPushObjectsRecordsSkippedBundles:
+    """Each bundle skipped as a partial push is recorded as a ``data.not_found``
+    warning, so the run reports why ``last_run`` is held."""
+
+    _make_handler_for_push = TestPushObjectsPartialPushFlag._make_handler_for_push
+
+    def test_failed_download_is_recorded(self, empty_error_store):
+        handler = self._make_handler_for_push([None])
+        bundle_refs = [
+            {
+                "id": "ioc-1",
+                "stix_url": "https://example.invalid/1?sig=secret",
+                "created_at": 1700000000,
+            }
+        ]
+
+        handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        errors = empty_error_store.get_errors()
+        assert [type(e).code for e in errors] == ["data.not_found"]
+        assert str(errors[0]) == (
+            "Stub ioc-1 skipped: its STIX bundle could not be downloaded"
+        )
+
+    def test_bundle_without_objects_is_recorded(self, empty_error_store):
+        # A report reference is identified by its ``alias``
+        handler = self._make_handler_for_push([{"objects": []}, {}])
+        bundle_refs = [
+            {
+                "alias": "report-1",
+                "stix_url": "https://example.invalid/1",
+                "created_at": 0,
+            },
+            {
+                "alias": "report-2",
+                "stix_url": "https://example.invalid/2",
+                "created_at": 0,
+            },
+        ]
+
+        handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert [str(e) for e in empty_error_store.get_errors()] == [
+            "Stub report-1 skipped: its STIX bundle has no objects",
+            "Stub report-2 skipped: its STIX bundle has no objects",
+        ]
+
+    def test_non_pushable_ref_records_nothing(self, empty_error_store):
+        # A reference without ``stix_url`` does not hold the cursor: no error
+        handler = self._make_handler_for_push([])
+
+        handler.push_objects(work_id="work--x", bundle_refs=[{"created_at": 0}])
+
+        assert empty_error_store.get_errors() == []
+
+    def test_clean_push_records_nothing(self, empty_error_store):
+        handler = self._make_handler_for_push(
+            [{"objects": [{"type": "indicator", "id": "indicator--ok"}]}]
+        )
+        bundle_refs = [{"stix_url": "https://example.invalid/ok", "created_at": 0}]
+
+        handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert handler.partial_push is False
+        assert empty_error_store.get_errors() == []
+
+
 class TestRetrieveBundleReferencesRecordsErrors:
     """Reporting errors leaves the retry flow unchanged.
 

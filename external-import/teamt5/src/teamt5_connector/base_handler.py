@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 
 from connectors_sdk import (
+    DataNotFoundError,
     ErrorStore,
     ProviderApiInvalidResponseError,
     ProviderApiUnknownError,
@@ -242,15 +243,33 @@ class BaseHandler(ABC):
                 continue
 
             pushable_refs += 1
+            # Report references carry an ``alias``, IOC bundle references an ``id``.
+            # The URL stays out of the error message: it may be signed.
+            ref_id = bundle_ref.get("id") or bundle_ref.get("alias")
+
+            # A skipped bundle counts as a partial push, which holds ``last_run``:
+            # it is recorded as a data error, so the run reports why. The cause of
+            # a failed download is recorded by the client.
 
             # Retrieve the STIX Bundle corresponding to the bundle reference
             stix_bundle = self.client.request_data(bundle_url)
             if stix_bundle is None:
+                ErrorStore().record_error(
+                    DataNotFoundError(
+                        f"{self.name} {ref_id} skipped: its STIX bundle could not "
+                        "be downloaded"
+                    )
+                )
                 continue
 
             stix_content = stix_bundle.get("objects")
             if stix_content is None or len(stix_content) == 0:
                 self.helper.connector_logger.info("API Returned bundle with no items.")
+                ErrorStore().record_error(
+                    DataNotFoundError(
+                        f"{self.name} {ref_id} skipped: its STIX bundle has no objects"
+                    )
+                )
                 continue
 
             # Append author and TLP Marking to objects in the bundle
