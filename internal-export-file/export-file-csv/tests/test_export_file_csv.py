@@ -209,6 +209,45 @@ class TestExportDictListToCsv:
         assert "hashes_MD5" in headers
         assert rows[1][headers.index("hashes_MD5")] == "abc"
 
+    def test_external_references_export_their_url(self):
+        connector = _make_connector()
+        data = [
+            {
+                "name": "report",
+                "externalReferences": [
+                    {
+                        "id": "ref-1",
+                        "source_name": "blog",
+                        "url": "https://example.com/a",
+                        "external_id": None,
+                    },
+                    {
+                        "id": "ref-2",
+                        "source_name": "mitre-attack",
+                        "url": None,
+                        "external_id": "T1059",
+                    },
+                    {
+                        "id": "ref-3",
+                        "source_name": "internal",
+                        "url": None,
+                        "external_id": None,
+                    },
+                ],
+            }
+        ]
+        rows = list(
+            csv.reader(
+                io.StringIO(connector.export_dict_list_to_csv(data)),
+                delimiter=";",
+            )
+        )
+        headers = rows[0]
+        assert (
+            rows[1][headers.index("externalReferences")]
+            == "https://example.com/a,T1059,internal"
+        )
+
 
 class TestExportDictListToCsvBom:
 

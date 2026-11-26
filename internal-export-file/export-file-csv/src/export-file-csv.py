@@ -104,6 +104,13 @@ class ExportFileCsv:
                             if item["observable_value"] is not None
                             else ""
                         )
+                    elif "source_name" in item:
+                        rendered.append(
+                            item.get("url")
+                            or item.get("external_id")
+                            or item["source_name"]
+                            or ""
+                        )
                 return ",".join(rendered)
             return ""
         if isinstance(value, dict):
