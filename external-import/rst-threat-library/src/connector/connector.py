@@ -1,10 +1,9 @@
 import json
-import sys
 import time
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import requests
 from connector.confidence import (
@@ -50,6 +49,13 @@ class UpsertPrep:
 
 
 class RSTThreatLibrary:
+    """Threat Library sync engine used by SDK ``BaseDataProcessor`` instances.
+
+    Scheduling, work lifecycle, and ``last_run`` persistence are owned by
+    ``connectors_sdk.ExternalImportConnector``. This class keeps collect /
+    transform / merge-split business logic.
+    """
+
     def __init__(
         self, *, config: ConnectorSettings, helper: OpenCTIConnectorHelper
     ) -> None:
@@ -96,62 +102,29 @@ class RSTThreatLibrary:
         self.respect_user_edits = bool(tl.respect_user_edits)
         self._intrusion_set_default_confidence = tl.intrusion_set_default_confidence
 
-    def _seed_cursor(self) -> str:
-        s = (self.import_from_date or "").strip()
-        if not s:
-            return ""
-        try:
-            datetime.strptime(s, "%Y-%m-%d")
-        except ValueError:
-            self.helper.connector_logger.warning(
-                f"Invalid import_from_date '{s}' (expected YYYY-MM-DD); ignoring."
-            )
-            return ""
-        return f"{s}T00:00:00.000Z"
+        # Optional hooks injected by SDK processors (WorkManager + ConnectorState).
+        self._state_persist: Optional[Callable[[Dict[str, Any]], None]] = None
+        self._send_bundle: Optional[Callable[[List[Any], str], bool]] = None
 
-    def _publish_connector_info(self, *, mark_last_run: bool) -> None:
-        """Populate OpenCTI connector status fields and push them to the UI."""
-        helper = self.helper
-        try:
-            duration_period_s = self.config.connector.duration_period.total_seconds()
+    def build_client(self) -> ThreatLibraryClient:
+        """Construct an API client from connector settings."""
+        return ThreatLibraryClient(
+            self.helper,
+            base_url=self._client_config["baseurl"],
+            api_key=self._client_config["apikey"],
+            auth_header=self._client_config["auth_header"],
+            connect_timeout=self._client_config["contimeout"],
+            read_timeout=self._client_config["readtimeout"],
+            retry=self._client_config["retry"],
+            ssl_verify=self._client_config["ssl_verify"],
+            page_size=self._client_config["page_size"],
+            order_by=self._client_config["order_by"],
+            order_mode=self._client_config["order_mode"],
+            proxy=self._client_config["proxy"],
+        )
 
-            try:
-                helper.check_connector_buffering()
-            except Exception:
-                helper.connector_info.queue_threshold = float(
-                    helper.connect_queue_threshold
-                )
-
-            if mark_last_run:
-                helper.last_run_datetime()
-            helper.next_run_datetime(duration_period_s)
-            helper.force_ping()
-        except Exception as ex:
-            helper.connector_logger.warning(
-                f"Failed to publish connector status to OpenCTI UI: {ex}"
-            )
-
-    def process_message(self) -> None:
-        timestamp = int(time.time())
-
-        self._publish_connector_info(mark_last_run=False)
-
-        current_state = self.helper.get_state() or {}
-        success = self._cycle(current_state, timestamp)
-        if success:
-            self._publish_connector_info(mark_last_run=True)
-        else:
-            self.helper.connector_logger.warning(
-                "Cycle completed with failures; not marking last run "
-                "(failed types remain retryable)"
-            )
-
-        if self.helper.connect_run_and_terminate:
-            self.helper.connector_logger.info("Connector stopped")
-            self.helper.force_ping()
-            sys.exit(0)
-
-    def run(self) -> None:
+    def log_startup_config(self) -> None:
+        """Log connector behaviour flags once at process start."""
         self.helper.connector_logger.info("Starting RST Threat Library connector")
         self.helper.connector_logger.info(
             f"OpenCTI push: send_stix2_bundle "
@@ -197,43 +170,30 @@ class RSTThreatLibrary:
                 "sightings, notes preserved) for intrusion sets, malware, "
                 "tools, and campaigns; merge/split runs after delta import."
             )
-
         duration_period_s = self.config.connector.duration_period.total_seconds()
         self.helper.connector_logger.info(
             f"Scheduled execution period: {duration_period_s}s"
         )
-        self.helper.schedule_process(
-            message_callback=self.process_message,
-            duration_period=duration_period_s,
-        )
 
-    def _cycle(self, state: Dict[str, Any], timestamp: int) -> bool:
-        seed = self._seed_cursor()
-        client = ThreatLibraryClient(
-            self.helper,
-            base_url=self._client_config["baseurl"],
-            api_key=self._client_config["apikey"],
-            auth_header=self._client_config["auth_header"],
-            connect_timeout=self._client_config["contimeout"],
-            read_timeout=self._client_config["readtimeout"],
-            retry=self._client_config["retry"],
-            ssl_verify=self._client_config["ssl_verify"],
-            page_size=self._client_config["page_size"],
-            order_by=self._client_config["order_by"],
-            order_mode=self._client_config["order_mode"],
-            proxy=self._client_config["proxy"],
-        )
+    def _seed_cursor(self) -> str:
+        s = (self.import_from_date or "").strip()
+        if not s:
+            return ""
+        try:
+            datetime.strptime(s, "%Y-%m-%d")
+        except ValueError:
+            self.helper.connector_logger.warning(
+                f"Invalid import_from_date '{s}' (expected YYYY-MM-DD); ignoring."
+            )
+            return ""
+        return f"{s}T00:00:00.000Z"
 
-        success = True
-        for obj_type in self.object_types:
-            if not self._cycle_type(client, obj_type, state, timestamp, seed):
-                success = False
-
-        if self.merge_split_enabled:
-            if not self._apply_merge_split(client, state, timestamp):
-                success = False
-
-        return success
+    def _persist_state(self, state: Dict[str, Any]) -> None:
+        """Persist mutable state via SDK hook or legacy helper.set_state."""
+        if self._state_persist is not None:
+            self._state_persist(state)
+            return
+        self.helper.set_state(state)
 
     @staticmethod
     def _entity_label_values(entity: Dict[str, Any]) -> List[str]:
@@ -621,7 +581,7 @@ class RSTThreatLibrary:
                 failures.pop(obj_type, None)
             if not failures:
                 state.pop(_SPLIT_FAILURES_STATE_KEY, None)
-            self.helper.set_state(state)
+            self._persist_state(state)
 
     def _should_skip_split_after_failures(
         self,
@@ -641,7 +601,7 @@ class RSTThreatLibrary:
             entry["count"] = 0
             entry["fingerprint"] = fingerprint
             entry["skipped"] = False
-            self.helper.set_state(state)
+            self._persist_state(state)
             return False
 
         return bool(entry.get("skipped"))
@@ -683,7 +643,7 @@ class RSTThreatLibrary:
                 f"[{obj_type}] split: skip {oc_sid} (name={oc.get('name')}) — "
                 f"{reason} (failure {count}/{_SPLIT_FAILURE_SKIP_THRESHOLD})"
             )
-        self.helper.set_state(state)
+        self._persist_state(state)
 
     def _apply_merge_split(
         self,
@@ -889,7 +849,7 @@ class RSTThreatLibrary:
                 return False
 
         self._clear_split_failure(state, obj_type, oc_sid)
-        self.helper.set_state(state)
+        self._persist_state(state)
         return True
 
     def _opencti_fusion_merge(
@@ -1135,7 +1095,7 @@ class RSTThreatLibrary:
         if fusion_target_sid:
             cur.add(fusion_target_sid)
         managed[obj_type] = sorted(cur)
-        self.helper.set_state(state)
+        self._persist_state(state)
         return True
 
     def _cycle_type(
@@ -1193,7 +1153,7 @@ class RSTThreatLibrary:
             cur = set(managed.get(obj_type, []))
             cur.update(pushed_standard_ids)
             managed[obj_type] = sorted(cur)
-            self.helper.set_state(state)
+            self._persist_state(state)
             stix_objects = []
             pushed_standard_ids = []
             pushed_api_items = []
@@ -1287,7 +1247,7 @@ class RSTThreatLibrary:
         if any_pushed:
             state[cursor_key] = latest or cursor
             state[cursor_ids_key] = sorted(latest_ids)
-            self.helper.set_state(state)
+            self._persist_state(state)
             self.helper.connector_logger.info(
                 f"[{obj_type}] ingested {count} object(s), cursor now "
                 f"{state[cursor_key] or '(none)'}"
@@ -1295,7 +1255,7 @@ class RSTThreatLibrary:
         elif count:
             state[cursor_key] = latest or cursor
             state[cursor_ids_key] = sorted(latest_ids)
-            self.helper.set_state(state)
+            self._persist_state(state)
             self.helper.connector_logger.info(
                 f"[{obj_type}] no new objects this cycle "
                 f"(cursor advanced after {count} skipped)"
@@ -1384,16 +1344,20 @@ class RSTThreatLibrary:
     def _batch_send_stix_bundle(
         self, stix_objects: List[Any], timestamp: int, obj_type: str
     ) -> bool:
-        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        friendly_name = (
-            f"RST Threat Library [{obj_type}] @ " f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
         stix_objects = self._with_tlp_marking(stix_objects)
         self.helper.connector_logger.debug(
             f"[{obj_type}] start uploading {len(stix_objects)} object(s) "
             f"(mode=bundle)"
         )
 
+        # SDK processors inject WorkManager-backed send (preferred path).
+        if self._send_bundle is not None:
+            return self._send_bundle_with_retries(stix_objects, obj_type)
+
+        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        friendly_name = (
+            f"RST Threat Library [{obj_type}] @ " f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         max_retries = max(1, int(self._max_retries))
         retry_delay = self._retry_delay
 
@@ -1437,6 +1401,36 @@ class RSTThreatLibrary:
                 self.helper.connector_logger.error(error_message)
                 raise
 
+        return False
+
+    def _send_bundle_with_retries(
+        self, stix_objects: List[Any], obj_type: str
+    ) -> bool:
+        """Push via injected WorkManager send with the connector retry policy."""
+        assert self._send_bundle is not None
+        max_retries = max(1, int(self._max_retries))
+        retry_delay = self._retry_delay
+
+        for attempt in range(max_retries):
+            try:
+                return bool(self._send_bundle(stix_objects, obj_type))
+            except Exception as ex:
+                if self._is_retryable_upload_error(ex):
+                    self.helper.connector_logger.error(
+                        f"[{obj_type}] push attempt {attempt + 1}/{max_retries} "
+                        f"failed: {ex}"
+                    )
+                    if attempt < max_retries - 1:
+                        retry_delay = self._sleep_before_retry(retry_delay)
+                        continue
+                    self.helper.connector_logger.error(
+                        f"[{obj_type}] failed to upload bundle after "
+                        f"{max_retries} attempts."
+                    )
+                    return False
+                error_message = f"[{obj_type}] unexpected error during upload: {ex}"
+                self.helper.connector_logger.error(error_message)
+                raise
         return False
 
     def _with_tlp_marking(self, stix_objects: List[Any]) -> List[Any]:

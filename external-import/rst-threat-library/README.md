@@ -4,7 +4,15 @@ Ingests intrusion sets, malware, tools, and campaigns from the **RST Cloud Threa
 
 ## Introduction
 
-The connector polls `GET /threat-objects/<type>` for each configured type and upserts the results into OpenCTI keyed on `standard_id`. Imports are sent with `helper.send_stix2_bundle` (OpenCTI worker). Optional `merge_split` reconcile uses the OpenCTI API for platform merge/alias updates.
+The connector polls `GET /threat-objects/<type>` for each configured type and upserts the results into OpenCTI keyed on `standard_id`.
+
+It follows the Filigran **connectors-sdk** external-import contract:
+
+- `ExternalImportConnector.start()` owns scheduling, state load/save, and `last_run`
+- one `ThreatObjectImportProcessor` per configured object type (WorkManager bundle send)
+- optional `MergeSplitProcessor` (last) for alias merge/split via OpenCTI `stix.merge` / alias updates
+
+Imports are sent through the SDK `WorkManager` (`send_stix2_bundle` with `cleanup_inconsistent_bundle`).
 
 ## Installation
 
