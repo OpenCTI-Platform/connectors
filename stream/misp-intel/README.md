@@ -196,7 +196,7 @@ When a marking or a report type is removed from a container, the update event of
 | Description             | Event Report     | Event report named after the container, updated in place on each update |
 | Analysis Status         | Analysis         | Always set to 2 (Completed)              |
 
-If the description is cleared in OpenCTI, the existing event report is left unchanged in MISP. Events exported by earlier versions keep their former "Event description" comment attribute, which can be deleted manually. If the event report is deleted in MISP, it is restored on the next update of the container.
+If the description is cleared in OpenCTI, the existing event report is left unchanged in MISP. Events exported by earlier versions held the description in an "Event description" comment attribute: it is deleted on the next update of the container, once the event report is in MISP. If the event report is deleted in MISP, it is restored on the next update of the container.
 
 ### Threat Level Calculation
 

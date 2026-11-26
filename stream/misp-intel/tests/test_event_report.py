@@ -8,15 +8,16 @@ event from the converter dict and only copy its Tag, Attribute and Object
 entries. The endpoints also make the sync idempotent by UUID.
 """
 
+import logging
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from misp_intel_connector.api_handler import MispApiHandler
+from misp_intel_connector.api_handler import LEGACY_DESCRIPTION_COMMENT, MispApiHandler
 from misp_intel_connector.stix_to_misp_converter import (
     STIXtoMISPConverter,
     description_report_uuid,
 )
-from pymisp import MISPEvent, MISPEventReport
+from pymisp import MISPAttribute, MISPEvent, MISPEventReport
 
 EVENT_UUID = "33333333-3333-3333-3333-333333333333"
 OTHER_EVENT_UUID = "44444444-4444-4444-4444-444444444444"
@@ -85,7 +86,7 @@ def _field(report, name):
     return report[name] if isinstance(report, dict) else getattr(report, name)
 
 
-def _existing_event(reports=()):
+def _existing_event(reports=(), attributes=()):
     event = MISPEvent()
     event.uuid = EVENT_UUID
     event.info = REPORT_NAME
@@ -94,11 +95,27 @@ def _existing_event(reports=()):
     event.analysis = 2
     for report in reports:
         event.EventReport.append(report)
+    for attribute in attributes:
+        event.Attribute.append(attribute)
     return event
 
 
+def _existing_attribute(comment, uuid, value=DESCRIPTION, attribute_type="comment"):
+    attribute = MISPAttribute()
+    attribute.from_dict(
+        type=attribute_type,
+        category="Other",
+        value=value,
+        comment=comment,
+        uuid=uuid,
+    )
+    return attribute
+
+
 def _existing_report(content=DESCRIPTION, name=REPORT_NAME, distribution=2, **kwargs):
-    # distribution defaults to the one set by the config fixture
+    # distribution defaults to the one set by the config fixture, event_id to
+    # the id of the event returned by _prepare_update
+    kwargs.setdefault("event_id", "1")
     report = MISPEventReport()
     report.from_dict(
         id=7,
@@ -793,3 +810,184 @@ def test_sync_event_reports_accepts_plain_dicts(api_handler):
     assert event_id == "1"
     assert (report.name, report.content, report.uuid) == ("n", "c", report_uuid)
     assert api_handler.misp.mock_calls[-1] == call.add_event_report("1", report)
+
+
+def test_update_event_skips_a_hidden_report_of_another_event(
+    api_handler, helper, config
+):
+    """In round-trip mode the report UUID can be taken by another event."""
+    config.misp.publish_on_update = True
+    event_data = _event_data_with_description(helper, config, "New description")
+    _prepare_update(api_handler, _existing_event())
+    api_handler.misp.get_event_report.return_value = _existing_report(
+        "Old content", deleted=True, event_id="42"
+    )
+
+    result = api_handler.update_event(EVENT_UUID, event_data)
+
+    assert result["uuid"] == EVENT_UUID
+    api_handler.misp.direct_call.assert_not_called()
+    api_handler.misp.add_event_report.assert_not_called()
+    api_handler.misp.update_event_report.assert_not_called()
+    api_handler.misp.publish.assert_called_once()
+    helper.connector_logger.warning.assert_called_once()
+    message = helper.connector_logger.warning.call_args[0][0]
+    meta = helper.connector_logger.warning.call_args[1]["meta"]
+    assert message == "Failed to sync MISP event report"
+    assert meta["event_id"] == "1"
+    assert "another MISP event" in meta["error"]
+    assert "42" in meta["error"]
+
+
+def test_report_lookup_drops_only_the_pymisp_not_found_error(api_handler, caplog):
+    """A missing report is the normal case: PyMISP's 404 ERROR is not logged."""
+    pymisp_logger = logging.getLogger("pymisp")
+
+    def get_event_report(*args, **kwargs):
+        pymisp_logger.error("Something went wrong (404): {'message': 'Invalid report'}")
+        pymisp_logger.error("Something went wrong (403): {'message': 'Forbidden'}")
+        return {"errors": (404, {"message": "Invalid report"})}
+
+    api_handler.misp.get_event_report.side_effect = get_event_report
+
+    with caplog.at_level(logging.ERROR, logger="pymisp"):
+        found = api_handler._find_hidden_event_report(
+            "1", description_report_uuid(EVENT_UUID), {}
+        )
+        pymisp_logger.error("Something went wrong (404): after the lookup")
+
+    assert found is None
+    messages = [r.getMessage() for r in caplog.records if r.name == "pymisp"]
+    assert messages == [
+        "Something went wrong (403): {'message': 'Forbidden'}",
+        "Something went wrong (404): after the lookup",
+    ]
+    assert not pymisp_logger.filters
+
+
+def test_sync_event_reports_skips_a_report_without_uuid(api_handler, helper):
+    synced = api_handler._sync_event_reports(
+        "1", [{"name": "n", "content": "c", "distribution": 1}], []
+    )
+
+    assert synced is False
+    api_handler.misp.get_event_report.assert_not_called()
+    api_handler.misp.add_event_report.assert_not_called()
+    api_handler.misp.update_event_report.assert_not_called()
+    helper.connector_logger.warning.assert_called_once()
+    message = helper.connector_logger.warning.call_args[0][0]
+    meta = helper.connector_logger.warning.call_args[1]["meta"]
+    assert message == "Skipped MISP event report without UUID"
+    assert meta["report_name"] == "n"
+
+
+# --- API handler: legacy description attribute -------------------------------
+
+LEGACY_UUID = "55555555-5555-5555-5555-555555555555"
+OTHER_COMMENT_UUID = "77777777-7777-7777-7777-777777777777"
+
+
+def _event_with_legacy_attribute(reports=()):
+    return _existing_event(
+        reports,
+        attributes=[
+            _existing_attribute(LEGACY_DESCRIPTION_COMMENT, LEGACY_UUID),
+            _existing_attribute("Analyst note", OTHER_COMMENT_UUID, value="note"),
+        ],
+    )
+
+
+def test_update_event_deletes_the_legacy_description_attribute(
+    api_handler, helper, config
+):
+    config.misp.publish_on_update = True
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(api_handler, _event_with_legacy_attribute())
+    api_handler.misp.get_event_report.return_value = {"errors": ["Invalid report"]}
+    api_handler.misp.add_event_report.return_value = {"EventReport": {"id": "9"}}
+    api_handler.misp.delete_attribute.return_value = {"message": "Attribute deleted."}
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.delete_attribute.assert_called_once()
+    (attribute,) = api_handler.misp.delete_attribute.call_args[0]
+    assert attribute.uuid == LEGACY_UUID
+    method_calls = _method_calls(api_handler)
+    assert method_calls.index("add_event_report") < method_calls.index(
+        "delete_attribute"
+    )
+    assert method_calls.index("delete_attribute") < method_calls.index("publish")
+    helper.connector_logger.warning.assert_not_called()
+
+
+def test_update_event_deletes_the_legacy_attribute_when_report_is_unchanged(
+    api_handler, helper, config
+):
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(api_handler, _event_with_legacy_attribute([_existing_report()]))
+    api_handler.misp.delete_attribute.return_value = {"message": "Attribute deleted."}
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.update_event_report.assert_not_called()
+    api_handler.misp.delete_attribute.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "side_effect",
+    [
+        {"return_value": {"errors": ["Event report could not be saved"]}},
+        {"side_effect": RuntimeError("boom")},
+    ],
+    ids=["errors-response", "exception"],
+)
+def test_update_event_keeps_the_legacy_attribute_when_report_sync_fails(
+    api_handler, helper, config, side_effect
+):
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(api_handler, _event_with_legacy_attribute())
+    api_handler.misp.get_event_report.return_value = {"errors": ["Invalid report"]}
+    api_handler.misp.add_event_report.configure_mock(**side_effect)
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.delete_attribute.assert_not_called()
+
+
+def test_update_event_keeps_the_legacy_attribute_without_description(
+    api_handler, helper, config
+):
+    event_data = _convert(helper, config, _bundle())
+    _prepare_update(api_handler, _event_with_legacy_attribute())
+
+    api_handler.update_event(EVENT_UUID, event_data)
+
+    api_handler.misp.delete_attribute.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "side_effect",
+    [
+        {"return_value": {"errors": ["Attribute not found"]}},
+        {"side_effect": RuntimeError("boom")},
+    ],
+    ids=["errors-response", "exception"],
+)
+def test_update_event_survives_a_failing_legacy_attribute_deletion(
+    api_handler, helper, config, side_effect
+):
+    config.misp.publish_on_update = True
+    event_data = _event_data_with_description(helper, config)
+    _prepare_update(api_handler, _event_with_legacy_attribute([_existing_report()]))
+    api_handler.misp.delete_attribute.configure_mock(**side_effect)
+
+    result = api_handler.update_event(EVENT_UUID, event_data)
+
+    assert result["uuid"] == EVENT_UUID
+    api_handler.misp.publish.assert_called_once()
+    helper.connector_logger.warning.assert_called_once()
+    message = helper.connector_logger.warning.call_args[0][0]
+    meta = helper.connector_logger.warning.call_args[1]["meta"]
+    assert message == "Failed to delete legacy MISP description attribute"
+    assert meta["attribute_uuid"] == LEGACY_UUID
+    assert meta["error"]
