@@ -18,6 +18,9 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
+from connectors_sdk.connectors.external_import.report_connector_errors import (
+    report_connector_errors,
+)
 from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
     BaseEnrichmentProcessor,
 )
@@ -146,4 +149,6 @@ __all__ = [
     "InternalEnrichmentConnector",
     "BaseEnrichmentProcessor",
     "EnrichmentMessage",
+    # Connector decorators
+    "report_connector_errors",
 ]
