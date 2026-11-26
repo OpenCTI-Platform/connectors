@@ -432,7 +432,6 @@ class ThreatFox:
             indicator_type = "md5"
             observable_type = "StixFile"
             stix_observable = stix2.File(
-                name=ioc.value,
                 hashes={"MD5": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
@@ -449,7 +448,6 @@ class ThreatFox:
             indicator_type = "sha1"
             observable_type = "StixFile"
             stix_observable = stix2.File(
-                name=ioc.value,
                 hashes={"SHA-1": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
@@ -466,7 +464,6 @@ class ThreatFox:
             indicator_type = "sha256"
             observable_type = "StixFile"
             stix_observable = stix2.File(
-                name=ioc.value,
                 hashes={"SHA-256": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
