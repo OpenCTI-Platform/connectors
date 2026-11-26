@@ -143,11 +143,12 @@ def _token_request_error(cause):
 class TestTokenRequestFailures:
     """Pin the OAuth token-exchange error contract.
 
-    When the session's auth fails to obtain a token, ``request_data`` MUST raise
+    When the session's auth fails to obtain a token, ``request_data`` records
     the standardized ``ProviderApiError`` matching the cause — transport errors,
     HTTP error responses, bodies that are not JSON, without ``access_token`` or
-    with an invalid ``expires_in`` — so the run stops and reports it to OpenCTI
-    with its code and criticity, instead of turning it into a ``None`` page.
+    with an invalid ``expires_in`` — and returns ``None``, like any failed
+    request: the caller stops, and the run reports the error to OpenCTI with its
+    code and criticity while it continues with the next handler.
     """
 
     def _make_client(self, mock_helper, mock_config_oauth, cause):
@@ -186,24 +187,25 @@ class TestTokenRequestFailures:
             (ValueError("Invalid expires_in: None"), ProviderApiInvalidResponseError),
         ],
     )
-    def test_token_failure_raises_matching_error(
+    def test_token_failure_records_matching_error(
         self, mock_helper, mock_config_oauth, empty_error_store, cause, expected
     ):
         client = self._make_client(mock_helper, mock_config_oauth, cause)
 
-        with pytest.raises(expected, match="Failed to obtain OAuth token") as info:
-            client.request_data("https://api.threatvision.org/test")
+        assert client.request_data("https://api.threatvision.org/test") is None
 
-        assert info.value.__cause__ is cause
+        errors = empty_error_store.get_errors()
+        assert [type(e) for e in errors] == [expected]
+        assert str(errors[0]).startswith("Failed to obtain OAuth token")
+        # The original exception is kept as the cause of the recorded error
+        assert errors[0].__cause__ is cause
         mock_helper.connector_logger.error.assert_called_once()
         assert mock_helper.connector_logger.error.call_args.kwargs["meta"][
             "token_url"
         ] == ("https://api.threatvision.org/oauth/token")
-        # Raised, not recorded: the run reports it as the error that stopped it
-        assert empty_error_store.get_errors() == []
 
-    def test_token_failure_propagates_through_a_real_session(
-        self, mock_helper, mock_config_oauth
+    def test_token_failure_through_a_real_session(
+        self, mock_helper, mock_config_oauth, empty_error_store
     ):
         """With the real session and auth, a rejected token request stops
         ``request_data`` before any API request is sent."""
@@ -212,10 +214,38 @@ class TestTokenRequestFailures:
         with patch("teamt5_services.auth.requests.post", return_value=rejected):
             client = Teamt5Client(mock_helper, mock_config_oauth)
             with patch.object(client.session, "send") as send:
-                with pytest.raises(ProviderApiAuthenticationError):
-                    client.request_data("https://api.threatvision.org/test")
+                assert client.request_data("https://api.threatvision.org/test") is None
 
         send.assert_not_called()
+        assert [type(e) for e in empty_error_store.get_errors()] == [
+            ProviderApiAuthenticationError
+        ]
+
+    def test_next_request_gets_a_token_after_a_failed_one(
+        self, mock_helper, mock_config_oauth, empty_error_store
+    ):
+        """A failed token request does not stop later requests: the next one
+        requests a token again, as the next handler of the run does."""
+        rejected = Mock()
+        rejected.raise_for_status.side_effect = _http_error(503)
+        granted = Mock()
+        granted.json.return_value = {"access_token": "tok", "expires_in": 3600}
+        page = Mock(status_code=200)
+        page.json.return_value = {"success": True}
+        with patch(
+            "teamt5_services.auth.requests.post", side_effect=[rejected, granted]
+        ):
+            client = Teamt5Client(mock_helper, mock_config_oauth)
+            with patch.object(client.session, "send", return_value=page) as send:
+                first = client.request_data("https://api.threatvision.org/reports")
+                second = client.request_data("https://api.threatvision.org/ioc")
+
+        assert first is None
+        assert second == {"success": True}
+        assert send.call_args.args[0].headers["Authorization"] == "Bearer tok"
+        assert [type(e) for e in empty_error_store.get_errors()] == [
+            ProviderApiServerError
+        ]
 
 
 class TestRequestData:

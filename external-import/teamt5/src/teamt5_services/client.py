@@ -154,14 +154,14 @@ class Teamt5Client:
             sleep after every GET would silently add minutes to the
             wall-clock time of every cycle.
         :return: The decoded JSON object of the response on success, or ``None`` on failure (HTTP error, network error, or a body that is not a JSON object), recorded in the ``ErrorStore`` as the matching standardized error. A request fails only once its retries are exhausted (see ``RetryingAdapter``).
-        :raises ProviderApiError: If the OAuth token request fails, as the
-            standardized error matching its cause (see ``_token_error_class``).
         """
         timeout = 15
 
         try:
-            response = self.session.get(url, params=params, timeout=timeout)
-            response.raise_for_status()
+            response = self.session.get(
+                url, params=params, timeout=timeout
+            )  # This GET is retried on network errors, timeouts and server errors by the RetryingAdapter mounted on the session
+            response.raise_for_status()  # Raises only HTTPError, which is a RequestException subclass, on 4xx/5xx responses
             payload = response.json()
             if not isinstance(payload, dict):
                 # A ``null`` body or a JSON array: ``None`` then always means a
@@ -194,17 +194,21 @@ class Teamt5Client:
         # standardized error, without being raised, so the run reports it.
         # A body that is not JSON lands here too: ``requests``'
         # ``JSONDecodeError`` is a ``RequestException``.
-        # The OAuth token request failed. It is raised, not recorded: without a
-        # token no further request can succeed, so the run stops and reports it.
+        # The OAuth token request failed. It is recorded like any failed request,
+        # as the standardized error matching its cause, and ``None`` stops the
+        # caller: the run continues with the next handler, whose requests may
+        # succeed. The original exception is kept as the error's cause.
         except TokenRequestError as err:
             cause = err.__cause__
+            error = _token_error_class(cause)(
+                f"Failed to obtain OAuth token from TeamT5: {cause}"
+            )
+            error.__cause__ = cause
+            ErrorStore().record_error(error)
             self.helper.connector_logger.error(
                 "TeamT5 OAuth token exchange failed",
                 meta={"token_url": self.session.auth.token_url, "error": str(cause)},
             )
-            raise _token_error_class(cause)(
-                f"Failed to obtain OAuth token from TeamT5: {cause}"
-            ) from cause
         except requests.RequestException as err:
             error_msg = f"Failed request to: {url} {err}"
             ErrorStore().record_error(_request_error_class(err)(error_msg))
