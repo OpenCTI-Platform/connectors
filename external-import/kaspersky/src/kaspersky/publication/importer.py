@@ -35,7 +35,6 @@ class PublicationImporter(BaseImporter):
         tlp_marking: MarkingDefinition,
         create_observables: bool,
         create_indicators: bool,
-        update_existing_data: bool,
         publication_start_timestamp: int,
         publication_report_type: str,
         publication_report_status: int,
@@ -43,7 +42,7 @@ class PublicationImporter(BaseImporter):
         publication_excluded_ioc_indicator_types: Set[str],
     ) -> None:
         """Initialize Kaspersky publication importer."""
-        super().__init__(helper, client, author, tlp_marking, update_existing_data)
+        super().__init__(helper, client, author, tlp_marking)
 
         self.create_observables = create_observables
         self.create_indicators = create_indicators
@@ -60,10 +59,7 @@ class PublicationImporter(BaseImporter):
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
-        self._info(
-            "Running Kaspersky publication importer (update data: {0})...",
-            self.update_existing_data,
-        )
+        self._info("Running Kaspersky publication importer...")
 
         self._load_opencti_regions()
 
