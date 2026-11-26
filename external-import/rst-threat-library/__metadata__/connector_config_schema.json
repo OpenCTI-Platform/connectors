@@ -171,12 +171,16 @@
     },
     "RST_THREAT_LIBRARY_ORDER_BY": {
       "default": "modified",
-      "description": "Sort field for incremental polling.",
+      "description": "Sort field for incremental polling. Must be 'modified' so the connector cursor (modified timestamp + IDs) matches API ordering.",
+      "enum": [
+        "modified"
+      ],
       "examples": [
         "modified"
       ],
       "type": "string"
     },
+
     "RST_THREAT_LIBRARY_ORDER_MODE": {
       "default": "desc",
       "description": "Sort direction for incremental polling.",

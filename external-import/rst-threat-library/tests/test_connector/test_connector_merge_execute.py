@@ -101,8 +101,11 @@ def test_apply_merge_split_for_type_handles_catalogue_fetch_failure(connector):
     client = MagicMock()
     client.iter_all_items.side_effect = RuntimeError("catalogue down")
 
-    connector._apply_merge_split_for_type(client, {}, 1, ThreatObjectType.MALWARE)
+    ok = connector._apply_merge_split_for_type(
+        client, {}, 1, ThreatObjectType.MALWARE
+    )
 
+    assert ok is False
     connector.helper.connector_logger.error.assert_called()
     assert "catalogue fetch failed" in connector.helper.connector_logger.error.call_args.args[0]
 
@@ -170,12 +173,20 @@ def test_execute_split_happy_path_updates_aliases_and_pushes(connector):
 
     split = _split_candidate()
     state: dict = {}
-    connector._execute_split(
+    call_order: list[str] = []
+    connector._batch_send = MagicMock(
+        side_effect=lambda *a, **k: call_order.append("batch_send") or True
+    )
+    connector.helper.api.stix_domain_object.update_field = MagicMock(
+        side_effect=lambda *a, **k: call_order.append("update_field")
+    )
+
+    ok = connector._execute_split(
         split, timestamp=1, obj_type=ThreatObjectType.MALWARE, state=state
     )
 
-    connector.helper.api.stix_domain_object.update_field.assert_called_once()
-    connector._batch_send.assert_called_once()
+    assert ok is True
+    assert call_order == ["batch_send", "update_field"]
     assert "malware--keep" in state["managed_ids"][ThreatObjectType.MALWARE]
     assert "malware--split-off" in state["managed_ids"][ThreatObjectType.MALWARE]
     assert ThreatObjectType.MALWARE not in (state.get("split_failures") or {})
@@ -186,14 +197,20 @@ def test_execute_split_records_failure_when_alias_update_fails(connector):
     connector.helper.api.stix_domain_object.update_field.side_effect = RuntimeError(
         "alias boom"
     )
-    connector._batch_send = MagicMock()
+    connector._batch_send = MagicMock(return_value=True)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: UpsertPrep(skip=False, api_item=item)
+    )
+    connector._upsert_sdo_from_prep = MagicMock(return_value=MagicMock())
+    connector.converter.build_identity = MagicMock(return_value=None)
 
     split = _split_candidate()
     state: dict = {}
-    connector._execute_split(
+    ok = connector._execute_split(
         split, timestamp=1, obj_type=ThreatObjectType.MALWARE, state=state
     )
 
+    assert ok is False
     entry = state["split_failures"][ThreatObjectType.MALWARE]["malware--keep"]
     assert entry["count"] == 1
     info = " ".join(
@@ -202,7 +219,7 @@ def test_execute_split_records_failure_when_alias_update_fails(connector):
         if c.args
     )
     assert "alias update failed" in info
-    connector._batch_send.assert_not_called()
+    connector._batch_send.assert_called_once()
 
 
 def test_execute_split_skips_when_missing_ids(connector):
@@ -210,9 +227,10 @@ def test_execute_split_skips_when_missing_ids(connector):
     split = _split_candidate(
         opencti_entity={"name": "Broken", "aliases": ["X"]},
     )
-    connector._execute_split(
+    ok = connector._execute_split(
         split, timestamp=1, obj_type=ThreatObjectType.MALWARE, state={}
     )
+    assert ok is False
     connector._batch_send.assert_not_called()
 
 
@@ -226,14 +244,15 @@ def test_execute_split_records_failure_when_sdo_cannot_be_built(connector):
 
     split = _split_candidate()
     state: dict = {}
-    connector._execute_split(
+    ok = connector._execute_split(
         split, timestamp=1, obj_type=ThreatObjectType.MALWARE, state=state
     )
 
+    assert ok is False
     entry = state["split_failures"][ThreatObjectType.MALWARE]["malware--keep"]
     assert entry["count"] == 1
     connector._batch_send.assert_not_called()
-    connector.helper.api.stix_domain_object.update_field.assert_called_once()
+    connector.helper.api.stix_domain_object.update_field.assert_not_called()
     error = " ".join(
         str(c.args[0])
         for c in connector.helper.connector_logger.error.call_args_list

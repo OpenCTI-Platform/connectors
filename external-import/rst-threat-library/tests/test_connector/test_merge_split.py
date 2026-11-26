@@ -58,6 +58,35 @@ def test_merge_split_detects_alias_conflict_for_split_candidate():
 
     assert len(plan.splits) == 1
     assert "Shared Alias" in plan.splits[0].aliases_to_remove
+    # Split subjects must not also be scheduled for fusion into the split-off.
+    assert plan.merges == []
+
+
+def test_split_candidate_is_excluded_from_merge_against_split_off_upstream():
+    api_items = [
+        {
+            "standard_id": "malware--keep",
+            "name": "KeepMe",
+            "aliases": [],
+        },
+        {
+            "standard_id": "malware--split-off",
+            "name": "SplitOff",
+            "aliases": ["Shared"],
+        },
+    ]
+    opencti_entities = [
+        {
+            "standard_id": "malware--keep",
+            "name": "KeepMe",
+            "aliases": ["Shared"],
+        }
+    ]
+
+    plan = analyze_merge_split(api_items, opencti_entities)
+
+    assert len(plan.splits) == 1
+    assert plan.merges == []
 
 
 def test_split_does_not_put_opencti_name_into_aliases_to_remove():

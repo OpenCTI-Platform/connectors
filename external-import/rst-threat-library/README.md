@@ -10,7 +10,7 @@ The connector polls `GET /threat-objects/<type>` for each configured type and up
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261008.0 with a working worker
+- OpenCTI Platform >= 7.261124.0 with a working worker
 - Python >= 3.11 (for manual deployment)
 - An RST Cloud Threat Library API key
 - Docker / Docker Compose
@@ -56,7 +56,7 @@ Configuration is set either in `docker-compose.yml` (Docker) or in `config.yml` 
 | OpenCTI push backoff multiplier   | `retry_backoff_multiplier`          | `RST_THREAT_LIBRARY_RETRY_BACKOFF_MULTIPLIER`        | `2.0`                                        | No        | `2.0`                                        | Exponential backoff multiplier.                                             |
 | OpenCTI push batch size           | `opencti_batch_size`                | `RST_THREAT_LIBRARY_OPENCTI_BATCH_SIZE`              | `200`                                        | No        | `200`                                        | Max objects per OpenCTI push (large deltas are flushed in chunks).          |
 | Object types to pull              | `object_types`                      | `RST_THREAT_LIBRARY_OBJECT_TYPES`                    | `intrusion-sets,malware,tools,campaigns`     | No        | `intrusion-sets,malware,tools,campaigns`     | Comma-separated paths under `/threat-objects/`.                             |
-| Sort field                        | `order_by`                          | `RST_THREAT_LIBRARY_ORDER_BY`                        | `modified`                                   | No        | `modified`                                   | Use `modified` for incremental sync.                                        |
+| Sort field                        | `order_by`                          | `RST_THREAT_LIBRARY_ORDER_BY`                        | `modified`                                   | No        | `modified`                                   | Must be `modified` (cursor is based on it).                                 |
 | Sort direction                    | `order_mode`                        | `RST_THREAT_LIBRARY_ORDER_MODE`                      | `desc`                                       | No        | `desc`                                       | `asc` or `desc`.                                                            |
 | Page size                         | `page_size`                         | `RST_THREAT_LIBRARY_PAGE_SIZE`                       | `100`                                        | No        | `20`                                         | `limit` per request.                                                        |
 | Alias merge/split                 | `merge_split`                       | `RST_THREAT_LIBRARY_MERGE_SPLIT`                     | `false`                                      | No        | `false`                                      | Optional reconcile for intrusion sets, malware, tools, and campaigns.       |

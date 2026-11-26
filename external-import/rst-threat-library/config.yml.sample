@@ -21,7 +21,7 @@ rst_threat_library:
   retry: 2 # optional, per-request HTTP retries (default: 2; try 10 for reliability)
   ssl_verify: true # optional (default: true)
   page_size: 100 # optional (default: 100; try 20 for reliability)
-  order_by: 'modified' # optional (default: 'modified')
+  order_by: 'modified' # optional; must be 'modified' (cursor is based on modified)
   order_mode: 'desc' # optional: 'asc' or 'desc' (default: 'desc')
   proxy: '' # optional forward HTTP proxy URL, e.g. 'http://proxy.example.com:8080'
   max_retries: 3 # optional, OpenCTI push retries (default: 3)

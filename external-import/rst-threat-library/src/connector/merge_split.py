@@ -168,6 +168,10 @@ def analyze_merge_split(
             for oc_sid in oc_index.get(ident, set()):
                 if oc_sid == api_sid:
                     continue
+                # OpenCTI entities already queued for split must not also be
+                # fused into the split-off upstream object (that undoes the split).
+                if oc_sid in split_seen:
+                    continue
                 entity = opencti_by_sid.get(oc_sid)
                 if entity:
                     oc_duplicates[oc_sid] = entity

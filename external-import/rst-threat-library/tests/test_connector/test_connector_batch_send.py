@@ -799,3 +799,16 @@ def test_cycle_returns_false_when_any_type_fails(connector):
 
     assert ok is False
     assert connector._cycle_type.call_count == 2
+
+
+def test_cycle_returns_false_when_merge_split_fails(connector):
+    connector.object_types = ["malware"]
+    connector.merge_split_enabled = True
+    connector._cycle_type = MagicMock(return_value=True)
+    connector._apply_merge_split = MagicMock(return_value=False)
+
+    with patch("connector.connector.ThreatLibraryClient"):
+        ok = connector._cycle({}, timestamp=1)
+
+    assert ok is False
+    connector._apply_merge_split.assert_called_once()

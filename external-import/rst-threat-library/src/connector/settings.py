@@ -93,8 +93,11 @@ class RstThreatLibraryConfig(BaseConfigModel):
         gt=0,
         examples=[20, 100],
     )
-    order_by: str = Field(
-        description="Sort field for incremental polling.",
+    order_by: Literal["modified"] = Field(
+        description=(
+            "Sort field for incremental polling. Must be 'modified' so the "
+            "connector cursor (modified timestamp + IDs) matches API ordering."
+        ),
         default="modified",
         examples=["modified"],
     )

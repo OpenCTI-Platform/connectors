@@ -230,7 +230,8 @@ class RSTThreatLibrary:
                 success = False
 
         if self.merge_split_enabled:
-            self._apply_merge_split(client, state, timestamp)
+            if not self._apply_merge_split(client, state, timestamp):
+                success = False
 
         return success
 
@@ -689,12 +690,17 @@ class RSTThreatLibrary:
         client: ThreatLibraryClient,
         state: Dict[str, Any],
         timestamp: int,
-    ) -> None:
+    ) -> bool:
         """Run alias merge/split for each configured threat-object type."""
+        success = True
         for obj_type in self.object_types:
             if obj_type not in _MERGE_SPLIT_TYPES:
                 continue
-            self._apply_merge_split_for_type(client, state, timestamp, obj_type)
+            if not self._apply_merge_split_for_type(
+                client, state, timestamp, obj_type
+            ):
+                success = False
+        return success
 
     def _apply_merge_split_for_type(
         self,
@@ -702,7 +708,7 @@ class RSTThreatLibrary:
         state: Dict[str, Any],
         timestamp: int,
         obj_type: str,
-    ) -> None:
+    ) -> bool:
         """Compare one catalogue with OpenCTI and apply split/merge."""
         api_items: List[Dict[str, Any]] = []
         try:
@@ -722,7 +728,7 @@ class RSTThreatLibrary:
                 f"[{obj_type}] merge/split catalogue fetch failed: {ex}\n"
                 f"{traceback.format_exc()}"
             )
-            return
+            return False
 
         opencti_entities = self._opencti_entities_for_merge_split(
             obj_type, state, api_items=api_items
@@ -734,18 +740,22 @@ class RSTThreatLibrary:
                 f"[{obj_type}] merge/split: no candidates "
                 f"(api={len(api_items)}, opencti_scoped={len(opencti_entities)})"
             )
-            return
+            return True
 
         self.helper.connector_logger.info(
             f"[{obj_type}] merge/split: {len(plan.splits)} split(s), "
             f"{len(plan.merges)} merge(s)"
         )
 
+        success = True
         for split in plan.splits:
-            self._execute_split(split, timestamp, obj_type, state)
+            if not self._execute_split(split, timestamp, obj_type, state):
+                success = False
 
         for merge in plan.merges:
-            self._execute_merge(merge, timestamp, obj_type, state)
+            if not self._execute_merge(merge, timestamp, obj_type, state):
+                success = False
+        return success
 
     def _execute_split(
         self,
@@ -753,19 +763,19 @@ class RSTThreatLibrary:
         timestamp: int,
         obj_type: str,
         state: Dict[str, Any],
-    ) -> None:
+    ) -> bool:
         oc = split.opencti_entity
         oid = oc.get("id")
         oc_sid = oc.get("standard_id")
         if not oid or not oc_sid:
-            return
+            return False
 
         if self._should_skip_split_after_failures(split, obj_type, state):
             self.helper.connector_logger.debug(
                 f"[{obj_type}] split: skipped {oc_sid} "
                 f"(name={oc.get('name')}) — previously abandoned"
             )
-            return
+            return False
 
         if self._analyst_locks_entity(
             oc,
@@ -779,32 +789,7 @@ class RSTThreatLibrary:
                 state,
                 reason=("OpenCTI confidence exceeds Threat Library (analyst lock)"),
             )
-            return
-
-        if split.aliases_to_remove:
-            remaining = [
-                a for a in (oc.get("aliases") or []) if a not in split.aliases_to_remove
-            ]
-            try:
-                self.helper.api.stix_domain_object.update_field(
-                    id=oid,
-                    input={"key": "aliases", "value": remaining},
-                )
-                self.helper.connector_logger.info(
-                    f"[{obj_type}] split: removed aliases {split.aliases_to_remove} "
-                    f"from {oc_sid} (name={oc.get('name')})"
-                )
-            except Exception as ex:
-                self.helper.connector_logger.error(
-                    f"[{obj_type}] split alias update failed for {oc_sid}: {ex}"
-                )
-                self._record_split_failure(
-                    split,
-                    obj_type,
-                    state,
-                    reason=f"alias update failed: {ex}",
-                )
-                return
+            return False
 
         stix_objects: List[Any] = []
         seen_identities: Dict[str, bool] = {}
@@ -839,7 +824,7 @@ class RSTThreatLibrary:
                     state,
                     reason=f"failed to build SDO for {sid}",
                 )
-                return
+                return False
             stix_objects.append(sdo)
             sid = item.get("standard_id")
             if sid:
@@ -854,22 +839,19 @@ class RSTThreatLibrary:
                     seen_identities[cb_id] = True
 
         if stix_objects:
-            if self._batch_send(stix_objects, timestamp, obj_type):
-                self._record_sync_state(state, obj_type, pushed_items)
-                managed = state.setdefault("managed_ids", {})
-                cur = set(managed.get(obj_type, []))
-                cur.update(pushed)
-                managed[obj_type] = sorted(cur)
-                self._clear_split_failure(state, obj_type, oc_sid)
-                self.helper.set_state(state)
-            else:
+            if not self._batch_send(stix_objects, timestamp, obj_type):
                 self._record_split_failure(
                     split,
                     obj_type,
                     state,
                     reason="OpenCTI push failed",
                 )
-                return
+                return False
+            self._record_sync_state(state, obj_type, pushed_items)
+            managed = state.setdefault("managed_ids", {})
+            cur = set(managed.get(obj_type, []))
+            cur.update(pushed)
+            managed[obj_type] = sorted(cur)
         elif not split.aliases_to_remove:
             self._record_split_failure(
                 split,
@@ -877,8 +859,38 @@ class RSTThreatLibrary:
                 state,
                 reason="no upsertable split-off items",
             )
-        else:
-            self._clear_split_failure(state, obj_type, oc_sid)
+            return False
+
+        # Alias mutation only after dependent objects are sent (or for alias-only
+        # splits), so a failed push leaves the conflicting aliases intact for retry.
+        if split.aliases_to_remove:
+            remaining = [
+                a for a in (oc.get("aliases") or []) if a not in split.aliases_to_remove
+            ]
+            try:
+                self.helper.api.stix_domain_object.update_field(
+                    id=oid,
+                    input={"key": "aliases", "value": remaining},
+                )
+                self.helper.connector_logger.info(
+                    f"[{obj_type}] split: removed aliases {split.aliases_to_remove} "
+                    f"from {oc_sid} (name={oc.get('name')})"
+                )
+            except Exception as ex:
+                self.helper.connector_logger.error(
+                    f"[{obj_type}] split alias update failed for {oc_sid}: {ex}"
+                )
+                self._record_split_failure(
+                    split,
+                    obj_type,
+                    state,
+                    reason=f"alias update failed: {ex}",
+                )
+                return False
+
+        self._clear_split_failure(state, obj_type, oc_sid)
+        self.helper.set_state(state)
+        return True
 
     def _opencti_fusion_merge(
         self,
@@ -946,7 +958,7 @@ class RSTThreatLibrary:
         timestamp: int,
         obj_type: str,
         state: Dict[str, Any],
-    ) -> None:
+    ) -> bool:
         stix_objects: List[Any] = []
         seen_identities: Dict[str, bool] = {}
         pushed: List[str] = []
@@ -1018,13 +1030,13 @@ class RSTThreatLibrary:
                 f"[{obj_type}] merge: survivor upsert failed for {target_sid}; "
                 "skipping OpenCTI fusion"
             )
-            return
+            return False
 
         if survivor_pushed:
             self._record_sync_state(state, obj_type, survivor_pushed)
 
         if not target_sid:
-            return
+            return True
 
         api_target = self._wait_for_opencti_entity(
             obj_type,
@@ -1076,7 +1088,7 @@ class RSTThreatLibrary:
                 f"[{obj_type}] merge: survivor {target_sid} not found in OpenCTI "
                 "after upsert (and no usable OpenCTI fusion candidate)"
             )
-            return
+            return False
 
         fusion_target_sid = fusion_target.get("standard_id")
         if not self._should_allow_reconcile_delete(fusion_target):
@@ -1085,7 +1097,7 @@ class RSTThreatLibrary:
                 f"(name={fusion_target.get('name')}) — protected by exclude-labels "
                 "or createdBy allowlist"
             )
-            return
+            return True
         if self._analyst_locks_entity(
             fusion_target,
             obj_type_path=obj_type,
@@ -1097,7 +1109,7 @@ class RSTThreatLibrary:
                 f"(name={fusion_target.get('name')}) — OpenCTI confidence exceeds "
                 "Threat Library (analyst lock)"
             )
-            return
+            return True
 
         source_by_sid: Dict[str, Dict[str, Any]] = {}
         for src in merge.opencti_entities_to_merge:
@@ -1124,6 +1136,7 @@ class RSTThreatLibrary:
             cur.add(fusion_target_sid)
         managed[obj_type] = sorted(cur)
         self.helper.set_state(state)
+        return True
 
     def _cycle_type(
         self,

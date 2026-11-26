@@ -30,7 +30,7 @@ connector.
 | RST_THREAT_LIBRARY_RETRY_BACKOFF_MULTIPLIER | `number` | | Positive number | `2.0` | Exponential backoff multiplier for OpenCTI push retries. |
 | RST_THREAT_LIBRARY_OPENCTI_BATCH_SIZE | `integer` | | Positive integer | `200` | Max STIX objects per OpenCTI worker bundle push. |
 | RST_THREAT_LIBRARY_OBJECT_TYPES | `string` | | Comma-separated string | `"intrusion-sets,malware,tools,campaigns"` | Threat-object API paths to poll. |
-| RST_THREAT_LIBRARY_ORDER_BY | `string` | | string | `"modified"` | Field used to order API results for incremental synchronization. |
+| RST_THREAT_LIBRARY_ORDER_BY | `string` | | `"modified"` | `"modified"` | Must be `modified` so the incremental cursor matches API ordering. |
 | RST_THREAT_LIBRARY_ORDER_MODE | `string` | | `asc`, `desc` | `"desc"` | Direction used to order API results. |
 | RST_THREAT_LIBRARY_PAGE_SIZE | `integer` | | Positive integer | `100` | Maximum number of threat objects requested per page. |
 | RST_THREAT_LIBRARY_MERGE_SPLIT | `boolean` | | `true`, `false` | `false` | Optional alias merge/split for intrusion sets, malware, tools, and campaigns. |
