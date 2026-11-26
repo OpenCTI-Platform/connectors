@@ -374,11 +374,21 @@ class TestProcessMessageReturnsErrors:
         assert errors == [
             {
                 "code": "other.unknown",
-                "message": "boom",
+                "message": "RuntimeError: boom",
                 "criticity": int(Criticity.CRITICAL),
             }
         ]
         helper.set_state.assert_not_called()
+
+    def test_unknown_error_names_the_exception_type(self):
+        """``str(KeyError('objects'))`` alone would only say ``'objects'``."""
+        connector, _, report_handler, _ = _make_connector()
+        cause = KeyError("objects")
+        report_handler.retrieve_bundle_references.side_effect = cause
+
+        errors = _run(connector)
+
+        assert errors[0]["message"] == "KeyError: 'objects'"
 
     def test_errors_of_the_previous_run_are_not_returned_again(self, empty_error_store):
         connector, _, _, _ = _make_connector()

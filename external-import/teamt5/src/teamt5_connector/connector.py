@@ -237,13 +237,17 @@ class TeamT5Connector:
             self._close_work_in_error(work_id, err)
             return self._return_run_error_list(err)
         except Exception as err:
-            # Any other exception is reported as an UnknownError.
+            # Any other exception is reported as an UnknownError. Its message
+            # names the exception type: ``str(KeyError('objects'))`` alone would
+            # only say ``'objects'``.
             self.helper.connector_logger.error(
                 "[CONNECTOR] Unhandled exception during run",
                 meta={"error": str(err)},
             )
             self._close_work_in_error(work_id, err)
-            return self._return_run_error_list(UnknownError(str(err)))
+            unknown_error = UnknownError(f"{type(err).__name__}: {err}")
+            unknown_error.__cause__ = err
+            return self._return_run_error_list(unknown_error)
 
     def _create_tlp_marking(self, level: str) -> stix2.MarkingDefinition:
         """

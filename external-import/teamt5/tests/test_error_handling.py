@@ -234,24 +234,27 @@ def _response(payload):
 
 
 @pytest.mark.parametrize(
-    "exception, expected_code, expected_criticity",
+    "exception, expected_code, expected_criticity, expected_message",
     [
         pytest.param(
             ProviderApiAuthenticationError("Invalid API key"),
             "api.authentication",
             Criticity.CRITICAL,
+            "Invalid API key",
             id="critical-connector-error",
         ),
         pytest.param(
             DataConversionError("Invalid API key"),
             "data.conversion",
             Criticity.WARNING,
+            "Invalid API key",
             id="warning-connector-error",
         ),
         pytest.param(
             RuntimeError("Invalid API key"),
             "other.unknown",
             Criticity.CRITICAL,
+            "RuntimeError: Invalid API key",
             id="not-a-connector-error",
         ),
     ],
@@ -263,18 +266,19 @@ def test_error_stopping_the_run_is_returned(
     exception,
     expected_code,
     expected_criticity,
+    expected_message,
 ):
     helper.get_state.return_value = None
     teamt5_client.request_data.side_effect = exception
 
     errors = connector_with_mock_client.process_message()
 
-    # A connector error is reported with its own code and criticity, any
-    # other exception as an UnknownError; the message is kept in both cases.
+    # A connector error is reported with its own code, criticity and message,
+    # any other exception as an UnknownError whose message names its type
     assert errors == [
         {
             "code": expected_code,
-            "message": "Invalid API key",
+            "message": expected_message,
             "criticity": int(expected_criticity),
         }
     ]
@@ -437,22 +441,24 @@ def test_run_ok(
 
 
 @pytest.mark.parametrize(
-    "exception, expected_code",
+    "exception, expected_code, expected_message",
     [
         pytest.param(
             ProviderApiServerError("Bundle download failed"),
             "api.server",
+            "Bundle download failed",
             id="connector-error",
         ),
         pytest.param(
             RuntimeError("Bundle download failed"),
             "other.unknown",
+            "RuntimeError: Bundle download failed",
             id="not-a-connector-error",
         ),
     ],
 )
 def test_push_failure_closes_work_in_error(
-    connector_with_mock_handler, helper, exception, expected_code
+    connector_with_mock_handler, helper, exception, expected_code, expected_message
 ):
     connector = connector_with_mock_handler
     connector.report_handler.retrieve_bundle_references.return_value = [REF_1]
@@ -468,7 +474,7 @@ def test_push_failure_closes_work_in_error(
         "work-1", "Unhandled exception: Bundle download failed", in_error=True
     )
     assert [(error["code"], error["message"]) for error in errors] == [
-        (expected_code, "Bundle download failed")
+        (expected_code, expected_message)
     ]
     # The run stopped: the next handler did not run, last_run is not advanced
     connector.indicator_bundle_handler.retrieve_bundle_references.assert_not_called()
