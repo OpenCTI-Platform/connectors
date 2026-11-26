@@ -33,14 +33,13 @@ class MasterIOCImporter(BaseImporter):
         tlp_marking: MarkingDefinition,
         create_observables: bool,
         create_indicators: bool,
-        update_existing_data: bool,
         master_ioc_fetch_weekday: Optional[int],
         master_ioc_excluded_ioc_indicator_types: Set[str],
         master_ioc_report_type: str,
         master_ioc_report_status: int,
     ) -> None:
         """Initialize Kaspersky Master IOC importer."""
-        super().__init__(helper, client, author, tlp_marking, update_existing_data)
+        super().__init__(helper, client, author, tlp_marking)
 
         self.create_observables = create_observables
         self.create_indicators = create_indicators
@@ -58,10 +57,7 @@ class MasterIOCImporter(BaseImporter):
 
     def run(self, state: Mapping[str, Any]) -> Mapping[str, Any]:
         """Run importer."""
-        self._info(
-            "Running Kaspersky Master IOC importer (update data: {0})...",
-            self.update_existing_data,
-        )
+        self._info("Running Kaspersky Master IOC importer...")
 
         latest_master_ioc_timestamp = state.get(self._LATEST_MASTER_IOC_TIMESTAMP)
         if latest_master_ioc_timestamp is None:
