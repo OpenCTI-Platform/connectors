@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+from connectors_sdk import (
+    ErrorStore,
+    ProviderApiInvalidResponseError,
+    ProviderApiUnknownError,
+)
+
 # STIX 2.1 cyber observable types (SCOs). OpenCTI uses
 # ``x_opencti_created_by_ref`` on SCOs because the STIX 2.1 spec only defines
 # ``created_by_ref`` on SDOs/SROs; setting it on an SCO produces an invalid
@@ -153,6 +159,23 @@ class BaseHandler(ABC):
                     # that was published after ``last_run`` but before
                     # the page that failed.
                     self.aborted = True
+                    # The run continues with the next handler, so the abort is
+                    # recorded, not raised: it is reported with the run's errors.
+                    # A payload without ``success`` is an invalid response; no
+                    # payload at all is a failed request (its cause is recorded
+                    # by the client) or a ``null`` body, which cannot be told
+                    # apart here.
+                    error_class = (
+                        ProviderApiUnknownError
+                        if data is None
+                        else ProviderApiInvalidResponseError
+                    )
+                    ErrorStore().record_error(
+                        error_class(
+                            f"{self.name} retrieval aborted after {failure_count} "
+                            "consecutive failed pages"
+                        )
+                    )
                     break
                 continue
 

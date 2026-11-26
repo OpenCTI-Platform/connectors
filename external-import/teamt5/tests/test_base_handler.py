@@ -115,6 +115,20 @@ class TestRetrieveBundleReferencesPagination:
         assert refs == [{"id": 1}]
         assert client.request_data.call_count == 3
 
+    def test_recovered_failure_records_no_error(self, empty_error_store):
+        """A failed page followed by a successful retry does not abort: no error."""
+        client = Mock()
+        client.request_data.side_effect = [
+            {"success": False},
+            {"success": True, "stubs": []},
+        ]
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert handler.aborted is False
+        assert empty_error_store.get_errors() == []
+
     def test_none_response_counts_as_failure(self):
         """``client.request_data`` returning ``None`` (transport error) is a failure page."""
         client = Mock()
@@ -235,6 +249,48 @@ class TestRetrieveBundleReferencesMaxFailuresAbort:
         assert refs == []
         assert client.request_data.call_count == _MAX_PAGE_FAILURES
         handler.helper.connector_logger.error.assert_called_once()
+
+
+class TestRetrieveBundleReferencesAbortRecordsError:
+    """When the retries are exhausted, the abort is recorded in the ``ErrorStore``,
+    so the run reports it even when no request raised."""
+
+    def test_unsuccessful_payloads_record_an_invalid_response(self, empty_error_store):
+        client = Mock()
+        client.request_data.return_value = {"success": False}
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        errors = empty_error_store.get_errors()
+        assert [type(e).code for e in errors] == ["api.invalid_response"]
+        assert str(errors[0]) == (
+            f"Stub retrieval aborted after {_MAX_PAGE_FAILURES} consecutive failed pages"
+        )
+
+    def test_missing_payloads_record_an_unknown_error(self, empty_error_store):
+        # ``request_data`` returns ``None`` for a ``null`` body, or for a failed
+        # request whose own error the client records
+        client = Mock()
+        client.request_data.return_value = None
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert [type(e).code for e in empty_error_store.get_errors()] == ["api.unknown"]
+
+    def test_last_failure_decides_the_error(self, empty_error_store):
+        client = Mock()
+        client.request_data.side_effect = [None] * (_MAX_PAGE_FAILURES - 1) + [
+            {"success": False}
+        ]
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert [type(e).code for e in empty_error_store.get_errors()] == [
+            "api.invalid_response"
+        ]
 
 
 class TestRetrieveBundleReferencesAbortedFlag:
@@ -537,6 +593,7 @@ class TestRetrieveBundleReferencesRecordsErrors:
         assert refs == []
         assert handler.aborted is True
         assert client.session.get.call_count == _MAX_PAGE_FAILURES
+        # Each failed attempt, then the abort once the retries are exhausted
         assert [type(e).code for e in empty_error_store.get_errors()] == [
             "api.server"
-        ] * _MAX_PAGE_FAILURES
+        ] * _MAX_PAGE_FAILURES + ["api.unknown"]
