@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/nameshield_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "NameShield",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "NameShield"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P7D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "NAMESHIELD_AUTH_BEARER": {
+      "description": "Bearer token of the NameShield API. The IP address of the connector must also be allowed on the NameShield side.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "NAMESHIELD_SERVER": {
+      "default": "api.nameshield.net",
+      "description": "NameShield API server, used as `{server}` in the URL templates.",
+      "type": "string"
+    },
+    "NAMESHIELD_API_VERSION": {
+      "default": "v1",
+      "description": "NameShield API version, used as `{api_version}` in the URL templates.",
+      "type": "string"
+    },
+    "NAMESHIELD_API_ENDPOINT": {
+      "default": "registrar",
+      "description": "NameShield API endpoint, used as `{api_endpoint}` in the URL templates.",
+      "type": "string"
+    },
+    "NAMESHIELD_URL_LIST": {
+      "default": "https://{server}/{api_endpoint}/{api_version}/domains",
+      "description": "URL template of the domain list. Supports the `{server}`, `{api_endpoint}` and `{api_version}` placeholders.",
+      "type": "string"
+    },
+    "NAMESHIELD_URL_DOMAIN": {
+      "default": "https://{server}/{api_endpoint}/{api_version}/domains/{domain}",
+      "description": "URL template of the domain details. Supports the `{server}`, `{api_endpoint}`, `{api_version}` and `{domain}` placeholders.",
+      "type": "string"
+    },
+    "NAMESHIELD_DOMAIN_LIMIT": {
+      "default": 10000,
+      "description": "Maximum number of domains imported per run.",
+      "type": "integer"
+    },
+    "NAMESHIELD_MARKING": {
+      "default": "TLP:GREEN",
+      "description": "TLP marking applied to the imported objects: `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT` or `TLP:RED`. Any other value falls back to `TLP:AMBER+STRICT`.",
+      "type": "string"
+    },
+    "NAMESHIELD_LINK_TO_IDENTITIES": {
+      "default": "",
+      "description": "Comma-separated STIX IDs of identities (for example your organization) the indicators are attributed to. Leave empty to create no link.",
+      "type": "string"
+    },
+    "NAMESHIELD_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_DURATION_PERIOD instead.",
+      "type": "integer"
+    },
+    "NAMESHIELD_MARKING_DEFINITION": {
+      "default": null,
+      "deprecated": true,
+      "description": "Use NAMESHIELD_MARKING instead.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "NAMESHIELD_AUTH_BEARER"
+  ],
+  "additionalProperties": true
+}
