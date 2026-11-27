@@ -432,6 +432,27 @@ def test_wait_for_opencti_entity_returns_none_after_retries(monkeypatch):
         str(c.args[0]) for c in helper.connector_logger.info.call_args_list if c.args
     ]
     assert any("attempt 2/3" in msg for msg in info_msgs)
+
+
+def test_wait_for_opencti_entity_raises_when_all_attempts_error(monkeypatch):
+    from connector.connector import OpenCTIReadError
+
+    settings = StubConnectorSettings()
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    connector = RSTThreatLibrary(config=settings, helper=helper)
+    connector._read_opencti_entity = MagicMock(
+        side_effect=OpenCTIReadError("read failed")
+    )
+    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
+
+    with pytest.raises(OpenCTIReadError, match="read failed"):
+        connector._wait_for_opencti_entity(
+            "intrusion-sets",
+            "intrusion-set--1",
+            attempts=2,
+            delay_s=0.01,
+        )
     assert any("attempt 3/3" in msg for msg in info_msgs)
 
 
@@ -725,90 +746,68 @@ def test_cycle_type_reincludes_shared_identity_in_later_batches(connector):
         assert len(batch) == 2
 
 
-def test_process_message_marks_last_run_only_after_successful_cycle(
-    connector, monkeypatch
-):
-    mark_last_run_calls: list[bool] = []
+def test_import_processor_raises_when_cycle_type_fails(connector):
+    """Failed import processor must raise so SDK callback skips last_run save."""
+    from connector.data_processors import ThreatObjectImportProcessor
+    from connector.state import ConnectorState
 
-    def fake_publish(*, mark_last_run: bool) -> None:
-        mark_last_run_calls.append(mark_last_run)
+    processor = ThreatObjectImportProcessor("malware")
+    processor.settings = connector.config
+    processor.state = ConnectorState()
+    processor.work_manager = MagicMock()
+    processor.logger = MagicMock()
+    processor.engine = connector
+    connector._cycle_type = MagicMock(return_value=False)
+    connector.build_client = MagicMock(return_value=MagicMock())
+    connector._seed_cursor = MagicMock(return_value="")
 
-    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
-    monkeypatch.setattr(connector, "_cycle", MagicMock(return_value=True))
-    connector.helper.get_state.return_value = {}
-    connector.helper.connect_run_and_terminate = False
-
-    connector.process_message()
-
-    assert mark_last_run_calls == [False, True]
-    connector._cycle.assert_called_once()
-
-
-def test_process_message_does_not_mark_last_run_when_cycle_fails(
-    connector, monkeypatch
-):
-    mark_last_run_calls: list[bool] = []
-
-    def fake_publish(*, mark_last_run: bool) -> None:
-        mark_last_run_calls.append(mark_last_run)
-
-    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
-    monkeypatch.setattr(
-        connector, "_cycle", MagicMock(side_effect=RuntimeError("cycle failed"))
-    )
-    connector.helper.get_state.return_value = {}
-    connector.helper.connect_run_and_terminate = False
-
-    with pytest.raises(RuntimeError, match="cycle failed"):
-        connector.process_message()
-
-    assert mark_last_run_calls == [False]
+    with pytest.raises(RuntimeError, match="import failed"):
+        processor.process()
 
 
-def test_process_message_does_not_mark_last_run_when_cycle_returns_false(
-    connector, monkeypatch
-):
-    mark_last_run_calls: list[bool] = []
+def test_import_processor_succeeds_when_cycle_type_ok(connector):
+    from connector.data_processors import ThreatObjectImportProcessor
+    from connector.state import ConnectorState
 
-    def fake_publish(*, mark_last_run: bool) -> None:
-        mark_last_run_calls.append(mark_last_run)
-
-    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
-    monkeypatch.setattr(connector, "_cycle", MagicMock(return_value=False))
-    connector.helper.get_state.return_value = {}
-    connector.helper.connect_run_and_terminate = False
-
-    connector.process_message()
-
-    assert mark_last_run_calls == [False]
-    warn = " ".join(
-        str(c.args[0])
-        for c in connector.helper.connector_logger.warning.call_args_list
-        if c.args
-    )
-    assert "not marking last run" in warn
-
-
-def test_cycle_returns_false_when_any_type_fails(connector):
-    connector.object_types = ["malware", "tools"]
-    connector.merge_split_enabled = False
-    connector._cycle_type = MagicMock(side_effect=[True, False])
-
-    with patch("connector.connector.ThreatLibraryClient"):
-        ok = connector._cycle({}, timestamp=1)
-
-    assert ok is False
-    assert connector._cycle_type.call_count == 2
-
-
-def test_cycle_returns_false_when_merge_split_fails(connector):
-    connector.object_types = ["malware"]
-    connector.merge_split_enabled = True
+    processor = ThreatObjectImportProcessor("malware")
+    processor.settings = connector.config
+    processor.state = ConnectorState()
+    processor.work_manager = MagicMock()
+    processor.logger = MagicMock()
+    processor.engine = connector
     connector._cycle_type = MagicMock(return_value=True)
+    connector.build_client = MagicMock(return_value=MagicMock())
+    connector._seed_cursor = MagicMock(return_value="")
+
+    processor.process()
+    connector._cycle_type.assert_called_once()
+
+
+def test_merge_split_processor_raises_when_reconcile_fails(connector):
+    from connector.data_processors import MergeSplitProcessor
+    from connector.state import ConnectorState
+
+    processor = MergeSplitProcessor()
+    processor.settings = connector.config
+    object.__setattr__(processor.settings.rst_threat_library, "merge_split", True)
+    processor.state = ConnectorState()
+    processor.work_manager = MagicMock()
+    processor.logger = MagicMock()
+    processor.engine = connector
     connector._apply_merge_split = MagicMock(return_value=False)
+    connector.build_client = MagicMock(return_value=MagicMock())
 
-    with patch("connector.connector.ThreatLibraryClient"):
-        ok = connector._cycle({}, timestamp=1)
+    with pytest.raises(RuntimeError, match="merge/split"):
+        processor.process()
 
-    assert ok is False
-    connector._apply_merge_split.assert_called_once()
+
+def test_processor_persist_does_not_save_mid_run(connector):
+    from connector.data_processors import ThreatObjectImportProcessor
+    from connector.state import ConnectorState
+
+    processor = ThreatObjectImportProcessor("malware")
+    processor.state = ConnectorState()
+    processor.state.save = MagicMock()
+    processor._persist_state_dict({"cursor_malware": "2024-01-01T00:00:00.000Z"})
+    assert getattr(processor.state, "cursor_malware") == "2024-01-01T00:00:00.000Z"
+    processor.state.save.assert_not_called()

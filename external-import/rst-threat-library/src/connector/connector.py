@@ -46,6 +46,13 @@ class UpsertPrep:
     api_item: Dict[str, Any]
     opencti_entity: Optional[Dict[str, Any]] = None
     skip_reason: str = ""
+    # When True, skip is due to a transient/error condition (e.g. OpenCTI read
+    # failure). Cursor must not advance so the item remains retryable.
+    retryable: bool = False
+
+
+class OpenCTIReadError(RuntimeError):
+    """Raised when an OpenCTI entity read fails (transport/API), not when missing."""
 
 
 class RSTThreatLibrary:
@@ -336,7 +343,17 @@ class RSTThreatLibrary:
         if not sid:
             return UpsertPrep(skip=False, api_item=api_item)
 
-        opencti_entity = self._read_opencti_entity(obj_type_path, sid)
+        try:
+            opencti_entity = self._read_opencti_entity(obj_type_path, sid)
+        except OpenCTIReadError as ex:
+            # Do not treat API failures as "missing" — that would overwrite
+            # analyst edits when respect_user_edits is enabled.
+            return UpsertPrep(
+                skip=True,
+                api_item=api_item,
+                skip_reason=f"OpenCTI read failed: {ex}",
+                retryable=True,
+            )
         if not opencti_entity:
             return UpsertPrep(skip=False, api_item=api_item)
 
@@ -384,20 +401,33 @@ class RSTThreatLibrary:
     def _read_opencti_entity(
         self, obj_type_path: str, standard_id: str
     ) -> Optional[Dict[str, Any]]:
+        """Read an OpenCTI entity by standard_id.
+
+        Returns:
+            The entity dict, or ``None`` when OpenCTI reports it as missing.
+
+        Raises:
+            OpenCTIReadError: On transport/API failures (not a missing entity).
+        """
         api = self.helper.api
         try:
             if obj_type_path == ThreatObjectType.INTRUSION_SETS:
-                return api.intrusion_set.read(id=standard_id)
+                return api.intrusion_set.read(id=standard_id) or None
             if obj_type_path == ThreatObjectType.MALWARE:
-                return api.malware.read(id=standard_id)
+                return api.malware.read(id=standard_id) or None
             if obj_type_path == ThreatObjectType.TOOLS:
-                return api.tool.read(id=standard_id)
+                return api.tool.read(id=standard_id) or None
             if obj_type_path == ThreatObjectType.CAMPAIGNS:
-                return api.campaign.read(id=standard_id)
+                return api.campaign.read(id=standard_id) or None
+        except OpenCTIReadError:
+            raise
         except Exception as ex:
-            self.helper.connector_logger.debug(
-                f"[{obj_type_path}] read {standard_id} for confidence check: {ex}"
+            self.helper.connector_logger.warning(
+                f"[{obj_type_path}] read {standard_id} failed: {ex}"
             )
+            raise OpenCTIReadError(
+                f"[{obj_type_path}] read {standard_id} failed: {ex}"
+            ) from ex
         return None
 
     def _wait_for_opencti_entity(
@@ -409,29 +439,49 @@ class RSTThreatLibrary:
         delay_s: float = _MERGE_SURVIVOR_READ_DELAY_S,
         context: str = "merge",
     ) -> Optional[Dict[str, Any]]:
-        """Read an entity, retrying while bundle-mode workers run."""
+        """Read an entity, retrying while bundle-mode workers run.
+
+        Distinguishes successful "not found" (``None``) from read errors
+        (``OpenCTIReadError``). Retries both; re-raises if every attempt failed
+        with an error and no successful miss was observed.
+        """
         if not standard_id:
             return None
 
         total_attempts = max(attempts, 1)
-        entity = self._read_opencti_entity(obj_type_path, standard_id)
-        if entity:
-            return entity
+        saw_successful_miss = False
+        last_error: Optional[OpenCTIReadError] = None
 
-        for attempt in range(2, total_attempts + 1):
-            self.helper.connector_logger.info(
-                f"[{obj_type_path}] {context}: waiting for {standard_id} "
-                f"in OpenCTI (attempt {attempt}/{total_attempts}, "
-                f"delay={delay_s:.1f}s)"
-            )
-            time.sleep(delay_s)
-            entity = self._read_opencti_entity(obj_type_path, standard_id)
-            if entity:
+        for attempt in range(1, total_attempts + 1):
+            try:
+                entity = self._read_opencti_entity(obj_type_path, standard_id)
+            except OpenCTIReadError as ex:
+                last_error = ex
                 self.helper.connector_logger.info(
-                    f"[{obj_type_path}] {context}: {standard_id} readable after "
-                    f"wait (attempt {attempt}/{total_attempts})"
+                    f"[{obj_type_path}] {context}: read error for {standard_id} "
+                    f"(attempt {attempt}/{total_attempts}): {ex}"
                 )
-                return entity
+            else:
+                if entity:
+                    if attempt > 1:
+                        self.helper.connector_logger.info(
+                            f"[{obj_type_path}] {context}: {standard_id} "
+                            f"readable after wait (attempt {attempt}/"
+                            f"{total_attempts})"
+                        )
+                    return entity
+                saw_successful_miss = True
+
+            if attempt < total_attempts:
+                self.helper.connector_logger.info(
+                    f"[{obj_type_path}] {context}: waiting for {standard_id} "
+                    f"in OpenCTI (attempt {attempt + 1}/{total_attempts}, "
+                    f"delay={delay_s:.1f}s)"
+                )
+                time.sleep(delay_s)
+
+        if last_error is not None and not saw_successful_miss:
+            raise last_error
         return None
 
     def _is_entity_user_edited(
@@ -760,6 +810,15 @@ class RSTThreatLibrary:
             refresh_items.append(split.keep_api_item)
         refresh_items.extend(split.split_off_api_items)
 
+        # Aliases must not be removed until every required split-off object was
+        # successfully upserted; skipped upserts (analyst lock / read errors)
+        # would otherwise drop aliases without transferring them.
+        required_split_off_sids = {
+            str(item.get("standard_id"))
+            for item in (split.split_off_api_items or [])
+            if item.get("standard_id")
+        }
+
         pushed_items: List[Dict[str, Any]] = []
         for item in refresh_items:
             prep = self._prepare_upsert_item(obj_type, item, state)
@@ -798,6 +857,21 @@ class RSTThreatLibrary:
                     stix_objects.append(identity)
                     seen_identities[cb_id] = True
 
+        missing_split_off = sorted(
+            sid for sid in required_split_off_sids if sid not in pushed
+        )
+        if missing_split_off and split.aliases_to_remove:
+            self._record_split_failure(
+                split,
+                obj_type,
+                state,
+                reason=(
+                    "split-off upsert incomplete before alias removal: "
+                    + ",".join(missing_split_off)
+                ),
+            )
+            return False
+
         if stix_objects:
             if not self._batch_send(stix_objects, timestamp, obj_type):
                 self._record_split_failure(
@@ -812,7 +886,7 @@ class RSTThreatLibrary:
             cur = set(managed.get(obj_type, []))
             cur.update(pushed)
             managed[obj_type] = sorted(cur)
-        elif not split.aliases_to_remove:
+        elif required_split_off_sids or not split.aliases_to_remove:
             self._record_split_failure(
                 split,
                 obj_type,
@@ -932,7 +1006,14 @@ class RSTThreatLibrary:
             if self._should_allow_reconcile_delete(entity)
         ]
         if target_sid:
-            existing_api_entity = self._read_opencti_entity(obj_type, target_sid)
+            try:
+                existing_api_entity = self._read_opencti_entity(obj_type, target_sid)
+            except OpenCTIReadError as ex:
+                self.helper.connector_logger.error(
+                    f"[{obj_type}] merge: OpenCTI read failed for target "
+                    f"{target_sid}: {ex}"
+                )
+                return False
             if existing_api_entity and self._should_allow_reconcile_delete(
                 existing_api_entity
             ):
@@ -965,6 +1046,12 @@ class RSTThreatLibrary:
 
         survivor_prep = self._prepare_upsert_item(obj_type, item, state)
         survivor_pushed: List[Dict[str, Any]] = []
+        if survivor_prep.skip and survivor_prep.retryable:
+            self.helper.connector_logger.error(
+                f"[{obj_type}] merge: aborting — survivor upsert skipped "
+                f"for {target_sid} ({survivor_prep.skip_reason})"
+            )
+            return False
         if not survivor_prep.skip:
             sdo = self._upsert_sdo_from_prep(obj_type, survivor_prep)
             if sdo is not None:
@@ -998,11 +1085,18 @@ class RSTThreatLibrary:
         if not target_sid:
             return True
 
-        api_target = self._wait_for_opencti_entity(
-            obj_type,
-            target_sid,
-            context="merge",
-        )
+        try:
+            api_target = self._wait_for_opencti_entity(
+                obj_type,
+                target_sid,
+                context="merge",
+            )
+        except OpenCTIReadError as ex:
+            self.helper.connector_logger.error(
+                f"[{obj_type}] merge: OpenCTI read failed while waiting for "
+                f"survivor {target_sid}: {ex}"
+            )
+            return False
         if not api_target and survivor_prep.opencti_entity:
             api_target = survivor_prep.opencti_entity
             self.helper.connector_logger.warning(
@@ -1012,11 +1106,18 @@ class RSTThreatLibrary:
 
         fusion_target: Optional[Dict[str, Any]] = None
         if preferred_survivor_sid and preferred_survivor_sid != target_sid:
-            preferred_live = self._wait_for_opencti_entity(
-                obj_type,
-                preferred_survivor_sid,
-                context="merge preferred survivor",
-            )
+            try:
+                preferred_live = self._wait_for_opencti_entity(
+                    obj_type,
+                    preferred_survivor_sid,
+                    context="merge preferred survivor",
+                )
+            except OpenCTIReadError as ex:
+                self.helper.connector_logger.error(
+                    f"[{obj_type}] merge: OpenCTI read failed while waiting for "
+                    f"preferred survivor {preferred_survivor_sid}: {ex}"
+                )
+                return False
             if preferred_live:
                 fusion_target = preferred_live
             elif preferred_survivor and preferred_survivor.get("id"):
@@ -1125,6 +1226,7 @@ class RSTThreatLibrary:
         count = 0
         skipped_user_edit = 0
         conversion_failures = 0
+        retryable_skips = 0
         batch_item_count = 0
         any_pushed = False
         batch_size = self._opencti_batch_size
@@ -1171,14 +1273,18 @@ class RSTThreatLibrary:
                 sid = str(item.get("standard_id") or "")
                 count += 1
                 if prep.skip:
-                    # Intentional skips are checkpointed; conversion failures are not.
-                    advance_checkpoint(mod, sid)
-                    skipped_user_edit += 1
                     if prep.skip_reason:
                         self.helper.connector_logger.info(
                             f"[{obj_type}] skip upsert for {sid or item.get('standard_id')} "
                             f"(name={item.get('name')}) — {prep.skip_reason}"
                         )
+                    if prep.retryable:
+                        # Read/API failures must remain retryable — do not advance.
+                        retryable_skips += 1
+                        continue
+                    # Intentional skips (e.g. analyst lock) are checkpointed.
+                    advance_checkpoint(mod, sid)
+                    skipped_user_edit += 1
                     continue
                 sdo = self._upsert_sdo_from_prep(obj_type, prep)
                 if sdo is None:
@@ -1237,9 +1343,11 @@ class RSTThreatLibrary:
             )
             return False
 
-        if conversion_failures:
+        if conversion_failures or retryable_skips:
             self.helper.connector_logger.warning(
-                f"[{obj_type}] {conversion_failures} conversion failure(s); "
+                f"[{obj_type}] "
+                f"{conversion_failures} conversion failure(s), "
+                f"{retryable_skips} retryable skip(s); "
                 "cursor not advanced so failed items remain retryable"
             )
             return False

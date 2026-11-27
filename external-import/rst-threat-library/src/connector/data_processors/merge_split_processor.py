@@ -41,8 +41,8 @@ class MergeSplitProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
         self.engine._send_bundle = self._send_via_work_manager
 
     def _persist_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        """Apply engine mutations in memory only; SDK saves after full run."""
         self.state.apply_mutable_dict(state_dict)
-        self.state.save()
 
     def _send_via_work_manager(self, stix_objects: List[Any], obj_type: str) -> bool:
         if not stix_objects:

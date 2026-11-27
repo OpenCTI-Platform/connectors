@@ -649,37 +649,36 @@ def test_read_opencti_entity_routes_by_type(connector):
     ) == {"standard_id": "intrusion-set--1"}
 
 
-def test_read_opencti_entity_returns_none_on_exception(connector):
+def test_read_opencti_entity_raises_on_exception(connector):
+    from connector.connector import OpenCTIReadError
+
     connector.helper.api.malware.read.side_effect = RuntimeError("boom")
-    assert (
-        connector._read_opencti_entity(ThreatObjectType.MALWARE, "malware--1") is None
+    with pytest.raises(OpenCTIReadError, match="read malware--1 failed"):
+        connector._read_opencti_entity(ThreatObjectType.MALWARE, "malware--1")
+
+
+def test_prepare_upsert_item_skips_retryable_on_read_error(connector):
+    from connector.connector import OpenCTIReadError
+
+    connector._read_opencti_entity = MagicMock(
+        side_effect=OpenCTIReadError("read failed")
     )
+    prep = connector._prepare_upsert_item(
+        ThreatObjectType.MALWARE,
+        {"standard_id": "malware--1", "name": "X", "confidence": 10},
+        {},
+    )
+    assert prep.skip is True
+    assert prep.retryable is True
+    assert "OpenCTI read failed" in prep.skip_reason
 
 
-def test_cycle_runs_merge_split_when_enabled(connector):
-    connector.merge_split_enabled = True
-    connector.object_types = [ThreatObjectType.MALWARE]
-    connector._cycle_type = MagicMock()
-    connector._apply_merge_split = MagicMock()
+def test_build_data_processors_orders_merge_split_last():
+    from main import build_data_processors
 
-    with patch("connector.connector.ThreatLibraryClient") as client_cls:
-        connector._cycle({}, timestamp=1)
-
-    client_cls.assert_called_once()
-    connector._cycle_type.assert_called_once()
-    connector._apply_merge_split.assert_called_once()
-
-
-def test_cycle_skips_merge_split_when_disabled(connector):
-    connector.merge_split_enabled = False
-    connector.object_types = [ThreatObjectType.MALWARE]
-    connector._cycle_type = MagicMock()
-    connector._apply_merge_split = MagicMock()
-
-    with patch("connector.connector.ThreatLibraryClient"):
-        connector._cycle({}, timestamp=1)
-
-    connector._apply_merge_split.assert_not_called()
+    settings = StubConnectorSettings()
+    processors = build_data_processors(settings)
+    assert type(processors[-1]).__name__ == "MergeSplitProcessor"
 
 
 def test_cycle_type_fetch_exception_does_not_advance_cursor(connector):
@@ -736,8 +735,60 @@ def test_cycle_type_advances_cursor_when_all_items_skipped(connector):
     connector._batch_send.assert_not_called()
 
 
-def test_run_schedules_process_message(connector):
-    connector.run()
-    connector.helper.schedule_process.assert_called_once()
-    kwargs = connector.helper.schedule_process.call_args.kwargs
-    assert kwargs["message_callback"] == connector.process_message
+def test_sdk_connector_start_schedules_callback(monkeypatch):
+    from main import RSTThreatLibraryConnector, build_data_processors
+
+    settings = StubConnectorSettings()
+    state = MagicMock()
+    processors = build_data_processors(settings)
+    connector = RSTThreatLibraryConnector(
+        settings=settings,
+        state=state,
+        data_processors=processors,
+    )
+    helper = MagicMock()
+    monkeypatch.setattr(connector, "_init_dependencies", MagicMock())
+    connector._helper = helper
+
+    connector.start()
+
+    helper.schedule_process.assert_called_once()
+    kwargs = helper.schedule_process.call_args.kwargs
+    assert kwargs["message_callback"] == connector.callback
+    assert kwargs["duration_period"] == settings.connector.duration_period.total_seconds()
+
+
+def test_execute_split_defers_alias_removal_when_split_off_skipped(connector):
+    connector._analyst_locks_entity = MagicMock(return_value=False)
+    connector._batch_send = MagicMock(return_value=True)
+
+    def prep_side_effect(_t, item, _s):
+        sid = item.get("standard_id")
+        if sid == "malware--split-off":
+            return UpsertPrep(
+                skip=True,
+                api_item=item,
+                skip_reason="OpenCTI confidence lock",
+            )
+        return UpsertPrep(skip=False, api_item=item)
+
+    connector._prepare_upsert_item = MagicMock(side_effect=prep_side_effect)
+    connector._upsert_sdo_from_prep = MagicMock(return_value=MagicMock())
+    connector.converter.build_identity = MagicMock(return_value=None)
+
+    split = _split_candidate()
+    state: dict = {}
+    ok = connector._execute_split(
+        split, timestamp=1, obj_type=ThreatObjectType.MALWARE, state=state
+    )
+
+    assert ok is False
+    connector.helper.api.stix_domain_object.update_field.assert_not_called()
+    entry = state["split_failures"][ThreatObjectType.MALWARE]["malware--keep"]
+    assert entry["count"] == 1
+    info = " ".join(
+        str(c.args[0])
+        for c in connector.helper.connector_logger.info.call_args_list
+        if c.args
+    )
+    assert "split-off upsert incomplete" in info
