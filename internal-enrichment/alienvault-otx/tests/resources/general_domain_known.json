@@ -1,0 +1,83 @@
+{
+  "indicator": "malicious.example",
+  "type": "domain",
+  "type_title": "Domain",
+  "base_indicator": {
+    "id": 1000000003,
+    "indicator": "malicious.example",
+    "type": "domain",
+    "title": "",
+    "description": "",
+    "content": "",
+    "access_type": "public",
+    "access_reason": ""
+  },
+  "pulse_info": {
+    "count": 1,
+    "pulses": [
+      {
+        "id": "6a0000000000000000000003",
+        "name": "Example Phishing Domains",
+        "description": "Invented pulse used as a test fixture.",
+        "created": "2020-09-14T12:30:45.123000",
+        "modified": "2020-09-15T07:00:00.000000",
+        "TLP": "white",
+        "adversary": "",
+        "tags": [
+          "phishing"
+        ],
+        "malware_families": [],
+        "attack_ids": [
+          {
+            "id": "T1566",
+            "name": "Phishing",
+            "display_name": "T1566 - Phishing"
+          }
+        ],
+        "industries": [
+          "Finance"
+        ],
+        "targeted_countries": [],
+        "references": [],
+        "author": {
+          "username": "example-analyst",
+          "id": "1000",
+          "avatar_url": "https://example.com/avatar.png"
+        },
+        "indicator_count": 15,
+        "indicator_type_counts": {
+          "domain": 15
+        },
+        "subscriber_count": 2,
+        "public": 1
+      }
+    ],
+    "references": [],
+    "related": {
+      "alienvault": {
+        "adversary": [],
+        "malware_families": [],
+        "industries": []
+      },
+      "other": {
+        "adversary": [],
+        "malware_families": [],
+        "industries": [
+          "Finance"
+        ]
+      }
+    }
+  },
+  "validation": [],
+  "sections": [
+    "general",
+    "geo",
+    "url_list",
+    "passive_dns",
+    "malware",
+    "whois",
+    "http_scans"
+  ],
+  "alexa": "http://www.alexa.com/siteinfo/malicious.example",
+  "whois": "http://whois.domaintools.com/malicious.example"
+}

@@ -1,0 +1,78 @@
+{
+  "indicator": "http://malicious.example/payload.bin?id=1",
+  "type": "url",
+  "type_title": "URL",
+  "domain": "malicious.example",
+  "hostname": "malicious.example",
+  "base_indicator": {
+    "id": 1000000004,
+    "indicator": "http://malicious.example/payload.bin?id=1",
+    "type": "URL",
+    "title": "",
+    "description": "",
+    "content": "",
+    "access_type": "public",
+    "access_reason": ""
+  },
+  "pulse_info": {
+    "count": 1,
+    "pulses": [
+      {
+        "id": "6a0000000000000000000004",
+        "name": "Example Malware Distribution",
+        "description": "Invented pulse used as a test fixture.",
+        "created": "2021-01-20T16:45:10.500000",
+        "modified": "2021-01-21T09:00:00.000000",
+        "TLP": "white",
+        "adversary": "",
+        "tags": [
+          "malware distribution"
+        ],
+        "malware_families": [
+          {
+            "id": "ExampleLoader",
+            "display_name": "Example Loader",
+            "target": null
+          }
+        ],
+        "attack_ids": [],
+        "industries": [],
+        "targeted_countries": [],
+        "references": [],
+        "author": {
+          "username": "example-analyst",
+          "id": "1000",
+          "avatar_url": "https://example.com/avatar.png"
+        },
+        "indicator_count": 8,
+        "indicator_type_counts": {
+          "URL": 8
+        },
+        "subscriber_count": 0,
+        "public": 1
+      }
+    ],
+    "references": [],
+    "related": {
+      "alienvault": {
+        "adversary": [],
+        "malware_families": [],
+        "industries": [],
+        "unique_indicators": 0
+      },
+      "other": {
+        "adversary": [],
+        "malware_families": [
+          "Example Loader"
+        ],
+        "industries": [],
+        "unique_indicators": 1
+      }
+    }
+  },
+  "validation": [],
+  "sections": [
+    "general",
+    "url_list"
+  ]
+}

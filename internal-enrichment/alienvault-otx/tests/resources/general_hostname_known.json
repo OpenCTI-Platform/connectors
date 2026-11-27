@@ -1,0 +1,49 @@
+{
+  "indicator": "www.malicious.example",
+  "type": "hostname",
+  "type_title": "Hostname",
+  "base_indicator": {
+    "id": 1000000005,
+    "indicator": "www.malicious.example",
+    "type": "hostname",
+    "title": "",
+    "description": "",
+    "content": "",
+    "access_type": "public",
+    "access_reason": ""
+  },
+  "pulse_info": {
+    "count": 1,
+    "pulses": [
+      {
+        "id": "6a0000000000000000000005",
+        "name": "Example Phishing Hostnames",
+        "description": "Invented pulse used as a test fixture.",
+        "created": "2021-05-03T09:10:11.000000",
+        "modified": "2021-05-04T07:00:00.000000",
+        "TLP": "white",
+        "adversary": "",
+        "tags": [
+          "phishing"
+        ],
+        "malware_families": [],
+        "attack_ids": [],
+        "industries": [],
+        "targeted_countries": [],
+        "references": [],
+        "indicator_count": 8,
+        "public": 1
+      }
+    ],
+    "references": []
+  },
+  "validation": [],
+  "sections": [
+    "general",
+    "geo",
+    "url_list",
+    "passive_dns",
+    "malware",
+    "http_scans"
+  ]
+}

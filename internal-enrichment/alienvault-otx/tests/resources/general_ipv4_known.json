@@ -1,0 +1,149 @@
+{
+  "indicator": "192.0.2.10",
+  "type": "IPv4",
+  "type_title": "IPv4",
+  "reputation": 0,
+  "city": null,
+  "region": null,
+  "country_name": "Netherlands",
+  "country_code": "NL",
+  "latitude": 52.37,
+  "longitude": 4.9,
+  "asn": "AS64496 Example Hosting B.V.",
+  "base_indicator": {
+    "id": 1000000002,
+    "indicator": "192.0.2.10",
+    "type": "IPv4",
+    "title": "",
+    "description": "",
+    "content": "",
+    "access_type": "public",
+    "access_reason": ""
+  },
+  "pulse_info": {
+    "count": 2,
+    "pulses": [
+      {
+        "id": "6a0000000000000000000001",
+        "name": "Example Scanner Campaign",
+        "description": "Invented pulse used as a test fixture.",
+        "created": "2018-02-10T00:36:00.396000",
+        "modified": "2018-03-12T10:15:30.000000",
+        "TLP": "white",
+        "adversary": "",
+        "tags": [
+          "webscanner, bruteforce, web app attack",
+          "ssh",
+          "SSH",
+          "  ",
+          "ssh"
+        ],
+        "malware_families": [
+          {
+            "id": "ExampleBot",
+            "display_name": "ExampleBot",
+            "target": null
+          }
+        ],
+        "attack_ids": [
+          {
+            "id": "T1027",
+            "name": "Obfuscated Files or Information",
+            "display_name": "T1027 - Obfuscated Files or Information"
+          }
+        ],
+        "industries": [
+          "Legal, Financial, Healthcare"
+        ],
+        "targeted_countries": [
+          "Tanzania, United Republic of",
+          "Netherlands"
+        ],
+        "references": [
+          "https://example.com/report-1",
+          ""
+        ],
+        "author": {
+          "username": "example-analyst",
+          "id": "1000",
+          "avatar_url": "https://example.com/avatar.png"
+        },
+        "indicator_count": 120,
+        "indicator_type_counts": {
+          "IPv4": 100,
+          "domain": 20
+        },
+        "is_subscribing": null,
+        "subscriber_count": 12,
+        "upvotes_count": 0,
+        "downvotes_count": 0,
+        "votes_count": 0,
+        "comment_count": 0,
+        "export_count": 3,
+        "follower_count": 0,
+        "pulse_source": "web",
+        "public": 1,
+        "revision": 1,
+        "locked": 0,
+        "in_group": false
+      },
+      {
+        "id": "6a0000000000000000000002",
+        "name": "Example Intrusion Set Activity",
+        "description": "",
+        "created": "2019-06-01T08:00:00.000000",
+        "modified": "2019-06-01T08:00:00.000000",
+        "TLP": "green",
+        "adversary": "Example Group",
+        "tags": [],
+        "malware_families": [],
+        "attack_ids": [],
+        "industries": [],
+        "targeted_countries": [],
+        "references": [],
+        "author": {
+          "username": "example-researcher",
+          "id": "1001",
+          "avatar_url": "https://example.com/avatar.png"
+        },
+        "indicator_count": 4,
+        "indicator_type_counts": {
+          "IPv4": 4
+        },
+        "subscriber_count": 1,
+        "public": 1
+      }
+    ],
+    "references": [
+      "https://example.com/report-1"
+    ],
+    "related": {
+      "alienvault": {
+        "adversary": [],
+        "malware_families": [
+          "ExampleBot"
+        ],
+        "industries": []
+      },
+      "other": {
+        "adversary": [
+          "Example Group"
+        ],
+        "malware_families": [],
+        "industries": []
+      }
+    }
+  },
+  "validation": [],
+  "sections": [
+    "general",
+    "geo",
+    "reputation",
+    "url_list",
+    "passive_dns",
+    "malware",
+    "nids_list",
+    "http_scans"
+  ],
+  "whois": "http://whois.domaintools.com/192.0.2.10"
+}
