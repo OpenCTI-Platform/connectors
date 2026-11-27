@@ -22,7 +22,7 @@
   "subscription_link": "https://censys.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/censys-collections",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.261127.0",
   "container_image": "opencti/connector-censys-collections",
   "container_type": "EXTERNAL_IMPORT"
 }
