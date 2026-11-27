@@ -1,0 +1,25 @@
+---
+version: '3'
+services:
+  connector-privara-unmask:
+    image: opencti/connector-privara-unmask:latest # 'privara-unmask' being the name of the connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe # a UUIDv4
+      #- CONNECTOR_NAME=Privara Unmask # optional (default: 'Privara Unmask')
+      #- CONNECTOR_SCOPE=Artifact,StixFile # optional (default: 'Artifact,StixFile')
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      #- CONNECTOR_AUTO=false # optional (default: false); keep false: every analysis can be charged on your Privara wallet
+      #- CONNECTOR_MAX_TLP=amber # optional, files marked above this TLP are never sent to Privara (default: 'amber')
+      # Custom parameters for connector-privara-unmask
+      - PRIVARA_UNMASK_API_KEY=ChangeMe # Unmask API key (pvu_...), from https://app.tajapps.com/dashboard/unmask/api
+      #- PRIVARA_UNMASK_API_BASE_URL=https://app.tajapps.com/api/unmask/v1 # optional (default: 'https://app.tajapps.com/api/unmask/v1')
+      #- PRIVARA_UNMASK_MAX_WAIT=3600 # optional, seconds to wait for one analysis (default: 3600)
+      #- PRIVARA_UNMASK_POLL_INTERVAL=30 # optional, delay between status checks when the API sends no Retry-After, min 15 s (default: 30)
+      #- PRIVARA_UNMASK_MAX_FILE_SIZE_MB=50 # optional lower cap (default: the API's limit, GET /balance)
+      #- PRIVARA_UNMASK_CREATE_OBSERVABLES=true # optional, also create URL / IP / domain observables for each C2 (default: true)
+      #- PRIVARA_UNMASK_NOTIFY_EMAIL=false # optional, true / false (default: your Privara account setting)
+    restart: always

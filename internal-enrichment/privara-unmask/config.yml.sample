@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # a UUIDv4
+  name: 'Privara Unmask'
+  scope: 'Artifact,StixFile'
+  log_level: 'error'
+  auto: false # keep false: every analysis can be charged on your Privara wallet
+  max_tlp: 'amber' # files marked above this TLP are never sent to Privara
+
+privara_unmask:
+  api_key: 'ChangeMe' # Unmask API key (pvu_...), from https://app.tajapps.com/dashboard/unmask/api
+  api_base_url: 'https://app.tajapps.com/api/unmask/v1'
+  max_wait: 3600 # seconds to wait for one analysis
+  poll_interval: 30 # delay between status checks when the API sends no Retry-After (min 15 s)
+  # max_file_size_mb: 50 # optional lower cap; default = the API's limit (GET /balance)
+  create_observables: true
+  # notify_email: false # unset = your Privara account setting

@@ -1,0 +1,28 @@
+{
+  "title": "Privara Unmask",
+  "slug": "privara-unmask",
+  "description": "Privara Unmask is the Android malware sandbox that recovers the C2. Pay only for results. It extracts the command-and-control (C2) servers of Android malware, including servers hidden behind packers, dead-drop resolvers and encrypted strings. Each C2 is checked by a verifier and probed for liveness.\n\nThis connector sends the Android package attached to an Artifact or File observable (APK, XAPK, APKM or .apks) to the Unmask API and imports the result:\n\n- an Indicator for each C2 (URL, IPv4, IPv6, domain or host:port pattern) with the MITRE ATT&CK command-and-control phase, its liveness check and whether abuse.ch already lists it\n- the Malware family when it is identified, with `indicates` relationships\n- optional URL / IP / domain observables linked to the indicators (`based-on`)\n- a Note with the outcome, the charge and the link to the job on tajapps.com\n\nCandidates rejected by the verifier are never imported as indicators. Unmask is billed per result (live C2 $25, dead C2 $9, nothing found is free) from a prepaid wallet on tajapps.com, so automatic enrichment is off by default. Sign up at https://tajapps.com/unmask/.",
+  "short_description": "Privara Unmask, the Android malware sandbox that recovers the C2: import the C2 servers of an APK as indicators. Pay only for results.",
+  "logo": "internal-enrichment/privara-unmask/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@tajapps.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 90,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://tajapps.com/unmask/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/privara-unmask",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-privara-unmask",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
