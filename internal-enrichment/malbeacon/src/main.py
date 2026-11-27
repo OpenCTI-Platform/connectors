@@ -1,3 +1,4 @@
+from connectors_sdk import InternalEnrichmentConnector
 from malbeacon_client import MalbeaconClient
 from malbeacon_config_variables import ConfigMalbeacon
 from malbeacon_converter import MalbeaconConverter
@@ -22,7 +23,6 @@ class MalBeaconConnector:
 
         # Define variables
         self.author = None
-        self.tlp = None
         self.external_references = None
         self.stix_object_list = []
 
@@ -34,14 +34,15 @@ class MalBeaconConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        is_valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
-
-        return is_valid_max_tlp
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.settings.connector.max_tlp
+        )
 
     def _process_observable(self, data: dict) -> str:
         """

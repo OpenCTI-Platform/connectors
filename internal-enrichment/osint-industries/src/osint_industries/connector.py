@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import traceback
 
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import TLPMarking
 from pycti import OpenCTIConnectorHelper
 
@@ -47,25 +48,22 @@ class OsintIndustriesConnector:
 
         Every TLP marking carried by the observable must be within the
         configured maximum: an entity marked both TLP:GREEN and TLP:RED is
-        treated as TLP:RED. Unmarked observables are allowed, which is what
-        `check_max_tlp` does for a `None` TLP.
+        treated as TLP:RED. Unmarked observables are allowed.
 
         :raises MaxTlpExceededError: when the observable's value must never
             be sent to the OSINT Industries API.
         """
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        refused = [
+        tlp_levels = [
             marking.get("definition")
             for marking in observable.get("objectMarking") or []
             if marking.get("definition_type") == "TLP"
-            and not OpenCTIConnectorHelper.check_max_tlp(
-                marking.get("definition"), max_tlp
-            )
         ]
-        if refused:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise MaxTlpExceededError(
                 "Observable marked %s exceeds the configured maximum TLP %s."
-                % (refused, max_tlp)
+                % (tlp_levels, self.config.connector.max_tlp)
             )
 
     def _extract_value(self, observable: dict) -> str | None:

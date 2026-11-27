@@ -1379,6 +1379,26 @@ def test_tlp_check_refuses_when_marking_exceeds_max_tlp(helper, client, make_con
     helper.connector_logger.warning.assert_called()
 
 
+def test_tlp_check_refuses_when_any_marking_exceeds_max_tlp(
+    helper, client, make_config
+):
+    # Every TLP of the entity is checked, not only the last one.
+    config = make_config(connector_overrides={"max_tlp": "TLP:AMBER"})
+    connector = WhisperConnector(helper=helper, config=config, client=client)
+    observable = {
+        "id": "ipv4--x",
+        "entity_type": "IPv4-Addr",
+        "observable_value": "8.8.8.8",
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ],
+    }
+    result = connector._process_message(_v7_payload(observable))
+    assert "exceeds connector.max_tlp=amber" in result
+    client.execute_cypher.assert_not_called()
+
+
 def test_tlp_check_allows_marking_at_or_below_max_tlp(connector, client):
     # An AMBER observable under a TLP:RED ceiling must proceed to the
     # normal enrichment flow (cypher fired, bundle sent / not sent based

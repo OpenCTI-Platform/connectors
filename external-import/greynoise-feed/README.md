@@ -29,7 +29,7 @@ The GreyNoise Feed connector imports internet scanner IP addresses from GreyNois
 
 ## Introduction
 
-GreyNoise provides intelligence on internet-wide scanners, botnets, and other sources of internet background noise. This connector uses the GreyNoise Feed API to import IP addresses observed scanning the internet, including contextual information about their behavior, associated vulnerabilities, and classifications.
+GreyNoise provides intelligence on internet-wide scanners, botnets, and other sources of internet background noise. This connector uses the GreyNoise Feed API to import IP addresses observed scanning the internet, along with their GreyNoise classification.
 
 ## Installation
 
@@ -65,7 +65,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Parameter        | config.yml                                | Docker environment variable                 | Default | Mandatory | Description                                              |
 |------------------|-------------------------------------------|---------------------------------------------|---------|-----------|----------------------------------------------------------|
 | API Key          | greynoise_feed.api_key                    | `GREYNOISE_FEED_API_KEY`                    |         | Yes       | GreyNoise API key.                                       |
-| Feed Type        | greynoise_feed.feed_type                  | `GREYNOISE_FEED_TYPE`                       |         | Yes       | Type of GreyNoise feed to import.                        |
+| Feed Type        | greynoise_feed.feed_type                  | `GREYNOISE_FEED_FEED_TYPE`                  | malicious | No      | Type of GreyNoise feed to import.                        |
 | Limit            | greynoise_feed.limit                      | `GREYNOISE_FEED_LIMIT`                      | 10,000  | No        | The max number of indicators to import.                  |
 | Malicious Score  | greynoise_feed.indicator_score_malicious  | `GREYNOISE_FEED_INDICATOR_SCORE_MALICIOUS`  | 75      | No        | The indicator score for GreyNoise Malicious Indicators.  |
 | Suspicious Score | greynoise_feed.indicator_score_suspicious | `GREYNOISE_FEED_INDICATOR_SCORE_SUSPICIOUS` | 50      | No        | The indicator score for GreyNoise Suspicious Indicators. |
@@ -73,7 +73,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Feed Type Options
 
-The connector ingest indicators based off of a defined "feed type" in the configuration.  The following are the support feed types and what inidicators they will ingest:
+The connector ingests indicators based on the "feed type" defined in the configuration. The following are the supported feed types and the indicators they ingest:
 - `benign`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign scanning behavior
 - `malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited malicious scanning behavior
 - `suspicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited suspicious scanning behavior
@@ -105,12 +105,12 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=greynoisefeed
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT6H
-      - GREYNOISE_API_KEY=ChangeMe
-      - GREYNOISE_FEED_TYPE=malicious
-      - GREYNOISE_LIMIT=10000
-      - GREYNOISE_INDICATOR_SCORE_MALICIOUS=75
-      - GREYNOISE_INDICATOR_SCORE_SUSPICIOUS=50
-      - GREYNOISE_INDICATOR_SCORE_BENIGN=20
+      - GREYNOISE_FEED_API_KEY=ChangeMe
+      - GREYNOISE_FEED_FEED_TYPE=malicious
+      - GREYNOISE_FEED_LIMIT=10000
+      - GREYNOISE_FEED_INDICATOR_SCORE_MALICIOUS=75
+      - GREYNOISE_FEED_INDICATOR_SCORE_SUSPICIOUS=50
+      - GREYNOISE_FEED_INDICATOR_SCORE_BENIGN=20
     restart: always
 ```
 
@@ -162,15 +162,12 @@ graph LR
         Identity[Identity - GreyNoise]
         IP[IPv4-Addr Observable]
         Indicator[Indicator]
-        Vulnerability[Vulnerability]
     end
 
     Feed --> Identity
     Feed --> IP
     Feed --> Indicator
-    Feed --> Vulnerability
     Indicator -- based-on --> IP
-    Indicator -- indicates --> Vulnerability
 ```
 
 ### Entity Mapping
@@ -187,7 +184,7 @@ For each IP in the GreyNoise feed:
 
 1. **Observable**: IPv4-Addr with GreyNoise context
 2. **Indicator**: Created with STIX pattern
-3. **Relationship**: Indicator → `indicates` → IPv4 Observable
+3. **Relationship**: Indicator → `based-on` → IPv4 Observable
 
 ## Debugging
 

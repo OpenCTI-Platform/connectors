@@ -1,5 +1,4 @@
 import ipaddress
-import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -7,99 +6,38 @@ from typing import Dict
 from urllib.parse import urlparse
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from connectors_sdk import InternalEnrichmentConnector
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 from stix2 import Note
 from stix2.canonicalization.Canonicalize import canonicalize
 
 
 class RSTWhoisApiConnector:
     def __init__(self):
-        # Load config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.safe_load(open(config_file_path, encoding="UTF-8"))
-            if os.path.isfile(config_file_path)
-            else {}
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config.to_helper_config(), playbook_compatible=True
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
-        self.base_url = str(
-            get_config_variable(
-                "RST_WHOIS_API_BASE_URL",
-                ["rst-whois-api", "base_url"],
-                config,
-                default="https://api.rstcloud.net/v1",
-            )
-        ).rstrip("/")
-        self.api_key = str(
-            get_config_variable(
-                "RST_WHOIS_API_API_KEY", ["rst-whois-api", "api_key"], config
-            )
-        )
-        self.max_tlp = str(
-            get_config_variable(
-                "RST_WHOIS_API_MAX_TLP",
-                ["rst-whois-api", "max_tlp"],
-                config,
-                default="TLP:AMBER+STRICT",
-            )
-        )
+        self.base_url = self.config.rst_whois_api.base_url.rstrip("/")
+        self.api_key = self.config.rst_whois_api.api_key.get_secret_value()
+        self.max_tlp = self.config.connector.max_tlp
 
         self.domain_pattern = re.compile(r"value\s*=\s*(\'|\")([^\'\"]+)(\'|\")")
 
-        self.whois_output_object = str(
-            get_config_variable(
-                "RST_WHOIS_API_WHOIS_OUTPUT_OBJECT",
-                ["rst-whois-api", "whois_output_object"],
-                config,
-                default="note",
-            ).lower()
+        self.whois_output_object = self.config.rst_whois_api.whois_output_object.lower()
+
+        self.update_output_action = (
+            self.config.rst_whois_api.update_output_action.lower()
         )
 
-        self.update_output_action = str(
-            get_config_variable(
-                "RST_WHOIS_API_UPDATE_OUTPUT_ACTION",
-                ["rst-whois-api", "update_output_action"],
-                config,
-                default="overwrite",
-            ).lower()
-        )
+        self.output_format = self.config.rst_whois_api.output_format.lower()
 
-        self.output_format = str(
-            get_config_variable(
-                "RST_WHOIS_API_OUTPUT_FORMAT",
-                ["rst-whois-api", "output_format"],
-                config,
-                default="standard",
-            )
-        ).lower()
+        self.include_raw = self.config.rst_whois_api.output_include_raw
 
-        self.include_raw = bool(
-            get_config_variable(
-                "RST_WHOIS_API_OUTPUT_INCLUDE_RAW",
-                ["rst-whois-api", "output_include_raw"],
-                config,
-                default=False,
-            )
-        )
+        self.timeout = self.config.rst_whois_api.timeout
 
-        self.timeout = int(
-            get_config_variable(
-                "RST_WHOIS_API_TIMEOUT",
-                ["rst-whois-api", "timeout"],
-                config,
-                default=10,
-            )
-        )
-
-        self.connector_auto = bool(
-            get_config_variable(
-                "CONNECTOR_AUTO",
-                ["connector", "auto"],
-                config,
-                default=False,
-            )
-        )
+        self.connector_auto = self.config.connector.auto
 
         self.helper.log_info(f"connector_auto {self.connector_auto}")
 
@@ -217,13 +155,15 @@ class RSTWhoisApiConnector:
     def _process_message(self, data: Dict) -> str:
         opencti_entity = data["enrichment_entity"]
 
-        # if not specified assign TLP:WHITE
-        tlp = "TLP:WHITE"
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError("TLP of the value is greater than MAX TLP")
 
         self.helper.log_debug(f"Data Entity {data}")

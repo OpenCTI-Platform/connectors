@@ -345,9 +345,12 @@ class MispIntelConnector:
             if not stix_bundle:
                 return False
 
-            # Convert STIX bundle to MISP event format
+            # Convert STIX bundle to MISP event format. Use the UUID of the
+            # event being updated, which differs from the container id in
+            # MISP-to-MISP round-trip mode: the description report UUID derives
+            # from it, so the report always belongs to the updated event.
             misp_event_data = convert_stix_bundle_to_misp_event(
-                stix_bundle, self.helper, self.config, custom_uuid=container_id
+                stix_bundle, self.helper, self.config, custom_uuid=misp_event_uuid
             )
             if not misp_event_data:
                 self.helper.connector_logger.error(

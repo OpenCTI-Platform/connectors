@@ -98,3 +98,22 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_extract_and_check_markings_refuses_one_tlp_above_max_tlp(
+    mock_opencti_connector_helper,
+):
+    """Every TLP of the entity is checked against the max TLP (amber)."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = GreyNoiseConnector(config=settings, helper=helper)
+
+    opencti_entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+    }
+
+    assert connector._extract_and_check_markings(opencti_entity) is False
+    assert connector._extract_and_check_markings({"objectMarking": []}) is True

@@ -3,7 +3,6 @@ VULMATCH Connector
 """
 
 import itertools
-import os
 import traceback
 import uuid
 from contextlib import contextmanager
@@ -11,8 +10,8 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 def parse_bool(value: str):
@@ -40,49 +39,21 @@ class VulmatchConnector:
     def __init__(self):
         """Read in config variables"""
 
-        config_file_path = "config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip("/") + "/"
-        self.api_key = self._get_param("api_key")
-        self.sbom_only = parse_bool(self._get_param("sbom_only"))
-        self.cvss_v2_score_min = parse_number(
-            self._get_param("cvss_v2_score_min", is_number=True, default_value=-1)
-        )
-        self.cvss_v3_score_min = parse_number(
-            self._get_param("cvss_v3_score_min", is_number=True, default_value=-1)
-        )
-        self.cvss_v4_score_min = parse_number(
-            self._get_param("cvss_v4_score_min", is_number=True, default_value=-1)
-        )
-        self.epss_score_min = parse_number(
-            self._get_param("epss_score_min", is_number=True, default_value=-1)
-        )
-        self.interval_days = self._get_param("interval_days", is_number=True)
-        self.days_to_backfill = min(
-            self._get_param("days_to_backfill", is_number=True), 365
-        )
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.base_url = str(self.config.vulmatch.base_url).strip("/") + "/"
+        self.api_key = self.config.vulmatch.api_key.get_secret_value()
+        self.sbom_only = self.config.vulmatch.sbom_only
+        self.cvss_v2_score_min = parse_number(self.config.vulmatch.cvss_v2_score_min)
+        self.cvss_v3_score_min = parse_number(self.config.vulmatch.cvss_v3_score_min)
+        self.cvss_v4_score_min = parse_number(self.config.vulmatch.cvss_v4_score_min)
+        self.epss_score_min = parse_number(self.config.vulmatch.epss_score_min)
+        self.days_to_backfill = min(self.config.vulmatch.days_to_backfill, 365)
 
         self.session = requests.Session()
         self.session.headers = {
             "API-KEY": self.api_key,
         }
-
-    def _get_param(
-        self, param_name: str, is_number: bool = False, default_value: str = None
-    ) -> int | str:
-        return get_config_variable(
-            f"VULMATCH_{param_name.upper()}",
-            ["vulmatch", param_name.lower()],
-            self.helper.config,
-            is_number,
-            default_value,
-        )
 
     def list_cpes_in_sbom(self):
         if not self.sbom_only:
@@ -225,7 +196,7 @@ class VulmatchConnector:
         self.helper.log_info("Starting Vulmatch")
         self.helper.schedule_process(
             message_callback=self.run_once,
-            duration_period=self.interval_days * 86400,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
 
     def transform_bundle_objects(self, bundle_objects):

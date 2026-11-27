@@ -1,4 +1,4 @@
-from connectors_sdk import ApiClientError
+from connectors_sdk import ApiClientError, InternalEnrichmentConnector
 from connectors_sdk.exceptions.error import DataRetrievalError
 from internal_enrichment_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
@@ -53,7 +53,6 @@ class FirstEPSSConnector:
         self.api = ConnectorClient(str(self.config.first_epss.api_base_url))
         self.converter_to_stix = ConverterToStix(self.helper)
         self.author = None
-        self.tlp = None
         self.stix_objects_list = []
 
     def _collect_intelligence(self, cve_name) -> list:
@@ -120,16 +119,15 @@ class FirstEPSSConnector:
         :param opencti_entity: Dict of vulnerability from OpenCTI
         :return: Boolean
         """
-        # Reset so the TLP of a previous message is never reused
-        self.tlp = None
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
-        if not valid_max_tlp:
+        # A local variable, so the TLP of a previous message is never reused
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,the connector does not has access to this observable, please check the group of the connector user"
             )

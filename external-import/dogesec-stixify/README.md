@@ -12,6 +12,7 @@
   - [Requirements](#requirements)
 - [Configuration](#configuration)
   - [Configuration Variables](#configuration-variables)
+  - [Finding Dossier IDs](#finding-dossier-ids)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -71,29 +72,16 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 
 ### Configuration Variables
 
-#### OpenCTI Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-#### Base Connector Parameters
+### Finding Dossier IDs
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+The connector imports the Reports (and the objects extracted from them) of the Dossiers listed in `STIXIFY_DOSSIER_IDS`, as comma-separated IDs, for example `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132`. Set at least one Dossier ID: the connector stops at startup when none is set.
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | config.yml | Required | Default | Description |
-|-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | Yes | `https://api.stixify.com/` | Stixify API URL |
-| API Key | `STIXIFY_API_KEY` | `stixify.api_key` | Yes | - | API key for authentication |
-| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | - | Comma-separated Dossier IDs. The Reports (and objects extracted from them) in these Dossiers will be imported to OpenCTI. You do not need to own the Dossier to import, but the Dossier must be visible to you. You can check this by logging into Stixify using the team the API key belongs to and validating you can see the Dossier. Pass the Dossier IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
-| Interval Hours | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | Yes | `1` | Polling interval in hours. The connector with poll Stixify for new Reports in the Dossier(s) at this schedule. The minimum value allowed and recommended value is `1` |
+You do not need to own a Dossier to import it, but it must be visible to you. To check, log in to Stixify with the team the API key belongs to and make sure you can see the Dossier.
 
 ---
 
@@ -113,10 +101,10 @@ services:
       - CONNECTOR_ID=${CONNECTOR_STIXIFY_ID}
       - CONNECTOR_NAME=Stixify
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - STIXIFY_BASE_URL=https://api.stixify.com/
       - STIXIFY_API_KEY=${STIXIFY_API_KEY}
       - STIXIFY_DOSSIER_IDS=dossier1-uuid,dossier2-uuid
-      - STIXIFY_INTERVAL_HOURS=12
     restart: always
     depends_on:
       - opencti
@@ -251,7 +239,7 @@ All other supported STIX objects in the bundle will import successfully and rema
    - New intelligence added to dossiers is imported on schedule
 
 3. **Incremental Updates**:
-   - Polls at configured interval (default: 12 hours)
+   - Polls at the configured `CONNECTOR_DURATION_PERIOD` (default: 1 hour)
    - Only fetches new/updated intelligence since last run
 
 ---

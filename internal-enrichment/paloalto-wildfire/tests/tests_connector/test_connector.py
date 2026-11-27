@@ -30,7 +30,7 @@ def _load(name: str) -> dict:
         return json.load(f)
 
 
-def _settings_dict(submit_unknown: bool = False) -> dict:
+def _settings_dict(submit_unknown: bool = False, max_tlp: str = "amber") -> dict:
     return {
         "opencti": {"url": "http://localhost:8080", "token": "test-token"},
         "connector": {
@@ -39,6 +39,7 @@ def _settings_dict(submit_unknown: bool = False) -> dict:
             "scope": "StixFile,Artifact",
             "log_level": "error",
             "auto": True,
+            "max_tlp": max_tlp,
         },
         "paloalto_wildfire": {
             "api_key": "test-api-key",
@@ -61,6 +62,12 @@ class StubConnectorSettingsSubmit(ConnectorSettings):
     @classmethod
     def _load_config_dict(cls, _, handler) -> dict[str, Any]:
         return handler(_settings_dict(submit_unknown=True))
+
+
+class StubConnectorSettingsClearTlp(ConnectorSettings):
+    @classmethod
+    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        return handler(_settings_dict(max_tlp="clear"))
 
 
 @pytest.fixture
@@ -123,12 +130,28 @@ def stub_connector(mock_opencti_connector_helper):
 def test_process_message_ignores_entity_exceeding_max_tlp(
     dummy_connector, file_message
 ):
-    dummy_connector.max_tlp = "TLP:CLEAR"
+    # The settings are frozen: use other settings with a TLP:CLEAR max TLP
+    dummy_connector.config = StubConnectorSettingsClearTlp()
 
     dummy_connector._process_message(file_message)
 
     dummy_connector._search_hash.assert_not_called()
     dummy_connector._create_knowledge.assert_not_called()
+    dummy_connector._send_bundle.assert_called_with(file_message["stix_objects"])
+
+
+def test_process_message_ignores_entity_with_one_tlp_above_max_tlp(
+    dummy_connector, file_message
+):
+    # Every TLP of the entity is checked, not only the last one
+    file_message["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+    ]
+
+    dummy_connector._process_message(file_message)
+
+    dummy_connector._search_hash.assert_not_called()
     dummy_connector._send_bundle.assert_called_with(file_message["stix_objects"])
 
 

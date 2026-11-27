@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from unittest.mock import MagicMock, call
 
 import freezegun
@@ -17,7 +18,7 @@ def test_connector_init(
     assert connector.base_url == "https://test-stixify-url/"
     assert connector.api_key == "test-api-key"
     assert connector.dossier_ids == ["dossier-1", "dossier-2"]
-    assert connector.interval_hours == 1
+    assert connector.config.connector.duration_period == timedelta(hours=1)
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
 
@@ -223,15 +224,3 @@ def test_run_in_work_failure(connector: StixifyConnector) -> None:
     assert call_kwargs["in_error"] is True
     assert "[Stixify] Work failed" in call_kwargs["message"]
     assert "ValueError: Test error" in call_kwargs["message"]
-
-
-@freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_get_param(connector: StixifyConnector) -> None:
-    """Test _get_param method"""
-
-    result = connector._get_param("base_url")
-    assert result == "https://test-stixify-url/"
-
-    result = connector._get_param("interval_hours", is_number=True)
-    assert result == 1
-    assert isinstance(result, int)

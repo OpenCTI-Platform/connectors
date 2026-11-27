@@ -17,14 +17,12 @@ class BaseImporter(ABC):
         client: KasperskyClient,
         author: Identity,
         tlp_marking: MarkingDefinition,
-        update_existing_data: bool,
     ) -> None:
         """Initialize Kaspersky base importer."""
         self.helper = helper
         self.client = client
         self.author = author
         self.tlp_marking = tlp_marking
-        self.update_existing_data = update_existing_data
 
         self.work_id: Optional[str] = None
 
@@ -76,6 +74,4 @@ class BaseImporter(ABC):
     def _send_bundle(self, bundle: Bundle) -> None:
         self.helper.metric.inc("record_send", len(bundle.objects))
         serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, work_id=self.work_id, update=self.update_existing_data
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)

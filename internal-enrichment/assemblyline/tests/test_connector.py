@@ -311,6 +311,11 @@ class TestTlpGate:
         connector = _make_connector(assemblyline_max_tlp="TLP:CLEAR")
         connector._check_tlp({"objectMarking": []})  # should not raise
 
+    def test_ignores_tlp_marking_without_definition(self) -> None:
+        connector = _make_connector(assemblyline_max_tlp="TLP:CLEAR")
+        observable = {"objectMarking": [{"definition_type": "TLP"}]}
+        connector._check_tlp(observable)  # should not raise
+
 
 class TestSafeObservableRef:
     """Error logs must never embed the full observable payload."""

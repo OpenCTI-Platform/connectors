@@ -17,7 +17,7 @@ def test_connector_init(
     assert connector.base_url == "https://test-vulmatch-url/"
     assert connector.api_key == "test-api-key"
     assert connector.sbom_only is False
-    assert connector.interval_days == 1
+    assert connector.config.connector.duration_period == timedelta(days=1)
     assert connector.days_to_backfill == 7
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Dict
 
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import ExternalReference, OrganizationAuthor
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from scout_search_connector.client_api import ScoutSearchConnectorClient
@@ -14,7 +15,6 @@ class ScoutSearchConnectorConfig:
     def __init__(self, config):
         self.api_base_url = config.pure_signal_scout.api_url.rstrip("/")
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.search_interval = config.pure_signal_scout.search_interval
         self.pattern_type = config.pure_signal_scout.indicator_pattern_type
 
@@ -24,7 +24,6 @@ class ScoutSearchConnectorConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        self.tlp = None
         self.client = ScoutSearchConnectorClient(
             self.helper, ScoutSearchConnectorConfig(self.config)
         )
@@ -55,14 +54,14 @@ class ScoutSearchConnectorConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: None
         """
-        if opencti_entity.get("objectMarking"):
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition.get("definition_type") == "TLP":
-                    self.tlp = marking_definition.get("definition")
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
-        if not valid_max_tlp:
+        tlp_levels = [
+            marking_definition.get("definition")
+            for marking_definition in opencti_entity.get("objectMarking") or []
+            if marking_definition.get("definition_type") == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
+        ):
             raise ValueError(
                 "[ScoutSearchConnector] Do not send any data, TLP of the observable is greater than MAX TLP,the connector does not have access to this observable, please check the group of the connector user"
             )

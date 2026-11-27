@@ -13,6 +13,13 @@ def find_call(calls, call_args: tuple):
             return call
 
 
+def with_max_tlp(config, max_tlp):
+    """Return a copy of the settings with another max TLP (the settings are frozen)."""
+    return config.model_copy(
+        update={"connector": config.connector.model_copy(update={"max_tlp": max_tlp})}
+    )
+
+
 @contextlib.contextmanager
 def patch_download(content):
     with mock.patch("requests.get") as mock_get:
@@ -71,13 +78,27 @@ class TestEsetConnector(object):
 
     @pytest.mark.usefixtures("enrichment_data")
     def test_skip_connector_has_lower_tlp(self, enrichment_data):
-        with mock.patch.object(self.connector, "max_tlp", "TLP:GREEN"):
+        green_config = with_max_tlp(self.connector.config, "green")
+        with mock.patch.object(self.connector, "config", green_config):
             with pytest.raises(
                 ValueError,
                 match="\[CONNECTOR\] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of "
                 "the connector user",
             ):
+                self.connector.process_message(enrichment_data)
+
+    @pytest.mark.usefixtures("enrichment_data")
+    def test_skip_entity_with_one_tlp_above_max_tlp(self, enrichment_data):
+        # Every TLP of the entity is checked, not only the last one:
+        # TLP:AMBER+STRICT (from the fixture) is above the max, TLP:CLEAR is not
+        enrichment_data["enrichment_entity"]["objectMarking"].append(
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"}
+        )
+
+        green_config = with_max_tlp(self.connector.config, "green")
+        with mock.patch.object(self.connector, "config", green_config):
+            with pytest.raises(ValueError, match="greater than MAX TLP"):
                 self.connector.process_message(enrichment_data)
 
     @pytest.mark.usefixtures("enrichment_data")

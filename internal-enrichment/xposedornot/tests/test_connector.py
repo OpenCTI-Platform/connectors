@@ -56,7 +56,7 @@ def test_skipped_entity_is_forwarded_unchanged_inside_a_playbook():
 def test_tlp_above_the_maximum_is_skipped(markings):
     connector, helper, client = make_connector()
     message = connector._message_callback(make_data(markings=markings))
-    assert "above the maximum allowed (TLP:AMBER); skipping" in message
+    assert "above the maximum allowed (amber); skipping" in message
     client.lookup.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
 
