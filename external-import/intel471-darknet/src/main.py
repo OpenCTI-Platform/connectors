@@ -25,7 +25,6 @@ from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship as PyctiSCR
 from pycti import ThreatActorIndividual as PyctiTAI
-from pycti import get_config_variable
 from stix2 import Identity, Incident, Relationship, Report
 
 
@@ -115,42 +114,15 @@ class Intel471AlertsConnector(ExternalImportConnector):
         """
         super().__init__()
 
-        # Connector-specific settings are loaded through
-        # ``get_config_variable`` so they honour both ``src/config.yml``
-        # (nested ``intel471.*`` keys) and the documented environment
-        # variables (``INTEL471_*``). The base class already loaded the
-        # config in ``__init__``; we reuse the same on-disk file rather
-        # than reaching into the helper's internals.
-        config = self._load_config()
-
-        self.intel471_api_url = get_config_variable(
-            "INTEL471_API_URL",
-            ["intel471", "api_url"],
-            config,
-            default="https://api.intel471.com/v1",
-        ).rstrip("/")
-        self.intel471_api_username = get_config_variable(
-            "INTEL471_API_USERNAME",
-            ["intel471", "api_username"],
-            config,
-        )
-        self.intel471_api_key = get_config_variable(
-            "INTEL471_API_KEY",
-            ["intel471", "api_key"],
-            config,
-        )
-        # Connector-specific settings live under the ``intel471_darknet``
-        # yaml key in ``config.yml`` (and under ``INTEL471_DARKNET_*`` env
-        # variables); this matches the README configuration table and the
-        # ``src/config.yml.sample`` layout.
-        self.intel471_initial_history_alerts = str(
-            get_config_variable(
-                "INTEL471_DARKNET_INITIAL_HISTORY_ALERTS",
-                ["intel471_darknet", "initial_history_alerts"],
-                config,
-                default="0",
-            )
-            or "0"
+        # Connector-specific settings come from ``self.config``, the
+        # ``ConnectorSettings`` built by the base class (``intel471.*`` and
+        # ``intel471_darknet.*`` keys in ``config.yml``, ``INTEL471_*`` and
+        # ``INTEL471_DARKNET_*`` environment variables).
+        self.intel471_api_url = self.config.intel471.api_url.rstrip("/")
+        self.intel471_api_username = self.config.intel471.api_username
+        self.intel471_api_key = self.config.intel471.api_key.get_secret_value()
+        self.intel471_initial_history_alerts = (
+            self.config.intel471_darknet.initial_history_alerts
         )
         # ``object_marking_refs`` expects a *list* of marking-definition
         # references, so we store the resolved id as a one-element list.
@@ -163,13 +135,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # ``TLP:AMBER+STRICT``) are registered with the platform by
         # name and the right UI label is preserved.
         self.intel471_darknet_marking: stix2.MarkingDefinition = self._get_tlp(
-            get_config_variable(
-                "INTEL471_DARKNET_TLP",
-                ["intel471_darknet", "tlp"],
-                config,
-                default="AMBER",
-            )
-            or "AMBER"
+            self.config.intel471_darknet.tlp
         )
         self.intel471_darknet_tlp = [self.intel471_darknet_marking.id]
         self.intel471_watchers = {}
