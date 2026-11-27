@@ -402,3 +402,27 @@ def test_playbook_trigger_out_of_scope_gets_the_original_bundle(
     assert helper.send_stix2_bundle.call_args.kwargs == {
         "cleanup_inconsistent_bundle": True
     }
+
+
+def test_any_tlp_above_max_is_skipped(connector, helper, client):
+    msg = make_message()
+    msg["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+    ]
+    message = connector.process_message(msg)
+    assert "TLP:RED" in message and "max TLP" in message
+    helper.api.fetch_opencti_file.assert_not_called()
+    client.submit_sample.assert_not_called()
+
+
+def test_pause_still_collects_existing_jobs(connector, helper, client):
+    client.submit_sample.side_effect = UnmaskError(
+        402, "insufficient_balance", "Top up first."
+    )
+    connector.process_message(make_message())
+    client.lookup.return_value = (JOB_LIVE, None)
+    message = connector.process_message(make_message())
+    assert "no new charge" in message
+    assert client.submit_sample.call_count == 1
+    assert any(o["type"] == "indicator" for o in sent_objects(helper))

@@ -232,3 +232,26 @@ def test_without_observables():
         LIVE_JOB, SAMPLE_REF, []
     )
     assert not [o for o in objects if o.type in ("url", "domain-name", "ipv4-addr")]
+
+
+def test_message_note_id_is_stable_per_sample():
+    first = ConverterToStix().message_note(SAMPLE_REF, [], "rate limited", "Slow down.")
+    second = ConverterToStix().message_note(
+        SAMPLE_REF, [], "rate limited", "Slow down."
+    )
+    other = ConverterToStix().message_note(
+        "artifact--6b6f6f6b-0000-4000-8000-000000000002",
+        [],
+        "rate limited",
+        "Slow down.",
+    )
+    assert first[1].id == second[1].id
+    assert other[1].id != first[1].id
+
+
+def test_c2_without_defanged_value_is_defanged():
+    raw = {k: v for k, v in LIVE_JOB["c2"][0].items() if k != "defanged"}
+    job = {**LIVE_JOB, "c2": [raw, {**LIVE_JOB["c2"][0], "defanged": ""}]}
+    body = result_markdown(job)
+    assert "http://1.2.3.4/x.php" not in body
+    assert body.count("hxxp://1.2.3[.]4/x.php") == 2

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import stix2
-from privara_unmask_client import liveness_text, outcome_label
+from privara_unmask_client import defang, liveness_text, outcome_label
 from pycti import Identity, Indicator, Malware, Note, StixCoreRelationship
 
 AUTHOR_NAME = "Privara Unmask"
@@ -179,9 +179,15 @@ class ConverterToStix:
         created: datetime | None = None,
         external_references: list | None = None,
     ) -> stix2.Note:
-        created = created or datetime.now(tz=timezone.utc)
+        if created is None:
+            note_id = Note.generate_id(
+                None, "\n".join(sorted(object_refs)) + "\n" + content
+            )
+            created = datetime.now(tz=timezone.utc)
+        else:
+            note_id = Note.generate_id(created, content)
         return stix2.Note(
-            id=Note.generate_id(created, content),
+            id=note_id,
             created=created,
             abstract=abstract,
             content=content,
@@ -415,7 +421,7 @@ def result_markdown(job: dict[str, Any], reused: bool = False) -> str:
         for entry in c2:
             conf = _confidence(entry.get("confidence"))
             lines.append(
-                f"| {_md(entry.get('defanged') or entry.get('value') or '-')} "
+                f"| {_md(entry.get('defanged') or (defang(entry['value']) if entry.get('value') else '-'))} "
                 f"| {_md(entry.get('kind') or '-')} "
                 f"| {'yes' if entry.get('live') else 'no'} "
                 f"| {_md(liveness_text(entry))} "

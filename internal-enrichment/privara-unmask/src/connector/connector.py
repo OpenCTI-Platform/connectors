@@ -129,16 +129,25 @@ class PrivaraUnmaskConnector:
         stix_entity = data["stix_entity"]
         stix_objects = data["stix_objects"]
         try:
-            tlp = "TLP:CLEAR"
-            for marking in opencti_entity.get("objectMarking") or []:
-                if marking.get("definition_type") == "TLP":
-                    tlp = marking["definition"]
-            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            tlps = [
+                marking["definition"]
+                for marking in opencti_entity.get("objectMarking") or []
+                if marking.get("definition_type") == "TLP"
+            ] or ["TLP:CLEAR"]
+            offending_tlp = next(
+                (
+                    tlp
+                    for tlp in tlps
+                    if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
+                ),
+                None,
+            )
+            if offending_tlp is not None:
                 return self._finish(
                     data,
                     stix_objects,
                     [],
-                    f"Skipped: the file is {tlp}, above the connector's max TLP ({self.max_tlp}); nothing sent to Privara.",
+                    f"Skipped: the file is {offending_tlp}, above the connector's max TLP ({self.max_tlp}); nothing sent to Privara.",
                 )
             if opencti_entity["entity_type"].lower() not in self.scope:
                 return self._finish(
@@ -173,10 +182,6 @@ class PrivaraUnmaskConnector:
         def note(abstract: str, content: str) -> list:
             return self.converter.message_note(sample_ref, markings, abstract, content)
 
-        if time.monotonic() < self._paused_until and self._paused_note:
-            abstract, content = self._paused_note
-            return note(abstract, content), f"Not sent to Privara: {abstract}"
-
         attached = self._pick_file(opencti_entity)
         if attached is None:
             return (
@@ -210,6 +215,9 @@ class PrivaraUnmaskConnector:
         reused = job is not None
         submitted = job is None
         if job is None:
+            if time.monotonic() < self._paused_until and self._paused_note:
+                abstract, content = self._paused_note
+                return note(abstract, content), f"Not sent to Privara: {abstract}"
             name = (attached.get("name") or "sample").rsplit("/", 1)[-1]
             self.helper.connector_logger.info(
                 "Submitting the sample to Privara Unmask",
