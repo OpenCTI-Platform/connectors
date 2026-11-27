@@ -109,9 +109,10 @@ class ConnectorAccenture:
     def _download_image_from_s3(self, hash_value: str) -> Optional[Dict[str, Any]]:
         """Download image from S3 bucket using hash value.
 
-        A DataNotFoundError is recorded in the ErrorStore for each S3 error other than
-        NoSuchKey (e.g. AccessDenied), and when no extension matches. The image is
-        then skipped: None is returned.
+        Each extension is tried in turn: an S3 error on one of them (NoSuchKey,
+        AccessDenied...) only moves on to the next. A single DataNotFoundError is
+        recorded in the ErrorStore when no extension matches. The image is then
+        skipped: None is returned.
         """
         for ext in IMAGE_EXTENSIONS:
             file_key = f"document-images/{hash_value}{ext}"
@@ -130,12 +131,7 @@ class ConnectorAccenture:
                     "data": base64.b64encode(data).decode("utf-8"),
                     "embedded": True,
                 }
-            except ClientError as e:
-                error_code = e.response["Error"]["Code"]
-                if error_code != "NoSuchKey":
-                    error_msg = f"Error accessing {file_key}: {error_code}"
-                    ErrorStore().record_error(DataNotFoundError(error_msg))
-                    self.helper.connector_logger.warning(f"[S3] {error_msg}")
+            except ClientError:
                 continue
 
         error_msg = f"Image not found in S3 for any extension. Hash: {hash_value}"

@@ -73,7 +73,9 @@ def test_download_image_from_s3_records_a_not_found_error(connector):
     assert "abc123" in str(errors[0])
 
 
-def test_download_image_from_s3_records_each_s3_error(connector):
+def test_download_image_from_s3_records_a_single_error_whatever_the_s3_errors(
+    connector,
+):
     connector.s3_client.get_object.side_effect = [_s3_error("AccessDenied")] + [
         _s3_error("NoSuchKey")
     ] * 10
@@ -82,6 +84,5 @@ def test_download_image_from_s3_records_each_s3_error(connector):
 
     assert image is None
     errors = ErrorStore().get_errors()
-    assert [type(error) for error in errors] == [DataNotFoundError, DataNotFoundError]
-    assert str(errors[0]) == "Error accessing document-images/abc123.jpg: AccessDenied"
-    assert "Image not found in S3" in str(errors[1])
+    assert [type(error) for error in errors] == [DataNotFoundError]
+    assert str(errors[0]) == "Image not found in S3 for any extension. Hash: abc123"
