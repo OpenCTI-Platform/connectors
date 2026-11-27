@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-offensive-agency:
+    image: opencti/connector-offensive-agency:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common connector configuration
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=Offensive Agency
+      #- CONNECTOR_SCOPE=Indicator,Tool,IPv4-Addr
+      #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=PT6H
+      # Connector configuration
+      #- OFFENSIVE_AGENCY_API_BASE_URL=https://www.offensive.agency/api/v1
+      #- OFFENSIVE_AGENCY_TLP_LEVEL=clear
+      #- OFFENSIVE_AGENCY_INDICATOR_VALIDITY=P30D
+      #- OFFENSIVE_AGENCY_CREATE_OBSERVABLES=true
+    restart: always
