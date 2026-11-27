@@ -94,6 +94,7 @@ Below are the connector specific parameters:
 | Repository branch    | `repo_branch`        | `CVELISTV5_REPO_BRANCH`        | `main`                                           | No        | Branch to track in the upstream repository.                                                                              |
 | Local clone path     | `local_path`         | `CVELISTV5_LOCAL_PATH`         | `/opt/cvelistV5`                                 | No        | Local path where the clone is kept. Should map to a persistent volume in production.                                     |
 | History start year   | `history_start_year` | `CVELISTV5_HISTORY_START_YEAR` | `2024`                                           | No        | Oldest year of CVE records to import on the **initial** run. Minimum recommended value is `2019` for CVSS v3.1 coverage. |
+| Import history       | `import_history`     | `CVELISTV5_IMPORT_HISTORY`     | `true`                                           | No        | Import the existing CVE records on the first run. Set to `false` to skip the catch-up and only ingest records changed after the connector starts. No effect once the connector has a state. |
 
 ### Deployment
 
@@ -146,6 +147,15 @@ for a deployment from the connector catalog. Once the clone is complete,
 the connector walks the `cves/<year>/` folders starting from
 `history_start_year` and converts every CVE record into a STIX bundle which
 is sent to OpenCTI.
+
+With `CVELISTV5_IMPORT_HISTORY=false`, the first run clones the repository
+but imports no record: it writes the state at once (`last_run` set to the
+run start, `initial_import_skipped: true`) and closes the work with
+"Initial catch-up skipped by configuration". The following runs only ingest
+the records changed after that time. The setting is read only when the
+connector has no state: an existing deployment keeps its incremental
+behaviour, and resetting the state with the setting at `false` restarts
+live from that point.
 
 #### Pull CVE updates
 

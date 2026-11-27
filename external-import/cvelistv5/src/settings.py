@@ -67,6 +67,12 @@ class CVEListV5Config(BaseConfigModel):
         "(minimum 1999; a lower value falls back to the default).",
         default=2024,
     )
+    import_history: bool = Field(
+        description="Import the existing CVE records on the first run. Set to false to "
+        "skip the catch-up and only ingest records changed after the connector starts. "
+        "Has no effect once the connector has a state.",
+        default=True,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

@@ -3452,6 +3452,11 @@
             "default": 2024,
             "description": "Oldest year of CVE records to import on the initial run (minimum 1999; a lower value falls back to the default).",
             "type": "integer"
+          },
+          "CVELISTV5_IMPORT_HISTORY": {
+            "default": true,
+            "description": "Import the existing CVE records on the first run. Set to false to skip the catch-up and only ingest records changed after the connector starts. Has no effect once the connector has a state.",
+            "type": "boolean"
           }
         },
         "required": [

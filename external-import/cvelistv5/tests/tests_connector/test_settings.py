@@ -85,6 +85,7 @@ def test_settings_should_apply_defaults():
     assert settings.cvelistv5.repo_branch == "main"
     assert settings.cvelistv5.local_path == "/opt/cvelistV5"
     assert settings.cvelistv5.history_start_year == 2024
+    assert settings.cvelistv5.import_history is True
 
 
 def test_settings_should_default_connector_id():

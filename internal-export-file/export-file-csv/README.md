@@ -114,7 +114,7 @@ pip3 install -r requirements.txt
 3. Start the connector from the `src` directory:
 
 ```bash
-python3 export-file-csv.py
+python3 main.py
 ```
 
 ## Usage
