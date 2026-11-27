@@ -1,13 +1,13 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
 #  name: 'CVEProject cvelistV5'
 #  scope: 'identity,vulnerability,software'
-#  log_level: 'error'
-#  duration_period: 'PT1H' # ISO 8601 duration period
+#  log_level: 'info'
+#  duration_period: 'PT1H' # ISO 8601 duration period, greater than zero
 
 cvelistv5:
   # Upstream git repository. Override only if you mirror cvelistV5 internally.
@@ -18,3 +18,7 @@ cvelistv5:
   # Oldest year of CVE records to import (initial run only), minimum 1999.
   # Most CVSS v3.1 metrics were back-filled from 2019 onwards.
 #  history_start_year: 2024
+  # Import the existing CVE records on the first run. Set to false to skip the
+  # catch-up and only ingest records changed after the connector starts
+  # (no effect once the connector has a state).
+#  import_history: true

@@ -64,7 +64,8 @@ itself is still written as one `Software` whose version is the range text
 - OpenCTI Platform version 6.6 or higher
 - Outbound HTTPS access to `github.com` so the connector can clone and pull
   the upstream repository
-- A persistent volume for the clone (a few GB) when running in Docker
+- A persistent volume for the clone (about 8 GB) when running in Docker or
+  from the connector catalog
 
 ### Configuration variables
 
@@ -82,8 +83,8 @@ Below are the generic connector parameters:
 | Connector ID            | `id`                | `CONNECTOR_ID`                 | a fixed `UUIDv4` (see `settings.py`) | No        | A unique `UUIDv4` identifier for this connector instance. Set your own when you run several.      |
 | Connector Name          | `name`              | `CONNECTOR_NAME`               | `CVEProject cvelistV5`               | No        | Name of the connector as displayed in the OpenCTI UI.                                             |
 | Connector Scope         | `scope`             | `CONNECTOR_SCOPE`              | `identity,vulnerability,software`    | No        | The scope of data produced by the connector.                                                      |
-| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `error`                              | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
-| Duration Period         | `duration_period`   | `CONNECTOR_DURATION_PERIOD`    | `PT1H`                               | No        | ISO 8601 duration between two runs (e.g. `PT1H` for hourly, `P1D` for daily).                     |
+| Log Level               | `log_level`         | `CONNECTOR_LOG_LEVEL`          | `info`                               | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                       |
+| Duration Period         | `duration_period`   | `CONNECTOR_DURATION_PERIOD`    | `PT1H`                               | No        | ISO 8601 duration between two runs (e.g. `PT1H` for hourly, `P1D` for daily). Must be greater than zero. |
 
 Below are the connector specific parameters:
 
@@ -93,6 +94,7 @@ Below are the connector specific parameters:
 | Repository branch    | `repo_branch`        | `CVELISTV5_REPO_BRANCH`        | `main`                                           | No        | Branch to track in the upstream repository.                                                                              |
 | Local clone path     | `local_path`         | `CVELISTV5_LOCAL_PATH`         | `/opt/cvelistV5`                                 | No        | Local path where the clone is kept. Should map to a persistent volume in production.                                     |
 | History start year   | `history_start_year` | `CVELISTV5_HISTORY_START_YEAR` | `2024`                                           | No        | Oldest year of CVE records to import on the **initial** run. Minimum recommended value is `2019` for CVSS v3.1 coverage. |
+| Import history       | `import_history`     | `CVELISTV5_IMPORT_HISTORY`     | `true`                                           | No        | Import the existing CVE records on the first run. Set to `false` to skip the catch-up and only ingest records changed after the connector starts. No effect once the connector has a state. |
 
 ### Deployment
 
@@ -136,11 +138,24 @@ python3 main.py
 
 #### Initial population
 
-For the first run, the connector clones `CVEProject/cvelistV5`. Depending on
-network throughput this can take a few minutes. Once the clone is complete,
+For the first run, the connector clones `CVEProject/cvelistV5` (about 8 GB).
+This takes 15 minutes or more depending on network throughput and CPU
+(about 14 min 30 s with 4 CPUs on a local stack), and the clone logs no
+progress while it runs. Without a volume at `CVELISTV5_LOCAL_PATH` the clone
+is redone on every container restart, so mount one in production, including
+for a deployment from the connector catalog. Once the clone is complete,
 the connector walks the `cves/<year>/` folders starting from
 `history_start_year` and converts every CVE record into a STIX bundle which
 is sent to OpenCTI.
+
+With `CVELISTV5_IMPORT_HISTORY=false`, the first run clones the repository
+but imports no record: it writes the state at once (`last_run` set to the
+run start, `initial_import_skipped: true`) and closes the work with
+"Initial catch-up skipped by configuration". The following runs only ingest
+the records changed after that time. The setting is read only when the
+connector has no state: an existing deployment keeps its incremental
+behaviour, and resetting the state with the setting at `false` restarts
+live from that point.
 
 #### Pull CVE updates
 

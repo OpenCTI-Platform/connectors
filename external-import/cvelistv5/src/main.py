@@ -33,6 +33,7 @@ class CVEListV5Connector:
             )
             start_year = DEFAULT_START_YEAR
         self.start_year = start_year
+        self.import_history = self.config.cvelistv5.import_history
 
         self.duration_period = self.config.connector.duration_period
 
@@ -44,8 +45,8 @@ class CVEListV5Connector:
     def _ensure_git_handler(self) -> GitHandler:
         if self.git_handler is None:
             self.helper.connector_logger.info(
-                "Initializing local clone of cvelistV5 repository (this may take a "
-                "few minutes on first run)...",
+                "Initializing local clone of cvelistV5 repository (about 8 GB, 15 "
+                "minutes or more on first run, no progress is logged meanwhile)...",
                 {"repo_url": self.repo_url, "local_path": self.local_path},
             )
             self.git_handler = GitHandler(
@@ -81,6 +82,11 @@ class CVEListV5Connector:
         try:
             git_handler = self._ensure_git_handler()
             git_handler.pull_updates()
+
+            if git_handler.last_run_time is None and not self.import_history:
+                self._skip_initial_import(git_handler, run_started_at, work_id)
+                return
+
             files_to_process = git_handler.get_updated_files(self.start_year)
             self.helper.connector_logger.info(
                 "Processing CVE records.", {"files": len(files_to_process)}
@@ -121,6 +127,30 @@ class CVEListV5Connector:
             message = f"CVEListV5 connector run failed: {exc}"
             self.helper.connector_logger.error(message)
             self.helper.api.work.to_processed(work_id, message, in_error=True)
+
+    def _skip_initial_import(
+        self, git_handler: GitHandler, run_started_at: datetime, work_id: str
+    ) -> None:
+        """Record a state at once without importing the existing records.
+
+        Used on the first run when ``import_history`` is false: the next runs
+        only ingest the records changed after ``run_started_at``.
+        """
+        git_handler.update_last_run_time(run_started_at)
+        self.helper.set_state(
+            {
+                "last_run": run_started_at.isoformat(),
+                "last_run_processed": 0,
+                "last_run_failed": 0,
+                "initial_import_skipped": True,
+            }
+        )
+        message = (
+            "Initial catch-up skipped by configuration; live updates from "
+            f"{run_started_at.isoformat()}."
+        )
+        self.helper.connector_logger.info(message)
+        self.helper.api.work.to_processed(work_id, message)
 
     def start(self) -> None:
         self.helper.connector_logger.info("Starting CVEListV5 connector.")
