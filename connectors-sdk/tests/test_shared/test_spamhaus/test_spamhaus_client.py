@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from connectors_sdk import (
+    ApiClientError,
     ApiNotFoundError,
     ProviderApiAuthenticationError,
     ProviderApiAuthorizationError,
@@ -437,15 +438,20 @@ class TestRequests:
 
         assert exc_info.value.code == code
 
-    def test_other_client_errors_propagate_as_is(self, client):
-        """Mapped by the next commit, which makes them fall back too."""
+    @pytest.mark.parametrize("status", [400, 404, 422])
+    def test_other_client_errors_are_an_invalid_response(self, client, status):
+        """A feed endpoint that rejects the request cannot be used: fall back."""
         with patch.object(
             client,
             "_raw_request",
-            side_effect=[_login_ok(expires=self._expires()), _response(404)],
+            side_effect=[_login_ok(expires=self._expires()), _response(status)],
         ):
-            with pytest.raises(ApiNotFoundError):
-                client.get_json("/threatfox/v1/nope")
+            with pytest.raises(ProviderApiInvalidResponseError) as exc_info:
+                client.get_json("/threatfox/v1/iocs")
+
+        assert exc_info.value.code == "api.invalid_response"
+        assert f"HTTP {status}" in str(exc_info.value)
+        assert isinstance(exc_info.value.__cause__, ApiClientError)
 
 
 @freeze_time("2027-01-15 08:00:00")
@@ -539,6 +545,16 @@ class TestPaginate:
         ):
             with pytest.raises(ProviderApiInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
+
+    def test_a_rejected_page_request_is_an_invalid_response(self, client):
+        """E.g. a `since` the API refuses: the pages cannot be read at all."""
+        with patch.object(
+            client,
+            "_raw_request",
+            side_effect=[_login_ok(expires=self._expires()), _response(400)],
+        ):
+            with pytest.raises(ProviderApiInvalidResponseError):
+                list(client.paginate("/threatfox/v1/iocs", params={"since": "x"}))
 
     @pytest.mark.parametrize(
         "body", [["not", "an", "object"], {"meta": {}}, {"items": "x"}]

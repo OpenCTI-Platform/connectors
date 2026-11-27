@@ -67,11 +67,11 @@ matching `api.*` code. A connector that holds a community Auth-Key catches
 | `ProviderApiServerError` (`api.server`) | HTTP 5xx, on a request or on the login |
 | `ProviderApiTimeoutError` (`api.timeout`) | a request or the login times out |
 | `ProviderApiConnectionError` (`api.connection`) | the API cannot be reached (network, DNS, TLS) |
-| `ProviderApiInvalidResponseError` (`api.invalid_response`) | a page with an unexpected shape, a cursor that does not advance, an unexpected login response |
+| `ProviderApiInvalidResponseError` (`api.invalid_response`) | any other 4xx (400, 404, 422...) on `get_json` or `paginate`, a page with an unexpected shape, a cursor that does not advance, an unexpected login response |
 
-Other client errors on `get_bytes` (for example a 404 on a sample) propagate as the
-`connectors-sdk` `ApiClientError` subclasses and do not mean the commercial mode is
-unusable.
+A 4xx on `get_bytes` (for example a 404 on a sample) only concerns that file: it
+propagates as the `connectors-sdk` `ApiClientError` subclasses and does not mean the
+commercial mode is unusable.
 
 The password, the JWT and the login response never appear in a log or in an error
 message.

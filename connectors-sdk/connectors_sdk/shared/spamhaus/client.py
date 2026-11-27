@@ -8,6 +8,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from pydantic import SecretStr
+
 from connectors_sdk import (
     ApiClientError,
     ApiForbiddenError,
@@ -18,13 +20,13 @@ from connectors_sdk import (
     ProviderApiAuthenticationError,
     ProviderApiAuthorizationError,
     ProviderApiConnectionError,
+    ProviderApiError,
     ProviderApiInvalidResponseError,
     ProviderApiRateLimitError,
     ProviderApiServerError,
     ProviderApiTimeoutError,
     RateLimit,
 )
-from pydantic import SecretStr
 
 SPAMHAUS_API_URL = "https://api.spamhaus.com"
 SPAMHAUS_REALM = "abusech"
@@ -191,7 +193,7 @@ class SpamhausClient(BaseClientApi):
         return {"Authorization": f"Bearer {token.get_secret_value()}"}
 
     def _send(self, path: str, params: dict[str, Any] | None, *, binary: bool) -> Any:
-        """Send one authenticated GET and map its failures to provider API errors."""
+        """Send one authenticated GET, mapping its failures to provider errors."""
         headers = self._bearer_headers()
         try:
             if binary:
@@ -204,30 +206,54 @@ class SpamhausClient(BaseClientApi):
             return self._get(path, params=params, headers=headers)
         except ApiUnauthorizedError:
             raise
-        except ApiForbiddenError as err:
-            raise ProviderApiAuthorizationError(
+        except (ApiClientError, requests.exceptions.RequestException) as err:
+            mapped = self._provider_error(err, path, binary=binary)
+            if mapped is None:
+                raise
+            raise mapped from err
+
+    @staticmethod
+    def _provider_error(
+        err: Exception, path: str, *, binary: bool
+    ) -> ProviderApiError | None:
+        """Map a request failure to the provider error OpenCTI should get.
+
+        Returns:
+            The provider error, or ``None`` when the failure must propagate as is: a
+            4xx on a binary download (a sample file) only concerns that file.
+        """
+        if isinstance(err, ApiForbiddenError):
+            return ProviderApiAuthorizationError(
                 f"Spamhaus refused the access (HTTP 403): {CREDENTIALS_HINT}"
-            ) from err
-        except ApiRateLimitError as err:
-            raise ProviderApiRateLimitError(
+            )
+        if isinstance(err, ApiRateLimitError):
+            return ProviderApiRateLimitError(
                 "Spamhaus throttles the requests (HTTP 429)"
-            ) from err
-        except ApiServerError as err:
-            raise ProviderApiServerError(
+            )
+        if isinstance(err, ApiServerError):
+            return ProviderApiServerError(
                 f"Spamhaus cannot answer (HTTP {err.status_code})"
-            ) from err
-        except requests.exceptions.JSONDecodeError as err:
-            # Must precede RequestException, its base class: the API did answer.
-            raise ProviderApiInvalidResponseError(
+            )
+        if isinstance(err, ApiClientError):
+            # Any other 4xx (400, 404, 422...). On a feed endpoint it means the
+            # commercial mode cannot be used, so the caller can fall back.
+            if binary:
+                return None
+            return ProviderApiInvalidResponseError(
+                f"Spamhaus rejected the request (HTTP {err.status_code}) for {path}"
+            )
+        # Below, ``requests`` errors. The order matters: JSONDecodeError and Timeout
+        # are subclasses of RequestException (a connect timeout is also a
+        # ConnectionError), and the first two are more precise.
+        if isinstance(err, requests.exceptions.JSONDecodeError):
+            return ProviderApiInvalidResponseError(
                 f"Spamhaus returned a body that is not valid JSON for {path}"
-            ) from err
-        except requests.exceptions.Timeout as err:
-            # Must precede RequestException: a connect timeout is also a ConnectionError.
-            raise ProviderApiTimeoutError("Spamhaus request timed out") from err
-        except requests.exceptions.RequestException as err:
-            raise ProviderApiConnectionError(
-                "Spamhaus request failed: the API cannot be reached"
-            ) from err
+            )
+        if isinstance(err, requests.exceptions.Timeout):
+            return ProviderApiTimeoutError("Spamhaus request timed out")
+        return ProviderApiConnectionError(
+            "Spamhaus request failed: the API cannot be reached"
+        )
 
     def _ensure_same_origin(self, path: str) -> None:
         """Refuse a path that resolves outside the configured API origin.
@@ -281,8 +307,9 @@ class SpamhausClient(BaseClientApi):
             ProviderApiServerError: If the API answers with a 5xx.
             ProviderApiTimeoutError: If a request times out.
             ProviderApiConnectionError: If the API cannot be reached.
-            ProviderApiInvalidResponseError: If the body is not valid JSON, or is
-                neither an object nor an array (e.g. an HTML maintenance page).
+            ProviderApiInvalidResponseError: If the API rejects the request with
+                another 4xx (400, 404, 422...), or the body is not valid JSON, or
+                is neither an object nor an array (e.g. an HTML maintenance page).
             ValueError: If ``path`` points outside the API base URL.
         """
         body = self._authenticated_get(path, params, binary=False)
