@@ -5,10 +5,17 @@ from typing import Generator
 
 import requests
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.shared.spamhaus import SpamhausClient, SpamhausCommercialError
 from dateutil.parser import parse
+from external_import_connector.spamhaus_urls import SpamhausUrlsClient
 
 # Seconds to wait for the server; the recent export is about 30 MB.
 REQUEST_TIMEOUT = 300
+# Short connector name and version of the explicit User-Agent sent on every
+# request (`OpenCTI-<connector>/<version>`); the version is the manifest's
+# `container_version`.
+USER_AGENT_NAME = "urlhaus"
+USER_AGENT_VERSION = "rolling"
 
 
 class ConnectorClient:
@@ -20,8 +27,21 @@ class ConnectorClient:
         self.config = config
         self.state = state
 
-        # Define headers in session and update when needed
+        # Community mode: the export is downloaded with this session
         self.session = requests.Session()
+        self.session.headers["User-Agent"] = (
+            f"OpenCTI-{USER_AGENT_NAME}/{USER_AGENT_VERSION}"
+        )
+
+        # Commercial mode: the `connectors_sdk.shared.spamhaus` client logs in and reuses the JWT
+        self.spamhaus = None
+        if self.config.urlhaus.use_commercial:
+            self.spamhaus = SpamhausClient(
+                username=self.config.urlhaus.spamhaus_username,
+                password=self.config.urlhaus.spamhaus_password,
+                connector_name=USER_AGENT_NAME,
+                connector_version=USER_AGENT_VERSION,
+            )
 
     def _request_data(self, api_url: str, params=None) -> requests.Response:
         """
@@ -62,9 +82,35 @@ class ConnectorClient:
 
     def get_entities(self, params=None) -> Generator[list, None, None]:
         """
-        retrieve all URLs in URLHaus Database
+        retrieve the URLs of the URLHaus Database
+        With Spamhaus credentials, the commercial API is queried since the
+        checkpoint. When it cannot be used and an Auth-Key is set, the community
+        export is downloaded instead.
         :param params: undefine
         :return: lists of url
+        :raises SpamhausCommercialError: when the commercial API cannot be used and
+            no Auth-Key is set
+        """
+        if self.spamhaus is not None:
+            try:
+                yield from SpamhausUrlsClient(
+                    self.spamhaus, self.helper, self.config, self.state
+                ).get_entities()
+                return
+            except SpamhausCommercialError as err:
+                if not self.config.urlhaus.community_configured:
+                    raise
+                # The message of a Spamhaus error holds no secret
+                self.helper.connector_logger.warning(
+                    "[API] Spamhaus commercial API unavailable, "
+                    "falling back to the community export",
+                    {"reason": str(err)},
+                )
+        yield from self._get_community_entities(params)
+
+    def _get_community_entities(self, params=None) -> Generator[list, None, None]:
+        """
+        retrieve all URLs of the community export
         """
         # Errors are not swallowed here: a failed download or an unreadable
         # file must reach process_message() and mark the work in error.
