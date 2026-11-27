@@ -10,7 +10,12 @@ from typing import Any, Dict, List, Optional, Tuple
 import boto3
 from accenture_connector.run_errors import report_run_errors
 from botocore.exceptions import ClientError
-from connectors_sdk import DataConversionError, DataNotFoundError, ErrorStore
+from connectors_sdk import (
+    DataConversionError,
+    DataNotFoundError,
+    ErrorStore,
+    ProviderApiAuthenticationError,
+)
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -109,10 +114,14 @@ class ConnectorAccenture:
     def _download_image_from_s3(self, hash_value: str) -> Optional[Dict[str, Any]]:
         """Download image from S3 bucket using hash value.
 
-        Each extension is tried in turn: an S3 error on one of them (NoSuchKey,
-        AccessDenied...) only moves on to the next. A single DataNotFoundError is
-        recorded in the ErrorStore when no extension matches. The image is then
-        skipped: None is returned.
+        Each extension is tried in turn: a NoSuchKey error only moves on to the
+        next. The image is skipped, None is returned, and an error is recorded in
+        the ErrorStore:
+
+        - a ProviderApiAuthenticationError as soon as S3 answers with any other
+          error (AccessDenied, InvalidAccessKeyId...): the access to S3 failed, the
+          other extensions are not tried;
+        - a DataNotFoundError when no extension matches.
         """
         for ext in IMAGE_EXTENSIONS:
             file_key = f"document-images/{hash_value}{ext}"
@@ -131,8 +140,18 @@ class ConnectorAccenture:
                     "data": base64.b64encode(data).decode("utf-8"),
                     "embedded": True,
                 }
-            except ClientError:
-                continue
+            except ClientError as err:
+                error_code = err.response["Error"]["Code"]
+                if error_code == "NoSuchKey":
+                    continue
+                error_msg = (
+                    f"Access to S3 failed for {file_key}: {error_code}. Check the S3 "
+                    "credentials: they need s3:GetObject and s3:ListBucket on the "
+                    "bucket"
+                )
+                ErrorStore().record_error(ProviderApiAuthenticationError(error_msg))
+                self.helper.connector_logger.error(f"[S3] {error_msg}")
+                return None
 
         error_msg = f"Image not found in S3 for any extension. Hash: {hash_value}"
         ErrorStore().record_error(DataNotFoundError(error_msg))

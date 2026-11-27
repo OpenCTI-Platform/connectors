@@ -516,7 +516,7 @@ def test_process_message_reports_a_warning_when_the_s3_image_is_not_found(
     helper.set_state.assert_called()
 
 
-def test_process_message_reports_no_error_when_s3_denies_access_to_a_key(
+def test_process_message_reports_an_error_when_the_access_to_s3_fails(
     connector,
     helper,
     client,
@@ -525,24 +525,29 @@ def test_process_message_reports_no_error_when_s3_denies_access_to_a_key(
     one_interval_run,
 ):
     client.get_reports.return_value = acti_bundle_with_s3_image
-    png = base64.b64decode(PNG_BASE64)
-    s3_client.get_object.side_effect = [
-        ClientError({"Error": {"Code": "AccessDenied"}}, "GetObject"),
-        ClientError({"Error": {"Code": "NoSuchKey"}}, "GetObject"),
-        {
-            "Body": StreamingBody(io.BytesIO(png), len(png)),
-            "ContentType": "image/png",
-        },
-    ]
+    s3_client.get_object.side_effect = ClientError(
+        {"Error": {"Code": "AccessDenied"}}, "GetObject"
+    )
 
     errors = connector.process_message()
 
-    # The image is found under another extension: the denied key is not reported
-    assert errors == []
-    report = _sent_objects(helper)[REPORT_ID]
-    assert [image["name"] for image in report["x_opencti_files"]] == [
-        f"{S3_IMAGE_HASH}.png"
+    assert errors == [
+        {
+            "code": "api.authentication",
+            "message": (
+                "Access to S3 failed for "
+                f"document-images/{S3_IMAGE_HASH}.jpg: AccessDenied. Check the S3 "
+                "credentials: they need s3:GetObject and s3:ListBucket on the bucket"
+            ),
+            "criticity": int(Criticity.CRITICAL),
+        }
     ]
+    # The other extensions are not tried
+    s3_client.get_object.assert_called_once()
+    # The image is skipped: the report is still sent, without it
+    report = _sent_objects(helper)[REPORT_ID]
+    assert "x_opencti_files" not in report
+    helper.set_state.assert_called()
 
 
 def test_process_message_reports_a_warning_when_the_base64_image_is_corrupted(

@@ -3,7 +3,12 @@ from unittest.mock import MagicMock
 import pytest
 from accenture_connector import ConnectorAccenture
 from botocore.exceptions import ClientError
-from connectors_sdk import DataConversionError, DataNotFoundError, ErrorStore
+from connectors_sdk import (
+    DataConversionError,
+    DataNotFoundError,
+    ErrorStore,
+    ProviderApiAuthenticationError,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -73,16 +78,21 @@ def test_download_image_from_s3_records_a_not_found_error(connector):
     assert "abc123" in str(errors[0])
 
 
-def test_download_image_from_s3_records_a_single_error_whatever_the_s3_errors(
+def test_download_image_from_s3_records_an_error_when_the_access_to_s3_fails(
     connector,
 ):
-    connector.s3_client.get_object.side_effect = [_s3_error("AccessDenied")] + [
-        _s3_error("NoSuchKey")
+    connector.s3_client.get_object.side_effect = [_s3_error("NoSuchKey")] + [
+        _s3_error("AccessDenied")
     ] * 10
 
     image = connector._download_image_from_s3("abc123")
 
     assert image is None
+    # The other extensions are not tried
+    assert connector.s3_client.get_object.call_count == 2
     errors = ErrorStore().get_errors()
-    assert [type(error) for error in errors] == [DataNotFoundError]
-    assert str(errors[0]) == "Image not found in S3 for any extension. Hash: abc123"
+    assert [type(error) for error in errors] == [ProviderApiAuthenticationError]
+    assert str(errors[0]) == (
+        "Access to S3 failed for document-images/abc123.jpeg: AccessDenied. Check "
+        "the S3 credentials: they need s3:GetObject and s3:ListBucket on the bucket"
+    )
