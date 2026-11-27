@@ -16,5 +16,6 @@ services:
       - QRADAR_SSL_VERIFY=true
       - QRADAR_TOKEN=ChangeMe
       - QRADAR_REFERENCE_NAME=OpenCTI
+      - QRADAR_TRIM_URL_SCHEME=false
       - QRADAR_IGNORE_TYPES=label,marking-definition,identity
     restart: always
