@@ -229,7 +229,9 @@ in place by the procedure in
 Pydantic settings wired into the existing code, manifest flag, generated
 schema and tests, one commit per step, no restructuring. Tools that load
 skills from `.claude/` (Claude Code, GitHub Copilot) pick it up as a skill.
-With other tools, follow that file directly.
+With other tools, follow that file directly: the procedure is tool-neutral,
+and only its "Run modes" section (several connectors in parallel) needs a tool
+that launches subagents.
 
 ## Deprecating a connector
 

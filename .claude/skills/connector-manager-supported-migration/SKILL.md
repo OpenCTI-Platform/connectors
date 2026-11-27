@@ -1,265 +1,253 @@
 ---
 name: connector-manager-supported-migration
 description: >-
-  Minimal, structure-preserving migration of an OpenCTI connector to
-  manager-supported mode. Invoke this skill when the user asks for a "lite",
-  "light", "minimal", or "structure-preserving" manager-supported migration, or
-  when they want ONLY Pydantic settings + their usage (config normalization,
-  settings creation, wiring settings into the existing code, manifest metadata,
-  config-schema generation, test scaffolding, formatting/validation) while
-  keeping the current file structure, file names, class names, and scheduling
-  unchanged. Adds Pydantic settings and wires them into the EXISTING code in
-  place; each step produces one commit. It does NOT do any broader rework
-  (package restructuring, connector.py/main.py split, schedule_iso conversion,
-  logging refactor, STIX-ID fixes). Input: one or more connector paths (e.g.
-  "external-import/vxvault") and the GitHub issue number of each.
+  Migrate a legacy OpenCTI connector to manager-supported mode without
+  restructuring it: Pydantic settings on connectors-sdk, wired into the existing
+  code, manifest flag, generated config schema and tests, one commit per step.
+  Use when asked to migrate a connector to manager-supported or catalog mode, to
+  replace get_config_variable or config.yml loading with ConnectorSettings /
+  BaseConnectorSettings, or to migrate several connectors in parallel. Input: a
+  connector path (e.g. "external-import/vxvault") and the GitHub issue number.
+  Not for building a new connector or for the full verified rework (package
+  restructuring, schedule_iso, logging, STIX IDs).
 ---
 
-# Manager-Supported Migration
+# Manager-supported migration
 
-You perform a **minimal, structure-preserving** migration of OpenCTI connectors to
-**manager-supported** mode. You run the procedure below yourself, in this session. You add Pydantic
-settings and make the existing code consume them, nothing more.
+Migrates one legacy OpenCTI connector to manager-supported mode: its
+configuration is loaded and validated by Pydantic settings built on
+`connectors_sdk.BaseConnectorSettings`, the pycti helper is built from
+`settings.to_helper_config()`, and the connector ships a generated config
+schema. The rest of the connector stays as it is.
 
-Guiding principle: **keep the existing file structure and code shape; change only how configuration
-is loaded and read.**
+The procedure itself is tool-neutral. Only the "Run modes" section (several
+connectors in parallel, with subagents) needs a tool that can launch agents.
 
-It does **none** of the broader work: no restructuring, no file splitting, no `schedule_iso`
-conversion, no logging refactor, no STIX-ID determinism fixes.
+Paths below are relative to the repository root. `<path>` is the connector
+directory (for example `external-import/vxvault`) and `<name>` its last
+segment (`vxvault`), used as the commit scope.
 
-**Starting state**: legacy connector (`get_config_variable` / yaml config), `manager_supported` not
-true in the manifest, no `settings.py`.
-**Target state**: 6-7 commits; config flows through validated Pydantic settings and
-`to_helper_config()`; source layout unchanged; `manager_supported: true`; schema generated; flake8
-and pytest passing.
-**Progress line**: after each commit print `✅ Step N/7: <commit message>`.
+**Working directory.** Run every command from the root of the working copy
+you were given (the repository, or the workspace or worktree of Run modes).
+The one `cd` is in the connector-linter command, which runs in a subshell, so
+you are back at the root afterwards. Edit and commit only under `<path>`.
 
 ## Hard rules
 
-- MUST have a connector path and a GitHub issue number. If the user gave none, ask for it. NEVER guess
-  either, and NEVER invent an issue number.
-- MUST commit after EACH of the 7 steps, before starting the next (see Execution model). NEVER batch.
-  Step 7 commits only if formatting changed files.
-- MUST do only what this file describes. For any other action, stop and ask the user first (see Stop
-  conditions).
-- NEVER restructure into a `src/connector/` package, never split code into
-  `connector.py` / `main.py` / `__init__.py`, never create a new entry point, never rename or move
-  files, never rename classes, never move code between files.
-- NEVER convert scheduling to `schedule_iso` / `duration_period` (keep the existing loop), never
-  refactor logging (`log_info` to `connector_logger`), converters or STIX-ID generation.
-- NEVER delete, rename, move or split existing files. The only renames allowed are those of Step 1
-  (`docker-compose.yaml` to `.yml`, `config.yaml.sample` to `.yml.sample`). The only deletion allowed
-  is a pass-through config file the user explicitly approved removing (see Stop conditions).
-- NEVER edit files outside the connector directory (or the assigned worktree). NEVER push, never
-  open a PR.
-- NEVER invent a UUID: generate it as in Step 2.
-- MUST sign every commit (`git commit -S`): CI rejects unsigned commits.
-- With more than one connector, NEVER run the steps in the shared working copy: one `git` worktree
-  per connector (see Run modes).
+- MUST have a connector path and a GitHub issue number. NEVER guess either.
+- MUST commit after each of the 6 steps, before starting the next. NEVER batch steps.
+- NEVER restructure, rename or move files or classes, convert the scheduling loop to
+  `schedule_iso`, or refactor logging, converters or STIX IDs. Stop and report instead.
+- NEVER delete an existing file. The only renames allowed are those of Step 1.
+- NEVER invent or copy a UUID: generate it and check it is unique (Step 2).
+- MUST unwrap every `SecretStr` with `.get_secret_value()` where it leaves the settings (Step 3).
+- NEVER edit outside `<path>` or the working directory you were given. NEVER push, NEVER open a
+  pull request.
+- NEVER report success with fewer than 6 commits or a failing validation command.
 
-The only new code files you may add: `settings.py` (Step 2) and, only when Step 5 proves
-`ConnectorSettings` is not importable by the schema generator, a minimal `src/__init__.py` re-export
-(see Step 5).
+## Inputs
+
+- **Connector path** (required).
+- **GitHub issue number** (required): every commit message ends with
+  `(#<issue>)`. If it is missing, stop and ask for it. Never guess it. With
+  several connectors, each has its own issue.
+- **Working directory** (optional): when the caller runs several migrations
+  in parallel, it gives each one its own jj workspace or git worktree. Do
+  every read, edit, validation and commit inside that directory.
+
+## Run modes
+
+1. **One connector, no working directory given**: run the procedure below in
+   the current working copy.
+2. **A working directory is given**: `cd` into it first and work only there.
+   Never create or remove workspaces or worktrees yourself and never launch
+   agents. You may have no way to reach the user: return a question verbatim
+   in your final report instead of asking it. Commits stay on the
+   workspace's or worktree's branch after the caller removes it.
+3. **Several connectors** (needs a tool that launches agents, such as Claude
+   Code): you are the coordinator and do not run the steps yourself.
+   1. Check each path against the stop conditions first, and make sure each
+      has its own issue number. Ask about a flagged connector and do not start
+      it until answered. The others proceed.
+   2. One working directory per connector, from up-to-date trunk, named
+      `ms-<slug>` (`external-import/vxvault` gives `ms-vxvault`):
+
+      ```bash
+      # jj repository (a `.jj/` directory exists at the root)
+      jj git fetch
+      jj workspace add -r 'trunk()' --name ms-<slug> ../ms-<slug>
+
+      # git repository
+      git worktree add -b ms-<slug> ../ms-<slug> origin/master
+      ```
+
+   3. Launch all workers in a single response, in the background, one agent
+      per connector. Each prompt: "Run the `connector-manager-supported-migration`
+      skill on connector `<path>`, GitHub issue `<issue>`. Work only in
+      `<dir>`: `cd` into it first and do every edit, validation and commit
+      there. Do not create or remove workspaces or worktrees, do not launch
+      agents, do not push, do not open a pull request. You cannot reach the
+      user: if the skill needs an answer, stop and return the question
+      verbatim. One commit per step and the skill's final report format. User
+      preferences: `<preferences or none>`."
+   4. Wait for the completion notifications (do not poll), read each result
+      and give a per-connector summary.
+   5. Clean up a directory only when it was created in this run, its worker
+      reported success and its commits are on the branch or bookmark. Use
+      `jj workspace remove ms-<slug>` (jj) or `git worktree remove ../ms-<slug>`
+      (git). Otherwise keep it and say why.
+
+A plain question about migration ("what does manager-supported mean?") gets a
+direct answer, without running the procedure.
+
+## Scope
+
+Change how configuration is loaded and read. Keep the code shape.
+
+In scope:
+
+1. Normalize the config files and requirements.
+2. Add a `settings.py` that mirrors the existing variables.
+3. Swap config loading for the settings in the existing code, in place.
+4. Set `manager_supported` to `true` in the manifest.
+5. Generate the config schema and its documentation.
+6. Add tests for the settings and their wiring.
+
+Out of scope (the broader "verified" work, done separately, see
+`templates/<type>/` for the target layout):
+
+- Restructuring into a `src/connector/` package, splitting files, adding an
+  entry point, renaming files or classes, moving code.
+- Replacing the scheduling loop with `schedule_iso` or an SDK base connector.
+- Refactoring logging, converters or STIX ID generation.
+
+If the connector needs any of this to work, stop and report it instead of
+widening the change.
 
 ## Stop conditions
 
-Stop, make no further edits, and tell the user what was found. Ask before continuing when it is a
-question, report when it is a failure:
+Stop, make no further edits and tell the user what was found. Ask when it is a
+question, report when it is a failure.
 
 - The path does not exist or has no `src/`.
-- **Already migrated signal**: the manifest `__metadata__/connector_manifest.json` already has
-  `"manager_supported": true` **OR** a `settings.py` already exists under `src/`. Say which signal was
-  found (manifest, `settings.py` with its path, or both) and ask whether to continue. Never overwrite
-  an existing `settings.py` silently.
-- Wiring the settings would require moving code, splitting or renaming files or classes. That is the
-  full migration: do not expand scope.
-- **Pass-through config class**: after Step 3, the legacy config class or file (`ConfigLoader`,
-  `ConfigConnector`, `config_loader.py`...) only builds `ConnectorSettings()` and copies its fields
-  one by one. Ask whether to remove it. Never create a new one. If the user says yes: the entry point
-  builds `ConnectorSettings()` and passes it to the helper and to the connector, the connector reads
-  `settings.<section>.<field>` directly, values derived from several fields (e.g. an `impact_map`) move
-  into the class that uses them, and the imports and test references to the removed class go away.
-- Commit signing is not configured (`git commit -S` fails): report it, do not commit unsigned.
-- `mise gs`, flake8 or pytest still fails after two fix attempts: report the failing output.
-- Any action not described in this file is needed.
+- **Already migrated**: the manifest already has `"manager_supported": true`,
+  or a `settings.py` already exists under `src/`. Say which signal was found
+  (manifest, `settings.py` with its path, or both) and ask whether to continue.
+  Never overwrite an existing `settings.py` silently.
+- Wiring the settings would require moving code or splitting or renaming files
+  or classes.
+- **Pass-through config class**: after Step 3, the legacy config class or file
+  (`ConfigLoader`, `config_loader.py`...) only builds `ConnectorSettings()` and
+  copies its fields one by one. Ask whether to remove it, and never create a new
+  one. If the user agrees, the entry point builds `ConnectorSettings()` and
+  passes it to the helper and the connector, the connector reads
+  `settings.<section>.<field>` directly, derived values move into the class that
+  uses them, and the imports and test references to the removed class go away.
+- Commit signing is configured but fails: report it, do not commit unsigned.
+- `mise run gs`, flake8 or the tests still fail after two fix attempts: report
+  the failing output.
 
-Questions go to the user directly. When you run as a subagent with no way to reach the user (see Run
-modes), return the question verbatim in your final report instead.
+## Pre-flight
 
-## Input and run modes
+Read before editing:
 
-Input: a connector path relative to the repo root (e.g., `external-import/vxvault`) and its GitHub
-issue number, taken from the user's request or the skill arguments, plus optional user preferences
-(e.g., "don't generate config schema", "skip the venv import check"). A preference may skip a check
-or a generation; say so in the report and adjust the expected commit count. It never lifts a hard
-rule.
+1. `src/`: find the module that loads `config.yml`, calls
+   `get_config_variable(...)` and builds `OpenCTIConnectorHelper`. That is
+   where the settings get wired in.
+2. `docker-compose.yml`: list every environment variable. Custom variables
+   (not `OPENCTI_*` or `CONNECTOR_*`) share a prefix that becomes the settings
+   section: `VXVAULT_URL`, `VXVAULT_SSL_VERIFY` give the section `vxvault`.
+3. `config.yml.sample` and `.env.sample` when present.
+4. `__metadata__/connector_manifest.json`: current `manager_supported` value
+   and display name.
+5. The connector type, from the parent directory: `external-import`,
+   `internal-enrichment`, `stream`, `internal-export-file`,
+   `internal-import-file`.
+6. The README configuration section.
+7. Any existing `settings.py` under `src/`: apply the "Already migrated" stop.
 
-Pick the mode:
-
-1. **One connector, no worktree given**: run Pre-flight and Steps 1-7 yourself in the current
-   working copy.
-2. **A worktree directory is given** (e.g., `../ms-vxvault`, passed by a coordinator or another
-   skill): `cd` into it first and do ALL reads, edits, validation and `git commit`s inside it, never
-   in the shared working copy. Never create or remove worktrees yourself, never launch agents. You
-   may have no way to reach the user: return questions in your final report. Commits stay on the
-   worktree's branch after the coordinator removes the worktree.
-3. **More than one connector path**: you are the coordinator. Do not run the steps yourself.
-   1. Check each path against the stop conditions first (path, manifest, `settings.py`) and make sure
-      each one has its own issue number. Ask about any flagged connector and do not start it until
-      answered; the others proceed.
-   2. One worktree and one branch per connector, from up-to-date `master`. Derive a slug from the path
-      (e.g. `external-import/vxvault` to `ms-vxvault`):
-      ```bash
-      git worktree add -b ms-<slug> ../ms-<slug> origin/master
-      ```
-      Each worktree has its own working copy but shares the repo, so commits land in the same repo
-      and different connectors never conflict.
-   3. Launch ALL workers in a single response, in the background, one `Agent` call per connector with
-      `subagent_type: "general-purpose"`. Each prompt: "Run the `connector-manager-supported-migration`
-      skill with the Skill tool on connector `<path>`, GitHub issue `<issue>`. Work ONLY in the git
-      worktree `<dir>`: `cd` into it first and do all edits, validation and `git commit -S`s there. Do
-      not create or remove worktrees, do not launch agents, do not push, do not open a PR. You cannot
-      reach the user: if the skill needs an answer, stop and return the question verbatim. Follow the
-      skill's hard rules, one commit per step, and its final report format. User preferences:
-      `<preferences or none>`."
-   4. Wait for the completion notifications (do not poll), read each result and report a
-      per-connector summary.
-   5. **Clean up a worktree** only when it was created in this run, its worker reported success and
-      its commits appear in `git log ms-<slug>`:
-      ```bash
-      git worktree remove ../ms-<slug>
-      ```
-      The branch `ms-<slug>` keeps the commits. Otherwise keep the worktree and tell the user why.
-
-If the user only asks a simple question about migration (e.g., "what does manager supported mean?"),
-answer directly without running the procedure.
-
-## Pre-flight: gather context
-
-Before any change, read and analyze:
-
-1. **Source files** in `src/`: locate the module that builds `OpenCTIConnectorHelper` and calls
-   `get_config_variable(...)` / loads `config.yml`. This is where you wire the settings.
-   **Note the existing layout: you must preserve it.**
-2. **docker-compose.yml**: extract ALL environment variables; custom ones (not `OPENCTI_*`/`CONNECTOR_*`)
-   share a prefix (e.g., `VXVAULT_*`) that becomes the Pydantic config section name
-3. **config.yml.sample** (if exists): cross-reference config vars, types, defaults
-4. **.env.sample** (if exists): additional config reference
-5. **`__metadata__/connector_manifest.json`**: check `manager_supported` status and connector type
-6. **Existing `settings.py`** anywhere under `src/`: apply the already-migrated stop condition
-7. **Connector type**, determined by parent directory:
-   `external-import`, `internal-enrichment`, `stream`, `internal-export-file`, `internal-import-file`
-
-### How to extract the config section name
-
-From docker-compose.yml environment vars, collect custom vars (not `OPENCTI_*`/`CONNECTOR_*`):
-
-```
-VXVAULT_URL=...        →  prefix = "VXVAULT_"
-VXVAULT_INTERVAL=...
-VXVAULT_SSL_VERIFY=...
-```
-
-Config section name = prefix lowercased without trailing underscore = `vxvault`.
-
-### How to infer field types from `get_config_variable`
+Infer field types from the legacy calls:
 
 ```python
 get_config_variable("ENV_VAR_NAME", ["section", "key"], config, isNumber, default, required)
-#                    ^1st arg         ^2nd arg             ^3rd   ^4th     ^5th     ^6th
 ```
 
-- 4th arg `True` → field type is `int`
-- 5th arg is the default value; `None` by default
-- 6th arg `True` → field is required (no default in Pydantic)
-- If env var name contains `token`, `key`, `secret`, `password` → use `SecretStr`
-- Boolean values (`True`/`False`/`true`/`false` in docker-compose) → `bool`
-- Everything else → `str`
+- `isNumber=True` gives `int`.
+- `default` gives the field default (`None` when absent).
+- `required=True` gives a field with no default.
+- `true`/`false` values give `bool`.
+- Names containing `token`, `key`, `secret` or `password` give `SecretStr`.
+- A value the code splits on commas (`.split(",")`, with or without `.strip()`)
+  gives `ListFromString` from `connectors_sdk` with a list default
+  (`default=["A", "B"]`). Remove the manual split in Step 3: the SDK type
+  already splits and strips. Do not test the splitting in the connector.
+- Everything else is `str`.
 
-### Comma-separated list values → `ListFromString`
+## Commits
 
-If the existing code does `.split(",")` (with or without `.strip()`) on a config value, type the field
-`ListFromString` (imported from `connectors_sdk`) with a **list** default (`default=["A", "B"]`),
-never `str`. `ListFromString` already splits on commas and strips the spaces, so remove the manual
-split from the code. Step 5 regenerates the schema, where the default becomes an array. Do not add a
-connector test for the splitting itself: `ListFromString` is tested once in the SDK
-(`connectors-sdk/tests/test_settings/test_annotated_types.py`), not in each connector.
+One commit per step, made as soon as the step is done and before the next
+one starts. Each commit is a reviewable unit, so never batch steps. Print
+`Step N/6 done: <message>` after each one.
 
-## Execution model: commit after every step
-
-The migration is 7 sequential steps. The commit IS the completion of the step: after finishing the
-edits for step N, commit IMMEDIATELY, print the progress line, then start step N+1. Never "come back
-to commit later".
-
-Commit with a signed commit (CI rejects unsigned ones):
+Before every commit, format the connector (versions pinned by CI in
+`ci-requirements.txt`, see `AGENTS.md`):
 
 ```bash
-git add -A -- <connector path> && git commit -S -m "<message>"
+uvx isort==7.0.0 --profile black --line-length 88 <path>
+uvx black==26.10.1 <path>
 ```
 
-Every message ends with the GitHub issue reference `(#<issue>)`, as required by the repository's
-Conventional Commits convention (`type(scope): description (#issue)`):
+Then commit with the repository's VCS:
 
-```
-Step 1 → feat(<name>): normalize config files for manager-supported migration (#<issue>)
-Step 2 → feat(<name>): add Pydantic settings for manager-supported mode (#<issue>)
-Step 3 → feat(<name>): use Pydantic settings in existing connector code (#<issue>)
-Step 4 → feat(<name>): set manager_supported to true in connector manifest (#<issue>)
-Step 5 → feat(<name>): generate connector config schema for manager-supported mode (#<issue>)
-Step 6 → feat(<name>): add unit tests for manager-supported mode (#<issue>)
-Step 7 → style(<name>): apply isort and black formatting (#<issue>)
-```
+- jj (a `.jj/` directory exists at the root): `jj commit -m "<message>"`
+- git: `git add <path> && git commit -S -m "<message>"`
 
----
+Messages, in order:
 
-## Step 1: Normalize config files
-
-### docker-compose.yml
-
-- Rename `docker-compose.yaml` → `docker-compose.yml` if needed
-- Uncomment `#- VAR=...` entries into valid YAML list items
-- Remove any `CONNECTOR_TYPE=...` line (SDK handles this now)
-- Normalize booleans: `False` → `false`, `True` → `true`
-
-### config.yml.sample (if exists)
-
-- Rename `config.yaml.sample` → `config.yml.sample` if needed
-- Uncomment `#key: value` lines used as real config keys
-
-### .env.sample
-
-- If missing (and no config.yml.sample exists), create from docker-compose env vars
-
-### src/requirements.txt: append if missing
-
-```
-pydantic >=2.8.2, <3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+```text
+1. feat(<name>): normalize config files for manager-supported migration (#<issue>)
+2. feat(<name>): add Pydantic settings for manager-supported mode (#<issue>)
+3. feat(<name>): use Pydantic settings in existing connector code (#<issue>)
+4. feat(<name>): set manager_supported to true in connector manifest (#<issue>)
+5. feat(<name>): generate connector config schema for manager-supported mode (#<issue>)
+6. feat(<name>): add unit tests for manager-supported mode (#<issue>)
 ```
 
-**→ Checkpoint: commit with the Step 1 message, then Step 2.**
+Do not push and do not open a pull request. CI rejects unsigned commits, so
+the person who ships the branch makes sure the commits are signed (jj signs
+its own commits on push when configured to).
 
----
+## Step 1: normalize config files
 
-## Step 2: Add settings.py (mirror the existing config)
+- Rename `docker-compose.yaml` to `docker-compose.yml` and
+  `config.yaml.sample` to `config.yml.sample` if needed.
+- Turn commented-out real settings (`#- VAR=...`, `#key: value`) back into
+  entries, so Step 2 sees every variable.
+- Remove `CONNECTOR_TYPE`: the SDK sets the type.
+- Write booleans as `true`/`false`.
+- Create `.env.sample` from the docker-compose variables only when neither
+  `config.yml.sample` nor `.env.sample` exists.
+- Append to `src/requirements.txt` if missing:
 
-Create a `settings.py` **next to the existing module that loads the config** (e.g., if the entry
-point is `src/main.py`, create `src/settings.py`; if the connector already has a package like
-`src/mypkg/`, put it in `src/mypkg/settings.py`). **Do NOT create a new `connector/` package or
-restructure anything.**
+  ```text
+  pydantic >=2.8.2, <3
+  connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+  ```
 
-Mirror the connector's **existing** config variables 1:1 into Pydantic. Do NOT introduce new config
-concepts (no `duration_period` migration, no `DeprecatedField`): keep the connector's own fields,
-including its existing `interval`/`polling` field, exactly as they are today.
+Commit 1.
 
-### Pattern by connector type
+## Step 2: add settings.py
 
-Use the SDK base config for the standard `opencti`/`connector` sections; keep the connector's own
-variables in a custom section.
+Create `settings.py` next to the module that loads the config: `src/settings.py`
+for a flat layout, `src/<pkg>/settings.py` when the code already lives in a
+package. Do not create a new package.
 
-**EXTERNAL_IMPORT** (custom config section):
+Mirror the existing variables one to one. Keep the connector's own field
+names, even odd ones; renames are follow-up work (see the end of this file).
 
 ```python
+"""OpenCTI <Name> connector settings module."""
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -269,33 +257,16 @@ from connectors_sdk import (
 from pydantic import Field, SecretStr
 
 
-class <ConnectorName>Config(BaseConfigModel):
-    """Config fields specific to this connector (mirror of the existing variables)."""
-    url: str = Field(description="...", default="...")
-    api_key: SecretStr = Field(description="...")          # no default = required
-    ssl_verify: bool = Field(description="...", default=True)
-    interval: int = Field(description="...", default=60)   # keep the existing scheduling field
-```
+class <Name>ConnectorConfig(BaseExternalImportConnectorConfig):
+    """Defaults of the `connector` section for the <Name> connector."""
 
-**INTERNAL_ENRICHMENT:** Use `BaseInternalEnrichmentConnectorConfig`.
-**STREAM:** Use `BaseStreamConnectorConfig`.
-**INTERNAL_EXPORT_FILE:** Use `BaseInternalExportFileConnectorConfig`.
-**INTERNAL_IMPORT_FILE:** Use `BaseInternalImportFileConnectorConfig`.
-
-### MANDATORY: subclass the connector config and give `id` a unique UUIDv4 default
-
-Never use the SDK base connector config directly. Always declare a connector-specific subclass that
-overrides `id`, `name` and `scope` with this connector's own defaults, and use it in `ConnectorSettings`:
-
-```python
-class <ConnectorName>ConnectorConfig(BaseExternalImportConnectorConfig):  # or the type-matching base
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
-        default="<FRESH-UNIQUE-UUIDV4>",
+        default="<fresh UUIDv4>",
     )
     name: str = Field(
         description="The name of the connector.",
-        default="<ConnectorName>",
+        default="<display name>",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
@@ -303,204 +274,239 @@ class <ConnectorName>ConnectorConfig(BaseExternalImportConnectorConfig):  # or t
     )
 
 
+class <Name>Config(BaseConfigModel):
+    """Settings specific to the <Name> connector."""
+
+    api_key: SecretStr = Field(description="...")  # no default: required
+    ssl_verify: bool = Field(description="...", default=True)
+
+
 class ConnectorSettings(BaseConnectorSettings):
-    connector: <ConnectorName>ConnectorConfig = Field(
-        default_factory=<ConnectorName>ConnectorConfig
-    )
-    <section>: <ConnectorName>Config = Field(default_factory=<ConnectorName>Config)
+    """Settings of the <Name> connector."""
+
+    connector: <Name>ConnectorConfig = Field(default_factory=<Name>ConnectorConfig)
+    <section>: <Name>Config = Field(default_factory=<Name>Config)
 ```
 
-Why: `_BaseConnectorConfig.id` in the SDK (`connectors-sdk/connectors_sdk/settings/base_settings.py`)
-is **required with no default**. Without the override, `CONNECTOR_ID` stays mandatory and the
-connector cannot be deployed from the catalog without manual input. 80+ connectors already follow
-this convention and no linter enforces it, so check it explicitly.
+Base class per type: `BaseExternalImportConnectorConfig`,
+`BaseInternalEnrichmentConnectorConfig`, `BaseStreamConnectorConfig`,
+`BaseInternalExportFileConnectorConfig`,
+`BaseInternalImportFileConnectorConfig`. Always subclass it: never use the
+SDK base config directly.
 
-Rules for the UUID:
+### The `connector.id` default is mandatory
 
-1. **Generate a fresh UUIDv4**: never copy one from another connector, never invent one by hand, never
-   use a pattern-looking placeholder (`00000000-...`, `aaaaaaaa-bbbb-...`).
+The SDK declares `connector.id` required with no default, so without this
+override the connector cannot be deployed from the catalog without manual
+input. No linter catches a missing override.
 
-   ```bash
-   python3 -c "import uuid; print(uuid.uuid4())"
-   ```
+1. Generate the value: `python3 -c "import uuid; print(uuid.uuid4())"`. Never
+   copy one from another connector and never type a pattern by hand.
+2. Check that it is unique: `grep -rI "<uuid>" --include='*.py' . | grep -v '/.venv/'`
+   must return only this `settings.py`.
+3. If the connector already declares an `id` default, keep it, but run the
+   same uniqueness check.
 
-2. **Verify it is unique across the repo before committing:**
+Keep `CONNECTOR_ID=ChangeMe` in `docker-compose.yml` and the samples:
+connector-linter (VC104) accepts `ChangeMe`, and a real UUID there would give
+every deployment the same identity. The schema generator always drops
+`CONNECTOR_ID`, so the default does not show in the schema.
 
-   ```bash
-   grep -rI "<the-uuid>" --include='*.py' . | grep -v '/.venv/'   # MUST return nothing
-   ```
+### Scheduling of external-import connectors
 
-3. If the connector **already** declares an `id` default, keep it, but still confirm it is unique
-   repo-wide (duplicates exist, e.g. the two `team-cymru-scout*` connectors).
+`BaseExternalImportConnectorConfig.duration_period` is required with no
+default. The connector keeps its own loop, so pick one of these:
 
-Two things this does **not** change; do not "fix" them:
+- **The connector has an interval variable** (`<SECTION>_INTERVAL`,
+  `<SECTION>_INTERVAL_SEC`, ...): make `CONNECTOR_DURATION_PERIOD` the
+  setting and keep the legacy variable working through `DeprecatedField`.
+  Step 3 then reads the sleep duration from `duration_period`; the loop
+  itself does not change.
 
-- **Generated config schema is unaffected.** `ConnectorConfigJsonSchemaGenerator.filter_schema`
-  always removes `CONNECTOR_ID`, so adding a default needs no regeneration.
-- **`docker-compose.yml` / `config.yml.sample` keep `CONNECTOR_ID=ChangeMe`.** Linter check VC104
-  accepts `ChangeMe` (and `${ENV_REF}`). A real UUID committed as a deployment value would give every
-  deployment the same identity in OpenCTI.
+  ```python
+  from datetime import timedelta
 
-### Update config files to match the settings
+  from connectors_sdk import DeprecatedField
 
-- Ensure the vars exist in `docker-compose.yml`, and in `config.yml.sample` / `.env.sample` if present
-- Settings **with** default values → present but **commented out** (defaults in settings.py are the
-  source of truth)
-- Settings **without** default values (required) → present, **uncommented**, value `ChangeMe`
 
-### Legacy `ConfigLoader` export
+  class <Name>ConnectorConfig(BaseExternalImportConnectorConfig):
+      # id, name, scope as above
+      duration_period: timedelta = Field(
+          description="The period of time to await between two runs of the connector.",
+          default=timedelta(minutes=5),  # the legacy interval default
+      )
 
-The config-schema generator tries `ConfigLoader` first (`from src import ConfigLoader`, then
-`from src.main import ConfigLoader`), and only then `ConnectorSettings`. If an **existing**
-`src/__init__.py` exports a legacy `ConfigLoader`, **replace** that export with `ConnectorSettings`
-(mirror the connector's own import style); otherwise the schema would be built from the OLD config.
-Do NOT create a `src/__init__.py` here: whether one is needed is decided in Step 5.
 
-**→ Checkpoint: commit with the Step 2 message, then Step 3.**
+  class <Name>Config(BaseConfigModel):
+      interval_sec: int | None = DeprecatedField(
+          deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+          new_namespace="connector",
+          new_namespaced_var="duration_period",
+          new_value_factory=lambda seconds: timedelta(seconds=int(seconds)),
+      )
+  ```
 
----
+  Match the unit of `new_value_factory` to the legacy variable (seconds,
+  minutes, hours, days). `BaseConnectorSettings` migrates the value and warns,
+  so no validator is needed.
 
-## Step 3: Use the settings in the existing code (in place)
+- **The connector has no interval variable** (fixed sleep, cron, run once):
+  hide the inherited field so the schema does not advertise a setting that
+  does nothing.
 
-Edit the **existing** module(s) in place. Make the smallest change that swaps configuration loading
-to the Pydantic settings. Do not move code, split files, rename the class, or change the scheduling
-loop or logging.
+  ```python
+  from pydantic.json_schema import SkipJsonSchema
 
-Import the settings using the existing import style, e.g. `from settings import ConnectorSettings`.
 
-### Replacement rules
+  class <Name>ConnectorConfig(BaseExternalImportConnectorConfig):
+      # id, name, scope as above
+      duration_period: SkipJsonSchema[None] = Field(
+          description="Not used: the connector keeps its own scheduling.",
+          default=None,
+      )
+  ```
+
+This is the only scheduling change of the migration. Converting the loop to
+`schedule_iso` stays out of scope.
+
+### Other type-specific points
+
+- **Stream:** `live_stream_id` stays required. Do not give it a default.
+- **`CONNECTOR_UPDATE_EXISTING_DATA`** is deprecated: do not add a field for it.
+  Step 3 stops reading and passing it.
+
+### Config files and README
+
+- Every setting appears in `docker-compose.yml`, and in `config.yml.sample` or
+  `.env.sample` when they exist.
+- A setting with a default is present but commented out, with the default
+  from `settings.py` as its value. `settings.py` is the source of truth.
+- A required setting is uncommented with the value `ChangeMe`.
+- The README configuration section is updated in Step 5, once the generated
+  documentation exists.
+
+### Make `ConnectorSettings` importable by the schema generator
+
+The generator imports `from src import ConnectorSettings`, then
+`from src.main import ConnectorSettings`. Many connectors need no
+`src/__init__.py` because `src/main.py` already imports `ConnectorSettings` at
+module level. Do not add one up front. When Step 5 fails with an import error
+on `ConnectorSettings` (typical case: Step 3 builds the settings in a class
+module, so `src/main.py` does not import them), add a minimal `src/__init__.py`
+in the Step 5 commit, using the same import style as the connector's entry
+point:
+
+```python
+from <pkg>.settings import ConnectorSettings  # or: from settings import ConnectorSettings
+
+__all__ = ["ConnectorSettings"]
+```
+
+Do not add an unused `ConnectorSettings` import to `src/main.py` for the
+generator: flake8 flags it (F401).
+
+The generator tries `ConfigLoader` before `ConnectorSettings`. If an existing
+`src/__init__.py` exports a legacy `ConfigLoader`, replace that export in this
+step, otherwise the schema is built from the old config.
+
+`settings.py` and, only when needed, `src/__init__.py` are the only new source
+files of the migration.
+
+Commit 2.
+
+## Step 3: use the settings in the existing code
+
+Edit the existing module in place, with the smallest change that swaps the
+config source. Import the settings in the connector's own import style, for
+example `from settings import ConnectorSettings`.
 
 | Legacy code | Replacement |
 |---|---|
-| `config = yaml.load(open(config_file_path), ...)` (and the file-path plumbing) | Remove; not needed anymore |
-| `self.helper = OpenCTIConnectorHelper(config)` | `self.config = ConnectorSettings()` then `self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())` |
-| `get_config_variable("VAR", ["section", "key"], config, ...)` | `self.config.<section>.<field>` |
-| `get_config_variable("CONNECTOR_*", ...)` (standard vars) | read from `self.config.connector.<field>` |
+| `yaml.load(open(config_file_path), ...)` and the path plumbing | Remove |
+| `OpenCTIConnectorHelper(config)` | `self.config = ConnectorSettings()`, then `OpenCTIConnectorHelper(config=self.config.to_helper_config())` |
+| `get_config_variable("<SECTION>_<KEY>", ...)` | `self.config.<section>.<key>` |
+| `get_config_variable("CONNECTOR_<KEY>", ...)` | `self.config.connector.<key>` |
+| A `SecretStr` value passed to a client, an auth header or a URL | `.get_secret_value()` (keep the `None` case of an optional secret) |
+| A legacy interval read | `int(self.config.connector.duration_period.total_seconds())` (or the unit the loop expects) |
+| `get_config_variable("CONNECTOR_UPDATE_EXISTING_DATA", ...)` | Remove the read: the SDK has no such field |
+| `update=update_existing_data` in `send_stix2_bundle` | Remove the argument |
 
-For **internal-enrichment**, if the helper is built with `playbook_compatible=True`, preserve that:
-`OpenCTIConnectorHelper(config=self.config.to_helper_config(), playbook_compatible=True)`.
+A secret read through `self.config.<section>.<key>` is a `SecretStr`. Unwrap
+it at every place where it leaves the settings (client constructor,
+`Authorization` header, query string). Mocked tests do not catch a missed one:
+the client would send the masked value and the API answers 401.
 
-### Rules
+- Build `ConnectorSettings()` where the config was loaded before (usually
+  `__init__`, sometimes the `__main__` block).
+- Keep `playbook_compatible=True` on the helper when it is already there:
+  `OpenCTIConnectorHelper(config=self.config.to_helper_config(), playbook_compatible=True)`.
+- Keep the scheduling loop, the logging calls, the class names and the
+  `if __name__ == "__main__"` block.
+- Read values from `self.config.<section>.<field>`, not from a legacy class
+  that copies them. If that class ends up as a pass-through, apply the stop
+  condition.
+- Keep files that become unused (a legacy config loader, for example) and
+  list them in the report: deleting them is a separate decision.
+- If `yaml` is no longer imported anywhere in `src/`, remove `pyyaml` from
+  `requirements.txt` (the deptry CI job flags unused dependencies).
 
-- **Instantiate `ConnectorSettings()` where the config was previously loaded** (usually the class
-  `__init__`, or the `__main__` block if that's where the helper is built): mirror the existing flow.
-- **Keep the existing scheduling** (`while True` + `time.sleep(self.interval)` stays; do NOT convert
-  to `schedule_iso`). Read the interval from `self.config.<section>.interval`.
-- **Do not touch logging calls, converters, STIX-ID generation, or method bodies** beyond swapping
-  the config source.
-- **Keep the `if __name__ == "__main__"` block** and the class name intact.
-- **Read values from `self.config.<section>.<field>`**, not from a legacy config class that copies
-  them. If that class ends up as a pass-through, apply the "Pass-through config class" stop condition.
+Commit 3.
 
-**→ Checkpoint: commit with the Step 3 message, then Step 4.**
+## Step 4: manifest
 
----
+In `__metadata__/connector_manifest.json`, set `"manager_supported": true`.
+Change nothing else: `verified`, `last_verified_date` and the other fields
+belong to maintainers.
 
-## Step 4: Update the connector manifest
+Commit 4.
 
-In `__metadata__/connector_manifest.json`, set:
-
-```json
-"manager_supported": true
-```
-
-Do NOT modify any other fields.
-
-**→ Checkpoint: commit with the Step 4 message, then Step 5.**
-
----
-
-## Step 5: Generate the manager-supported config schema
-
-The connector manager consumes a generated env-var **config schema**. Generating it also proves that
-`ConnectorSettings` is wired correctly: a broken import here means the connector is **not actually
-manager-supported**, so this step MUST pass.
-
-### Generate
-
-Run the repo's generator (it builds a temp venv, imports `ConnectorSettings`, and writes
-`__metadata__/connector_config_schema.json` + `__metadata__/CONNECTOR_CONFIG_DOC.md`):
+## Step 5: generate the config schema and update the README
 
 ```bash
-mise run generate_config_schema .     # alias: mise gs .
+mise run gs <path>
 ```
 
-- It MUST exit 0 with no `ImportError` / `ModuleNotFoundError` for `ConnectorSettings`.
-- The SDK pins an exact `pycti` version (see `connectors-sdk/pyproject.toml`). If the connector's
-  `src/requirements.txt` pins an older `pycti`, dependency resolution fails and generation stops.
-  Set the connector's `pycti` pin to the SDK's version (a one-line change to `src/requirements.txt`,
-  committed with Step 5 and mentioned in the report). If the connector has other pins that conflict,
-  stop and report instead of guessing.
-- If the connector pins `stix-shifter` / `antlr4` (some stream connectors), the default Python 3.13
-  venv fails on the removed `typing.io`; run it with Python 3.11:
-  `UV_PYTHON=3.11 mise run generate_config_schema .`
+It writes `__metadata__/connector_config_schema.json` and
+`__metadata__/CONNECTOR_CONFIG_DOC.md`. Never edit those by hand.
 
-### Exposing `ConnectorSettings` to the generator (only when needed)
+- It must exit 0. An `ImportError` on `ConnectorSettings` means the generator
+  cannot find it: add the `src/__init__.py` re-export described in Step 2 (or
+  fix the `ConfigLoader` export) and rerun.
+- The task builds its own Python 3.12 environment and installs this
+  checkout's `connectors-sdk`. That SDK pins an exact pycti. If the connector
+  pins an older pycti, dependency resolution fails: report it rather than
+  bumping pycti inside this migration (`AGENTS.md` says to rebase on the
+  latest `master` first).
+- Check the result: `required` lists `OPENCTI_URL`, `OPENCTI_TOKEN` and the
+  connector's required variables, and every setting has a property.
 
-The generator imports the model with `from src import ConnectorSettings`, then falls back to
-`from src.main import ConnectorSettings`. **Do not add a `src/__init__.py` up front**: this migration does not
-add files unnecessarily, and most already-migrated connectors have none (about two thirds of the
-manager-supported connectors in the monorepo have no `src/__init__.py` and rely on their entry point
-`src/main.py` importing `ConnectorSettings` at module level).
-
-Run the generator first. Add the minimal re-export **only if** it fails with a `ConnectorSettings`
-import error (typical case: Step 3 instantiated the settings in a class module, so `src/main.py` does
-not import `ConnectorSettings`, and `src` has no export). Mirror the entry point's own import style:
-
-```python
-# src/__init__.py: flat layout (settings at src/settings.py)
-from settings import ConnectorSettings
-
-__all__ = ["ConnectorSettings"]
-```
-
-```python
-# src/__init__.py: package layout (settings at src/<pkg>/settings.py)
-from <pkg>.settings import ConnectorSettings
-
-__all__ = ["ConnectorSettings"]
-```
-
-Re-run until it exits 0. A new `src/__init__.py` goes into the Step 5 commit. Do not add an unused
-`ConnectorSettings` import to `src/main.py` just for the generator (flake8 F401): use the re-export.
-Also make sure no legacy `ConfigLoader` remains importable from `src` or `src.main`.
-
-### Update the README configuration section
-
-Once `CONNECTOR_CONFIG_DOC.md` exists, the README section that documents the configuration (usually
-"Configuration") is replaced by a link to it, as in the connector templates:
+Then replace the README configuration section (usually "Configuration") with a
+link to the generated document, as in `templates/<type>/README.md`:
 
 ```markdown
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 ```
 
-- Delete the parameter tables of that section (Generic Parameters, connector-specific parameters,
-  etc.): the generated doc lists every variable. Keep the other sections and any prose that is not a
-  variable table.
-- If `CONNECTOR_MAX_TLP` appears in the generated schema and `grep -rn max_tlp src/` finds no read of
-  it in the connector code, add this note under the link: `> **Note:** CONNECTOR_MAX_TLP is listed
-  there, but the connector does not check it yet.`
-- The README change goes into the Step 5 commit.
+- Delete the parameter tables of that section: the generated document lists
+  every variable. Keep the other sections and any prose that is not a table.
+- If `CONNECTOR_MAX_TLP` appears in the generated schema and `grep -rn max_tlp
+  <path>/src` finds no read of it, add under the link: `> **Note:**
+  CONNECTOR_MAX_TLP is listed there, but the connector does not check it yet.`
 
-### Sanity check the output
+Commit 5, with the README and any `src/__init__.py`.
 
-`required` lists the connector's mandatory env vars (e.g. `OPENCTI_URL`, `OPENCTI_TOKEN`, plus
-your required custom vars) and the property count matches your settings.
+## Step 6: tests
 
-**→ Checkpoint: commit with the Step 5 message, then Step 6.**
+Follow `templates/<type>/tests/` for layout and pins.
 
----
+`tests/test-requirements.txt`:
 
-## Step 6: Create test files
-
-### tests/test-requirements.txt
-
-```
+```text
 -r ../src/requirements.txt
-pytest==8.4.2
+pytest==<same pin as templates/<type>/tests/test-requirements.txt>
 ```
 
-### tests/conftest.py
+`tests/conftest.py`:
 
 ```python
 import os
@@ -509,205 +515,154 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 ```
 
-### tests/test_main.py
-
-Create with three tests using a `StubConnectorSettings` that overrides `_load_config_dict`:
-
-1. `test_connector_settings_is_instantiated`: verify `to_helper_config()` returns dict
-2. `test_opencti_connector_helper_is_instantiated`: verify helper attributes from config
-3. `test_connector_is_instantiated`: verify the existing connector class instantiates with the stubbed
-   settings (patch `ConnectorSettings` where the class imports it; use the helper fixture below)
-
-The stub config dict MUST match the fields in settings.py. Use realistic values from docker-compose.yml.
-Use the connector's existing fields, including `interval`. Do NOT add `duration_period` (the existing
-scheduling is kept) and do NOT add a deprecated-interval migration test (there is no `DeprecatedField`).
-
-Mock these in the `mock_opencti_connector_helper` fixture:
-
-```python
-module_import_path = "pycti.connector.opencti_connector_helper"
-monkeypatch.setattr(f"{module_import_path}.killProgramHook", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
-monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
-```
+Keep any existing tests and test files.
 
 ### tests/tests_connector/test_settings.py
 
-Create with two parametrized test functions:
-
-1. `test_settings_should_accept_valid_input` with:
-   - `full_valid_settings_dict`: ALL fields (required + optional)
-   - `minimal_valid_settings_dict`: only required fields, connector section empty `{}`
-
-2. `test_settings_should_raise_when_invalid_input` with:
-   - `empty_settings_dict`: `{}`
-   - `missing_opencti_token`: opencti without token
-   - `invalid_connector_id`: connector.id as int instead of str
-
-Both use `FakeConnectorSettings` subclass that overrides `_load_config_dict`.
-Invalid cases assert `ConfigValidationError` with message containing `"Error validating configuration"`.
-
-3. `test_settings_should_default_connector_id`: MANDATORY, guards the Step 2 `id` override.
-   Pass a config dict whose `connector` section is empty (`{}`), plus any sibling field the connector
-   genuinely requires (e.g. `live_stream_id` for STREAM), and assert both the exact default and that
-   it is a real UUIDv4:
+Each test subclasses `ConnectorSettings` and overrides `_load_config_dict` to
+return a dict, so no environment variable or file is read:
 
 ```python
-from uuid import UUID
-
-def test_settings_should_default_connector_id():
-    """The connector id MUST fall back on its unique default UUID v4."""
-
-    class FakeConnectorSettings(ConnectorSettings):
-        @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-            return handler({**MINIMAL_VALID_SETTINGS_DICT, "connector": {}})
-
-    settings = FakeConnectorSettings()
-
-    assert settings.connector.id == "<THE-UUID-FROM-SETTINGS-PY>"
-    assert UUID(settings.connector.id).version == 4
+class FakeConnectorSettings(ConnectorSettings):
+    @classmethod
+    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        return handler(settings_dict)
 ```
 
-**→ Checkpoint: commit with the Step 6 message, then Step 7.**
+Define `MINIMAL_VALID_SETTINGS_DICT`: OpenCTI URL and token, the `connector`
+fields the type requires (`live_stream_id` for a stream; none for the other
+types), and the required custom fields only. Cover:
 
----
+1. `test_settings_should_accept_valid_input`, parametrized with every field
+   set, and with `MINIMAL_VALID_SETTINGS_DICT`.
+2. `test_settings_should_apply_defaults`: the minimal dict yields the
+   documented defaults (name, scope, custom fields, and `duration_period`
+   for an external-import connector).
+3. `test_settings_should_default_connector_id`: the minimal dict with only
+   `connector.id` omitted gives `settings.connector.id` equal to the UUID from
+   `settings.py`, and `UUID(settings.connector.id).version == 4`. Keep the other
+   required `connector` fields (`live_stream_id` for a stream).
+4. `test_settings_should_raise_when_invalid_input`, parametrized with `{}`, a
+   missing OpenCTI token, `connector.id` given as an int, and each missing
+   required custom field. Assert `ConfigValidationError` with
+   `"Error validating configuration"` in the message.
+5. With a `DeprecatedField` interval:
+   - the legacy value alone migrates to `duration_period`, under
+     `pytest.warns(UserWarning, match="<section>.<field>")`;
+   - when both are set, `duration_period` wins, under
+     `pytest.warns(UserWarning, match="Using only 'connector.duration_period'")`.
 
-## Step 7: Format and validate
+### tests/test_main.py
 
-### Format
+Mock the heavy parts of the helper:
 
-Run from the repository root, with the versions CI pins (`ci-requirements.txt`, also in `AGENTS.md`),
-isort first and black second. A different local version can format differently and fail the CI check:
-
-```bash
-uvx isort==7.0.0 --profile black --line-length 88 <connector path>
-uvx black==26.10.1 <connector path>
+```python
+@pytest.fixture
+def mock_opencti_connector_helper(monkeypatch):
+    module_import_path = "pycti.connector.opencti_connector_helper"
+    monkeypatch.setattr(f"{module_import_path}.killProgramHook", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
+    monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 ```
 
-### Lint
+Define a `StubConnectorSettings` with realistic values from
+`docker-compose.yml` and every non-deprecated field of `settings.py`, then:
+
+1. `test_connector_settings_is_instantiated`: `to_helper_config()` returns a
+   dict.
+2. `test_opencti_connector_helper_is_instantiated`: a helper built from
+   `to_helper_config()` exposes the URL, token, connector id, name, scope and
+   log level.
+3. `test_connector_is_instantiated`: the existing class builds its own
+   settings, so patch the name it imports
+   (`monkeypatch.setattr("<module>.ConnectorSettings", StubConnectorSettings)`),
+   mock the external API client, instantiate the class as the entry point
+   does, and assert that `config` is the stub, the helper comes from it, and
+   the custom values reach the objects that use them.
+
+Commit 6.
+
+## Validation
 
 From the repository root:
 
 ```bash
-uvx flake8 --ignore=E,W <connector path>
+uvx flake8 --ignore=E,W <path>
+(cd shared/tools/connector_linter && uv run connector-linter check ../../../<path>)
+python3 .github/scripts/deptry_scan.py <path>
+bash run_test.sh ./<path>/tests/test-requirements.txt
 ```
 
-### Test
+- `run_test.sh` blocks network access, installs the local `connectors-sdk` and
+  needs git and an `origin/master` ref. In a jj workspace with no `.git`,
+  or when it skips the connector for lack of changes since the merge base, use
+  a throwaway environment instead (it does not block the network, so mock every
+  call):
 
-From the connector directory:
+  ```bash
+  uv venv -p 3.12 /tmp/<name>-venv
+  uv pip install --python /tmp/<name>-venv -q -r <path>/tests/test-requirements.txt
+  uv pip install --python /tmp/<name>-venv -q ./connectors-sdk
+  /tmp/<name>-venv/bin/python -m pytest <path>/tests -q
+  rm -rf /tmp/<name>-venv
+  ```
 
-```bash
-# Create temp venv, install deps, run pytest
-python3.12 -m venv /tmp/<connector>_test_venv
-source /tmp/<connector>_test_venv/bin/activate
-pip install -q -r tests/test-requirements.txt
-python -m pytest tests/ -v
-deactivate && rm -rf /tmp/<connector>_test_venv
-```
+- connector-linter now runs on this connector in CI (it is manager-supported).
+  Fix findings caused by the migration. Report the others without fixing
+  them: they belong to the verified work.
+- Rerun the `connector.id` uniqueness check.
 
-### Import sanity check
+A failure caused by the migration gets fixed and committed as
+`fix(<name>): <what> (#<issue>)`, or folded into the step that introduced it
+when the VCS makes that easy (`jj squash --into <change>`).
 
-Validate that the settings module imports and the existing entry module still imports cleanly, in a
-temp venv so connectors-sdk and the connector's deps are available:
+## Report
 
-```bash
-python3.12 -m venv /tmp/<connector>_migration_venv
-source /tmp/<connector>_migration_venv/bin/activate
-pip install -q -r src/requirements.txt
-python -c "import sys; sys.path.insert(0, 'src'); from settings import ConnectorSettings; print('settings OK')"
-deactivate && rm -rf /tmp/<connector>_migration_venv
-```
-
-Adjust the import path to the actual location of `settings.py`.
-
-### Connector id uniqueness check
-
-Confirm the UUIDv4 default declared for `connector.id` in Step 2 exists nowhere else in the repo:
-
-```bash
-grep -rI "<the-uuid>" --include='*.py' . | grep -v '/.venv/'   # MUST return only this connector's settings.py
-```
-
-If it returns any other connector, generate a new UUIDv4 and update both `settings.py` and the
-`test_settings_should_default_connector_id` assertion.
-
-If lint, tests or the import check fail, fix and re-run BEFORE committing. After two failed fix
-attempts, stop and report the failing output (see Stop conditions).
-
-**→ Checkpoint: commit with the Step 7 message ONLY if formatting changed files (check with `git diff` first). Otherwise skip the commit and say so.**
-
----
-
-## Reporting
-
-Before reporting, run `git log --oneline -n 10 --show-signature` and confirm 6-7 signed migration
-commits exist. If fewer, say so explicitly and do not report success. In a batch, give one
-block per connector.
-
-Final report, under 40 lines per connector:
+Before reporting, list the commits (`jj log` or `git log --show-signature`) and
+confirm the six migration commits exist. If fewer, say so and do not report
+success. With several connectors, give one block per connector.
 
 | Step | Commit | Status |
-|------|--------|--------|
-| 1. Config normalization | `<hash>` | ✅ |
-| 2. Pydantic settings | `<hash>` | ✅ |
-| 3. Settings wired into existing code | `<hash>` | ✅ |
-| 4. Manifest metadata | `<hash>` | ✅ |
-| 5. Config schema generation | `<hash>` | ✅ |
-| 6. Unit tests | `<hash>` | ✅ |
-| 7. Format & validate | `<hash>` | ✅ or skipped (no formatting changes) |
+|---|---|---|
+| 1. Config files | `<id>` | done / skipped (why) |
+| ... | | |
 
-Also report:
+Then:
 
-- Manager-supported: config now flows through validated Pydantic settings; **file structure unchanged**.
-- Whether a `src/__init__.py` re-export was needed (Step 5) and why.
-- Not "verified": no restructuring, no scheduling/logging modernization, no converter/STIX-ID cleanup.
-  Point the user to the right follow-up (see Out of scope).
-- Test count passing, flake8 result, any manual follow-up needed, and any user preference that skipped
-  a step.
+- Test count and the result of each validation command.
+- The generated `connector.id` UUID.
+- Whether a `src/__init__.py` re-export was needed, and why.
+- Files left unused by the migration (kept on purpose).
+- Follow-up candidates spotted but not done: variables with a wrong or
+  copied prefix (`CONNECTOR_TEMPLATE_*`), connector-linter findings, verified
+  work (restructuring, `schedule_iso`, logging, STIX IDs).
 
-**Done when**, all true: the 6-7 commits exist with the messages above; `ConnectorSettings` has a
-connector-specific config with a unique UUIDv4 `id` default; `mise gs` exits 0; flake8 and pytest pass;
-the manifest says `manager_supported: true`; no file was deleted, split or renamed beyond Step 1 and a pass-through config file the user approved removing.
+Done when: the six commits exist with the messages above, each ending with the
+issue reference; `ConnectorSettings` has a connector-specific config with a
+unique UUIDv4 `id` default; `mise run gs` exits 0; flake8, connector-linter,
+deptry and the tests pass; the manifest says `manager_supported: true`; no file
+was deleted, split or renamed beyond Step 1 and an approved pass-through
+config class.
 
-## Out of scope
+## Follow-ups, only when asked
 
-- Restructuring into a `src/connector/` package (`settings.py`, `connector.py`, `__init__.py`), adding
-  `src/main.py`, injecting `config` and `helper` into the connector class, converting scheduling to
-  `schedule_iso` with `duration_period` (and a `DeprecatedField` for the old interval), and moving
-  logging to `connector_logger`. The reference layout is `templates/<type>/`. Do it as a separate,
-  explicitly requested change.
-- The broader "Verified" criteria (for example STIX-ID determinism or converter cleanup). The
-  connector-linter command in `AGENTS.md` ("Validation commands") checks them.
-- If wiring the settings needs that restructuring, stop (see Stop conditions). Never silently expand
-  scope.
+Reviews often ask for these after the six steps. Each one is its own commit.
 
-## Common pitfalls
+- **Rename a variable** (wrong prefix, misleading name): add the new field
+  and turn the old one into a `DeprecatedField` pointing at it
+  (`new_namespace`, `new_namespaced_var`), update the samples, README, schema
+  and tests. Never hand-write alias fallbacks.
+- **Delete the legacy config loader** once nothing imports it.
+- **Fix behavior the migration exposed** (for example an internal-enrichment
+  connector that does not send the original bundle back to a playbook):
+  follow the rules for the connector type in `AGENTS.md`.
 
-- **Stay minimal**: if you catch yourself creating a `connector/` package, splitting files, renaming
-  classes, converting to `schedule_iso`, or refactoring logging, STOP. That is the full migration.
-- **Mirror config 1:1**: no new config concepts; keep the existing `interval` field and scheduling.
-- **Build the helper from `to_helper_config()`**: this is what makes it manager-supported.
-- **Import ordering**: third-party imports before local (isort handles this).
-- **Commit granularity**: one commit per step (6-7 total; Step 7 commits only if formatting changed
-  files). Fewer than 6 means a step was batched: split it. Every commit is signed and ends with
-  `(#<issue>)`.
-- **Schema generation must pass**: add the `src/__init__.py` re-export only when the generator cannot
-  import `ConnectorSettings`, and replace any legacy `ConfigLoader` export. Use `UV_PYTHON=3.11` for
-  `stix-shifter`/`antlr4` connectors.
-- **Never leave `connector.id` without a default**: freshly generated, repo-unique UUIDv4 (Step 2).
-  It is the most frequently forgotten part of this migration. Keep `CONNECTOR_ID=ChangeMe` in the
-  config files regardless.
-- **Do not overwrite earlier work**: an existing `settings.py` or `manager_supported: true` is a stop
-  signal, not something to redo.
+## Reminders
 
-## Reminders (restated)
-
-One commit per step, signed, ending with `(#<issue>)`, printed as `✅ Step N/7`. Structure-preserving
-only: no restructuring, renames, `schedule_iso` or logging refactor. Never delete existing files. Never
-invent a UUID or an issue number. One git worktree per connector in a batch. Stop and ask when the manifest already says `manager_supported: true` or a
-`settings.py` already exists (name the signal), and on every other listed stop condition.
+One commit per step, each ending with `(#<issue>)`. Structure-preserving only. Mirror the existing
+variables, handle `duration_period` as in Step 2, unwrap secrets, never overwrite an existing
+`settings.py`, never push. Stop and ask on every stop condition.
