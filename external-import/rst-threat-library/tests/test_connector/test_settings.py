@@ -196,7 +196,9 @@ def test_settings_migrates_hyphen_namespace():
                 }
             )
 
-    settings = FakeConnectorSettings()
+    # Hyphen namespace is deprecated on purpose; migration emits UserWarnings.
+    with pytest.warns(UserWarning, match="Deprecated setting 'rst-threat-library"):
+        settings = FakeConnectorSettings()
     assert settings.rst_threat_library.apikey.get_secret_value() == "migrated-key"
     assert settings.rst_threat_library.merge_split is True
 
