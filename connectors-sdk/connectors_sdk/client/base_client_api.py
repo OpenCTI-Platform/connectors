@@ -321,7 +321,7 @@ class BaseClientApi(_ClassLoggerMixin):
             ApiNotFoundError: On 404.
             ApiRateLimitError: On 429 after retries exhausted.
             ApiServerError: On 5xx after retries exhausted.
-            ApiClientError: On other HTTP errors.
+            ApiClientError: On other HTTP errors, or on a malformed JSON body.
         """
         response = self._raw_request(method, path, **kwargs)
 
@@ -367,7 +367,14 @@ class BaseClientApi(_ClassLoggerMixin):
         content_type = response.headers.get("Content-Type", "").lower()
 
         if "application/json" in content_type:
-            return response.json()
+            try:
+                return response.json()
+            except (ValueError, requests.exceptions.JSONDecodeError) as err:
+                raise ApiClientError(
+                    f"Malformed JSON response body: {err}",
+                    status_code=response.status_code,
+                    response_body=self._safe_response_body(response),
+                ) from err
 
         if content_type.startswith("text/"):
             return response.text or None

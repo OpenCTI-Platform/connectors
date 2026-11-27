@@ -86,7 +86,6 @@ class BaseImporter(ABC):
         self.helper.send_stix2_bundle(
             serialized_bundle,
             work_id=self.work_id,
-            bypass_split=True,
         )
 
     @property

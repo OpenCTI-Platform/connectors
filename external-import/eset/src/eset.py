@@ -110,7 +110,6 @@ class Eset:
                     self.helper.log_debug("Objects to be sent " + str(bundle_objects))
                     self.helper.send_stix2_bundle(
                         self.helper.stix2_create_bundle(bundle_objects),
-                        bypass_split=True,
                         work_id=work_id,
                     )
                 except Exception as e:
