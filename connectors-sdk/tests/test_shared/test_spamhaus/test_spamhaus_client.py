@@ -6,9 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from freezegun import freeze_time
-from pydantic import SecretStr
-
 from connectors_sdk import (
     ApiClientError,
     ApiNotFoundError,
@@ -21,6 +18,8 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
 )
 from connectors_sdk.shared.spamhaus import SPAMHAUS_API_URL, SpamhausClient
+from freezegun import freeze_time
+from pydantic import SecretStr
 
 NOW = 1_800_000_000  # fixed "current" epoch, in seconds
 PASSWORD = "p4ssw0rd-do-not-leak"

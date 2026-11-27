@@ -8,8 +8,6 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import requests
-from pydantic import SecretStr
-
 from connectors_sdk import (
     ApiClientError,
     ApiForbiddenError,
@@ -27,6 +25,7 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
     RateLimit,
 )
+from pydantic import SecretStr
 
 SPAMHAUS_API_URL = "https://api.spamhaus.com"
 SPAMHAUS_REALM = "abusech"
