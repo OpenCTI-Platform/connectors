@@ -6,6 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from freezegun import freeze_time
+from pydantic import SecretStr
+
 from connectors_sdk import (
     ApiClientError,
     ApiNotFoundError,
@@ -18,8 +21,6 @@ from connectors_sdk import (
     ProviderApiTimeoutError,
 )
 from connectors_sdk.shared.spamhaus import SPAMHAUS_API_URL, SpamhausClient
-from freezegun import freeze_time
-from pydantic import SecretStr
 
 NOW = 1_800_000_000  # fixed "current" epoch, in seconds
 PASSWORD = "p4ssw0rd-do-not-leak"
@@ -196,6 +197,114 @@ class TestLogin:
         ):
             with pytest.raises(ProviderApiInvalidResponseError):
                 client.login()
+
+
+@freeze_time("2027-01-15 08:00:00")
+class TestLoginRetry:
+    """urllib3 never retries a POST: the client replays the login once itself."""
+
+    @pytest.fixture
+    def retrying_client(self):
+        return SpamhausClient(
+            username=SecretStr(USERNAME),
+            password=SecretStr(PASSWORD),
+            connector_name="threatfox",
+            connector_version="1.2.3",
+            max_retries=3,
+            backoff_factor=0.5,
+        )
+
+    @pytest.mark.parametrize(
+        "first_failure",
+        [
+            _response(502),
+            _response(503),
+            requests.exceptions.ConnectionError("boom"),
+            requests.exceptions.ReadTimeout("slow"),
+        ],
+    )
+    def test_a_transient_failure_is_retried_once(self, retrying_client, first_failure):
+        with (
+            patch.object(
+                retrying_client,
+                "_raw_request",
+                side_effect=[first_failure, _login_ok()],
+            ) as raw,
+            patch("connectors_sdk.shared.spamhaus.client.time.sleep") as sleep,
+        ):
+            retrying_client.login()
+
+        assert _calls(raw) == [("POST", "/v1/login"), ("POST", "/v1/login")]
+        sleep.assert_called_once_with(0.5)
+        assert retrying_client._token.get_secret_value() == TOKEN_1
+
+    def test_a_second_failure_is_reported_without_a_third_attempt(
+        self, retrying_client
+    ):
+        with (
+            patch.object(
+                retrying_client,
+                "_raw_request",
+                side_effect=[_response(503), _response(503)],
+            ) as raw,
+            patch("connectors_sdk.shared.spamhaus.client.time.sleep"),
+        ):
+            with pytest.raises(ProviderApiServerError):
+                retrying_client.login()
+
+        assert len(_calls(raw)) == 2
+
+    def test_two_network_failures_are_reported(self, retrying_client):
+        error = requests.exceptions.ConnectionError("boom")
+        with (
+            patch.object(
+                retrying_client, "_raw_request", side_effect=[error, error]
+            ) as raw,
+            patch("connectors_sdk.shared.spamhaus.client.time.sleep"),
+        ):
+            with pytest.raises(ProviderApiConnectionError):
+                retrying_client.login()
+
+        assert len(_calls(raw)) == 2
+
+    @pytest.mark.parametrize("status", [400, 401, 403, 429])
+    def test_a_refused_login_is_not_retried(self, retrying_client, status):
+        with (
+            patch.object(
+                retrying_client, "_raw_request", return_value=_response(status)
+            ) as raw,
+            patch("connectors_sdk.shared.spamhaus.client.time.sleep") as sleep,
+        ):
+            with pytest.raises(
+                (ProviderApiAuthenticationError, ProviderApiRateLimitError)
+            ):
+                retrying_client.login()
+
+        assert len(_calls(raw)) == 1
+        sleep.assert_not_called()
+
+    def test_nothing_is_retried_when_retries_are_disabled(self, client):
+        with patch.object(client, "_raw_request", return_value=_response(503)) as raw:
+            with pytest.raises(ProviderApiServerError):
+                client.login()
+
+        assert len(_calls(raw)) == 1
+
+    def test_the_retry_does_not_log_the_credentials(self, retrying_client, caplog):
+        caplog.set_level(logging.DEBUG)
+        with (
+            patch.object(
+                retrying_client,
+                "_raw_request",
+                side_effect=[_response(503), _login_ok()],
+            ),
+            patch("connectors_sdk.shared.spamhaus.client.time.sleep"),
+        ):
+            retrying_client.login()
+
+        assert "trying once more" in caplog.text
+        assert PASSWORD not in caplog.text
+        assert TOKEN_1 not in caplog.text
 
 
 @freeze_time("2027-01-15 08:00:00")

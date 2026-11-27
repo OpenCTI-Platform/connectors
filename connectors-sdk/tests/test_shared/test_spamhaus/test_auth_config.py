@@ -4,11 +4,12 @@ import traceback
 from typing import ClassVar
 
 import pytest
+from pydantic import BaseModel, ValidationError
+
 from connectors_sdk.shared.spamhaus import (
     AbuseChAuthConfigMixin,
     build_user_agent,
 )
-from pydantic import BaseModel, ValidationError
 
 
 class _Section(AbuseChAuthConfigMixin, BaseModel):

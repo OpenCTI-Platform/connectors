@@ -53,6 +53,10 @@ The client logs in once, reuses the JWT until 300 seconds before its expiry (the
 `expires` field of the login response), and logs in again exactly once when the API
 answers 401, then retries. It never logs in for each request.
 
+`urllib3` never retries a POST, so the client replays the login itself, once, after a
+5xx answer or a network failure (a refused login is not replayed). With
+`max_retries=0` nothing is replayed.
+
 ## Errors
 
 The client raises the standard `connectors-sdk` provider errors, so OpenCTI gets the

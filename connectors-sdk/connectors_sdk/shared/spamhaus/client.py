@@ -121,15 +121,7 @@ class SpamhausClient(BaseClientApi):
             ProviderApiInvalidResponseError: If the answer cannot be used.
         """
         try:
-            response = self._raw_request(
-                "POST",
-                LOGIN_PATH,
-                json={
-                    "username": self._username.get_secret_value(),
-                    "password": self._password.get_secret_value(),
-                    "realm": SPAMHAUS_REALM,
-                },
-            )
+            response = self._post_login()
         except requests.exceptions.Timeout as err:
             raise ProviderApiTimeoutError("Spamhaus login timed out") from err
         except (requests.exceptions.RequestException, ApiClientError) as err:
@@ -155,6 +147,38 @@ class SpamhausClient(BaseClientApi):
         self.logger.info(
             "Spamhaus login succeeded", meta={"expires_at": self._token_expires_at}
         )
+
+    def _send_login(self) -> requests.Response:
+        """POST the credentials once."""
+        return self._raw_request(
+            "POST",
+            LOGIN_PATH,
+            json={
+                "username": self._username.get_secret_value(),
+                "password": self._password.get_secret_value(),
+                "realm": SPAMHAUS_REALM,
+            },
+        )
+
+    def _post_login(self) -> requests.Response:
+        """POST the credentials, once more after a transient failure.
+
+        ``urllib3`` never retries a POST, so without this a single 5xx or dropped
+        connection on the login would make the commercial mode fail for the whole
+        run. A rejected login (4xx) is never retried. Nothing is retried when the
+        client was built with ``max_retries=0``.
+        """
+        try:
+            response = self._send_login()
+        except (requests.exceptions.RequestException, ApiClientError):
+            if self._max_retries <= 0:
+                raise
+        else:
+            if response.status_code < 500 or self._max_retries <= 0:
+                return response
+        self.logger.warning("Spamhaus login failed, trying once more")
+        time.sleep(self._backoff_factor)
+        return self._send_login()
 
     @staticmethod
     def _read_login_response(response: requests.Response) -> tuple[SecretStr, float]:
