@@ -1,10 +1,20 @@
 """OpenCTI Malpedia Knowledge importer module."""
 
 import sys
+import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
+import requests
 import stix2
+from connectors_sdk import (
+    ApiClientError,
+    ApiForbiddenError,
+    ApiNotFoundError,
+    ApiRateLimitError,
+    ApiServerError,
+)
+from connectors_sdk.exceptions.error import DataRetrievalError
 from malpedia_connector.settings import ConnectorSettings
 from malpedia_services import (
     MalpediaClient,
@@ -21,6 +31,11 @@ from malpedia_services.constants import (
 from pycti import OpenCTIConnectorHelper
 from pydantic.v1 import ValidationError
 
+# When Malpedia cannot be reached at startup, try the API key check up to
+# this many times, and wait this long (in seconds) between two tries.
+API_KEY_CHECK_ATTEMPTS = 5
+API_KEY_CHECK_RETRY_DELAY = 60
+
 
 class MalpediaConnector:
     """Malpedia Connector importer."""
@@ -32,13 +47,14 @@ class MalpediaConnector:
         self.config = config
         self.helper = helper
         self.api_client = MalpediaClient(
-            self.helper,
             (
                 self.config.malpedia.auth_key.get_secret_value()
                 if self.config.malpedia.auth_key
                 else None
             ),
         )
+        if not self.api_client.unauthenticated:
+            self._check_api_key()
         self.helper.metric.state("idle")
 
         """
@@ -72,6 +88,44 @@ class MalpediaConnector:
         self.stix_objects = []
         self.stix_relationships = []
 
+    def _check_api_key(self) -> None:
+        """Check that Malpedia accepts the API key.
+
+        A rejected key stops the connector at once. When Malpedia cannot be
+        reached, retry a few times before stopping. A network problem must not
+        look like an invalid key.
+        """
+        for attempt in range(1, API_KEY_CHECK_ATTEMPTS + 1):
+            try:
+                self.api_client.check_api_key()
+                return
+            except ApiForbiddenError as err:
+                raise ApiForbiddenError(
+                    "The API request failed because the token is invalid. "
+                    "Please enter a valid auth_key or "
+                    "run the connector in unauthenticated mode (no value).",
+                    response_body=err.response_body,
+                ) from err
+            except (
+                requests.RequestException,
+                ApiServerError,
+                ApiRateLimitError,
+            ) as err:
+                if attempt == API_KEY_CHECK_ATTEMPTS:
+                    raise DataRetrievalError(
+                        "Could not reach the Malpedia API to check the API key"
+                    ) from err
+                self.helper.connector_logger.warning(
+                    "[API] Could not reach the Malpedia API to check the API key, retrying",
+                    {
+                        "attempt": attempt,
+                        "max_attempts": API_KEY_CHECK_ATTEMPTS,
+                        "retry_in_seconds": API_KEY_CHECK_RETRY_DELAY,
+                        "error": str(err),
+                    },
+                )
+                time.sleep(API_KEY_CHECK_RETRY_DELAY)
+
     def run(self):
         self.helper.schedule_unit(
             message_callback=self.start,
@@ -83,7 +137,7 @@ class MalpediaConnector:
         """Malpedia Connector execution"""
         self.helper.connector_logger.info("[CONNECTOR] Starting Malpedia connector...")
         try:
-            current_malpedia_version = self.api_client.current_version()
+            current_malpedia_version = self.api_client.get_version()
             self.helper.connector_logger.info(
                 "[CONNECTOR] Current Malpedia version",
                 {"version": current_malpedia_version},
@@ -179,11 +233,7 @@ class MalpediaConnector:
         )
 
     def _process_families(self) -> None:
-        families_json = self.api_client.query("get/families")
-        if families_json is None:
-            raise ValueError(
-                "An error occurred during the API request to get all families."
-            )
+        families_json = self.api_client.get_families()
         for family_name in families_json:
             try:
                 if families_json[family_name]["updated"] == "":
@@ -212,25 +262,21 @@ class MalpediaConnector:
                     {"family_name": family_name},
                 )
             else:
-                yara_rules = self.api_client.query("get/yara/" + family_name)
-                if yara_rules is None:
-                    self.helper.connector_logger.error(
-                        "[API] Some error occurred during yara rule creation",
-                        {"family_name": family_name},
-                    )
-                    self.helper.metric.inc("error_count")
-                elif not yara_rules:
-                    self.helper.connector_logger.info(
-                        "[YARA-RULES] No Yara rules found for this family...",
-                        {"family_name": family_name},
-                    )
-                else:
+                yara_rules = self._get_family_data(
+                    self.api_client.get_yara_rules, family_name, "yara_rules"
+                )
+                if yara_rules:
                     self.helper.connector_logger.info(
                         "[YARA-RULES] Generate yara rules for...",
                         {"family_name": family_name},
                     )
                     self._generate_yara_rule_associated_with_malware(
                         yara_rules, malware_id
+                    )
+                elif yara_rules is not None:
+                    self.helper.connector_logger.info(
+                        "[YARA-RULES] No Yara rules found for this family...",
+                        {"family_name": family_name},
                     )
             if not self.api_client.unauthenticated:
                 if not self.config.malpedia.create_indicators and (
@@ -241,25 +287,21 @@ class MalpediaConnector:
                         {"family_name": family_name},
                     )
                 else:
-                    samples = self.api_client.query("list/samples/" + family_name)
-                    if samples is None:
-                        self.helper.connector_logger.error(
-                            "[API] Some error occurred during indicator/observable sample creation",
-                            {"family_name": family_name},
-                        )
-                        self.helper.metric.inc("error_count")
-                    elif not samples:
-                        self.helper.connector_logger.info(
-                            "[SAMPLES] No Sample found for this family...",
-                            {"family_name": family_name},
-                        )
-                    else:
+                    samples = self._get_family_data(
+                        self.api_client.get_samples, family_name, "samples"
+                    )
+                    if samples:
                         self.helper.connector_logger.info(
                             "[SAMPLES] Generate indicators/observables samples...",
                             {"family_name": family_name},
                         )
                         self._generate_samples_associated_with_malware(
                             samples, malware_id
+                        )
+                    elif samples is not None:
+                        self.helper.connector_logger.info(
+                            "[SAMPLES] No Sample found for this family...",
+                            {"family_name": family_name},
                         )
             else:
                 self.helper.connector_logger.info(
@@ -284,6 +326,28 @@ class MalpediaConnector:
                 self._generate_intrusion_set_associated_with_malware(
                     data_family, malware_id
                 )
+
+    def _get_family_data(
+        self, get_data: Callable[[str], Any], family_name: str, data_name: str
+    ) -> Any:
+        """Get one kind of data of a family from Malpedia, such as its YARA rules.
+
+        Malpedia answers 404 when it has no such data: return an empty dict.
+        When the request fails, log a warning and return None. The run goes on
+        without this data.
+        """
+        try:
+            return get_data(family_name)
+        except ApiNotFoundError:
+            return {}
+        except (ApiClientError, requests.RequestException) as err:
+            self.helper.connector_logger.warning(
+                "[API] Could not get family data from Malpedia, skipping it",
+                {"family_name": family_name, "data": data_name, "error": str(err)},
+            )
+            self.helper.metric.inc("client_error_count")
+            self.helper.metric.inc("error_count")
+            return None
 
     def _generate_malware_by_family(self, data_family) -> str:
         try:
@@ -458,21 +522,21 @@ class MalpediaConnector:
                 "[INTRUSION-SET] Generate intrusion set...",
                 {"family_name": data_family.malpedia_name, "actor": actor},
             )
-            actor_json = self.api_client.query(
-                "get/actor/" + actor.lower().replace(" ", "_")
-            )
-            if actor_json is None:
-                self.helper.connector_logger.info(
-                    "[API] Some error occurred during actor creation", {"actor": actor}
+            try:
+                actor_json = self.api_client.get_actor(actor.lower().replace(" ", "_"))
+            except ApiNotFoundError:
+                self.helper.connector_logger.warning(
+                    "[API] No Actor matches the given query, skipping it",
+                    {"actor": actor},
                 )
                 continue
-            if (
-                "detail" in actor_json
-                and actor_json["detail"] == "No Actor matches the given query."
-            ):
-                self.helper.connector_logger.info(
-                    "[API] No Actor matches the given query", {"actor": actor}
+            except (ApiClientError, requests.RequestException) as err:
+                self.helper.connector_logger.warning(
+                    "[API] Could not get the actor from Malpedia, skipping it",
+                    {"actor": actor, "error": str(err)},
                 )
+                self.helper.metric.inc("client_error_count")
+                self.helper.metric.inc("error_count")
                 continue
             if actor_json["value"] == "" or actor_json["value"] is None:
                 self.helper.connector_logger.info(
