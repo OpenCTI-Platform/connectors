@@ -1,0 +1,10 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+
+threatfox:
+  auth_key: 'ChangeMe' # From https://auth.abuse.ch
