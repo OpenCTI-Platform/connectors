@@ -234,6 +234,8 @@ class ThreatFox:
         )
 
         last_processed_entry_running_max = 0
+        # Observable/indicator id -> ports it was reported on in this run
+        self._port_sightings: Dict[str, List["FeedRow"]] = {}
 
         try:
             lines = self.download_csv()
@@ -297,6 +299,10 @@ class ThreatFox:
                 # ---- STIX creation path ----
                 for obj in self.process_row(ioc):
                     bundle_objects.append(obj)
+
+            # One object per STIX id: rows sharing an observable, indicator or
+            # malware would otherwise overwrite each other on ingestion
+            bundle_objects = self._merge_duplicates(bundle_objects)
 
             # Build and send bundle
             bundle = stix2.Bundle(
@@ -394,6 +400,10 @@ class ThreatFox:
             return
 
         stix_observable, stix_indicator = result
+        if ioc.port:
+            for obj in (stix_observable, stix_indicator):
+                if obj is not None:
+                    self._record_port(obj.id, ioc)
         if stix_observable:
             yield stix_observable
         if stix_indicator:
@@ -443,6 +453,7 @@ class ThreatFox:
 
         if ioc.type == "ip:port":
             ioc.value, port = ioc.value.split(":", maxsplit=1)
+            ioc.port = port
             description = f"Traffic seen on port {port}"
             pattern_value = f"[ipv4-addr:value = '{ioc.value}']"
             indicator_type = "ipv4"
@@ -632,6 +643,103 @@ class ThreatFox:
 
         return stix_rel
 
+    # ------------------------- Duplicate merging -------------------------
+    # Several rows can map to one STIX id: an IP reported on several ports, a
+    # value reported twice, a malware family shared by many IOCs. OpenCTI keeps
+    # one object per id from a bundle, so unmerged duplicates lose the
+    # references, labels and ports of all but one row.
+
+    _UNION_LISTS = (
+        "labels",
+        "x_opencti_labels",
+        "aliases",
+        "malware_types",
+        "indicator_types",
+        "object_marking_refs",
+    )
+    _UNION_REFS = ("external_references", "x_opencti_external_references")
+    _MAX_INTS = ("x_opencti_score", "confidence")
+
+    def _record_port(self, object_id: str, ioc: "FeedRow") -> None:
+        """Remember that the observable/indicator `object_id` was reported on `ioc.port`."""
+        if not hasattr(self, "_port_sightings"):
+            self._port_sightings = {}
+        self._port_sightings.setdefault(object_id, []).append(ioc)
+
+    def _merge_duplicates(self, objects: List) -> List:
+        """
+        Collapse objects sharing an id into one, in first-seen order.
+        Lists and references are unioned, score/confidence take the maximum,
+        other fields keep the first (newest) row's value. Observables and
+        indicators reported on several ports get a per-port description.
+        """
+        merged: Dict[str, Dict] = {}
+        for obj in objects:
+            props = dict(obj)
+            first = merged.get(obj.id)
+            if first is None:
+                merged[obj.id] = props
+                continue
+            for key in self._UNION_LISTS:
+                if props.get(key):
+                    first[key] = list(
+                        dict.fromkeys([*(first.get(key) or []), *props[key]])
+                    )
+            for key in self._UNION_REFS:
+                if props.get(key):
+                    seen = {
+                        (r["source_name"], r.get("url")) for r in first.get(key) or []
+                    }
+                    extra = [
+                        r
+                        for r in props[key]
+                        if (r["source_name"], r.get("url")) not in seen
+                    ]
+                    first[key] = [*(first.get(key) or []), *extra]
+            for key in self._MAX_INTS:
+                if props.get(key) is not None:
+                    first[key] = max(first.get(key) or 0, props[key])
+
+        sightings = getattr(self, "_port_sightings", {})
+        result = []
+        for obj in objects:
+            props = merged.pop(obj.id, None)
+            if props is None:
+                continue  # already emitted at its first occurrence
+            description = self._multi_port_description(sightings.get(obj.id, []))
+            if description:
+                # SCOs carry descriptions as x_opencti_description
+                key = (
+                    "description"
+                    if obj.type == "indicator"
+                    else "x_opencti_description"
+                )
+                props[key] = description
+            result.append(stix2.parse(props, allow_custom=True))
+        return result
+
+    @staticmethod
+    def _multi_port_description(sightings: List["FeedRow"]) -> Optional[str]:
+        """Per-port description for an IP reported on two or more ports, else None."""
+        by_port: Dict[str, "FeedRow"] = {}
+        for ioc in sightings:
+            by_port.setdefault(ioc.port, ioc)  # rows arrive newest first
+        if len(by_port) < 2:
+            return None
+        lines = ["Activity seen across multiple ports:", ""]
+        for port in sorted(
+            by_port, key=lambda p: (not p.isdigit(), int(p) if p.isdigit() else 0, p)
+        ):
+            ioc = by_port[port]
+            details = [f"first seen {ioc.first_seen:%Y-%m-%d %H:%M} UTC"]
+            if ioc.threat_type:
+                details.append(ioc.threat_type)
+            if ioc.malware_printable or ioc.fk_malware:
+                details.append(ioc.malware_printable or ioc.fk_malware)
+            details.append(f"confidence {ioc.confidence_level}")
+            lines.append(f"- {port} ({', '.join(details)})")
+        return "\n".join(lines)
+
     # ---------------------- External references ----------------------
     def _reference_urls(self, ioc: "FeedRow") -> List[str]:
         """
@@ -723,6 +831,8 @@ class FeedRow:
 
         self.anonymous = bool(int(row[13]))
         self.reporter = row[14]
+        # Set from the value when an ip:port IOC is mapped
+        self.port: Optional[str] = None
 
 
 def main() -> None:
