@@ -18,8 +18,8 @@ A connector that already depends on `connectors-sdk` has nothing more to install
 - At least one mode must be configured, otherwise the settings validation fails and
   names both options.
 - When both are configured, the commercial mode wins (`use_commercial`). If it fails,
-  the connector falls back to the community Auth-Key by catching
-  `SpamhausCommercialError`.
+  the connector falls back to the community Auth-Key by catching `ProviderApiError`
+  around the Spamhaus call.
 - The community mode is not implemented here: the connector keeps calling its community
   host as before.
 
@@ -28,11 +28,7 @@ A connector that already depends on `connectors-sdk` has nothing more to install
 ```python
 from connectors_sdk.shared.spamhaus import (
     AbuseChAuthConfigMixin,
-    SpamhausAuthenticationError,
     SpamhausClient,
-    SpamhausCommercialError,
-    SpamhausInvalidResponseError,
-    SpamhausUnavailableError,
     build_user_agent,
 )
 ```
@@ -59,17 +55,23 @@ answers 401, then retries. It never logs in for each request.
 
 ## Errors
 
-Every error that means "the commercial mode cannot be used" is a
-`SpamhausCommercialError`, so a connector can catch one class to fall back:
+The client raises the standard `connectors-sdk` provider errors, so OpenCTI gets the
+matching `api.*` code. A connector that holds a community Auth-Key catches
+`ProviderApiError` around the Spamhaus call to fall back:
 
-| Error | Raised when |
-|-------|-------------|
-| `SpamhausAuthenticationError` | login refused (400, 401, 403), 401 after a re-login, 403 on a request |
-| `SpamhausUnavailableError` | network error, timeout, HTTP 429 or 5xx, unexpected login response |
-| `SpamhausInvalidResponseError` | a page with an unexpected shape, or a cursor that does not advance |
+| Error (code) | Raised when |
+|--------------|-------------|
+| `ProviderApiAuthenticationError` (`api.authentication`) | login refused (400, 401, 403), 401 after a re-login |
+| `ProviderApiAuthorizationError` (`api.authorization`) | 403 on a request |
+| `ProviderApiRateLimitError` (`api.rate_limit`) | HTTP 429, on a request or on the login |
+| `ProviderApiServerError` (`api.server`) | HTTP 5xx, on a request or on the login |
+| `ProviderApiTimeoutError` (`api.timeout`) | a request or the login times out |
+| `ProviderApiConnectionError` (`api.connection`) | the API cannot be reached (network, DNS, TLS) |
+| `ProviderApiInvalidResponseError` (`api.invalid_response`) | a page with an unexpected shape, a cursor that does not advance, an unexpected login response |
 
-Other client errors (for example a 404 on a sample) are not commercial errors and
-propagate as the `connectors-sdk` `ApiClientError` subclasses.
+Other client errors on `get_bytes` (for example a 404 on a sample) propagate as the
+`connectors-sdk` `ApiClientError` subclasses and do not mean the commercial mode is
+unusable.
 
 The password, the JWT and the login response never appear in a log or in an error
 message.

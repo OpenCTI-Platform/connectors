@@ -15,12 +15,14 @@ from connectors_sdk import (
     ApiServerError,
     ApiUnauthorizedError,
     BaseClientApi,
+    ProviderApiAuthenticationError,
+    ProviderApiAuthorizationError,
+    ProviderApiConnectionError,
+    ProviderApiInvalidResponseError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
     RateLimit,
-)
-from connectors_sdk.shared.spamhaus.exceptions import (
-    SpamhausAuthenticationError,
-    SpamhausInvalidResponseError,
-    SpamhausUnavailableError,
 )
 from pydantic import SecretStr
 
@@ -109,8 +111,12 @@ class SpamhausClient(BaseClientApi):
         """Log in and store the JWT.
 
         Raises:
-            SpamhausAuthenticationError: If Spamhaus rejects the credentials.
-            SpamhausUnavailableError: If the login cannot be done (network, 5xx).
+            ProviderApiAuthenticationError: If Spamhaus rejects the credentials.
+            ProviderApiRateLimitError: If the login is throttled (429).
+            ProviderApiServerError: If Spamhaus answers with a 5xx.
+            ProviderApiTimeoutError: If the login times out.
+            ProviderApiConnectionError: If Spamhaus cannot be reached.
+            ProviderApiInvalidResponseError: If the answer cannot be used.
         """
         try:
             response = self._raw_request(
@@ -122,18 +128,26 @@ class SpamhausClient(BaseClientApi):
                     "realm": SPAMHAUS_REALM,
                 },
             )
+        except requests.exceptions.Timeout as err:
+            raise ProviderApiTimeoutError("Spamhaus login timed out") from err
         except (requests.exceptions.RequestException, ApiClientError) as err:
-            raise SpamhausUnavailableError(
+            raise ProviderApiConnectionError(
                 "Spamhaus login failed: the API cannot be reached"
             ) from err
 
         status = response.status_code
         if status in (400, 401, 403):
-            raise SpamhausAuthenticationError(
+            raise ProviderApiAuthenticationError(
                 f"Spamhaus rejected the login (HTTP {status}): {CREDENTIALS_HINT}"
             )
+        if status == 429:
+            raise ProviderApiRateLimitError("Spamhaus throttled the login (HTTP 429)")
+        if status >= 500:
+            raise ProviderApiServerError(f"Spamhaus login failed with HTTP {status}")
         if status != 200:
-            raise SpamhausUnavailableError(f"Spamhaus login failed with HTTP {status}")
+            raise ProviderApiInvalidResponseError(
+                f"Spamhaus login failed with HTTP {status}"
+            )
 
         self._token, self._token_expires_at = self._read_login_response(response)
         self.logger.info(
@@ -146,7 +160,7 @@ class SpamhausClient(BaseClientApi):
         try:
             data = response.json()
         except ValueError as err:
-            raise SpamhausUnavailableError(
+            raise ProviderApiInvalidResponseError(
                 "Spamhaus login returned a body that is not JSON"
             ) from err
         token = data.get("token") if isinstance(data, dict) else None
@@ -157,7 +171,7 @@ class SpamhausClient(BaseClientApi):
             or isinstance(expires, bool)
             or not isinstance(expires, (int, float))
         ):
-            raise SpamhausUnavailableError(
+            raise ProviderApiInvalidResponseError(
                 "Spamhaus login returned an unexpected response"
             )
         return SecretStr(token), float(expires)
@@ -171,11 +185,13 @@ class SpamhausClient(BaseClientApi):
             self.login()
         token = self._token
         if token is None:
-            raise SpamhausUnavailableError("Spamhaus login did not provide a token")
+            raise ProviderApiInvalidResponseError(
+                "Spamhaus login did not provide a token"
+            )
         return {"Authorization": f"Bearer {token.get_secret_value()}"}
 
     def _send(self, path: str, params: dict[str, Any] | None, *, binary: bool) -> Any:
-        """Send one authenticated GET and map its failures to commercial errors."""
+        """Send one authenticated GET and map its failures to provider API errors."""
         headers = self._bearer_headers()
         try:
             if binary:
@@ -189,20 +205,27 @@ class SpamhausClient(BaseClientApi):
         except ApiUnauthorizedError:
             raise
         except ApiForbiddenError as err:
-            raise SpamhausAuthenticationError(
+            raise ProviderApiAuthorizationError(
                 f"Spamhaus refused the access (HTTP 403): {CREDENTIALS_HINT}"
             ) from err
-        except (ApiRateLimitError, ApiServerError) as err:
-            raise SpamhausUnavailableError(
+        except ApiRateLimitError as err:
+            raise ProviderApiRateLimitError(
+                "Spamhaus throttles the requests (HTTP 429)"
+            ) from err
+        except ApiServerError as err:
+            raise ProviderApiServerError(
                 f"Spamhaus cannot answer (HTTP {err.status_code})"
             ) from err
         except requests.exceptions.JSONDecodeError as err:
             # Must precede RequestException, its base class: the API did answer.
-            raise SpamhausInvalidResponseError(
+            raise ProviderApiInvalidResponseError(
                 f"Spamhaus returned a body that is not valid JSON for {path}"
             ) from err
+        except requests.exceptions.Timeout as err:
+            # Must precede RequestException: a connect timeout is also a ConnectionError.
+            raise ProviderApiTimeoutError("Spamhaus request timed out") from err
         except requests.exceptions.RequestException as err:
-            raise SpamhausUnavailableError(
+            raise ProviderApiConnectionError(
                 "Spamhaus request failed: the API cannot be reached"
             ) from err
 
@@ -237,7 +260,7 @@ class SpamhausClient(BaseClientApi):
         try:
             return self._send(path, params, binary=binary)
         except ApiUnauthorizedError as err:
-            raise SpamhausAuthenticationError(
+            raise ProviderApiAuthenticationError(
                 f"Spamhaus rejected a fresh token (HTTP 401): {CREDENTIALS_HINT}"
             ) from err
 
@@ -252,15 +275,19 @@ class SpamhausClient(BaseClientApi):
             The parsed JSON body, a ``dict`` or a ``list``.
 
         Raises:
-            SpamhausAuthenticationError: If the credentials are rejected.
-            SpamhausUnavailableError: If the API cannot answer.
-            SpamhausInvalidResponseError: If the body is not valid JSON, or is
+            ProviderApiAuthenticationError: If the credentials are rejected.
+            ProviderApiAuthorizationError: If the account lacks access (403).
+            ProviderApiRateLimitError: If the API throttles the requests (429).
+            ProviderApiServerError: If the API answers with a 5xx.
+            ProviderApiTimeoutError: If a request times out.
+            ProviderApiConnectionError: If the API cannot be reached.
+            ProviderApiInvalidResponseError: If the body is not valid JSON, or is
                 neither an object nor an array (e.g. an HTML maintenance page).
             ValueError: If ``path`` points outside the API base URL.
         """
         body = self._authenticated_get(path, params, binary=False)
         if not isinstance(body, (dict, list)):
-            raise SpamhausInvalidResponseError(
+            raise ProviderApiInvalidResponseError(
                 f"Spamhaus returned a body that is not JSON for {path}"
             )
         return body
@@ -279,8 +306,12 @@ class SpamhausClient(BaseClientApi):
             The raw response body.
 
         Raises:
-            SpamhausAuthenticationError: If the credentials are rejected.
-            SpamhausUnavailableError: If the API cannot answer.
+            ProviderApiAuthenticationError: If the credentials are rejected.
+            ProviderApiAuthorizationError: If the account lacks access (403).
+            ProviderApiRateLimitError: If the API throttles the requests (429).
+            ProviderApiServerError: If the API answers with a 5xx.
+            ProviderApiTimeoutError: If a request times out.
+            ProviderApiConnectionError: If the API cannot be reached.
             ValueError: If ``path`` points outside the API base URL.
         """
         content: bytes = self._authenticated_get(path, params, binary=True)
@@ -307,17 +338,15 @@ class SpamhausClient(BaseClientApi):
             The ``items`` of each page.
 
         Raises:
-            SpamhausAuthenticationError: If the credentials are rejected.
-            SpamhausUnavailableError: If the API cannot answer.
-            SpamhausInvalidResponseError: If a page has an unexpected shape or
-                the cursor does not advance.
+            ProviderApiError: As ``get_json``, plus ``ProviderApiInvalidResponseError``
+                if a page has an unexpected shape or the cursor does not advance.
         """
         page_params: dict[str, Any] = {**(params or {}), "page_size": page_size}
         seen_cursors: set[str] = set()
         while True:
             body = self.get_json(path, params=page_params)
             if not isinstance(body, dict) or not isinstance(body.get("items"), list):
-                raise SpamhausInvalidResponseError(
+                raise ProviderApiInvalidResponseError(
                     f"Spamhaus returned an unexpected page for {path}"
                 )
             if body["items"]:
@@ -327,7 +356,7 @@ class SpamhausClient(BaseClientApi):
             if cursor is None:
                 return
             if cursor in seen_cursors:
-                raise SpamhausInvalidResponseError(
+                raise ProviderApiInvalidResponseError(
                     f"Spamhaus returned no usable next cursor for {path}"
                 )
             seen_cursors.add(cursor)
@@ -340,13 +369,13 @@ class SpamhausClient(BaseClientApi):
         refused, so a malformed page cannot end an import early as if it had finished.
 
         Raises:
-            SpamhausInvalidResponseError: If ``meta``, ``next_page`` or ``next_cursor``
+            ProviderApiInvalidResponseError: If ``meta``, ``next_page`` or ``next_cursor``
                 has the wrong type, or no cursor can be read.
         """
         if meta is None:
             return None
         if not isinstance(meta, dict):
-            raise SpamhausInvalidResponseError(
+            raise ProviderApiInvalidResponseError(
                 f"Spamhaus returned an unexpected page metadata for {path}"
             )
         next_page = meta.get("next_page")
@@ -356,12 +385,12 @@ class SpamhausClient(BaseClientApi):
         if not isinstance(next_page, str) or not (
             next_cursor is None or isinstance(next_cursor, str)
         ):
-            raise SpamhausInvalidResponseError(
+            raise ProviderApiInvalidResponseError(
                 f"Spamhaus returned an unexpected next page for {path}"
             )
         cursor = next_cursor or self._cursor_from(next_page)
         if not cursor:
-            raise SpamhausInvalidResponseError(
+            raise ProviderApiInvalidResponseError(
                 f"Spamhaus returned no usable next cursor for {path}"
             )
         return cursor

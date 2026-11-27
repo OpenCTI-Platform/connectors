@@ -4,17 +4,8 @@ import traceback
 from typing import ClassVar
 
 import pytest
-from connectors_sdk import (
-    ProviderApiAuthenticationError,
-    ProviderApiInvalidResponseError,
-    ProviderApiServerError,
-)
 from connectors_sdk.shared.spamhaus import (
     AbuseChAuthConfigMixin,
-    SpamhausAuthenticationError,
-    SpamhausCommercialError,
-    SpamhausInvalidResponseError,
-    SpamhausUnavailableError,
     build_user_agent,
 )
 from pydantic import BaseModel, ValidationError
@@ -135,30 +126,6 @@ class TestUserAgent:
         assert build_user_agent("threatfox", "7.261119.0") == (
             "OpenCTI-threatfox/7.261119.0"
         )
-
-
-class TestErrors:
-    def test_authentication_error_is_a_commercial_error(self):
-        error = SpamhausAuthenticationError("check the Spamhaus credentials")
-
-        assert isinstance(error, SpamhausCommercialError)
-        assert isinstance(error, ProviderApiAuthenticationError)
-
-    def test_unavailable_error_is_a_commercial_error(self):
-        error = SpamhausUnavailableError("down")
-
-        assert isinstance(error, SpamhausCommercialError)
-        assert isinstance(error, ProviderApiServerError)
-
-    def test_invalid_response_error_is_a_commercial_error(self):
-        error = SpamhausInvalidResponseError("bad page")
-
-        assert isinstance(error, SpamhausCommercialError)
-        assert isinstance(error, ProviderApiInvalidResponseError)
-
-    def test_commercial_error_is_abstract(self):
-        with pytest.raises(TypeError):
-            SpamhausCommercialError("abstract")
 
 
 class TestSecretsInValidationErrors:

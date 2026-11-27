@@ -6,15 +6,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from connectors_sdk import ApiNotFoundError
-from connectors_sdk.shared.spamhaus import (
-    SPAMHAUS_API_URL,
-    SpamhausAuthenticationError,
-    SpamhausClient,
-    SpamhausCommercialError,
-    SpamhausInvalidResponseError,
-    SpamhausUnavailableError,
+from connectors_sdk import (
+    ApiNotFoundError,
+    ProviderApiAuthenticationError,
+    ProviderApiAuthorizationError,
+    ProviderApiConnectionError,
+    ProviderApiInvalidResponseError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
 )
+from connectors_sdk.shared.spamhaus import SPAMHAUS_API_URL, SpamhausClient
 from freezegun import freeze_time
 from pydantic import SecretStr
 
@@ -114,29 +116,58 @@ class TestLogin:
     @pytest.mark.parametrize("status", [400, 401, 403])
     def test_rejected_credentials(self, client, status):
         with patch.object(client, "_raw_request", return_value=_response(status)):
-            with pytest.raises(SpamhausAuthenticationError) as exc_info:
+            with pytest.raises(ProviderApiAuthenticationError) as exc_info:
                 client.login()
 
         assert "Spamhaus credentials" in str(exc_info.value)
         assert PASSWORD not in str(exc_info.value)
 
-    @pytest.mark.parametrize("status", [429, 500, 502, 503, 418])
-    def test_login_unavailable(self, client, status):
-        with patch.object(client, "_raw_request", return_value=_response(status)):
-            with pytest.raises(SpamhausUnavailableError):
-                client.login()
-
     @pytest.mark.parametrize(
-        "error",
+        ("status", "error_class", "code"),
         [
-            requests.exceptions.ConnectionError("boom"),
-            requests.exceptions.Timeout("slow"),
+            (429, ProviderApiRateLimitError, "api.rate_limit"),
+            (500, ProviderApiServerError, "api.server"),
+            (502, ProviderApiServerError, "api.server"),
+            (503, ProviderApiServerError, "api.server"),
+            (418, ProviderApiInvalidResponseError, "api.invalid_response"),
         ],
     )
-    def test_login_network_failure(self, client, error):
-        with patch.object(client, "_raw_request", side_effect=error):
-            with pytest.raises(SpamhausUnavailableError) as exc_info:
+    def test_login_failure_reports_the_matching_error(
+        self, client, status, error_class, code
+    ):
+        with patch.object(client, "_raw_request", return_value=_response(status)):
+            with pytest.raises(error_class) as exc_info:
                 client.login()
+
+        assert exc_info.value.code == code
+
+    @pytest.mark.parametrize(
+        ("error", "error_class", "code"),
+        [
+            (
+                requests.exceptions.ConnectionError("boom"),
+                ProviderApiConnectionError,
+                "api.connection",
+            ),
+            (
+                requests.exceptions.Timeout("slow"),
+                ProviderApiTimeoutError,
+                "api.timeout",
+            ),
+            (
+                # A connect timeout is both a ConnectionError and a Timeout.
+                requests.exceptions.ConnectTimeout("slow"),
+                ProviderApiTimeoutError,
+                "api.timeout",
+            ),
+        ],
+    )
+    def test_login_network_failure(self, client, error, error_class, code):
+        with patch.object(client, "_raw_request", side_effect=error):
+            with pytest.raises(error_class) as exc_info:
+                client.login()
+
+        assert exc_info.value.code == code
 
         assert exc_info.value.__cause__ is error
         assert PASSWORD not in str(exc_info.value)
@@ -153,7 +184,7 @@ class TestLogin:
     )
     def test_login_with_unexpected_payload(self, client, payload):
         with patch.object(client, "_raw_request", return_value=_response(200, payload)):
-            with pytest.raises(SpamhausUnavailableError) as exc_info:
+            with pytest.raises(ProviderApiInvalidResponseError) as exc_info:
                 client.login()
 
         assert TOKEN_1 not in str(exc_info.value)
@@ -162,16 +193,18 @@ class TestLogin:
         with patch.object(
             client, "_raw_request", return_value=_response(200, json_error=True)
         ):
-            with pytest.raises(SpamhausUnavailableError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 client.login()
 
 
 @freeze_time("2027-01-15 08:00:00")
 class TestMissingToken:
-    def test_a_login_that_leaves_no_token_is_an_unavailable_error(self, client):
+    def test_a_login_that_leaves_no_token_is_an_invalid_response(self, client):
         """The check must be a real exception: ``assert`` is stripped by ``python -O``."""
         with patch.object(client, "login"):
-            with pytest.raises(SpamhausUnavailableError, match="did not provide"):
+            with pytest.raises(
+                ProviderApiInvalidResponseError, match="did not provide"
+            ):
                 client.get_json("/threatfox/v1/iocs")
 
 
@@ -272,7 +305,7 @@ class TestRequests:
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), maintenance],
         ):
-            with pytest.raises(SpamhausInvalidResponseError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 client.get_json("/threatfox/v1/iocs")
 
     def test_a_200_with_an_undecodable_json_body_is_an_invalid_response(self, client):
@@ -285,7 +318,7 @@ class TestRequests:
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), broken],
         ):
-            with pytest.raises(SpamhausInvalidResponseError) as excinfo:
+            with pytest.raises(ProviderApiInvalidResponseError) as excinfo:
                 client.get_json("/threatfox/v1/iocs")
 
         assert "cannot be reached" not in str(excinfo.value)
@@ -323,7 +356,7 @@ class TestRequests:
                 _response(401),
             ],
         ) as raw:
-            with pytest.raises(SpamhausAuthenticationError) as exc_info:
+            with pytest.raises(ProviderApiAuthenticationError) as exc_info:
                 client.get_json("/threatfox/v1/iocs")
 
         assert _calls(raw).count(("POST", "/v1/login")) == 2
@@ -339,51 +372,80 @@ class TestRequests:
                 _response(401),  # the login itself is now refused
             ],
         ):
-            with pytest.raises(SpamhausAuthenticationError):
+            with pytest.raises(ProviderApiAuthenticationError):
                 client.get_json("/threatfox/v1/iocs")
 
-    def test_403_is_a_credentials_error(self, client):
+    def test_403_is_an_authorization_error(self, client):
         with patch.object(
             client,
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(403)],
         ):
-            with pytest.raises(SpamhausAuthenticationError):
+            with pytest.raises(ProviderApiAuthorizationError):
                 client.get_json("/threatfox/v1/iocs")
 
-    @pytest.mark.parametrize("status", [429, 500, 503])
-    def test_throttling_and_server_errors_are_unavailable(self, client, status):
+    @pytest.mark.parametrize(
+        ("status", "error_class", "code"),
+        [
+            (429, ProviderApiRateLimitError, "api.rate_limit"),
+            (500, ProviderApiServerError, "api.server"),
+            (503, ProviderApiServerError, "api.server"),
+        ],
+    )
+    def test_throttling_and_server_errors_keep_their_own_code(
+        self, client, status, error_class, code
+    ):
         with patch.object(
             client,
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(status)],
         ):
-            with pytest.raises(SpamhausUnavailableError):
+            with pytest.raises(error_class) as exc_info:
                 client.get_json("/threatfox/v1/iocs")
 
-    def test_network_error_is_unavailable(self, client):
+        assert exc_info.value.code == code
+
+    @pytest.mark.parametrize(
+        ("error", "error_class", "code"),
+        [
+            (
+                requests.exceptions.ConnectionError("boom"),
+                ProviderApiConnectionError,
+                "api.connection",
+            ),
+            (
+                requests.exceptions.ReadTimeout("slow"),
+                ProviderApiTimeoutError,
+                "api.timeout",
+            ),
+            (
+                # A connect timeout is both a ConnectionError and a Timeout.
+                requests.exceptions.ConnectTimeout("slow"),
+                ProviderApiTimeoutError,
+                "api.timeout",
+            ),
+        ],
+    )
+    def test_network_errors_keep_their_own_code(self, client, error, error_class, code):
         with patch.object(
             client,
             "_raw_request",
-            side_effect=[
-                _login_ok(expires=self._expires()),
-                requests.exceptions.ConnectionError("boom"),
-            ],
+            side_effect=[_login_ok(expires=self._expires()), error],
         ):
-            with pytest.raises(SpamhausUnavailableError):
+            with pytest.raises(error_class) as exc_info:
                 client.get_json("/threatfox/v1/iocs")
 
-    def test_other_client_errors_are_not_commercial_errors(self, client):
-        """A 404 is a bug in the request, not a reason to fall back."""
+        assert exc_info.value.code == code
+
+    def test_other_client_errors_propagate_as_is(self, client):
+        """Mapped by the next commit, which makes them fall back too."""
         with patch.object(
             client,
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(404)],
         ):
-            with pytest.raises(ApiNotFoundError) as exc_info:
+            with pytest.raises(ApiNotFoundError):
                 client.get_json("/threatfox/v1/nope")
-
-        assert not isinstance(exc_info.value, SpamhausCommercialError)
 
 
 @freeze_time("2027-01-15 08:00:00")
@@ -463,7 +525,7 @@ class TestPaginate:
                 _page([{"id": 1}], next_cursor="same"),
             ],
         ):
-            with pytest.raises(SpamhausInvalidResponseError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
 
     def test_next_page_without_a_cursor_is_an_error(self, client):
@@ -475,7 +537,7 @@ class TestPaginate:
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), broken],
         ):
-            with pytest.raises(SpamhausInvalidResponseError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
 
     @pytest.mark.parametrize(
@@ -487,7 +549,7 @@ class TestPaginate:
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(200, body)],
         ):
-            with pytest.raises(SpamhausInvalidResponseError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
 
     @pytest.mark.parametrize(
@@ -510,7 +572,7 @@ class TestPaginate:
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), broken],
         ):
-            with pytest.raises(SpamhausInvalidResponseError):
+            with pytest.raises(ProviderApiInvalidResponseError):
                 list(client.paginate("/threatfox/v1/iocs"))
 
     @pytest.mark.parametrize("meta", [None, {}, {"next_page": None}, {"next_page": ""}])
@@ -627,25 +689,25 @@ class TestGetBytes:
                 _response(401),
             ],
         ):
-            with pytest.raises(SpamhausAuthenticationError):
+            with pytest.raises(ProviderApiAuthenticationError):
                 client.get_bytes("/urlhaus/v1/files/samples/abc")
 
-    def test_403_is_a_credentials_error(self, client):
+    def test_403_is_an_authorization_error(self, client):
         with patch.object(
             client,
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(403)],
         ):
-            with pytest.raises(SpamhausAuthenticationError):
+            with pytest.raises(ProviderApiAuthorizationError):
                 client.get_bytes("/urlhaus/v1/files/samples/abc")
 
-    def test_server_error_is_unavailable(self, client):
+    def test_server_error_is_a_provider_server_error(self, client):
         with patch.object(
             client,
             "_raw_request",
             side_effect=[_login_ok(expires=self._expires()), _response(503)],
         ):
-            with pytest.raises(SpamhausUnavailableError):
+            with pytest.raises(ProviderApiServerError):
                 client.get_bytes("/urlhaus/v1/files/samples/abc")
 
     def test_404_propagates_as_is(self, client):
