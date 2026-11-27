@@ -4,90 +4,173 @@ import ipaddress
 from datetime import datetime, timezone
 from typing import Any
 
-from connector.src.custom.mappers.gti_iocs.indicator_type_helpers import (
-    indicator_types_from_verdict,
+import pycountry
+from connector.src.custom.mappers.gti_iocs.base_ioc_mapper import BaseIOCMapper
+from connector.src.custom.mappers.relationship_reasons import (
+    ip_autonomous_system_reason,
+    ip_country_reason,
+    optional_reason,
 )
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
 )
-from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
 from connector.src.stix.octi.models.ipv4_address_model import OctiIPv4AddressModel
 from connector.src.stix.octi.models.ipv6_address_model import OctiIPv6AddressModel
-from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
+from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
-from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
-from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
+from connector.src.stix.v21.models.scos.as_model import AutonomousSystemModel
 from connector.src.stix.v21.models.scos.ipv4_address_model import IPv4AddressModel
 from connector.src.stix.v21.models.scos.ipv6_address_model import IPv6AddressModel
-from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
-from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
-from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models import (  # type: ignore[import-untyped]
-    OrganizationAuthor,
-    TLPMarking,
+from stix2 import (  # type: ignore[import-untyped]
+    AutonomousSystem,
+    IPv4Address,
+    IPv6Address,
+    Location,
 )
-from stix2 import IPv4Address, IPv6Address  # type: ignore[import-untyped]
 
 
-class GTIIPToSTIXIP(BaseMapper):
+def country_from_code(code: str | None) -> tuple[str, list[str]] | None:
+    """Return the country name and aliases of an ISO 3166-1 alpha-2 code.
+
+    The name is the common name when pycountry has one ('Taiwan'), else the ISO
+    name. Aliases hold the other names and the codes, so OpenCTI can match a
+    country it already knows under another name.
+
+    Returns:
+        (name, aliases), or None for an unknown or missing code.
+
+    """
+    country = pycountry.countries.get(alpha_2=code) if code else None
+    if country is None:
+        return None
+    name = getattr(country, "common_name", None) or country.name
+    candidates = (
+        country.name,
+        getattr(country, "official_name", None),
+        country.alpha_2,
+        country.alpha_3,
+    )
+    aliases = [alias for alias in dict.fromkeys(candidates) if alias and alias != name]
+    return name, aliases
+
+
+class GTIIPToSTIXIP(BaseIOCMapper[GTIIPData]):
     """Converts a GTI IP to a STIX IP object and indicator."""
 
-    @staticmethod
-    def create_relationship(
-        src_entity: Any, relation_type: str, target_entity: Any
-    ) -> Any:
-        """Create a relationship between entities.
-
-        For indicators: creates 'indicates' relationship from indicator to target
-        For observables: creates the specified relationship type from source to target
-
-        Args:
-            src_entity: The source entity (intrusion set or indicator/observable)
-            relation_type: The relationship type (e.g., "related-to")
-            target_entity: The target entity (IP address or intrusion set)
-
-        Returns:
-            OctiRelationshipModel: The relationship object
-
-        """
-        if isinstance(target_entity, IndicatorModel):
-            return OctiRelationshipModel.create(
-                relationship_type="indicates",
-                source_ref=target_entity.id,
-                target_ref=src_entity.id,
-                organization_id=src_entity.created_by_ref,
-                marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(tz=timezone.utc),
-                modified=datetime.now(tz=timezone.utc),
-            )
-        else:
-            return OctiRelationshipModel.create(
-                relationship_type=relation_type,
-                source_ref=src_entity.id,
-                target_ref=target_entity.id,
-                organization_id=src_entity.created_by_ref,
-                marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(tz=timezone.utc),
-                modified=datetime.now(tz=timezone.utc),
-            )
+    ioc_type = "ip_address"
 
     def __init__(
         self,
-        ip: GTIIPData,
-        organization: OrganizationAuthor,
-        tlp_marking: TLPMarking,
+        *args: Any,
+        ip_link_to_asn: bool = False,
+        ip_link_to_country: bool = False,
+        **kwargs: Any,
     ) -> None:
-        """Initialize the GTIIPToSTIXIP object.
+        """Initialize the mapper.
 
         Args:
-        ip (GTIIPData): The GTI IP data to convert.
-        organization (OrganizationAuthor): The organization author object.
-        tlp_marking (TLPMarking): The TLP marking object.
+            *args: See `BaseIOCMapper`.
+            ip_link_to_asn: Whether to link the IP to its autonomous system.
+            ip_link_to_country: Whether to link the IP to its country.
+            **kwargs: See `BaseIOCMapper`.
 
         """
-        self.ip = ip
-        self.organization = organization
-        self.tlp_marking = tlp_marking
+        super().__init__(*args, **kwargs)
+        self.ip_link_to_asn = ip_link_to_asn
+        self.ip_link_to_country = ip_link_to_country
+
+    @property
+    def ip(self) -> GTIIPData:
+        """The GTI ip address being converted."""
+        return self.ioc
+
+    def to_stix(self) -> list[Any]:
+        """Convert the GTI IP, adding its autonomous system and country when enabled.
+
+        Returns:
+            list[Any]: The objects of `BaseIOCMapper.to_stix`, then each linked
+                object followed by its relationship from the IP: 'belongs-to' the
+                autonomous system, 'located-at' the country.
+
+        """
+        stix_objects = super().to_stix()
+        observable = stix_objects[0]
+        attributes = self.ip.attributes
+        autonomous_system = self._create_autonomous_system()
+        country = self._create_country()
+        links = []
+        if autonomous_system is not None and attributes and attributes.asn is not None:
+            links.append(
+                (
+                    "belongs-to",
+                    autonomous_system,
+                    ip_autonomous_system_reason(attributes.asn, attributes.as_owner),
+                )
+            )
+        if country is not None and attributes and attributes.country:
+            links.append(
+                (
+                    "located-at",
+                    country,
+                    ip_country_reason(country.name, attributes.country),
+                )
+            )
+        for relationship_type, target, reason in links:
+            stix_objects.append(target)
+            stix_objects.append(
+                self._create_ioc_relationship(
+                    relationship_type,
+                    observable,
+                    target,
+                    description=optional_reason(reason),
+                )
+            )
+        return stix_objects
+
+    def _natively_linked_fields(self) -> frozenset[str]:
+        """Return the network fields carried by linked objects, left out of the description."""
+        fields = set()
+        if self._create_autonomous_system() is not None:
+            fields.add("asn")
+        if self._create_country() is not None:
+            fields.add("country")
+        return frozenset(fields)
+
+    def _create_country(self) -> Location | None:
+        """Create the Country location of the IP when enabled and the code is known."""
+        attributes = self.ip.attributes
+        code = attributes.country if attributes else None
+        if not self.ip_link_to_country or not code:
+            return None
+        country = country_from_code(code)
+        if country is None:
+            return None
+        name, aliases = country
+        timestamps = self._get_timestamps()
+        return OctiLocationModel.create_country(
+            name=name,
+            country_code=code,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+            custom_properties={"x_opencti_aliases": aliases},
+            created=timestamps["created"],
+            modified=timestamps["modified"],
+        ).to_stix2_object()
+
+    def _create_autonomous_system(self) -> AutonomousSystem | None:
+        """Create the autonomous system of the IP when enabled and known."""
+        attributes = self.ip.attributes
+        if not self.ip_link_to_asn or not attributes or attributes.asn is None:
+            return None
+        return AutonomousSystemModel(
+            type="autonomous-system",
+            spec_version="2.1",
+            number=attributes.asn,
+            name=attributes.as_owner,
+            rir=attributes.regional_internet_registry,
+            object_marking_refs=[self.tlp_marking.id],
+            custom_properties={"x_opencti_created_by_ref": self.organization.id},
+        ).to_stix2_object()
 
     def _detect_ip_version(self) -> str:
         """Detect if IP is IPv4 or IPv6.
@@ -110,7 +193,7 @@ class GTIIPToSTIXIP(BaseMapper):
         except ValueError as e:
             raise ValueError(f"Invalid IP address format '{self.ip.id}': {e}") from e
 
-    def _create_stix_ip(self) -> IPv4Address | IPv6Address:
+    def _create_stix_observable(self) -> IPv4Address | IPv6Address:
         """Create the STIX IP observable object (IPv4 or IPv6).
 
         Returns:
@@ -130,6 +213,7 @@ class GTIIPToSTIXIP(BaseMapper):
                 organization_id=self.organization.id,
                 marking_ids=[self.tlp_marking.id],
                 score=score,
+                custom_properties=self._observable_custom_properties(),
                 created=timestamps["created"],
                 modified=timestamps["modified"],
             )
@@ -139,92 +223,12 @@ class GTIIPToSTIXIP(BaseMapper):
                 organization_id=self.organization.id,
                 marking_ids=[self.tlp_marking.id],
                 score=score,
+                custom_properties=self._observable_custom_properties(),
                 created=timestamps["created"],
                 modified=timestamps["modified"],
             )
 
         return ip_model.to_stix2_object()
-
-    def _create_stix_indicator(self) -> IndicatorModel:
-        """Create the STIX indicator object.
-
-        Returns:
-        IndicatorModel: The STIX indicator model object.
-
-        """
-        timestamps = self._get_timestamps()
-        created = timestamps["created"]
-        modified = timestamps["modified"]
-        score = self._get_score()
-
-        pattern = self._build_stix_pattern()
-
-        ip_version = self._detect_ip_version()
-        observable_type = (
-            ObservableTypeOV.IPV4_ADDR
-            if ip_version == "ipv4"
-            else ObservableTypeOV.IPV6_ADDR
-        )
-        indicator_types = self._determine_indicator_types()
-
-        indicator_model = OctiIndicatorModel.create(
-            name=self.ip.id,
-            pattern=pattern,
-            pattern_type=PatternTypeOV.STIX,
-            observable_type=observable_type,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-            indicator_types=indicator_types,
-            score=score,
-            created=created,
-            modified=modified,
-        )
-
-        return indicator_model
-
-    def _create_relationship_indicator_ip(
-        self,
-        indicator: IndicatorModel,
-        ip_observable: IPv4Address | IPv6Address,
-    ) -> RelationshipModel:
-        """Create a based-on relationship from indicator to IP observable.
-
-        Args:
-            indicator (IndicatorModel): The source indicator object.
-            ip_observable (IPv4Address | IPv6Address): The target IP observable object.
-
-        Returns:
-            RelationshipModel: The relationship model object.
-
-        """
-        timestamps = self._get_timestamps()
-
-        relationship = RelationshipModel(
-            type="relationship",
-            spec_version="2.1",
-            source_ref=indicator.id,
-            target_ref=ip_observable.id,
-            relationship_type="based-on",
-            created=timestamps["created"],
-            modified=timestamps["modified"],
-            created_by_ref=self.organization.id,
-            object_marking_refs=[self.tlp_marking.id],
-        )
-
-        return relationship
-
-    def to_stix(self) -> list[Any]:
-        """Convert the GTI IP to STIX IP and indicator objects.
-
-        Returns:
-        list[Any]: list containing the STIX IP observable, indicator model objects, and their relationship.
-
-        """
-        ip_observable = self._create_stix_ip()
-        indicator = self._create_stix_indicator()
-        relationship = self._create_relationship_indicator_ip(indicator, ip_observable)
-
-        return [ip_observable, indicator, relationship]
 
     def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from IP attributes.
@@ -248,41 +252,6 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> int | None:
-        """Get score from IP attributes.
-
-        Priority order:
-        1. threat_score.value
-        2. contributing_factors.mandiant_confidence_score
-
-        Returns:
-            int | None: The score if available, None otherwise
-
-        """
-        if (
-            self.ip.attributes
-            and self.ip.attributes.gti_assessment
-            and self.ip.attributes.gti_assessment.threat_score
-        ):
-            return self.ip.attributes.gti_assessment.threat_score.value
-
-        if (
-            self.ip.attributes
-            and self.ip.attributes.gti_assessment
-            and self.ip.attributes.gti_assessment.contributing_factors
-            and hasattr(
-                self.ip.attributes.gti_assessment.contributing_factors,
-                "mandiant_confidence_score",
-            )
-            and self.ip.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
-            is not None
-        ):
-            return (
-                self.ip.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
-            )
-
-        return None
-
     def _build_stix_pattern(self) -> str:
         """Build STIX pattern for the IP indicator.
 
@@ -297,14 +266,8 @@ class GTIIPToSTIXIP(BaseMapper):
         else:
             return f"[ipv6-addr:value = '{self.ip.id}']"
 
-    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
-        """Determine indicator types from the GTI assessment verdict.
-
-        Returns:
-            list[IndicatorTypeOV]: list of indicator types, empty when no
-            classification is available (field should be omitted downstream).
-
-        """
-        if not self.ip.attributes:
-            return []
-        return indicator_types_from_verdict(self.ip.attributes.gti_assessment)
+    def _observable_type(self) -> ObservableTypeOV:
+        """Return the main observable type of the indicator."""
+        if self._detect_ip_version() == "ipv4":
+            return ObservableTypeOV.IPV4_ADDR
+        return ObservableTypeOV.IPV6_ADDR

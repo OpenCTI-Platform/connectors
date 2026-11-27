@@ -89,6 +89,8 @@ class DummyConfig:
         self.tlp_level = tlp_level
         self.vulnerability_get_related_softwares = True
         self.report_download_pdf = False
+        self.ioc_link_to_threats = False
+        self.intrusion_set_link_to_capabilities = False
         self.import_software_toolkits = False
         self.software_toolkit_import_start_date = timedelta(days=1)
         self.report_subentities = [

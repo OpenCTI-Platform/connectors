@@ -41,7 +41,9 @@ class GTIThreatActorConfig(GTIBaseConfig):
 
     enable_threat_actor_aliases: bool = Field(
         default=False,
-        description="Whether to enable importing threat actor aliases from GTI",
+        description="Whether to enable importing threat actor aliases from GTI: "
+        "alternative names, then the names of the actors GTI merged into the threat "
+        "actor (merged_actors).",
     )
 
     threat_actor_extra_filters: ListFromString = Field(

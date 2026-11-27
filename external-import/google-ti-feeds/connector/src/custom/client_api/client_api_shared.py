@@ -4,6 +4,8 @@ import logging
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
+from connector.src.custom.client_api.linked_threats import subentity_type_of
+from connector.src.custom.client_api.page_limits import subentity_page_limit
 
 LOG_PREFIX = "[FetcherShared]"
 
@@ -48,7 +50,7 @@ class ClientAPIShared(BaseClientAPI):
                 params = {
                     entity_name: entity_id,
                     "entity_type": subentity_type,
-                    "limit": 40,
+                    "limit": subentity_page_limit(subentity_type),
                 }
 
                 try:
@@ -124,6 +126,56 @@ class ClientAPIShared(BaseClientAPI):
                 },
             )
             return subentities
+
+    async def fetch_linked_threats(
+        self, collection_ids: list[str], subentity_types: list[str]
+    ) -> dict[str, list[Any]]:
+        """Fetch GTI threat collections by ID, grouped by sub-entity type.
+
+        Collections of a type outside `subentity_types` are dropped. Collections
+        that cannot be fetched are skipped (see `GenericFetcher.fetch_multiple`),
+        and so are those that fail model validation: callers read their attributes.
+
+        Args:
+            collection_ids: GTI collection IDs, e.g. linked in a report text.
+            subentity_types: Sub-entity types to keep, e.g. "threat_actors".
+
+        Returns:
+            The fetched collections, deserialized to their sub-entity model.
+
+        """
+        if not collection_ids or not subentity_types:
+            return {}
+        fetcher = self.fetcher_factory.create_fetcher_by_name(
+            "collections", base_url=self.config.api_url.unicode_string()
+        )
+        raw_by_type: dict[str, list[Any]] = {}
+        for collection in await fetcher.fetch_multiple(collection_ids):
+            subentity_type = (
+                subentity_type_of(collection) if isinstance(collection, dict) else None
+            )
+            if subentity_type in subentity_types:
+                raw_by_type.setdefault(subentity_type, []).append(collection)
+        linked: dict[str, list[Any]] = {}
+        for subentity_type, collections in raw_by_type.items():
+            # _deserialize_subentities keeps the raw dict when validation fails.
+            threats = [
+                threat
+                for threat in self._deserialize_subentities(subentity_type, collections)
+                if not isinstance(threat, dict)
+            ]
+            if len(threats) < len(collections):
+                self.logger.warning(
+                    "Skipping linked threats that failed model validation",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "subentity_type": subentity_type,
+                        "skipped": len(collections) - len(threats),
+                    },
+                )
+            if threats:
+                linked[subentity_type] = threats
+        return linked
 
     def _deserialize_subentities(
         self, subentity_type: str, entities: list[Any]

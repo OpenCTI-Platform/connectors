@@ -8,51 +8,54 @@ import pytest
 from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
     GTIDomainToSTIXDomain,
 )
-from connector.src.custom.models.gti.gti_domain_model import (
+from connector.src.custom.models.gti.gti_assessment_model import (
     ContributingFactors,
-    DomainModel,
     GTIAssessment,
-    GTIDomainData,
     ThreatScore,
     Verdict,
 )
+from connector.src.custom.models.gti.gti_domain_model import (
+    DomainModel,
+    GTIDomainData,
+)
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
+from tests.factories import GTIModelFactory
 
-class VerdictFactory(ModelFactory[Verdict]):
+
+class VerdictFactory(GTIModelFactory[Verdict]):
     """Factory for Verdict model."""
 
     __model__ = Verdict
 
 
-class ThreatScoreFactory(ModelFactory[ThreatScore]):
+class ThreatScoreFactory(GTIModelFactory[ThreatScore]):
     """Factory for ThreatScore model."""
 
     __model__ = ThreatScore
 
 
-class ContributingFactorsFactory(ModelFactory[ContributingFactors]):
+class ContributingFactorsFactory(GTIModelFactory[ContributingFactors]):
     """Factory for ContributingFactors model."""
 
     __model__ = ContributingFactors
 
 
-class GTIAssessmentFactory(ModelFactory[GTIAssessment]):
+class GTIAssessmentFactory(GTIModelFactory[GTIAssessment]):
     """Factory for GTIAssessment model."""
 
     __model__ = GTIAssessment
 
 
-class DomainModelFactory(ModelFactory[DomainModel]):
+class DomainModelFactory(GTIModelFactory[DomainModel]):
     """Factory for DomainModel."""
 
     __model__ = DomainModel
 
 
-class GTIDomainDataFactory(ModelFactory[GTIDomainData]):
+class GTIDomainDataFactory(GTIModelFactory[GTIDomainData]):
     """Factory for GTIDomainData."""
 
     __model__ = GTIDomainData
@@ -114,7 +117,7 @@ def domain_with_mandiant_score() -> GTIDomainData:
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
                 verdict=None,
@@ -131,7 +134,7 @@ def domain_with_threat_score() -> GTIDomainData:
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
                 verdict=None,
@@ -148,7 +151,7 @@ def domain_with_zero_score() -> GTIDomainData:
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
                 verdict=None,
@@ -213,7 +216,7 @@ def domain_with_all_data() -> GTIDomainData:
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=95
+                    gti_confidence_score=None, mandiant_confidence_score=95
                 ),
                 threat_score=ThreatScoreFactory.build(value=85),
             ),
@@ -591,7 +594,7 @@ def test_get_score_with_threat_score(
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
             )
@@ -617,7 +620,7 @@ def test_get_score_with_zero_threat_score(
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
             )
@@ -643,7 +646,7 @@ def test_get_score_with_mandiant_score_fallback(
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
             )
@@ -731,7 +734,7 @@ def test_create_stix_domain_method(
         attributes=DomainModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 )
             )
         ),
@@ -739,7 +742,7 @@ def test_create_stix_domain_method(
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX domain
-    domain_observable = mapper._create_stix_domain()
+    domain_observable = mapper._create_stix_observable()
 
     # Then domain observable should be created correctly
     assert domain_observable is not None  # noqa: S101
@@ -779,7 +782,7 @@ def _given_gti_domain_mapper(
 ) -> GTIDomainToSTIXDomain:
     """Create a GTIDomainToSTIXDomain mapper instance."""
     return GTIDomainToSTIXDomain(
-        domain=domain,
+        domain,
         organization=organization,
         tlp_marking=tlp_marking,
     )

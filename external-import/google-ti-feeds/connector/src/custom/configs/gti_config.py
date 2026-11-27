@@ -12,6 +12,7 @@ from connector.src.custom.configs.indicator.gti_config_indicator import (
 )
 from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
 from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.shared.gti_config_shared import GTISharedConfig
 from connector.src.custom.configs.software_toolkit.gti_config_software_toolkit import (
     GTISoftwareToolkitConfig,
 )
@@ -24,6 +25,7 @@ from connector.src.custom.configs.vulnerability.gti_config_vulnerability import 
 
 
 class GTIConfig(
+    GTISharedConfig,
     GTIReportConfig,
     GTIThreatActorConfig,
     GTIMalwareConfig,
@@ -43,6 +45,7 @@ class GTIConfig(
     - Malware family imports (from GTIMalwareConfig)
     - Vulnerability imports (from GTIVulnerabilityConfig)
     - Campaign imports (from GTICampaignConfig)
+    - Options shared by several collections (from GTISharedConfig)
     - Base GTI API settings (from GTIBaseConfig via inheritance)
 
     The configuration supports both YAML file-based and environment variable-based

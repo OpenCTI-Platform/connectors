@@ -1,23 +1,20 @@
 """Base orchestrator class with common functionality."""
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from connector.src.custom.client_api.client_api import ClientAPI
-from connector.src.custom.client_api.inline_relationships import (
-    is_subentity_call_needed,
-)
 from connector.src.custom.configs import GTIConfig
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
 )
 from connector.src.octi.work_manager import WorkManager
 
-LOG_PREFIX = "[BaseOrchestrator]"
-
 
 class BaseOrchestrator:
     """Base orchestrator class with common functionality."""
+
+    LOG_PREFIX: ClassVar[str] = "[BaseOrchestrator]"
 
     def __init__(
         self,
@@ -79,34 +76,29 @@ class BaseOrchestrator:
             self.logger.warning(
                 "Skipping attack techniques without a name",
                 {
-                    "prefix": LOG_PREFIX,
+                    "prefix": self.LOG_PREFIX,
                     "attack_technique_without_name_count": missing_name_count,
                 },
             )
         return GTIAttackTechniqueIDData.from_id_list(ids, names=names)
 
     def _log_relationships_summary(
-        self,
-        subentities_ids: dict[str, Any],
-        current_idx: int,
-        total: int,
-        entity_type: str,
+        self, subentities: dict[str, Any], current_idx: int, total: int
     ) -> None:
-        """Log summary of relationships found.
+        """Log the number of related entities found, by type.
 
         Args:
-            subentities_ids: dictionary of subentity IDs
-            current_idx: Current index in processing
-            total: Total number of entities
-            entity_type: Type of entity being processed
+            subentities: Related entities grouped by type
+            current_idx: Index of the entity being processed
+            total: Number of entities in the page
 
         """
-        rel_summary = ", ".join([f"{k}: {len(v)}" for k, v in subentities_ids.items()])
+        rel_summary = ", ".join([f"{k}: {len(v)}" for k, v in subentities.items()])
         if len(rel_summary) > 0:
             self.logger.info(
                 "Found relationships",
                 {
-                    "prefix": "[BaseOrchestrator]",
+                    "prefix": self.LOG_PREFIX,
                     "current": current_idx + 1,
                     "total": total,
                     "relationships": rel_summary,
@@ -114,29 +106,26 @@ class BaseOrchestrator:
             )
 
     def _log_entities_summary(
-        self, all_entities: list[Any], current_idx: int, total: int, entity_type: str
+        self, all_entities: list[Any], current_idx: int, total: int
     ) -> None:
-        """Log summary of converted entities.
+        """Log the number of converted STIX objects, by type.
 
         Args:
-            all_entities: list of all converted entities
-            current_idx: Current index in processing
-            total: Total number of entities
-            entity_type: Type of entity being processed
+            all_entities: Converted STIX objects
+            current_idx: Index of the entity being processed
+            total: Number of entities in the page
 
         """
         entity_types: dict[str, int] = {}
         for entity in all_entities:
-            entity_type_attr = getattr(entity, "type", None)
-            if entity_type_attr:
-                entity_types[entity_type_attr] = (
-                    entity_types.get(entity_type_attr, 0) + 1
-                )
+            entity_type = getattr(entity, "type", None)
+            if entity_type:
+                entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
         entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
         self.logger.info(
             "Converted to STIX entities",
             {
-                "prefix": "[BaseOrchestrator]",
+                "prefix": self.LOG_PREFIX,
                 "current": current_idx + 1,
                 "total": total,
                 "entities_count": len(all_entities),
@@ -159,7 +148,7 @@ class BaseOrchestrator:
         ) >= batch_processor.config.batch_size * 2:
             self.logger.info(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
-                {"prefix": LOG_PREFIX},
+                {"prefix": self.LOG_PREFIX},
             )
             batch_processor.flush()
 
@@ -177,40 +166,3 @@ class BaseOrchestrator:
         batch_processor.add_item(converter.organization)
         batch_processor.add_item(converter.tlp_marking)
         batch_processor.add_items(all_entities)
-
-    @staticmethod
-    def _filter_subentity_types(subentity_types: list[str], entity: Any) -> list[str]:
-        """Filter subentity types based on the entity's counters.
-
-        When the entity exposes a ``counters`` object (via ``attributes.counters``),
-        subentity types whose counter is explicitly ``0`` are removed from the
-        list to avoid unnecessary API calls.
-
-        When the entity carries inline relationship descriptors (list call made
-        with ``relationships=``), subentity types that the descriptors prove
-        empty are removed too. See ``client_api/inline_relationships.py``.
-
-        See: https://github.com/OpenCTI-Platform/connectors/issues/6562
-
-        Args:
-            subentity_types: The full list of subentity types to fetch.
-            entity: The GTI entity object (must have ``attributes.counters``).
-
-        Returns:
-            A filtered list of subentity types worth fetching.
-
-        """
-        counters = getattr(getattr(entity, "attributes", None), "counters", None)
-        if counters is not None:
-            subentity_types = [
-                subentity_type
-                for subentity_type in subentity_types
-                if getattr(counters, subentity_type, None) != 0
-            ]
-
-        relationships = getattr(entity, "relationships", None)
-        return [
-            subentity_type
-            for subentity_type in subentity_types
-            if is_subentity_call_needed(subentity_type, relationships)
-        ]

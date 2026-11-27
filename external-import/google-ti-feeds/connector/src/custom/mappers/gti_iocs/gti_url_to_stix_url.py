@@ -1,91 +1,28 @@
 """Converts a GTI URL to a STIX URL object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any
 
-from connector.src.custom.mappers.gti_iocs.indicator_type_helpers import (
-    indicator_types_from_verdict,
-)
+from connector.src.custom.mappers.gti_iocs.base_ioc_mapper import BaseIOCMapper
+from connector.src.custom.mappers.gti_iocs.stix_pattern import escape_pattern_value
 from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
 )
-from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
-from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.octi.models.url_model import OctiUrlModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
-from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
-from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
-from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
-from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models import (  # type: ignore[import-untyped]
-    OrganizationAuthor,
-    TLPMarking,
-)
 from stix2 import URL  # type: ignore[import-untyped]
 
 
-class GTIUrlToSTIXUrl(BaseMapper):
+class GTIUrlToSTIXUrl(BaseIOCMapper[GTIURLData]):
     """Converts a GTI URL to a STIX URL object and indicator."""
 
-    @staticmethod
-    def create_relationship(
-        src_entity: Any, relation_type: str, target_entity: Any
-    ) -> Any:
-        """Create a relationship between entities.
+    ioc_type = "url"
 
-        For indicators: creates 'indicates' relationship from indicator to target
-        For observables: creates the specified relationship type from source to target
+    @property
+    def url(self) -> GTIURLData:
+        """The GTI url being converted."""
+        return self.ioc
 
-        Args:
-            src_entity: The source entity (intrusion set or indicator/observable)
-            relation_type: The relationship type (e.g., "related-to")
-            target_entity: The target entity (URL or intrusion set)
-
-        Returns:
-            OctiRelationshipModel: The relationship object
-
-        """
-        if isinstance(target_entity, IndicatorModel):
-            return OctiRelationshipModel.create(
-                relationship_type="indicates",
-                source_ref=target_entity.id,
-                target_ref=src_entity.id,
-                organization_id=src_entity.created_by_ref,
-                marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(tz=timezone.utc),
-                modified=datetime.now(tz=timezone.utc),
-            )
-        else:
-            return OctiRelationshipModel.create(
-                relationship_type=relation_type,
-                source_ref=src_entity.id,
-                target_ref=target_entity.id,
-                organization_id=src_entity.created_by_ref,
-                marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(tz=timezone.utc),
-                modified=datetime.now(tz=timezone.utc),
-            )
-
-    def __init__(
-        self,
-        url: GTIURLData,
-        organization: OrganizationAuthor,
-        tlp_marking: TLPMarking,
-    ) -> None:
-        """Initialize the GTIUrlToSTIXUrl object.
-
-        Args:
-        url (GTIURLData): The GTI URL data to convert.
-        organization (OrganizationAuthor): The organization identity object.
-        tlp_marking (TLPMarking): The TLP marking definition.
-
-        """
-        self.url = url
-        self.organization = organization
-        self.tlp_marking = tlp_marking
-
-    def _create_stix_url(self) -> URL:
+    def _create_stix_observable(self) -> URL:
         """Create the STIX URL observable object.
 
         Returns:
@@ -101,84 +38,10 @@ class GTIUrlToSTIXUrl(BaseMapper):
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             score=score,
+            custom_properties=self._observable_custom_properties(),
         )
 
         return url_model.to_stix2_object()
-
-    def _create_stix_indicator(self) -> IndicatorModel:
-        """Create the STIX indicator object.
-
-        Returns:
-        IndicatorModel: The STIX indicator model object.
-
-        """
-        timestamps = self._get_timestamps()
-        created = timestamps["created"]
-        modified = timestamps["modified"]
-        score = self._get_score()
-
-        pattern = self._build_stix_pattern()
-
-        indicator_types = self._determine_indicator_types()
-
-        url_value = self._get_url_value()
-
-        indicator_model = OctiIndicatorModel.create(
-            name=url_value,
-            pattern=pattern,
-            pattern_type=PatternTypeOV.STIX,
-            observable_type=ObservableTypeOV.URL,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-            indicator_types=indicator_types,
-            score=score,
-            created=created,
-            modified=modified,
-        )
-
-        return indicator_model
-
-    def _create_relationship_indicator_url(
-        self, indicator: IndicatorModel, url_observable: URL
-    ) -> RelationshipModel:
-        """Create a based-on relationship from indicator to URL observable.
-
-        Args:
-            indicator (IndicatorModel): The source indicator object.
-            url_observable (URL): The target URL observable object.
-
-        Returns:
-            RelationshipModel: The relationship model object.
-
-        """
-        timestamps = self._get_timestamps()
-
-        relationship = RelationshipModel(
-            relationship_type="based-on",
-            source_ref=indicator.id,
-            target_ref=url_observable.id,
-            created=timestamps["created"],
-            modified=timestamps["modified"],
-            created_by_ref=self.organization.id,
-            object_marking_refs=[self.tlp_marking.id],
-        )
-
-        return relationship
-
-    def to_stix(self) -> list[Any]:
-        """Convert the GTI URL to STIX URL and indicator objects.
-
-        Returns:
-        list[Any]: list containing the STIX URL observable, indicator model objects, and their relationship.
-
-        """
-        url_observable = self._create_stix_url()
-        indicator = self._create_stix_indicator()
-        relationship = self._create_relationship_indicator_url(
-            indicator, url_observable
-        )
-
-        return [url_observable, indicator, relationship]
 
     def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from URL attributes.
@@ -201,41 +64,6 @@ class GTIUrlToSTIXUrl(BaseMapper):
                 )
 
         return {"created": created, "modified": modified}
-
-    def _get_score(self) -> int | None:
-        """Get score from URL attributes.
-
-        Priority order:
-        1. threat_score.value
-        2. contributing_factors.mandiant_confidence_score
-
-        Returns:
-            int | None: The score if available, None otherwise
-
-        """
-        if (
-            self.url.attributes
-            and self.url.attributes.gti_assessment
-            and self.url.attributes.gti_assessment.threat_score
-        ):
-            return self.url.attributes.gti_assessment.threat_score.value
-
-        if (
-            self.url.attributes
-            and self.url.attributes.gti_assessment
-            and self.url.attributes.gti_assessment.contributing_factors
-            and hasattr(
-                self.url.attributes.gti_assessment.contributing_factors,
-                "mandiant_confidence_score",
-            )
-            and self.url.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
-            is not None
-        ):
-            return (
-                self.url.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
-            )
-
-        return None
 
     def _get_url_value(self) -> str:
         """Get the URL value with priority order.
@@ -264,16 +92,12 @@ class GTIUrlToSTIXUrl(BaseMapper):
 
         """
         url_value = self._get_url_value()
-        return f"[url:value = '{url_value}']"
+        return f"[url:value = '{escape_pattern_value(url_value)}']"
 
-    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
-        """Determine indicator types from the GTI assessment verdict.
+    def _observable_type(self) -> ObservableTypeOV:
+        """Return the main observable type of the indicator."""
+        return ObservableTypeOV.URL
 
-        Returns:
-            list[IndicatorTypeOV]: list of indicator types, empty when no
-            classification is available (field should be omitted downstream).
-
-        """
-        if not self.url.attributes:
-            return []
-        return indicator_types_from_verdict(self.url.attributes.gti_assessment)
+    def _indicator_name(self) -> str:
+        """Name the indicator after the URL rather than its GTI ID."""
+        return self._get_url_value()

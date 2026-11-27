@@ -9,15 +9,17 @@ import pytest
 from connector.src.custom.convert_to_stix.indicator.convert_to_stix_indicator import (
     ConvertToSTIXIndicator,
 )
+from connector.src.custom.models.gti.gti_assessment_model import (
+    GTIAssessment,
+    ThreatScore,
+)
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaAttributes,
     IOCDeltaEntry,
-    IOCDeltaGTIAssessment,
     IOCDeltaRelationshipData,
     IOCDeltaRelationshipItem,
     IOCDeltaRelationshipItemAttributes,
     IOCDeltaRelationships,
-    IOCDeltaThreatScore,
 )
 from pydantic import HttpUrl
 from pydantic.types import SecretStr
@@ -45,6 +47,12 @@ class DummyConfig:
         self.indicator_min_score = 0
         self.indicator_require_malware_family = False
         self.indicator_require_threat_actor = False
+        self.indicator_scoring = "threat_score"
+        self.indicator_min_verdict = "any"
+        self.ioc_tags_as_labels = False
+        self.indicator_infrastructure = []
+        self.indicator_infrastructure_limit = 10
+        self.extended_descriptions = False
         self.indicator_subentities = [
             "malware_families",
             "threat_actors",
@@ -122,7 +130,7 @@ def _given_file_entry(
 ) -> dict:
     if attributes is None:
         gti = (
-            IOCDeltaGTIAssessment(threat_score=IOCDeltaThreatScore(value=score))
+            GTIAssessment(threat_score=ThreatScore(value=score))
             if score is not None
             else None
         )
@@ -153,7 +161,7 @@ def _given_ip_entry(
 ) -> dict:
     if attributes is None:
         gti = (
-            IOCDeltaGTIAssessment(threat_score=IOCDeltaThreatScore(value=score))
+            GTIAssessment(threat_score=ThreatScore(value=score))
             if score is not None
             else None
         )
@@ -178,7 +186,7 @@ def _given_url_entry(
     relationships: IOCDeltaRelationships | None = None,
 ) -> dict:
     gti = (
-        IOCDeltaGTIAssessment(threat_score=IOCDeltaThreatScore(value=score))
+        GTIAssessment(threat_score=ThreatScore(value=score))
         if score is not None
         else None
     )
@@ -203,7 +211,7 @@ def _given_domain_entry(
     relationships: IOCDeltaRelationships | None = None,
 ) -> dict:
     gti = (
-        IOCDeltaGTIAssessment(threat_score=IOCDeltaThreatScore(value=score))
+        GTIAssessment(threat_score=ThreatScore(value=score))
         if score is not None
         else None
     )

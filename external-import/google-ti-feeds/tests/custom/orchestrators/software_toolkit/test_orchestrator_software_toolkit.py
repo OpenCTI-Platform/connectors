@@ -253,10 +253,7 @@ class TestFlushBatchProcessor:
         orch._flush_batch_processor()  # should not raise
 
         all_messages = [rec.getMessage() for rec in caplog.records]
-        assert any(
-            "Failed to flush software toolkit batch processor" in msg
-            for msg in all_messages
-        )
+        assert any("Failed to flush batch processor" in msg for msg in all_messages)
 
 
 # =====================

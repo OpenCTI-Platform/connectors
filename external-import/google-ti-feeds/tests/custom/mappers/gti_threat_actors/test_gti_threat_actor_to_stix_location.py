@@ -12,30 +12,31 @@ from connector.src.custom.models.gti.gti_threat_actor_model import (
     TargetedRegion,
     ThreatActorModel,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
+from tests.factories import GTIModelFactory
 
-class SourceRegionFactory(ModelFactory[SourceRegion]):
+
+class SourceRegionFactory(GTIModelFactory[SourceRegion]):
     """Factory for SourceRegion model."""
 
     __model__ = SourceRegion
 
 
-class TargetedRegionFactory(ModelFactory[TargetedRegion]):
+class TargetedRegionFactory(GTIModelFactory[TargetedRegion]):
     """Factory for TargetedRegion model."""
 
     __model__ = TargetedRegion
 
 
-class ThreatActorModelFactory(ModelFactory[ThreatActorModel]):
+class ThreatActorModelFactory(GTIModelFactory[ThreatActorModel]):
     """Factory for ThreatActorModel."""
 
     __model__ = ThreatActorModel
 
 
-class GTIThreatActorDataFactory(ModelFactory[GTIThreatActorData]):
+class GTIThreatActorDataFactory(GTIModelFactory[GTIThreatActorData]):
     """Factory for GTIThreatActorData."""
 
     __model__ = GTIThreatActorData

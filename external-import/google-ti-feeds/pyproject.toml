@@ -22,6 +22,7 @@ dependencies = [
     "aiohttp~=3.14.1",
     "Markdown~=3.11.2",
     "markdownify~=1.2.0",
+    "pycountry~=26.2.16",
     "pydantic==2.14.4",
     "pydantic_settings~=2.16.2",
     "python-dotenv~=1.2.2",

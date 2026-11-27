@@ -13,6 +13,7 @@ from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_int
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     AltNameDetail,
     GTIThreatActorData,
+    MergedActor,
     Motivation,
     SeenDetail,
     TagDetail,
@@ -20,15 +21,16 @@ from connector.src.custom.models.gti.gti_threat_actor_model import (
     ThreatActorModel,
 )
 from polyfactory import Use
-from polyfactory.factories.pydantic_factory import ModelFactory
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from tests.factories import GTIModelFactory
 
 # =====================
 # Polyfactory Factories
 # =====================
 
 
-class AltNameDetailFactory(ModelFactory[AltNameDetail]):
+class AltNameDetailFactory(GTIModelFactory[AltNameDetail]):
     """Factory for AltNameDetail model."""
 
     __model__ = AltNameDetail
@@ -37,7 +39,7 @@ class AltNameDetailFactory(ModelFactory[AltNameDetail]):
     value = "APT Example"
 
 
-class SeenDetailFactory(ModelFactory[SeenDetail]):
+class SeenDetailFactory(GTIModelFactory[SeenDetail]):
     """Factory for SeenDetail model."""
 
     __model__ = SeenDetail
@@ -46,7 +48,7 @@ class SeenDetailFactory(ModelFactory[SeenDetail]):
     value = "2023-01-01T00:00:00Z"
 
 
-class MotivationFactory(ModelFactory[Motivation]):
+class MotivationFactory(GTIModelFactory[Motivation]):
     """Factory for Motivation model."""
 
     __model__ = Motivation
@@ -55,7 +57,7 @@ class MotivationFactory(ModelFactory[Motivation]):
     value = "Financial"
 
 
-class TagDetailFactory(ModelFactory[TagDetail]):
+class TagDetailFactory(GTIModelFactory[TagDetail]):
     """Factory for TagDetail model."""
 
     __model__ = TagDetail
@@ -64,7 +66,7 @@ class TagDetailFactory(ModelFactory[TagDetail]):
     value = "APT"
 
 
-class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
+class TargetedIndustryFactory(GTIModelFactory[TargetedIndustry]):
     """Factory for TargetedIndustry model."""
 
     __model__ = TargetedIndustry
@@ -73,19 +75,21 @@ class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
     industry_group = "Financial Services"
 
 
-class ThreatActorModelFactory(ModelFactory[ThreatActorModel]):
+class ThreatActorModelFactory(GTIModelFactory[ThreatActorModel]):
     """Factory for ThreatActorModel."""
 
     __model__ = ThreatActorModel
 
     name = "Test Threat Actor"
+    # Merged actors become aliases: random ones would change the alias assertions.
+    merged_actors = None
     creation_date = 1672531200
     last_modification_date = 1672617600
     description = "A test threat actor"
     private = False
 
 
-class GTIThreatActorDataFactory(ModelFactory[GTIThreatActorData]):
+class GTIThreatActorDataFactory(GTIModelFactory[GTIThreatActorData]):
     """Factory for GTIThreatActorData."""
 
     __model__ = GTIThreatActorData
@@ -1124,3 +1128,37 @@ def test_threat_actor_boundary_timestamps(
     expected_modified = datetime.fromtimestamp(modification_date, tz=timezone.utc)
     assert stix_intrusion_set.created == expected_created  # noqa: S101
     assert stix_intrusion_set.modified == expected_modified  # noqa: S101
+
+
+def test_extract_aliases_includes_merged_actors() -> None:
+    """Merged actors follow the alternative names, without duplicates or the name."""
+    # Given a threat actor with alternative names and merged actors
+    attributes = ThreatActorModelFactory.build(
+        name="APT Example",
+        alt_names_details=[
+            AltNameDetailFactory.build(value="Example Group (Vendor)"),
+        ],
+        merged_actors=[
+            MergedActor(confidence="confirmed", value="UNC1234"),
+            MergedActor(confidence="confirmed", value="Example Group"),
+            MergedActor(confidence="confirmed", value="APT Example"),
+        ],
+    )
+    # When the aliases are extracted
+    aliases = GTIThreatActorToSTIXIntrusionSet._extract_aliases(attributes)
+    # Then the merged actors are added once, without the actor's own name
+    assert aliases == ["Example Group", "UNC1234"]  # noqa: S101
+
+
+def test_extract_aliases_from_merged_actors_only() -> None:
+    """Merged actors are aliases even without alternative names."""
+    # Given a threat actor with merged actors only
+    attributes = ThreatActorModelFactory.build(
+        alt_names_details=None,
+        merged_actors=[MergedActor(confidence="confirmed", value="UNC1234")],
+    )
+    # When the aliases are extracted
+    # Then the merged actor is an alias
+    assert GTIThreatActorToSTIXIntrusionSet._extract_aliases(  # noqa: S101
+        attributes
+    ) == ["UNC1234"]

@@ -392,3 +392,17 @@ def _then_rate_limiter_called(
 ) -> None:
     """Assert that the rate limiter was called."""
     limiter_mock.acquire.assert_called()
+
+
+def test_truncated_response_payload_is_a_retryable_network_error() -> None:
+    """A body cut off mid-transfer (e.g. by a proxy) is retried, not failed as HTTP 0."""
+    from aiohttp import ClientPayloadError
+
+    # Given an aiohttp error raised when the connection drops mid-body
+    error = ClientPayloadError(
+        "Response payload is not completed: <TransferEncodingError: 400, "
+        "message='Not enough data to satisfy transfer length header.'>"
+    )
+
+    # When / Then it is classified as a network error (retried with backoff)
+    assert AioHttpClient._is_network_error(error) is True

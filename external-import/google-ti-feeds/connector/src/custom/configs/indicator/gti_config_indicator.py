@@ -13,6 +13,10 @@ from connector.src.custom.configs.gti_config_common import (
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
+from connector.src.custom.mappers.gti_iocs.ioc_infrastructure import (
+    ALLOWED_INFRASTRUCTURE_CATEGORIES,
+    InfrastructureCategory,
+)
 from connectors_sdk.settings.annotated_types import parse_comma_separated_list
 from pydantic import Field, field_validator
 
@@ -80,6 +84,29 @@ class GTIIndicatorConfig(GTIBaseConfig):
         ],
     )
 
+    indicator_infrastructure: ListOfFromString[InfrastructureCategory] = Field(
+        default=[],
+        description="Comma-separated list of infrastructure relationships of the IOC "
+        "delta entries to import as observables linked to the IOC observable "
+        "(described with the GTI relationship when relationship_descriptions is "
+        "enabled). The delta packages already "
+        "embed them, so this setting does not change API quota usage. The linked "
+        "observables have no GTI verdict: they are context, not indicators. "
+        "resolutions: domain resolves-to IP. subdomains, siblings: related "
+        "domains. downloaded, communicating, referrer: files downloaded from, "
+        "communicating with or referencing a domain or IP. contacted, embedded: "
+        "domains and IPs contacted by or embedded in a file. serving_ip: last IP "
+        "serving a URL. An empty list imports none. "
+        f"Allowed values: {', '.join(ALLOWED_INFRASTRUCTURE_CATEGORIES)}",
+        examples=["resolutions,contacted,downloaded,serving_ip", ""],
+    )
+    indicator_infrastructure_limit: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum number of observables imported per infrastructure "
+        "relationship list of an IOC delta entry (see indicator_infrastructure).",
+    )
+
     @field_validator("indicator_import_start_date", mode="after")
     @classmethod
     def validate_indicator_import_start_date(cls, v: timedelta) -> timedelta:
@@ -114,4 +141,12 @@ class GTIIndicatorConfig(GTIBaseConfig):
         """Validate indicator sub-entities against allowed values."""
         return validate_subentities_list(
             v, "indicator subentity", ALLOWED_INDICATOR_SUBENTITIES
+        )
+
+    @field_validator("indicator_infrastructure", mode="before")
+    @classmethod
+    def validate_indicator_infrastructure(cls, v: str | list[str]) -> list[str]:
+        """Validate infrastructure categories against allowed values."""
+        return validate_subentities_list(
+            v, "indicator infrastructure", ALLOWED_INFRASTRUCTURE_CATEGORIES
         )

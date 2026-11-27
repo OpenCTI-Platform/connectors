@@ -60,6 +60,8 @@ ALLOWED_ORIGINS = list(get_args(Origin))
 # Sub-entity types that can be fetched for each data collection, so that customers
 # can fine-tune which relationships to retrieve depending on their quota allowance.
 # See: https://github.com/OpenCTI-Platform/connectors/issues/7053
+IOC_SUBENTITY_TYPES = ("domains", "files", "urls", "ip_addresses")
+
 ReportSubentity = Literal[
     "malware_families",
     "threat_actors",

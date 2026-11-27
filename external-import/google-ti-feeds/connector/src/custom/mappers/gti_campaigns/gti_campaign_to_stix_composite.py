@@ -8,14 +8,16 @@ from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign im
 )
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_identity import (
     GTICampaignToSTIXIdentity,
-    IdentityWithTiming,
 )
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_location import (
     GTICampaignToSTIXLocation,
+)
+from connector.src.custom.mappers.targeting_mappers import targeting_relationships
+from connector.src.custom.mappers.timing_models import (
+    IdentityWithTiming,
     LocationWithTiming,
 )
 from connector.src.custom.models.gti.gti_campaign_model import GTICampaignData
-from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
@@ -120,98 +122,20 @@ class GTICampaignToSTIXComposite(BaseMapper):
         )
 
         # Create relationships between campaign and targeted locations
-        targeted_locations_with_timing = self._get_targeted_locations_with_timing(
-            locations_with_timing
+        relationships.extend(
+            targeting_relationships(
+                campaign,
+                locations_with_timing,
+                identities_with_timing,
+                organization_id=self.organization.id,
+                marking_ids=[self.tlp_marking.id],
+                created=created,
+                modified=modified,
+            )
         )
-        for location_with_timing in targeted_locations_with_timing:
-            location = location_with_timing.location
-            relationship = OctiRelationshipModel.create(
-                relationship_type="targets",
-                source_ref=campaign.id,
-                target_ref=location.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=location_with_timing.first_seen,
-                stop_time=location_with_timing.last_seen,
-            )
-            relationships.append(relationship)
-
-        # Create relationships between campaign and source locations
-        source_locations_with_timing = self._get_source_locations_with_timing(
-            locations_with_timing
-        )
-        for location_with_timing in source_locations_with_timing:
-            location = location_with_timing.location
-            relationship = OctiRelationshipModel.create(
-                relationship_type="originates-from",
-                source_ref=campaign.id,
-                target_ref=location.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=location_with_timing.first_seen,
-                stop_time=location_with_timing.last_seen,
-            )
-            relationships.append(relationship)
-
-        # Create relationships between campaign and targeted industries
-        for identity_with_timing in identities_with_timing:
-            identity = identity_with_timing.identity
-            relationship = OctiRelationshipModel.create(
-                relationship_type="targets",
-                source_ref=campaign.id,
-                target_ref=identity.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=identity_with_timing.first_seen,
-                stop_time=identity_with_timing.last_seen,
-            )
-            relationships.append(relationship)
 
         return relationships
 
-    def _get_targeted_locations_with_timing(
-        self, locations_with_timing: list[LocationWithTiming]
-    ) -> list[LocationWithTiming]:
-        """Get LocationWithTiming objects that correspond to targeted regions.
-
-        Args:
-            locations_with_timing: list of all LocationWithTiming objects
-
-        Returns:
-            list of LocationWithTiming objects that correspond to targeted regions
-
-        """
-        return [
-            location_with_timing
-            for location_with_timing in locations_with_timing
-            if location_with_timing.is_targeted
-        ]
-
-    def _get_source_locations_with_timing(
-        self, locations_with_timing: list[LocationWithTiming]
-    ) -> list[LocationWithTiming]:
-        """Get LocationWithTiming objects that correspond to source regions.
-
-        Args:
-            locations_with_timing: list of all LocationWithTiming objects
-
-        Returns:
-            list of LocationWithTiming objects that correspond to source regions
-
-        """
-        return [
-            location_with_timing
-            for location_with_timing in locations_with_timing
-            if location_with_timing.is_source
-        ]
-
-    @staticmethod
     def create_relationship(source: Any, rel_type: str, target: Any) -> Any:
         """Create a STIX relationship between two entities.
 

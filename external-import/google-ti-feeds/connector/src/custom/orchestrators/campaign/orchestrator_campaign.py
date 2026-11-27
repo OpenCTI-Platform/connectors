@@ -1,198 +1,73 @@
 """Campaign-specific orchestrator for fetching and processing campaign data."""
 
-import logging
-import re
+from collections.abc import AsyncIterator
+from datetime import timedelta
 from typing import Any
 
-from connector.src.custom.configs import (
-    CAMPAIGN_BATCH_PROCESSOR_CONFIG,
-    GTIConfig,
-)
+from connector.src.custom.configs import CAMPAIGN_BATCH_PROCESSOR_CONFIG
 from connector.src.custom.convert_to_stix.campaign.convert_to_stix_campaign import (
     ConvertToSTIXCampaign,
 )
-from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
-from connector.src.octi.work_manager import WorkManager
-from connector.src.utils.batch_processors import GenericBatchProcessor
+from connector.src.custom.convert_to_stix.convert_to_stix_base import (
+    ioc_data_by_value,
+)
+from connector.src.custom.orchestrators.collection_orchestrator import (
+    CollectionOrchestrator,
+)
 
-LOG_PREFIX = "[OrchestratorCampaign]"
 
-
-class OrchestratorCampaign(BaseOrchestrator):
+class OrchestratorCampaign(CollectionOrchestrator):
     """Campaign-specific orchestrator for fetching and processing campaign data."""
 
-    def __init__(
+    LOG_PREFIX = "[OrchestratorCampaign]"
+    collection = "campaign"
+    progress_label = "campaigns"
+    converter_class = ConvertToSTIXCampaign
+    converter: ConvertToSTIXCampaign
+    batch_processor_config = CAMPAIGN_BATCH_PROCESSOR_CONFIG
+
+    def _subentity_types(self) -> list[str]:
+        return list(self.config.campaign_subentities)
+
+    def _import_start_date(self) -> timedelta:
+        return self.config.campaign_import_start_date
+
+    def _fetch(self, initial_state: dict[str, Any] | None) -> AsyncIterator[Any]:
+        return self.client_api.fetch_campaigns(initial_state)
+
+    def _convert(self, entity: Any) -> list[Any]:
+        return self.converter.convert_campaign_to_stix(entity)
+
+    def _progress_total(self) -> int | None:
+        return self.client_api.real_total_campaigns
+
+    def _link_co_occurring_entities(
         self,
-        work_manager: WorkManager,
-        logger: logging.Logger,
-        config: GTIConfig,
-        tlp_level: str,
-    ):
-        """Initialize the Campaign Orchestrator.
+        main_entities: list[Any],
+        subentity_stix: list[Any],
+        subentities: dict[str, list[Any]] | None = None,
+    ) -> list[Any]:
+        """Create the enabled co-occurrence relationships.
+
+        IOCs are already linked to the campaign itself by the converters.
 
         Args:
-            work_manager: Work manager for handling OpenCTI work operations
-            logger: Logger instance for logging
-            config: Configuration object containing connector settings
-            tlp_level: TLP level for the connector
-
-        """
-        super().__init__(work_manager, logger, config, tlp_level)
-
-        self.logger.info(
-            "API URL",
-            {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
-        )
-        self.logger.info(
-            "Campaign import start date",
-            {
-                "prefix": LOG_PREFIX,
-                "start_date": self.config.campaign_import_start_date,
-            },
-        )
-
-        self.converter = ConvertToSTIXCampaign(config, logger, tlp_level)
-        self.batch_processor = self._create_batch_processor()
-        self.nb_current: int = 0
-
-    def _create_batch_processor(self) -> GenericBatchProcessor:
-        """Create and configure the campaign batch processor.
+            main_entities: STIX objects of the campaign.
+            subentities: GTI sub-entities, for the IOC evidence.
+            subentity_stix: Converted sub-entities of the campaign.
 
         Returns:
-            Configured GenericBatchProcessor instance
+            The created relationships.
 
         """
-        return GenericBatchProcessor(
-            work_manager=self.work_manager,
-            config=CAMPAIGN_BATCH_PROCESSOR_CONFIG,
-            logger=self.logger,
+        relationship_types = self._co_occurrence_relationship_types(
+            ("intrusion-set", "malware")
         )
-
-    async def run(self, initial_state: dict[str, Any] | None) -> None:
-        """Run the campaign orchestrator.
-
-        Args:
-            initial_state: Initial state for the orchestrator
-
-        """
-        subentity_types = list(self.config.campaign_subentities)
-        try:
-            async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
-                total_campaigns = len(gti_campaigns)
-                for campaign_idx, campaign in enumerate(gti_campaigns):
-                    self._update_index_inplace()
-                    campaign_entities = self.converter.convert_campaign_to_stix(
-                        campaign
-                    )
-                    subentities = await self.client_api.fetch_subentities(
-                        entity_name="entity_id",
-                        entity_id=campaign.id,
-                        subentity_types=self._filter_subentity_types(
-                            subentity_types, campaign
-                        ),
-                    )
-
-                    rel_summary = ", ".join(
-                        [f"{k}: {len(v)}" for k, v in subentities.items()]
-                    )
-                    if len(rel_summary) > 0:
-                        self.logger.info(
-                            "Found relationships",
-                            {
-                                "prefix": LOG_PREFIX,
-                                "current": campaign_idx + 1,
-                                "total": total_campaigns,
-                                "relationships": rel_summary,
-                            },
-                        )
-
-                    attack_technique_data = self._build_attack_technique_data(
-                        subentities.pop("attack_techniques", [])
-                    )
-
-                    subentities_detailed = subentities
-
-                    if attack_technique_data:
-                        self.logger.info(
-                            "Using ID-only approach for attack techniques (quota optimization)",
-                            {
-                                "prefix": LOG_PREFIX,
-                                "attack_technique_count": len(
-                                    attack_technique_data.ids
-                                ),
-                            },
-                        )
-                        subentities_detailed["attack_techniques"] = [
-                            attack_technique_data
-                        ]
-                    subentity_stix = (
-                        self.converter.convert_subentities_to_stix_with_linking(
-                            subentities=subentities_detailed,
-                            main_entity="campaign",
-                            main_entities=campaign_entities,
-                        )
-                    )
-
-                    all_entities = campaign_entities + (subentity_stix or [])
-
-                    entity_types: dict[str, int] = {}
-                    for entity in all_entities:
-                        entity_type = getattr(entity, "type", None)
-                        if entity_type:
-                            entity_types[entity_type] = (
-                                entity_types.get(entity_type, 0) + 1
-                            )
-                    entities_summary = ", ".join(
-                        [f"{k}: {v}" for k, v in entity_types.items()]
-                    )
-                    self.logger.info(
-                        "Converted to STIX entities",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "current": campaign_idx + 1,
-                            "total": total_campaigns,
-                            "entities_count": len(all_entities),
-                            "entities_summary": entities_summary,
-                        },
-                    )
-
-                    self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._add_entities_to_batch(
-                        self.batch_processor, all_entities, self.converter
-                    )
-        finally:
-            self._flush_batch_processor()
-
-    def _update_index_inplace(self) -> None:
-        """Update the work message to reflect current campaign progress."""
-
-        def replacer(match: Any) -> str:
-            actual_total = self.client_api.real_total_campaigns or 0
-
-            if actual_total == 0:
-                return "(~ 0/0 campaigns)"
-
-            self.nb_current += 1
-            return f"(~ {self.nb_current}/{actual_total} campaigns)"
-
-        pattern = r"\(~ (\d+)/(\d+) campaigns\)"
-        template = self.batch_processor.config.work_name_template
-        self.batch_processor.config.work_name_template = re.sub(
-            pattern, replacer, template
+        if not relationship_types:
+            return []
+        return self.converter.create_co_occurrence_relationships(
+            subentity_stix,
+            relationship_types,
+            container=self._main_entity(main_entities, "campaign"),
+            ioc_data=ioc_data_by_value(subentities or {}),
         )
-
-    def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the campaign batch processor."""
-        try:
-            work_id = self.batch_processor.flush()
-            if work_id:
-                self.logger.info(
-                    "Campaign batch processor: Flushed remaining items",
-                    {"prefix": LOG_PREFIX},
-                )
-            self.batch_processor.update_final_state()
-        except Exception as e:
-            self.logger.error(
-                "Failed to flush campaign batch processor",
-                {"prefix": LOG_PREFIX, "error": str(e)},
-            )

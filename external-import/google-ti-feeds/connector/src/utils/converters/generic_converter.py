@@ -5,6 +5,7 @@ handle both model-based and raw data, and provide consistent error handling thro
 configurable mapper classes.
 """
 
+import inspect
 import logging
 from typing import Any
 
@@ -73,10 +74,10 @@ class GenericConverter:
                 else:
                     final_output = stix_model
 
-                final_output = self._postprocess_output(final_output)
+                final_output = self._postprocess_output(final_output, mapper)
             else:
                 final_output = stix_model
-                final_output = self._postprocess_output(final_output)
+                final_output = self._postprocess_output(final_output, mapper)
 
             self._track_conversion(entity_id, final_output)
 
@@ -280,11 +281,15 @@ class GenericConverter:
                 return input_data
         return input_data
 
-    def _postprocess_output(self, output_data: Any) -> Any:
+    def _postprocess_output(self, output_data: Any, mapper: Any = None) -> Any:
         """Postprocess output data if postprocessing function is configured.
+
+        A postprocessing function with a `mapper` parameter also gets the mapper,
+        e.g. to read the source data of the converted objects.
 
         Args:
             output_data: The output data to postprocess
+            mapper: The mapper that produced the output
 
         Returns:
             Postprocessed output data
@@ -292,7 +297,10 @@ class GenericConverter:
         """
         if self.config.postprocessing_function:
             try:
-                return self.config.postprocessing_function(output_data)
+                function = self.config.postprocessing_function
+                if "mapper" in inspect.signature(function).parameters:
+                    return function(output_data, mapper=mapper)
+                return function(output_data)
             except Exception as e:
                 self.logger.warning(
                     "Postprocessing failed",

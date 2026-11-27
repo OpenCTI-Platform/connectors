@@ -29,14 +29,9 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
 
         """
         try:
-            additional_deps: dict[str, Any] = {"logger": self.logger}
-            if hasattr(self.config, "enable_threat_actor_aliases"):
-                additional_deps["enable_threat_actor_aliases"] = (
-                    self.config.enable_threat_actor_aliases
-                )
-
             converter = self.converter_factory.create_converter_by_name(
-                "threat_actor", additional_dependencies=additional_deps
+                "threat_actor",
+                additional_dependencies=self.mapper_options("threat_actors"),
             )
             stix_entities = converter.convert_single(threat_actor_data)
 

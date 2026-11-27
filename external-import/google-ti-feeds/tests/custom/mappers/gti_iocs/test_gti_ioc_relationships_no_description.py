@@ -32,22 +32,23 @@ from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
     URLModel,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from tests.factories import GTIModelFactory
 
 # ---------------------------------------------------------------------------
 # Factories
 # ---------------------------------------------------------------------------
 
 
-class DomainModelFactory(ModelFactory[DomainModel]):
+class DomainModelFactory(GTIModelFactory[DomainModel]):
     """Factory for DomainModel."""
 
     __model__ = DomainModel
 
 
-class GTIDomainDataFactory(ModelFactory[GTIDomainData]):
+class GTIDomainDataFactory(GTIModelFactory[GTIDomainData]):
     """Factory for GTIDomainData."""
 
     __model__ = GTIDomainData
@@ -55,13 +56,13 @@ class GTIDomainDataFactory(ModelFactory[GTIDomainData]):
     attributes = Use(DomainModelFactory.build)
 
 
-class IPModelFactory(ModelFactory[IPModel]):
+class IPModelFactory(GTIModelFactory[IPModel]):
     """Factory for IPModel."""
 
     __model__ = IPModel
 
 
-class GTIIPDataFactory(ModelFactory[GTIIPData]):
+class GTIIPDataFactory(GTIModelFactory[GTIIPData]):
     """Factory for GTIIPData."""
 
     __model__ = GTIIPData
@@ -69,13 +70,13 @@ class GTIIPDataFactory(ModelFactory[GTIIPData]):
     attributes = Use(IPModelFactory.build)
 
 
-class URLModelFactory(ModelFactory[URLModel]):
+class URLModelFactory(GTIModelFactory[URLModel]):
     """Factory for URLModel."""
 
     __model__ = URLModel
 
 
-class GTIURLDataFactory(ModelFactory[GTIURLData]):
+class GTIURLDataFactory(GTIModelFactory[GTIURLData]):
     """Factory for GTIURLData."""
 
     __model__ = GTIURLData
@@ -83,13 +84,13 @@ class GTIURLDataFactory(ModelFactory[GTIURLData]):
     attributes = Use(URLModelFactory.build)
 
 
-class FileModelFactory(ModelFactory[FileModel]):
+class FileModelFactory(GTIModelFactory[FileModel]):
     """Factory for FileModel."""
 
     __model__ = FileModel
 
 
-class GTIFileDataFactory(ModelFactory[GTIFileData]):
+class GTIFileDataFactory(GTIModelFactory[GTIFileData]):
     """Factory for GTIFileData."""
 
     __model__ = GTIFileData
@@ -133,7 +134,7 @@ def domain_stix_objects(mock_organization, mock_tlp_marking) -> list[Any]:
         ),
     )
     mapper = GTIDomainToSTIXDomain(
-        domain=domain_data, organization=mock_organization, tlp_marking=mock_tlp_marking
+        domain_data, organization=mock_organization, tlp_marking=mock_tlp_marking
     )
     return mapper.to_stix()
 
@@ -150,7 +151,7 @@ def ip_stix_objects(mock_organization, mock_tlp_marking) -> list[Any]:
         ),
     )
     mapper = GTIIPToSTIXIP(
-        ip=ip_data, organization=mock_organization, tlp_marking=mock_tlp_marking
+        ip_data, organization=mock_organization, tlp_marking=mock_tlp_marking
     )
     return mapper.to_stix()
 
@@ -168,7 +169,7 @@ def url_stix_objects(mock_organization, mock_tlp_marking) -> list[Any]:
         ),
     )
     mapper = GTIUrlToSTIXUrl(
-        url=url_data, organization=mock_organization, tlp_marking=mock_tlp_marking
+        url_data, organization=mock_organization, tlp_marking=mock_tlp_marking
     )
     return mapper.to_stix()
 
@@ -189,7 +190,7 @@ def file_stix_objects(mock_organization, mock_tlp_marking) -> list[Any]:
         ),
     )
     mapper = GTIFileToSTIXFile(
-        file=file_data, organization=mock_organization, tlp_marking=mock_tlp_marking
+        file_data, organization=mock_organization, tlp_marking=mock_tlp_marking
     )
     return mapper.to_stix()
 

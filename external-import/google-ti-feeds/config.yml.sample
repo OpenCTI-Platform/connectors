@@ -14,3 +14,16 @@ gti:
   # indicator_min_score: 50
   # indicator_require_malware_family: false
   # indicator_require_threat_actor: false
+  # indicator_infrastructure: resolutions,contacted,downloaded,serving_ip
+  # indicator_infrastructure_limit: 10
+  # indicator_scoring: threat_score
+  # indicator_min_verdict: any
+  # ioc_tags_as_labels: false
+  # relationship_descriptions: false
+  # ip_link_to_asn: false
+  # ip_link_to_country: false
+  # ioc_import_threshold: 250
+  # ioc_link_to_threats: false
+  # intrusion_set_link_to_capabilities: false
+  # report_link_to_mentioned_threats: false
+  # extended_descriptions: false

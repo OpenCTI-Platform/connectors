@@ -11,24 +11,25 @@ from connector.src.custom.models.gti.gti_attack_technique_model import (
     GTIAttackTechniqueData,
     Info,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
+from tests.factories import GTIModelFactory
 
-class InfoFactory(ModelFactory[Info]):
+
+class InfoFactory(GTIModelFactory[Info]):
     """Factory for Info model."""
 
     __model__ = Info
 
 
-class AttackTechniqueModelFactory(ModelFactory[AttackTechniqueModel]):
+class AttackTechniqueModelFactory(GTIModelFactory[AttackTechniqueModel]):
     """Factory for AttackTechniqueModel."""
 
     __model__ = AttackTechniqueModel
 
 
-class GTIAttackTechniqueDataFactory(ModelFactory[GTIAttackTechniqueData]):
+class GTIAttackTechniqueDataFactory(GTIModelFactory[GTIAttackTechniqueData]):
     """Factory for GTIAttackTechniqueData."""
 
     __model__ = GTIAttackTechniqueData

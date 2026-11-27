@@ -20,66 +20,67 @@ from connector.src.custom.models.gti.gti_report_model import (
     TargetedRegion,
     Technology,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
+from tests.factories import GTIModelFactory
 
-class MotivationFactory(ModelFactory[Motivation]):
+
+class MotivationFactory(GTIModelFactory[Motivation]):
     """Factory for Motivation."""
 
     __model__ = Motivation
 
 
-class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
+class TargetedIndustryFactory(GTIModelFactory[TargetedIndustry]):
     """Factory for TargetedIndustry."""
 
     __model__ = TargetedIndustry
 
 
-class TargetedRegionFactory(ModelFactory[TargetedRegion]):
+class TargetedRegionFactory(GTIModelFactory[TargetedRegion]):
     """Factory for TargetedRegion."""
 
     __model__ = TargetedRegion
 
 
-class SourceRegionFactory(ModelFactory[SourceRegion]):
+class SourceRegionFactory(GTIModelFactory[SourceRegion]):
     """Factory for SourceRegion."""
 
     __model__ = SourceRegion
 
 
-class TagDetailFactory(ModelFactory[TagDetail]):
+class TagDetailFactory(GTIModelFactory[TagDetail]):
     """Factory for TagDetail."""
 
     __model__ = TagDetail
 
 
-class TechnologyFactory(ModelFactory[Technology]):
+class TechnologyFactory(GTIModelFactory[Technology]):
     """Factory for Technology."""
 
     __model__ = Technology
 
 
-class CountersFactory(ModelFactory[Counters]):
+class CountersFactory(GTIModelFactory[Counters]):
     """Factory for Counters."""
 
     __model__ = Counters
 
 
-class AggregationCommonalitiesFactory(ModelFactory[AggregationCommonalities]):
+class AggregationCommonalitiesFactory(GTIModelFactory[AggregationCommonalities]):
     """Factory for AggregationCommonalities."""
 
     __model__ = AggregationCommonalities
 
 
-class LinksFactory(ModelFactory[Links]):
+class LinksFactory(GTIModelFactory[Links]):
     """Factory for Links."""
 
     __model__ = Links
 
 
-class ReportModelFactory(ModelFactory[ReportModel]):
+class ReportModelFactory(GTIModelFactory[ReportModel]):
     """Factory for ReportModel."""
 
     __model__ = ReportModel
@@ -88,7 +89,7 @@ class ReportModelFactory(ModelFactory[ReportModel]):
     private = False
 
 
-class GTIReportDataFactory(ModelFactory[GTIReportData]):
+class GTIReportDataFactory(GTIModelFactory[GTIReportData]):
     """Factory for GTIReportData."""
 
     __model__ = GTIReportData

@@ -148,6 +148,8 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
     def _extract_aliases(attributes: ThreatActorModel) -> list[str] | None:
         """Extract aliases from threat actor attributes.
 
+        Alternative names first, then the names of the actors merged into this one.
+
         Args:
             attributes: The threat actor attributes
 
@@ -155,20 +157,21 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             list[str] | None: Extracted aliases or None if no aliases exist
 
         """
-        if (
-            not hasattr(attributes, "alt_names_details")
-            or not attributes.alt_names_details
-        ):
-            return None
-
         aliases = []
-        for alt_name in attributes.alt_names_details:
+        for alt_name in getattr(attributes, "alt_names_details", None) or []:
             if hasattr(alt_name, "value") and alt_name.value:
                 # Remove source from alias to prevent deduplication issue
                 alt_name_without_source = alt_name.value.split(" (", 1)[0]
                 aliases.append(alt_name_without_source)
+        for merged_actor in getattr(attributes, "merged_actors", None) or []:
+            if merged_actor.value:
+                aliases.append(merged_actor.value)
 
-        return aliases if aliases else None
+        name = getattr(attributes, "name", None)
+        unique_aliases = [
+            alias for alias in dict.fromkeys(aliases) if alias and alias != name
+        ]
+        return unique_aliases or None
 
     def _extract_seen_dates(
         self,

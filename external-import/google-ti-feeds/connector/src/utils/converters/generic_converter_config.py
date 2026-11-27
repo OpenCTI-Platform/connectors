@@ -75,8 +75,11 @@ class GenericConverterConfig:
     preprocessing_function: Callable[[Any], Any] | None = None
     """Optional function to preprocess input data before conversion"""
 
-    postprocessing_function: Callable[[Any], Any] | None = None
-    """Optional function to postprocess STIX output after conversion"""
+    postprocessing_function: Callable[..., Any] | None = None
+    """Optional function to postprocess STIX output after conversion.
+
+    Called with the output, plus the mapper as `mapper` when it has that parameter.
+    """
 
     to_stix: bool = True
     """Whether to return STIX objects (True) or mapper objects (False). If False, still calls to_stix() for validation"""

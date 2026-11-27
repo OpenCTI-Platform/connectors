@@ -18,6 +18,25 @@ from connector.src.utils.batch_processors import GenericBatchProcessor
 LOG_PREFIX = "[OrchestratorIndicator]"
 
 
+def latest_entries(raw_entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep one entry per IOC: the one with the latest last_modification_date.
+
+    An IOC can appear several times in a delta package; GTI documents the latest
+    entry as authoritative. On equal dates, the later entry in the package wins.
+    """
+    latest: dict[tuple[Any, Any], dict[str, Any]] = {}
+    for entry in raw_entries:
+        key = (entry.get("type"), entry.get("id"))
+        current = latest.get(key)
+        if current is None or _modification_date(entry) >= _modification_date(current):
+            latest[key] = entry
+    return list(latest.values())
+
+
+def _modification_date(entry: dict[str, Any]) -> int:
+    return (entry.get("attributes") or {}).get("last_modification_date") or 0
+
+
 class OrchestratorIndicator(BaseOrchestrator):
     """Indicator-specific orchestrator for fetching and processing IOC delta data."""
 
@@ -119,6 +138,7 @@ class OrchestratorIndicator(BaseOrchestrator):
             if not raw_entries:
                 return
 
+            entries = latest_entries(raw_entries)
             self.logger.info(
                 "Fetched IOC delta entries",
                 {
@@ -126,12 +146,13 @@ class OrchestratorIndicator(BaseOrchestrator):
                     "package_id": package_id,
                     "ioc_type": ioc_type,
                     "count": len(raw_entries),
+                    "unique_count": len(entries),
                 },
             )
 
             all_stix: list[Any] = []
             try:
-                for entry_data in raw_entries:
+                for entry_data in entries:
                     stix_objects = self.converter.convert(entry_data)
                     all_stix.extend(stix_objects)
             finally:

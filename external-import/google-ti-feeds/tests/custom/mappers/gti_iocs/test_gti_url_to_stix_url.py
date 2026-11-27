@@ -8,51 +8,54 @@ import pytest
 from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import (
     GTIUrlToSTIXUrl,
 )
-from connector.src.custom.models.gti.gti_url_model import (
+from connector.src.custom.models.gti.gti_assessment_model import (
     ContributingFactors,
     GTIAssessment,
-    GTIURLData,
     ThreatScore,
-    URLModel,
     Verdict,
 )
+from connector.src.custom.models.gti.gti_url_model import (
+    GTIURLData,
+    URLModel,
+)
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition
 
+from tests.factories import GTIModelFactory
 
-class VerdictFactory(ModelFactory[Verdict]):
+
+class VerdictFactory(GTIModelFactory[Verdict]):
     """Factory for Verdict model."""
 
     __model__ = Verdict
 
 
-class ThreatScoreFactory(ModelFactory[ThreatScore]):
+class ThreatScoreFactory(GTIModelFactory[ThreatScore]):
     """Factory for ThreatScore model."""
 
     __model__ = ThreatScore
 
 
-class ContributingFactorsFactory(ModelFactory[ContributingFactors]):
+class ContributingFactorsFactory(GTIModelFactory[ContributingFactors]):
     """Factory for ContributingFactors model."""
 
     __model__ = ContributingFactors
 
 
-class GTIAssessmentFactory(ModelFactory[GTIAssessment]):
+class GTIAssessmentFactory(GTIModelFactory[GTIAssessment]):
     """Factory for GTIAssessment model."""
 
     __model__ = GTIAssessment
 
 
-class URLModelFactory(ModelFactory[URLModel]):
+class URLModelFactory(GTIModelFactory[URLModel]):
     """Factory for URLModel."""
 
     __model__ = URLModel
 
 
-class GTIURLDataFactory(ModelFactory[GTIURLData]):
+class GTIURLDataFactory(GTIModelFactory[GTIURLData]):
     """Factory for GTIURLData."""
 
     __model__ = GTIURLData
@@ -130,7 +133,7 @@ def url_with_mandiant_score() -> GTIURLData:
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
                 verdict=None,
@@ -147,7 +150,7 @@ def url_with_threat_score() -> GTIURLData:
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
                 verdict=None,
@@ -164,7 +167,7 @@ def url_with_zero_score() -> GTIURLData:
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
                 verdict=None,
@@ -231,7 +234,7 @@ def url_with_all_data() -> GTIURLData:
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=95
+                    gti_confidence_score=None, mandiant_confidence_score=95
                 ),
                 threat_score=ThreatScoreFactory.build(value=85),
             ),
@@ -635,7 +638,7 @@ def test_get_score_with_threat_score(
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
             )
@@ -661,7 +664,7 @@ def test_get_score_with_zero_threat_score(
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
             )
@@ -687,7 +690,7 @@ def test_get_score_with_mandiant_score_fallback(
         attributes=URLModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
             )
@@ -865,7 +868,7 @@ def test_create_stix_url_method(
             url="https://test.example.com",
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 )
             ),
         ),
@@ -873,7 +876,7 @@ def test_create_stix_url_method(
     mapper = _given_gti_url_mapper(url_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX URL
-    url_observable = mapper._create_stix_url()
+    url_observable = mapper._create_stix_observable()
 
     # Then URL observable should be created correctly
     assert url_observable is not None  # noqa: S101
@@ -913,7 +916,7 @@ def _given_gti_url_mapper(
 ) -> GTIUrlToSTIXUrl:
     """Create a GTIUrlToSTIXUrl mapper instance."""
     return GTIUrlToSTIXUrl(
-        url=url,
+        url,
         organization=organization,
         tlp_marking=tlp_marking,
     )

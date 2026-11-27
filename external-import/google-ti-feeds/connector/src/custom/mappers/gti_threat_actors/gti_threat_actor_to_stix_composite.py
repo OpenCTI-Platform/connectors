@@ -6,17 +6,19 @@ from typing import Any
 
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_identity import (
     GTIThreatActorToSTIXIdentity,
-    IdentityWithTiming,
 )
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_location import (
     GTIThreatActorToSTIXLocation,
+)
+from connector.src.custom.mappers.targeting_mappers import targeting_relationships
+from connector.src.custom.mappers.timing_models import (
+    IdentityWithTiming,
     LocationWithTiming,
 )
 from connector.src.custom.models.gti.gti_threat_actor_model import GTIThreatActorData
-from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
@@ -126,91 +128,16 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             attributes.last_modification_date, tz=timezone.utc
         )
 
-        targeted_locations_with_timing = self._get_targeted_locations_with_timing(
-            locations_with_timing
+        relationships.extend(
+            targeting_relationships(
+                intrusion_set,
+                locations_with_timing,
+                sectors_with_timing,
+                organization_id=self.organization.id,
+                marking_ids=[self.tlp_marking.id],
+                created=created,
+                modified=modified,
+            )
         )
-        for location_with_timing in targeted_locations_with_timing:
-            location = location_with_timing.location
-            relationship = OctiRelationshipModel.create(
-                relationship_type="targets",
-                source_ref=intrusion_set.id,
-                target_ref=location.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=location_with_timing.first_seen,
-                stop_time=location_with_timing.last_seen,
-            )
-            relationships.append(relationship)
-
-        source_locations_with_timing = self._get_source_locations_with_timing(
-            locations_with_timing
-        )
-        for location_with_timing in source_locations_with_timing:
-            location = location_with_timing.location
-            relationship = OctiRelationshipModel.create(
-                relationship_type="originates-from",
-                source_ref=intrusion_set.id,
-                target_ref=location.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=location_with_timing.first_seen,
-                stop_time=location_with_timing.last_seen,
-            )
-            relationships.append(relationship)
-
-        for sector_with_timing in sectors_with_timing:
-            sector = sector_with_timing.identity
-            relationship = OctiRelationshipModel.create(
-                relationship_type="targets",
-                source_ref=intrusion_set.id,
-                target_ref=sector.id,
-                organization_id=self.organization.id,
-                marking_ids=[self.tlp_marking.id],
-                created=created,
-                modified=modified,
-                start_time=sector_with_timing.first_seen,
-                stop_time=sector_with_timing.last_seen,
-            )
-            relationships.append(relationship)
 
         return relationships
-
-    def _get_targeted_locations_with_timing(
-        self, locations_with_timing: list[LocationWithTiming]
-    ) -> list[LocationWithTiming]:
-        """Get LocationWithTiming objects that correspond to targeted countries.
-
-        Args:
-            locations_with_timing: list of all LocationWithTiming objects
-
-        Returns:
-            list of LocationWithTiming objects that correspond to targeted countries
-
-        """
-        return [
-            location_with_timing
-            for location_with_timing in locations_with_timing
-            if location_with_timing.is_targeted
-        ]
-
-    def _get_source_locations_with_timing(
-        self, locations_with_timing: list[LocationWithTiming]
-    ) -> list[LocationWithTiming]:
-        """Get LocationWithTiming objects that correspond to source countries.
-
-        Args:
-            locations_with_timing: list of all LocationWithTiming objects
-
-        Returns:
-            list of LocationWithTiming objects that correspond to source countries
-
-        """
-        return [
-            location_with_timing
-            for location_with_timing in locations_with_timing
-            if location_with_timing.is_source
-        ]

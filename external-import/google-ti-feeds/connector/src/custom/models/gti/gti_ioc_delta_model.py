@@ -1,24 +1,9 @@
 """Pydantic models for GTI IOC delta NDJSON format."""
 
-from pydantic import BaseModel, Field
+from typing import Any
 
-
-class IOCDeltaVerdict(BaseModel):
-    value: str | None = Field(None)
-
-
-class IOCDeltaSeverity(BaseModel):
-    value: str | None = Field(None)
-
-
-class IOCDeltaThreatScore(BaseModel):
-    value: int | None = Field(None)
-
-
-class IOCDeltaGTIAssessment(BaseModel):
-    verdict: IOCDeltaVerdict | None = Field(None)
-    severity: IOCDeltaSeverity | None = Field(None)
-    threat_score: IOCDeltaThreatScore | None = Field(None)
+from connector.src.custom.models.gti.gti_assessment_model import GTIAssessment
+from pydantic import BaseModel, Field, field_validator
 
 
 class IOCDeltaRelationshipItemAttributes(BaseModel):
@@ -35,6 +20,14 @@ class IOCDeltaRelationshipItem(BaseModel):
 class IOCDeltaRelationshipData(BaseModel):
     data: list[IOCDeltaRelationshipItem] = Field(default_factory=list)
 
+    @field_validator("data", mode="before")
+    @classmethod
+    def _as_list(cls, value: Any) -> Any:
+        """Accept to-one relationships (an object) and missing data (None)."""
+        if isinstance(value, dict):
+            return [value]
+        return value if isinstance(value, list) else []
+
 
 class IOCDeltaRelationships(BaseModel):
     malware_families: IOCDeltaRelationshipData | None = Field(None)
@@ -44,6 +37,18 @@ class IOCDeltaRelationships(BaseModel):
     software_toolkits: IOCDeltaRelationshipData | None = Field(None)
     vulnerabilities: IOCDeltaRelationshipData | None = Field(None)
     attack_techniques: IOCDeltaRelationshipData | None = Field(None)
+    # Infrastructure, see GTI_INDICATOR_INFRASTRUCTURE
+    resolutions: IOCDeltaRelationshipData | None = Field(None)
+    subdomains: IOCDeltaRelationshipData | None = Field(None)
+    siblings: IOCDeltaRelationshipData | None = Field(None)
+    downloaded_files: IOCDeltaRelationshipData | None = Field(None)
+    communicating_files: IOCDeltaRelationshipData | None = Field(None)
+    referrer_files: IOCDeltaRelationshipData | None = Field(None)
+    contacted_domains: IOCDeltaRelationshipData | None = Field(None)
+    contacted_ips: IOCDeltaRelationshipData | None = Field(None)
+    embedded_domains: IOCDeltaRelationshipData | None = Field(None)
+    embedded_ips: IOCDeltaRelationshipData | None = Field(None)
+    last_serving_ip_address: IOCDeltaRelationshipData | None = Field(None)
 
 
 class IOCDeltaAttributes(BaseModel):
@@ -56,8 +61,16 @@ class IOCDeltaAttributes(BaseModel):
     size: int | None = Field(None)
     # URL fields
     url: str | None = Field(None)
+    # IP address fields
+    asn: int | None = Field(None)
+    as_owner: str | None = Field(None)
+    country: str | None = Field(None)
+    continent: str | None = Field(None)
+    network: str | None = Field(None)
+    regional_internet_registry: str | None = Field(None)
     # Common fields
-    gti_assessment: IOCDeltaGTIAssessment | None = Field(None)
+    gti_assessment: GTIAssessment | None = Field(None)
+    tags: list[str] | None = Field(None)
     creation_date: int | None = Field(None)
     last_modification_date: int | None = Field(None)
 

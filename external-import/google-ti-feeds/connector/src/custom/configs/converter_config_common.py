@@ -10,6 +10,10 @@ from typing import Any, Protocol
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
 )
+from connector.src.custom.mappers.relationship_reasons import (
+    gti_association_reason,
+    with_description,
+)
 
 _contexts = {}
 
@@ -151,13 +155,14 @@ def create_relationship(
 
     """
 
-    def postprocess(stix_output: Any) -> Any:
+    def postprocess(stix_output: Any, mapper: Any = None) -> Any:
         context_entity = get_context(source_context)
         if not context_entity:
             return stix_output
 
         entities = stix_output if isinstance(stix_output, list) else [stix_output]
         result = entities.copy()
+        evidence = _relationship_evidence(mapper, context_entity)
 
         if not hasattr(mapper_class, "create_relationship"):
             _logger.warning(
@@ -169,7 +174,12 @@ def create_relationship(
         try:
             for entity in entities:
                 relationship = _create_single_relationship(
-                    entity, context_entity, relationship_type, mapper_class, reverse
+                    entity,
+                    context_entity,
+                    relationship_type,
+                    mapper_class,
+                    reverse,
+                    evidence,
                 )
                 if relationship:
                     result.append(relationship)
@@ -195,8 +205,9 @@ def _create_single_relationship(
     relationship_type: str,
     mapper_class: RelationshipMapper,
     reverse: bool,
+    evidence: str | None = None,
 ) -> Any | None:
-    """Create a single relationship between two entities."""
+    """Create a single relationship between two entities, with its reason and evidence."""
     if not (hasattr(entity, "id") and not hasattr(entity, "relationship_type")):
         return None
 
@@ -228,7 +239,10 @@ def _create_single_relationship(
                 },
             )
 
-        return rel
+        reason = gti_association_reason(context_entity, entity)
+        if evidence:
+            reason = f"{reason} {evidence}"
+        return with_description(rel, reason)
 
     except Exception as e:
         _logger.warning(
@@ -241,6 +255,12 @@ def _create_single_relationship(
             },
         )
         return None
+
+
+def _relationship_evidence(mapper: Any, context_entity: Any) -> str | None:
+    """Return the GTI evidence the mapper holds for a link to the context entity."""
+    get_evidence = getattr(mapper, "relationship_evidence", None)
+    return get_evidence(context_entity) if callable(get_evidence) else None
 
 
 def _find_entity_in_output(stix_output: Any, context_key: str) -> Any:

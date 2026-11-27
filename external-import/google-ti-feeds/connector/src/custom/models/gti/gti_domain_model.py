@@ -2,6 +2,10 @@
 
 from typing import Any
 
+from connector.src.custom.models.gti.gti_assessment_model import (
+    GTIAssessment,
+    LastAnalysisStats,
+)
 from pydantic import BaseModel, Field
 
 
@@ -10,144 +14,6 @@ class Favicon(BaseModel):
 
     dhash: str | None = Field(None, description="Difference hash of the favicon.")
     raw_md5: str | None = Field(None, description="MD5 hash of the favicon.")
-
-
-class Verdict(BaseModel):
-    """Model representing a GTI assessment verdict."""
-
-    value: str | None = Field(
-        None, description="Verdict value (e.g., 'VERDICT_BENIGN', 'VERDICT_MALICIOUS')."
-    )
-
-
-class Severity(BaseModel):
-    """Model representing a GTI assessment severity."""
-
-    value: str | None = Field(
-        None, description="Severity value (e.g., 'SEVERITY_LOW', 'SEVERITY_HIGH')."
-    )
-
-
-class ThreatScore(BaseModel):
-    """Model representing the GTI threat score."""
-
-    value: int | None = Field(
-        None, description="Threat score, integer between 0 and 100."
-    )
-
-
-class ContributingFactors(BaseModel):
-    """Model representing factors contributing to GTI assessment."""
-
-    mandiant_analyst_benign: bool | None = Field(
-        None, description="Indicator if a GTI analyst determined it benign."
-    )
-    mandiant_analyst_malicious: bool | None = Field(
-        None, description="Indicator if a GTI analyst determined it malicious."
-    )
-    mandiant_malware_analysis_1: bool | None = Field(
-        None, description="Google TI malware analysis detection."
-    )
-    mandiant_malware_analysis_2: bool | None = Field(
-        None, description="Additional Google TI malware analysis detection."
-    )
-    mandiant_malware_analysis_3: bool | None = Field(
-        None, description="Additional Google TI malware analysis detection."
-    )
-    mandiant_botnet_emulation: bool | None = Field(
-        None, description="Indicator from GTI botnet emulation."
-    )
-    mandiant_mobile_malware_analysis: bool | None = Field(
-        None, description="Indicator from GTI mobile malware analysis."
-    )
-    mandiant_malware_similarity: bool | None = Field(
-        None, description="Indicator from GTI malware similarity analysis."
-    )
-    mandiant_malware_analysis_auto: bool | None = Field(
-        None, description="Indicator from GTI automated malware analysis."
-    )
-    mandiant_association_report: bool | None = Field(
-        None, description="Indicator if associated with a GTI intelligence report."
-    )
-    mandiant_association_actor: bool | None = Field(
-        None, description="Indicator if associated with a tracked GTI threat actor."
-    )
-    mandiant_association_malware: bool | None = Field(
-        None, description="Indicator if associated with a tracked GTI malware family."
-    )
-    mandiant_confidence_score: int | None = Field(
-        None, description="GTI confidence score for the indicator."
-    )
-    mandiant_domain_hijack: bool | None = Field(
-        None, description="Indicator if the domain was hijacked per GTI."
-    )
-    mandiant_osint: bool | None = Field(
-        None, description="Indicator if considered widespread in OSINT sources."
-    )
-    safebrowsing_verdict: str | None = Field(
-        None, description="Google Safe Browsing verdict."
-    )
-    gavs_detections: int | None = Field(
-        None,
-        description="Number of detections by Google's spam and threat filtering engines.",
-    )
-    gavs_categories: list[str] | None = Field(
-        None, description="Known threat categories from GAVS."
-    )
-    normalised_categories: list[str] | None = Field(
-        None, description="Normalized threat categories."
-    )
-    legitimate_software: bool | None = Field(
-        None, description="Indicator if associated with trusted software."
-    )
-    matched_malicious_yara: bool | None = Field(
-        None, description="Indicator if matches malicious YARA rules."
-    )
-    malicious_sandbox_verdict: bool | None = Field(
-        None, description="Indicator if detected by sandbox analysis."
-    )
-    associated_reference: bool | None = Field(
-        None, description="Indicator if appears in public sources."
-    )
-    associated_malware_configuration: bool | None = Field(
-        None, description="Indicator if contains known malware configurations."
-    )
-    associated_actor: bool | None = Field(
-        None, description="Indicator if associated with a community threat actor."
-    )
-    high_severity_related_files: bool | None = Field(
-        None,
-        description="Indicator if related files are marked as high severity malicious.",
-    )
-    medium_severity_related_files: bool | None = Field(
-        None,
-        description="Indicator if related files are marked as medium severity malicious.",
-    )
-    low_severity_related_files: bool | None = Field(
-        None,
-        description="Indicator if related files are marked as low severity malicious.",
-    )
-    pervasive_indicator: bool | None = Field(
-        None, description="Indicator if related files seen in OSINT sources."
-    )
-
-
-class GTIAssessment(BaseModel):
-    """Model representing a GTI assessment for a domain."""
-
-    verdict: Verdict | None = Field(None, description="Verdict of the GTI assessment.")
-    severity: Severity | None = Field(
-        None, description="Severity of the GTI assessment."
-    )
-    threat_score: ThreatScore | None = Field(
-        None, description="Threat score from GTI assessment."
-    )
-    contributing_factors: ContributingFactors | None = Field(
-        None, description="Signals contributing to the verdict and severity."
-    )
-    description: str | None = Field(
-        None, description="Human-readable description of the assessment factors."
-    )
 
 
 class LastAnalysisResult(BaseModel):
@@ -168,24 +34,6 @@ class LastAnalysisResult(BaseModel):
     )
     result: str | None = Field(
         None, description="Raw result from the URL scanner (e.g., 'clean', 'phishing')."
-    )
-
-
-class LastAnalysisStats(BaseModel):
-    """Model representing aggregated analysis statistics."""
-
-    harmless: int | None = Field(
-        None, description="Number of reports marking harmless."
-    )
-    malicious: int | None = Field(
-        None, description="Number of reports marking malicious."
-    )
-    suspicious: int | None = Field(
-        None, description="Number of reports marking suspicious."
-    )
-    timeout: int | None = Field(None, description="Number of timeouts during scanning.")
-    undetected: int | None = Field(
-        None, description="Number of reports marking undetected."
     )
 
 

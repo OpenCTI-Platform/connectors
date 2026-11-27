@@ -18,6 +18,7 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.note_model import OctiNoteModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from connector.src.utils.html_to_markdown import html_to_markdown
 from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
@@ -122,7 +123,7 @@ class GTIReportToSTIXComposite(BaseMapper):
         )
 
         note_model = OctiNoteModel.create(
-            content=attributes.analyst_comment,
+            content=html_to_markdown(attributes.analyst_comment),
             abstract=f"Analyst Comment & News Analysis Rating - {attributes.name}",
             created=created,
             modified=modified,

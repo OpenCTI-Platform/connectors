@@ -8,7 +8,9 @@ from connector.src.custom.client_api.inline_relationships import (
     inline_relationships_param,
     is_subentity_call_needed,
 )
-from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
+from connector.src.custom.orchestrators.collection_orchestrator import (
+    CollectionOrchestrator,
+)
 
 CURSOR = {"cursor": "eyJsaW1pdCI6IDIwLCAib2Zmc2V0IjogMjB9"}
 
@@ -141,7 +143,7 @@ def test_filter_combines_counters_and_inline_relationships():
         attributes=SimpleNamespace(counters=SimpleNamespace(attack_techniques=0)),
         relationships={**_assoc("threat-actor--1"), **_ttp(0)},
     )
-    result = BaseOrchestrator._filter_subentity_types(
+    result = CollectionOrchestrator._filter_subentity_types(
         ["malware_families", "attack_techniques", "threat_actors"], entity
     )
     assert result == ["threat_actors"]
@@ -151,7 +153,7 @@ def test_filter_keeps_everything_without_relationships():
     """Given an entity from a list call without relationships=, then no change."""
     entity = SimpleNamespace(attributes=None, relationships=None)
     types = ["malware_families", "attack_techniques", "threat_actors"]
-    assert BaseOrchestrator._filter_subentity_types(types, entity) == types
+    assert CollectionOrchestrator._filter_subentity_types(types, entity) == types
 
 
 # --- Scenario: the list call only asks for useful relationships --------------

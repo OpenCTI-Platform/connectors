@@ -13,40 +13,41 @@ from connector.src.custom.models.gti.gti_threat_actor_model import (
     TargetedRegion,
     ThreatActorModel,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from tests.factories import GTIModelFactory
 
 # ---------------------------------------------------------------------------
 # Factories
 # ---------------------------------------------------------------------------
 
 
-class SourceRegionFactory(ModelFactory[SourceRegion]):
+class SourceRegionFactory(GTIModelFactory[SourceRegion]):
     """Factory for SourceRegion model."""
 
     __model__ = SourceRegion
 
 
-class TargetedRegionFactory(ModelFactory[TargetedRegion]):
+class TargetedRegionFactory(GTIModelFactory[TargetedRegion]):
     """Factory for TargetedRegion model."""
 
     __model__ = TargetedRegion
 
 
-class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
+class TargetedIndustryFactory(GTIModelFactory[TargetedIndustry]):
     """Factory for TargetedIndustry model."""
 
     __model__ = TargetedIndustry
 
 
-class ThreatActorModelFactory(ModelFactory[ThreatActorModel]):
+class ThreatActorModelFactory(GTIModelFactory[ThreatActorModel]):
     """Factory for ThreatActorModel."""
 
     __model__ = ThreatActorModel
 
 
-class GTIThreatActorDataFactory(ModelFactory[GTIThreatActorData]):
+class GTIThreatActorDataFactory(GTIModelFactory[GTIThreatActorData]):
     """Factory for GTIThreatActorData."""
 
     __model__ = GTIThreatActorData
@@ -137,9 +138,12 @@ def _when_convert_to_stix(mapper: GTIThreatActorToSTIXComposite) -> list:
     return mapper.to_stix()
 
 
-def _then_relationship_has_no_description(relationship) -> None:  # noqa: ANN001
+def _then_relationship_has_no_generated_description(
+    relationship,
+) -> None:  # noqa: ANN001
+    # Only GTI content (confidence, note) is allowed by default, see #5775.
     assert relationship.relationship_type is not None  # noqa: S101
-    assert relationship.description is None  # noqa: S101
+    assert "Stated by GTI" not in (relationship.description or "")  # noqa: S101
 
 
 # ---------------------------------------------------------------------------
@@ -148,12 +152,12 @@ def _then_relationship_has_no_description(relationship) -> None:  # noqa: ANN001
 
 
 @pytest.mark.order(1)
-def test_targets_location_relationship_has_no_description(
+def test_targets_location_relationship_has_no_generated_description(
     threat_actor_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'targets' (location) relationship must have description=None."""
+    """The 'targets' (location) relationship must have no connector-generated description."""
     # GIVEN
     mapper = _given_composite_mapper(
         threat_actor_with_regions_and_sectors,
@@ -180,16 +184,16 @@ def test_targets_location_relationship_has_no_description(
     ]
     assert len(targets_location_rels) >= 1  # noqa: S101
     for rel in targets_location_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)
 
 
 @pytest.mark.order(1)
-def test_originates_from_location_relationship_has_no_description(
+def test_originates_from_location_relationship_has_no_generated_description(
     threat_actor_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'originates-from' (location) relationship must have description=None."""
+    """The 'originates-from' (location) relationship must have no connector-generated description."""
     # GIVEN
     mapper = _given_composite_mapper(
         threat_actor_with_regions_and_sectors,
@@ -209,16 +213,16 @@ def test_originates_from_location_relationship_has_no_description(
     ]
     assert len(originates_rels) >= 1  # noqa: S101
     for rel in originates_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)
 
 
 @pytest.mark.order(1)
-def test_targets_sector_relationship_has_no_description(
+def test_targets_sector_relationship_has_no_generated_description(
     threat_actor_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'targets' (sector/identity) relationship must have description=None."""
+    """The 'targets' (sector/identity) relationship must have no connector-generated description."""
     # GIVEN
     mapper = _given_composite_mapper(
         threat_actor_with_regions_and_sectors,
@@ -246,4 +250,4 @@ def test_targets_sector_relationship_has_no_description(
     ]
     assert len(targets_sector_rels) >= 1  # noqa: S101
     for rel in targets_sector_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)

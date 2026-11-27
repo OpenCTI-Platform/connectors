@@ -8,51 +8,54 @@ import pytest
 from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import (
     GTIIPToSTIXIP,
 )
-from connector.src.custom.models.gti.gti_ip_addresses_model import (
+from connector.src.custom.models.gti.gti_assessment_model import (
     ContributingFactors,
     GTIAssessment,
-    GTIIPData,
-    IPModel,
     ThreatScore,
     Verdict,
 )
+from connector.src.custom.models.gti.gti_ip_addresses_model import (
+    GTIIPData,
+    IPModel,
+)
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition
 
+from tests.factories import GTIModelFactory
 
-class VerdictFactory(ModelFactory[Verdict]):
+
+class VerdictFactory(GTIModelFactory[Verdict]):
     """Factory for Verdict model."""
 
     __model__ = Verdict
 
 
-class ThreatScoreFactory(ModelFactory[ThreatScore]):
+class ThreatScoreFactory(GTIModelFactory[ThreatScore]):
     """Factory for ThreatScore model."""
 
     __model__ = ThreatScore
 
 
-class ContributingFactorsFactory(ModelFactory[ContributingFactors]):
+class ContributingFactorsFactory(GTIModelFactory[ContributingFactors]):
     """Factory for ContributingFactors model."""
 
     __model__ = ContributingFactors
 
 
-class GTIAssessmentFactory(ModelFactory[GTIAssessment]):
+class GTIAssessmentFactory(GTIModelFactory[GTIAssessment]):
     """Factory for GTIAssessment model."""
 
     __model__ = GTIAssessment
 
 
-class IPModelFactory(ModelFactory[IPModel]):
+class IPModelFactory(GTIModelFactory[IPModel]):
     """Factory for IPModel."""
 
     __model__ = IPModel
 
 
-class GTIIPDataFactory(ModelFactory[GTIIPData]):
+class GTIIPDataFactory(GTIModelFactory[GTIIPData]):
     """Factory for GTIIPData."""
 
     __model__ = GTIIPData
@@ -139,7 +142,7 @@ def ip_with_mandiant_score() -> GTIIPData:
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
                 verdict=None,
@@ -156,7 +159,7 @@ def ip_with_threat_score() -> GTIIPData:
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
                 verdict=None,
@@ -173,7 +176,7 @@ def ip_with_zero_score() -> GTIIPData:
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
                 verdict=None,
@@ -238,7 +241,7 @@ def ip_with_all_data() -> GTIIPData:
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=95
+                    gti_confidence_score=None, mandiant_confidence_score=95
                 ),
                 threat_score=ThreatScoreFactory.build(value=85),
             ),
@@ -689,7 +692,7 @@ def test_get_score_with_threat_score(
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
             )
@@ -715,7 +718,7 @@ def test_get_score_with_zero_threat_score(
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
             )
@@ -741,7 +744,7 @@ def test_get_score_with_mandiant_score_fallback(
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
             )
@@ -865,7 +868,7 @@ def test_create_stix_ipv4_method(
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 )
             )
         ),
@@ -873,7 +876,7 @@ def test_create_stix_ipv4_method(
     mapper = _given_gti_ip_mapper(ip_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX IP
-    ip_observable = mapper._create_stix_ip()
+    ip_observable = mapper._create_stix_observable()
 
     # Then IPv4 observable should be created correctly
     assert ip_observable is not None  # noqa: S101
@@ -893,7 +896,7 @@ def test_create_stix_ipv6_method(
         attributes=IPModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 )
             )
         ),
@@ -901,7 +904,7 @@ def test_create_stix_ipv6_method(
     mapper = _given_gti_ip_mapper(ip_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX IP
-    ip_observable = mapper._create_stix_ip()
+    ip_observable = mapper._create_stix_observable()
 
     # Then IPv6 observable should be created correctly
     assert ip_observable is not None  # noqa: S101
@@ -943,7 +946,7 @@ def _given_gti_ip_mapper(
 ) -> GTIIPToSTIXIP:
     """Create a GTIIPToSTIXIP mapper instance."""
     return GTIIPToSTIXIP(
-        ip=ip,
+        ip,
         organization=organization,
         tlp_marking=tlp_marking,
     )

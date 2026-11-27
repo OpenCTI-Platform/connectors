@@ -1,5 +1,9 @@
 """Module containing models for GTI File response from Google Threat Intelligence API."""
 
+from connector.src.custom.models.gti.gti_assessment_model import (
+    GTIAssessment,
+    LastAnalysisStats,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -50,130 +54,6 @@ class CrowdsourcedYaraResult(BaseModel):
     source: str | None = Field(None, description="Source of the YARA rule.")
 
 
-class Verdict(BaseModel):
-    """Represents a GTI assessment verdict/value."""
-
-    value: str | None = Field(
-        None, description="Verdict value (e.g., 'VERDICT_MALICIOUS')."
-    )
-
-
-class Severity(BaseModel):
-    """Represents a GTI assessment severity/value."""
-
-    value: str | None = Field(
-        None, description="Severity value (e.g., 'SEVERITY_HIGH')."
-    )
-
-
-class ThreatScore(BaseModel):
-    """Represents a GTI assessment threat score."""
-
-    value: int | None = Field(None, description="Threat score, 0-100.")
-
-
-class ContributingFactors(BaseModel):
-    """Signals contributing to the GTI assessment."""
-
-    mandiant_analyst_benign: bool | None = Field(
-        None, description="Indicator if an analyst marked benign."
-    )
-    mandiant_analyst_malicious: bool | None = Field(
-        None, description="Indicator if an analyst marked malicious."
-    )
-    google_malware_analysis: bool | None = Field(
-        None, description="Detected by Google malware analysis."
-    )
-    google_botnet_emulation: bool | None = Field(
-        None, description="Detected by Google botnet analysis."
-    )
-    google_mobile_malware_analysis: bool | None = Field(
-        None, description="Detected by Google mobile malware analysis."
-    )
-    google_malware_similarity: bool | None = Field(
-        None, description="Detected by Google malware similarity."
-    )
-    google_malware_analysis_auto: bool | None = Field(
-        None, description="Detected by Google automated malware analysis."
-    )
-    mandiant_association_report: bool | None = Field(
-        None, description="Associated with an intelligence report."
-    )
-    mandiant_association_actor: bool | None = Field(
-        None, description="Associated with a threat actor."
-    )
-    mandiant_association_malware: bool | None = Field(
-        None, description="Associated with a malware family."
-    )
-    mandiant_confidence_score: int | None = Field(
-        None, description="GTI confidence score."
-    )
-    mandiant_domain_hijack: bool | None = Field(
-        None, description="Indicates domain hijack alert."
-    )
-    mandiant_osint: bool | None = Field(
-        None, description="Indicates widespread OSINT reports."
-    )
-    safebrowsing_verdict: str | None = Field(
-        None, description="Google Safe Browsing verdict."
-    )
-    gavs_detections: int | None = Field(None, description="Number of GAVS detections.")
-    gavs_categories: list[str] | None = Field(
-        None, description="Threat categories from GAVS."
-    )
-    normalised_categories: list[str] | None = Field(
-        None, description="Normalized threat categories."
-    )
-    legitimate_software: bool | None = Field(
-        None, description="Indicator if file is legitimate."
-    )
-    matched_malicious_yara: bool | None = Field(
-        None, description="Matched malicious YARA rule."
-    )
-    malicious_sandbox_verdict: bool | None = Field(
-        None, description="Detected malicious in sandbox analysis."
-    )
-    associated_reference: bool | None = Field(
-        None, description="Appears in public sources."
-    )
-    associated_malware_configuration: bool | None = Field(
-        None, description="Contains known malware configurations."
-    )
-    associated_actor: bool | None = Field(
-        None, description="Associated with a threat actor."
-    )
-    high_severity_related_files: bool | None = Field(
-        None, description="Related files marked high severity."
-    )
-    medium_severity_related_files: bool | None = Field(
-        None, description="Related files marked medium severity."
-    )
-    low_severity_related_files: bool | None = Field(
-        None, description="Related files marked low severity."
-    )
-    pervasive_indicator: bool | None = Field(
-        None, description="Related files seen in OSINT."
-    )
-
-
-class GTIAssessment(BaseModel):
-    """Google Threat Intelligence assessment for a file."""
-
-    verdict: Verdict | None = Field(None, description="Verdict of the GTI assessment.")
-    severity: Severity | None = Field(
-        None, description="Severity level of the GTI assessment."
-    )
-    threat_score: ThreatScore | None = Field(
-        None, description="Threat score from GTI assessment."
-    )
-    contributing_factors: ContributingFactors | None = Field(
-        None, description="Factors contributing to verdict/severity."
-    )
-    description: str | None = Field(
-        None, description="Human-readable description of classification."
-    )
-
-
 class LastAnalysisResult(BaseModel):
     """Result from a single antivirus engine."""
 
@@ -191,23 +71,6 @@ class LastAnalysisResult(BaseModel):
     result: str | None = Field(
         None, description="Raw scan result (e.g., 'clean', 'malicious')."
     )
-
-
-class LastAnalysisStats(BaseModel):
-    """Summary statistics for the latest scan results."""
-
-    confirmed_timeout: int | None = Field(
-        None, description="Count of confirmed timeouts."
-    )
-    failure: int | None = Field(None, description="Count of scan failures.")
-    harmless: int | None = Field(None, description="Count marking harmless.")
-    malicious: int | None = Field(None, description="Count marking malicious.")
-    suspicious: int | None = Field(None, description="Count marking suspicious.")
-    timeout: int | None = Field(None, description="Count of timeouts.")
-    type_unsupported: int | None = Field(
-        None, description="Count of unsupported file types."
-    )
-    undetected: int | None = Field(None, description="Count marking undetected.")
 
 
 class SandboxVerdict(BaseModel):
@@ -257,6 +120,35 @@ class SigmaAnalysisStats(BaseModel):
     high: int | None = Field(None, description="Count of high-severity matches.")
     low: int | None = Field(None, description="Count of low-severity matches.")
     medium: int | None = Field(None, description="Count of medium-severity matches.")
+
+
+class ThreatSeverityData(BaseModel):
+    """Data the GTI threat severity of a file was computed from."""
+
+    popular_threat_category: str | None = Field(
+        None, description="Most common threat category, e.g. 'trojan'."
+    )
+    type_tag: str | None = Field(None, description="File type tag.")
+    has_similar_files_with_detections: bool | None = Field(
+        None, description="Whether similar files are detected."
+    )
+
+
+class ThreatSeverity(BaseModel):
+    """GTI threat severity of a file."""
+
+    threat_severity_level: str | None = Field(
+        None, description="Severity level, e.g. 'SEVERITY_HIGH'."
+    )
+    level_description: str | None = Field(
+        None, description="Explanation of the severity level."
+    )
+    last_analysis_date: int | None = Field(
+        None, description="Date of the severity computation (UTC timestamp)."
+    )
+    threat_severity_data: ThreatSeverityData | None = Field(
+        None, description="Data the severity was computed from."
+    )
 
 
 class FileModel(BaseModel):
@@ -319,6 +211,9 @@ class FileModel(BaseModel):
     size: int | None = Field(None, description="File size in bytes.")
     tags: list[str] | None = Field(
         None, description="Representative tags for the file."
+    )
+    threat_severity: ThreatSeverity | None = Field(
+        None, description="GTI threat severity of the file."
     )
     tlsh: str | None = Field(None, description="TLSH hash of the file.")
     times_submitted: int | None = Field(

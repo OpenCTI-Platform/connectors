@@ -9,6 +9,7 @@ from uuid import uuid4
 from connector.src.custom.client_api.inline_relationships import (
     inline_relationships_param,
 )
+from connector.src.custom.client_api.page_limits import collection_page_limit
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -176,7 +177,7 @@ class BaseClientAPI:
 
                 params = {
                     "filter": current_filter,
-                    "limit": 40,
+                    "limit": collection_page_limit(collection_type),
                     "order": "last_modification_date+",
                 }
                 if relationships:

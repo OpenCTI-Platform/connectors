@@ -8,51 +8,54 @@ import pytest
 from connector.src.custom.mappers.gti_iocs.gti_file_to_stix_file import (
     GTIFileToSTIXFile,
 )
-from connector.src.custom.models.gti.gti_file_model import (
+from connector.src.custom.models.gti.gti_assessment_model import (
     ContributingFactors,
-    FileModel,
     GTIAssessment,
-    GTIFileData,
     ThreatScore,
     Verdict,
 )
+from connector.src.custom.models.gti.gti_file_model import (
+    FileModel,
+    GTIFileData,
+)
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition
 
+from tests.factories import GTIModelFactory
 
-class VerdictFactory(ModelFactory[Verdict]):
+
+class VerdictFactory(GTIModelFactory[Verdict]):
     """Create verdict for testing."""
 
     __model__ = Verdict
 
 
-class ThreatScoreFactory(ModelFactory[ThreatScore]):
+class ThreatScoreFactory(GTIModelFactory[ThreatScore]):
     """Create threat score for testing."""
 
     __model__ = ThreatScore
 
 
-class ContributingFactorsFactory(ModelFactory[ContributingFactors]):
+class ContributingFactorsFactory(GTIModelFactory[ContributingFactors]):
     """Create contributing factors for testing."""
 
     __model__ = ContributingFactors
 
 
-class GTIAssessmentFactory(ModelFactory[GTIAssessment]):
+class GTIAssessmentFactory(GTIModelFactory[GTIAssessment]):
     """Create GTI assessment for testing."""
 
     __model__ = GTIAssessment
 
 
-class FileModelFactory(ModelFactory[FileModel]):
+class FileModelFactory(GTIModelFactory[FileModel]):
     """Create file model for testing."""
 
     __model__ = FileModel
 
 
-class GTIFileDataFactory(ModelFactory[GTIFileData]):
+class GTIFileDataFactory(GTIModelFactory[GTIFileData]):
     """Create GTI file data for testing."""
 
     __model__ = GTIFileData
@@ -138,7 +141,7 @@ def file_with_mandiant_score() -> GTIFileData:
             md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
                 verdict=None,
@@ -159,7 +162,7 @@ def file_with_threat_score() -> GTIFileData:
             gti_assessment=GTIAssessmentFactory.build(
                 threat_score=ThreatScoreFactory.build(value=75),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 verdict=None,
             ),
@@ -179,7 +182,7 @@ def file_with_zero_score() -> GTIFileData:
             gti_assessment=GTIAssessmentFactory.build(
                 threat_score=ThreatScoreFactory.build(value=0),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 verdict=None,
             ),
@@ -260,7 +263,7 @@ def file_with_all_data() -> GTIFileData:
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 ),
                 threat_score=ThreatScoreFactory.build(value=85),
             ),
@@ -642,7 +645,7 @@ def test_get_score_with_threat_score(
         attributes=FileModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=70),
             )
@@ -668,7 +671,7 @@ def test_get_score_with_zero_threat_score(
         attributes=FileModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=None
+                    gti_confidence_score=None, mandiant_confidence_score=None
                 ),
                 threat_score=ThreatScoreFactory.build(value=0),
             )
@@ -694,7 +697,7 @@ def test_get_score_with_mandiant_score_fallback(
         attributes=FileModelFactory.build(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
+                    gti_confidence_score=None, mandiant_confidence_score=85
                 ),
                 threat_score=None,
             )
@@ -886,7 +889,7 @@ def test_create_stix_file_method(
             creation_date=1640995200,
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=90
+                    gti_confidence_score=None, mandiant_confidence_score=90
                 )
             ),
         ),
@@ -894,7 +897,7 @@ def test_create_stix_file_method(
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX file
-    file_observable = mapper._create_stix_file()
+    file_observable = mapper._create_stix_observable()
 
     # Then file observable should be created correctly
     assert file_observable is not None  # noqa: S101
@@ -951,7 +954,7 @@ def test_file_observable_ctime_property(
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX file
-    file_observable = mapper._create_stix_file()
+    file_observable = mapper._create_stix_observable()
 
     # Then file should have correct ctime
     _then_stix_file_has_correct_ctime(file_observable, file_data)
@@ -975,7 +978,7 @@ def test_file_observable_without_creation_date(
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
 
     # When creating STIX file
-    file_observable = mapper._create_stix_file()
+    file_observable = mapper._create_stix_observable()
 
     # Then file should not have ctime or it should be None
     _then_stix_file_has_correct_ctime(file_observable, file_data)
@@ -986,7 +989,7 @@ def _given_gti_file_mapper(
 ) -> GTIFileToSTIXFile:
     """Create a GTIFileToSTIXFile mapper instance."""
     return GTIFileToSTIXFile(
-        file=file,
+        file,
         organization=organization,
         tlp_marking=tlp_marking,
     )

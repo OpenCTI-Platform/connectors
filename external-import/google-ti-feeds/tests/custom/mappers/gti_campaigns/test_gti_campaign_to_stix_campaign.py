@@ -17,15 +17,16 @@ from connector.src.custom.models.gti.gti_campaign_model import (
     TagDetail,
 )
 from polyfactory import Use
-from polyfactory.factories.pydantic_factory import ModelFactory
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from tests.factories import GTIModelFactory
 
 # =====================
 # Polyfactory Factories
 # =====================
 
 
-class AltNameDetailFactory(ModelFactory[AltNameDetail]):
+class AltNameDetailFactory(GTIModelFactory[AltNameDetail]):
     """Factory for AltNameDetail model."""
 
     __model__ = AltNameDetail
@@ -34,7 +35,7 @@ class AltNameDetailFactory(ModelFactory[AltNameDetail]):
     value = "Campaign Example"
 
 
-class ActivityDetailFactory(ModelFactory[ActivityDetail]):
+class ActivityDetailFactory(GTIModelFactory[ActivityDetail]):
     """Factory for ActivityDetail model."""
 
     __model__ = ActivityDetail
@@ -43,7 +44,7 @@ class ActivityDetailFactory(ModelFactory[ActivityDetail]):
     value = "2023-01-01T00:00:00Z"
 
 
-class MotivationFactory(ModelFactory[Motivation]):
+class MotivationFactory(GTIModelFactory[Motivation]):
     """Factory for Motivation model."""
 
     __model__ = Motivation
@@ -52,7 +53,7 @@ class MotivationFactory(ModelFactory[Motivation]):
     value = "espionage"
 
 
-class TagDetailFactory(ModelFactory[TagDetail]):
+class TagDetailFactory(GTIModelFactory[TagDetail]):
     """Factory for TagDetail model."""
 
     __model__ = TagDetail
@@ -61,7 +62,7 @@ class TagDetailFactory(ModelFactory[TagDetail]):
     value = "Campaign"
 
 
-class CampaignModelFactory(ModelFactory[CampaignModel]):
+class CampaignModelFactory(GTIModelFactory[CampaignModel]):
     """Factory for CampaignModel."""
 
     __model__ = CampaignModel
@@ -73,7 +74,7 @@ class CampaignModelFactory(ModelFactory[CampaignModel]):
     private = False
 
 
-class GTICampaignDataFactory(ModelFactory[GTICampaignData]):
+class GTICampaignDataFactory(GTIModelFactory[GTICampaignData]):
     """Factory for GTICampaignData."""
 
     __model__ = GTICampaignData

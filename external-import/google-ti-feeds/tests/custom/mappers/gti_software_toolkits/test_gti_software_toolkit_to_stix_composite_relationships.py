@@ -8,47 +8,51 @@ from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_
 )
 from connector.src.custom.models.gti.gti_software_toolkit_model import (
     GTISoftwareToolkitData,
+    MalwareRole,
     SoftwareToolkitModel,
     SourceRegion,
     TargetedIndustry,
     TargetedRegion,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from tests.factories import GTIModelFactory
 
 # ---------------------------------------------------------------------------
 # Factories
 # ---------------------------------------------------------------------------
 
 
-class SourceRegionFactory(ModelFactory[SourceRegion]):
+class SourceRegionFactory(GTIModelFactory[SourceRegion]):
     """Factory for SourceRegion model."""
 
     __model__ = SourceRegion
 
 
-class TargetedRegionFactory(ModelFactory[TargetedRegion]):
+class TargetedRegionFactory(GTIModelFactory[TargetedRegion]):
     """Factory for TargetedRegion model."""
 
     __model__ = TargetedRegion
 
 
-class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
+class TargetedIndustryFactory(GTIModelFactory[TargetedIndustry]):
     """Factory for TargetedIndustry model."""
 
     __model__ = TargetedIndustry
 
 
-class SoftwareToolkitModelFactory(ModelFactory[SoftwareToolkitModel]):
+class SoftwareToolkitModelFactory(GTIModelFactory[SoftwareToolkitModel]):
     """Factory for SoftwareToolkitModel."""
 
     __model__ = SoftwareToolkitModel
+    # GTI roles become STIX tool types: random strings are outside the vocabulary.
+    malware_roles = Use(lambda: [MalwareRole(value="remote-access")])
     creation_date = 1672531200
     last_modification_date = 1672617600
 
 
-class GTISoftwareToolkitDataFactory(ModelFactory[GTISoftwareToolkitData]):
+class GTISoftwareToolkitDataFactory(GTIModelFactory[GTISoftwareToolkitData]):
     """Factory for GTISoftwareToolkitData."""
 
     __model__ = GTISoftwareToolkitData
@@ -154,9 +158,12 @@ def _when_convert_to_stix(mapper: GTISoftwareToolkitToSTIXComposite) -> list:
     return mapper.to_stix()
 
 
-def _then_relationship_has_no_description(relationship) -> None:  # noqa: ANN001
+def _then_relationship_has_no_generated_description(
+    relationship,
+) -> None:  # noqa: ANN001
+    # Only GTI content (confidence, note) is allowed by default, see #5775.
     assert relationship.relationship_type is not None  # noqa: S101
-    assert relationship.description is None  # noqa: S101
+    assert "Stated by GTI" not in (relationship.description or "")  # noqa: S101
 
 
 # ---------------------------------------------------------------------------
@@ -187,12 +194,12 @@ def test_composite_returns_tool_location_sector_and_relationships(
 
 
 @pytest.mark.order(1)
-def test_targets_location_relationship_has_no_description(
+def test_targets_location_relationship_has_no_generated_description(
     toolkit_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'targets' (location) relationship must have description=None."""
+    """The 'targets' (location) relationship must have no connector-generated description."""
     mapper = _given_composite_mapper(
         toolkit_with_regions_and_sectors,
         mock_organization,
@@ -216,16 +223,16 @@ def test_targets_location_relationship_has_no_description(
     ]
     assert len(targets_location_rels) >= 1  # noqa: S101
     for rel in targets_location_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)
 
 
 @pytest.mark.order(1)
-def test_originates_from_location_relationship_has_no_description(
+def test_originates_from_location_relationship_has_no_generated_description(
     toolkit_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'originates-from' (location) relationship must have description=None."""
+    """The 'originates-from' (location) relationship must have no connector-generated description."""
     mapper = _given_composite_mapper(
         toolkit_with_regions_and_sectors,
         mock_organization,
@@ -242,16 +249,16 @@ def test_originates_from_location_relationship_has_no_description(
     ]
     assert len(originates_rels) >= 1  # noqa: S101
     for rel in originates_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)
 
 
 @pytest.mark.order(1)
-def test_targets_sector_relationship_has_no_description(
+def test_targets_sector_relationship_has_no_generated_description(
     toolkit_with_regions_and_sectors,
     mock_organization,
     mock_tlp_marking,
 ):
-    """The 'targets' (sector/identity) relationship must have description=None."""
+    """The 'targets' (sector/identity) relationship must have no connector-generated description."""
     mapper = _given_composite_mapper(
         toolkit_with_regions_and_sectors,
         mock_organization,
@@ -274,7 +281,7 @@ def test_targets_sector_relationship_has_no_description(
     ]
     assert len(targets_sector_rels) >= 1  # noqa: S101
     for rel in targets_sector_rels:
-        _then_relationship_has_no_description(rel)
+        _then_relationship_has_no_generated_description(rel)
 
 
 @pytest.mark.order(1)

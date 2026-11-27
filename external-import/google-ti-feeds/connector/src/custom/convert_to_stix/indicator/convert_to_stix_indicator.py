@@ -5,16 +5,42 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
+from connector.src.custom.mappers.gti_iocs.gti_links import gti_external_reference
+from connector.src.custom.mappers.gti_iocs.ioc_assessment import (
+    build_ioc_description,
+    ioc_tag_labels,
+)
+from connector.src.custom.mappers.gti_iocs.ioc_infrastructure import (
+    INFRASTRUCTURE_RULES,
+    InfrastructureRule,
+    related_value,
+)
+from connector.src.custom.mappers.gti_iocs.ioc_scoring import (
+    compute_ioc_score,
+    meets_min_verdict,
+)
+from connector.src.custom.mappers.gti_iocs.stix_pattern import escape_pattern_value
+from connector.src.custom.mappers.relationship_reasons import (
+    ioc_delta_association_reason,
+    ioc_threat_evidence,
+    optional_reason,
+)
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
+    IOCDeltaAttributes,
     IOCDeltaEntry,
     IOCDeltaRelationshipItem,
 )
 from connectors_sdk.models import (
+    URL,
     AttackPattern,
     Campaign,
+    DomainName,
     ExternalReference,
+    File,
     Indicator,
     IntrusionSet,
+    IPV4Address,
+    IPV6Address,
     Malware,
     Relationship,
     Tool,
@@ -28,6 +54,15 @@ if TYPE_CHECKING:
     from connector.src.custom.configs import GTIConfig
 
 LOG_PREFIX = "[ConvertToSTIXIndicator]"
+
+# Delta relationship list -> STIX type of the threat, for the GTI evidence.
+DELTA_THREAT_TYPES = {
+    "malware_families": "malware",
+    "threat_actors": "intrusion-set",
+    "software_toolkits": "tool",
+    "attack_techniques": "attack-pattern",
+    "campaigns": "campaign",
+}
 
 
 class ConvertToSTIXIndicator(BaseConvertToSTIX):
@@ -151,6 +186,18 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             )
             return []
 
+        if not meets_min_verdict(entry.attributes, self.config.indicator_min_verdict):
+            self.logger.debug(
+                "IOC entry below minimum GTI verdict, skipping",
+                {
+                    "prefix": LOG_PREFIX,
+                    "type": entry.type,
+                    "id": entry.id,
+                    "min_verdict": self.config.indicator_min_verdict,
+                },
+            )
+            return []
+
         if not self._has_required_association(entry):
             self.logger.debug(
                 "IOC entry lacks required malware/threat actor association, skipping",
@@ -195,8 +242,63 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             return []
 
         rel_objects = self._build_relationships(entry, ioc_entry)
+        if rel_objects:
+            rel_objects.extend(self._build_infrastructure(entry))
 
         return rel_objects
+
+    def _get_score(self, attrs: IOCDeltaAttributes) -> int | None:
+        """Compute the indicator score with the configured scoring strategy."""
+        return compute_ioc_score(attrs, self.config.indicator_scoring)
+
+    def _get_description(self, attrs: IOCDeltaAttributes) -> str | None:
+        """Build the GTI assessment description when enabled."""
+        if not self.config.extended_descriptions:
+            return None
+        return build_ioc_description(attrs)
+
+    def _get_labels(self, attrs: IOCDeltaAttributes) -> list[str] | None:
+        """Return the GTI tags as labels when enabled."""
+        if not self.config.ioc_tags_as_labels:
+            return None
+        return ioc_tag_labels(attrs.tags)
+
+    def _build_indicator(
+        self,
+        attrs: IOCDeltaAttributes,
+        name: str,
+        pattern: str,
+        observable_type: str,
+        reference: dict[str, str],
+    ) -> Indicator:
+        """Return the indicator of an IOC delta entry, with its observable created by OpenCTI.
+
+        Args:
+            attrs: The entry attributes: score, description, labels and valid from date.
+            name: The indicator name.
+            pattern: The STIX pattern.
+            observable_type: The OpenCTI type of the main observable.
+            reference: The external reference to the GTI page of the IOC.
+
+        """
+        return Indicator(
+            name=name,
+            pattern=pattern,
+            pattern_type="stix",
+            main_observable_type=observable_type,
+            author=self.organization,
+            markings=[self.tlp_marking],
+            score=self._get_score(attrs),
+            description=self._get_description(attrs),
+            labels=self._get_labels(attrs),
+            valid_from=(
+                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
+                if attrs.creation_date
+                else None
+            ),
+            create_observables=True,
+            external_references=[ExternalReference(**reference)],
+        )
 
     def _convert_file(self, entry: IOCDeltaEntry) -> Indicator | None:
         """Convert a file IOC delta entry to a STIX Indicator with file observable."""
@@ -204,7 +306,6 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         if attrs is None:
             return None
 
-        hashes = {}
         patterns = []
         for hash_algo, hash_value in [
             (HashAlgorithm.SHA256, attrs.sha256),
@@ -214,39 +315,18 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             if hash_value is None:
                 continue
             patterns.append(f"file:hashes.'{hash_algo.value}' = '{hash_value}'")
-            hashes[hash_algo] = hash_value
 
         if not patterns:
             return None
 
         pattern = f"[{' OR '.join(patterns)}]"
 
-        if attrs.gti_assessment and attrs.gti_assessment.threat_score:
-            score = attrs.gti_assessment.threat_score.value
-        else:
-            score = None
-
-        return Indicator(
+        return self._build_indicator(
+            attrs,
             name=attrs.meaningful_name if attrs.meaningful_name else entry.id,
             pattern=pattern,
-            pattern_type="stix",
-            main_observable_type="StixFile",
-            author=self.organization,
-            markings=[self.tlp_marking],
-            score=score,
-            valid_from=(
-                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
-                if attrs.creation_date
-                else None
-            ),
-            create_observables=True,
-            external_references=[
-                ExternalReference(
-                    source_name=f"[GTI] File {entry.id}",
-                    description="Google Threat Intelligence File Link",
-                    url=f"https://www.virustotal.com/gui/file/{entry.id}",
-                )
-            ],
+            observable_type="StixFile",
+            reference=gti_external_reference("file", entry.id),
         )
 
     def _detect_ip_version(self, ip_addr: str) -> str:
@@ -279,31 +359,12 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         pattern = f"[{ip_version}-addr:value = '{entry.id}']"
         observable_type = "IPv4-Addr" if ip_version == "ipv4" else "IPv6-Addr"
 
-        return Indicator(
+        return self._build_indicator(
+            attrs,
             name=entry.id,
             pattern=pattern,
-            pattern_type="stix",
-            main_observable_type=observable_type,
-            author=self.organization,
-            markings=[self.tlp_marking],
-            score=(
-                attrs.gti_assessment.threat_score.value
-                if attrs.gti_assessment and attrs.gti_assessment.threat_score
-                else None
-            ),
-            valid_from=(
-                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
-                if attrs.creation_date
-                else None
-            ),
-            create_observables=True,
-            external_references=[
-                ExternalReference(
-                    source_name=f"[GTI] IP {entry.id}",
-                    description="Google Threat Intelligence IP Link",
-                    url=f"https://www.virustotal.com/gui/ip-address/{entry.id}",
-                )
-            ],
+            observable_type=observable_type,
+            reference=gti_external_reference("ip_address", entry.id),
         )
 
     def _convert_url(self, entry: IOCDeltaEntry) -> Indicator | None:
@@ -312,31 +373,12 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         if attrs is None or attrs.url is None:
             return None
 
-        return Indicator(
+        return self._build_indicator(
+            attrs,
             name=attrs.url,
-            pattern=f"[url:value = '{attrs.url}']",
-            pattern_type="stix",
-            main_observable_type="Url",
-            author=self.organization,
-            markings=[self.tlp_marking],
-            score=(
-                attrs.gti_assessment.threat_score.value
-                if attrs.gti_assessment and attrs.gti_assessment.threat_score
-                else None
-            ),
-            valid_from=(
-                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
-                if attrs.creation_date
-                else None
-            ),
-            create_observables=True,
-            external_references=[
-                ExternalReference(
-                    source_name=f"[GTI] URL {attrs.url}",
-                    description="Google Threat Intelligence URL Link",
-                    url=f"https://www.virustotal.com/gui/url/{entry.id}",
-                )
-            ],
+            pattern=f"[url:value = '{escape_pattern_value(attrs.url)}']",
+            observable_type="Url",
+            reference=gti_external_reference("url", entry.id, attrs.url),
         )
 
     def _convert_domain(self, entry: IOCDeltaEntry) -> Indicator | None:
@@ -345,31 +387,12 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         if attrs is None:
             return None
 
-        return Indicator(
+        return self._build_indicator(
+            attrs,
             name=entry.id,
-            pattern=f"[domain-name:value = '{entry.id}']",
-            pattern_type="stix",
-            main_observable_type="Domain-Name",
-            author=self.organization,
-            markings=[self.tlp_marking],
-            score=(
-                attrs.gti_assessment.threat_score.value
-                if attrs.gti_assessment and attrs.gti_assessment.threat_score
-                else None
-            ),
-            valid_from=(
-                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
-                if attrs.creation_date
-                else None
-            ),
-            create_observables=True,
-            external_references=[
-                ExternalReference(
-                    source_name=f"[GTI] Domain {entry.id}",
-                    description="Google Threat Intelligence Domain Link",
-                    url=f"https://www.virustotal.com/gui/domain/{entry.id}",
-                )
-            ],
+            pattern=f"[domain-name:value = '{escape_pattern_value(entry.id)}']",
+            observable_type="Domain-Name",
+            reference=gti_external_reference("domain", entry.id),
         )
 
     def _build_relationships(
@@ -386,12 +409,149 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             if not rel_data:
                 continue
             for item in rel_data.data:
-                rels.extend(rel_func(ioc_entry, item))
+                evidence = ioc_threat_evidence(
+                    entry.attributes.gti_assessment if entry.attributes else None,
+                    DELTA_THREAT_TYPES.get(rel_field),
+                    item.attributes.name if item.attributes else None,
+                    item.id,
+                )
+                rels.extend(rel_func(ioc_entry, item, evidence))
 
         return rels
 
+    def _build_infrastructure(self, entry: IOCDeltaEntry) -> list[_STIXBase]:
+        """Return the infrastructure observables of the entry, linked to the IOC observable.
+
+        Enabled by indicator_infrastructure. The IOC observable is sent with them:
+        OpenCTI also creates it from the indicator, with the same ID.
+        """
+        categories = set(getattr(self.config, "indicator_infrastructure", None) or [])
+        rules = [
+            rule
+            for rule in INFRASTRUCTURE_RULES
+            if rule.category in categories and rule.ioc_type == entry.type
+        ]
+        if not rules or entry.relationships is None:
+            return []
+        ioc_value = self._ioc_value(entry)
+        ioc_observable = self._ioc_observable(entry) if ioc_value else None
+        if ioc_value is None or ioc_observable is None:
+            return []
+
+        objects: list[_STIXBase] = []
+        for rule in rules:
+            for value in self._related_values(rule, entry, ioc_value):
+                related = self._observable(rule.related_type, value)
+                source, target = (
+                    (ioc_observable, related)
+                    if rule.ioc_is_source
+                    else (related, ioc_observable)
+                )
+                relationship = Relationship(
+                    type=RelationshipType(rule.relationship_type),
+                    source=source,
+                    target=target,
+                    author=self.organization,
+                    markings=[self.tlp_marking],
+                    description=optional_reason(
+                        "Stated by GTI: "
+                        + rule.reason.format(ioc=ioc_value, related=value)
+                    ),
+                )
+                objects.extend(
+                    [related.to_stix2_object(), relationship.to_stix2_object()]
+                )
+        if objects:
+            objects.insert(0, ioc_observable.to_stix2_object())
+        return objects
+
+    def _related_values(
+        self, rule: InfrastructureRule, entry: IOCDeltaEntry, ioc_value: str
+    ) -> list[str]:
+        """Return the valid related values of a rule, deduplicated and capped."""
+        data = getattr(entry.relationships, rule.field, None)
+        values = (
+            related_value(rule, ioc_value, item.id or "")
+            for item in (data.data if data else [])
+        )
+        unique_values = list(dict.fromkeys(value for value in values if value))
+        return unique_values[: self.config.indicator_infrastructure_limit]
+
+    @staticmethod
+    def _ioc_value(entry: IOCDeltaEntry) -> str | None:
+        """Return the value identifying the IOC in relationship descriptions."""
+        if entry.type == "url":
+            return entry.attributes.url if entry.attributes else None
+        return entry.id
+
+    def _ioc_observable(self, entry: IOCDeltaEntry) -> Any | None:
+        """Return the observable of the IOC itself, as created from its indicator."""
+        attrs = entry.attributes
+        if entry.type == "file":
+            hashes = {
+                algorithm: value
+                for algorithm, value in (
+                    (HashAlgorithm.SHA256, attrs.sha256 if attrs else None),
+                    (HashAlgorithm.MD5, attrs.md5 if attrs else None),
+                    (HashAlgorithm.SHA1, attrs.sha1 if attrs else None),
+                )
+                if value
+            }
+            if not hashes:
+                return None
+            return File(
+                hashes=hashes, author=self.organization, markings=[self.tlp_marking]
+            )
+        if entry.type == "url":
+            if not attrs or not attrs.url:
+                return None
+            return URL(
+                value=attrs.url, author=self.organization, markings=[self.tlp_marking]
+            )
+        kind = "ip" if entry.type == "ip_address" else "domain"
+        return self._observable(kind, entry.id)
+
+    def _observable(self, kind: str, value: str) -> Any:
+        """Return a domain, IP or file (SHA-256) observable."""
+        common = {"author": self.organization, "markings": [self.tlp_marking]}
+        if kind == "file":
+            return File(hashes={HashAlgorithm.SHA256: value}, **common)
+        if kind == "ip":
+            if self._detect_ip_version(value) == "ipv4":
+                return IPV4Address(value=value, **common)
+            return IPV6Address(value=value, **common)
+        return DomainName(value=value, **common)
+
+    def _indicates(
+        self, ioc_entry: Indicator, target: Any, evidence: str | None = None
+    ) -> list[_STIXBase]:
+        """Return the target and the 'indicates' relationship from the IOC to it.
+
+        The description states that the IOC deltas feed lists the target, then the
+        GTI evidence of the IOC supporting the link.
+        """
+        stix_target = target.to_stix2_object()
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=target,
+            author=self.organization,
+            markings=[self.tlp_marking],
+            description=optional_reason(
+                " ".join(
+                    part
+                    for part in (ioc_delta_association_reason(stix_target), evidence)
+                    if part
+                )
+            ),
+        )
+        return [stix_target, relationship.to_stix2_object()]
+
     def _create_relation_malware_family(
-        self, ioc_entry: Indicator, malware_data: IOCDeltaRelationshipItem
+        self,
+        ioc_entry: Indicator,
+        malware_data: IOCDeltaRelationshipItem,
+        evidence: str | None = None,
     ) -> list[_STIXBase]:
 
         if not malware_data.attributes or not malware_data.attributes.name:
@@ -406,21 +566,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             markings=[self.tlp_marking],
         )
 
-        relationship = Relationship(
-            type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=malware,
-            author=self.organization,
-            markings=[self.tlp_marking],
-        )
-
-        return [
-            malware.to_stix2_object(),
-            relationship.to_stix2_object(),
-        ]
+        return self._indicates(ioc_entry, malware, evidence)
 
     def _create_relation_campaign(
-        self, ioc_entry: Indicator, campaign_data: IOCDeltaRelationshipItem
+        self,
+        ioc_entry: Indicator,
+        campaign_data: IOCDeltaRelationshipItem,
+        evidence: str | None = None,
     ) -> list[_STIXBase]:
         if not campaign_data.attributes or not campaign_data.attributes.name:
             return []
@@ -433,23 +585,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             markings=[self.tlp_marking],
         )
 
-        relationship = Relationship(
-            type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=campaign,
-            author=self.organization,
-            markings=[self.tlp_marking],
-        )
-
-        return [
-            campaign.to_stix2_object(),
-            relationship.to_stix2_object(),
-        ]
+        return self._indicates(ioc_entry, campaign, evidence)
 
     def _create_relation_threat_actor(
         self,
         ioc_entry: Indicator,
         threat_actor_data: IOCDeltaRelationshipItem,
+        evidence: str | None = None,
     ) -> list[_STIXBase]:
         if not threat_actor_data.attributes or not threat_actor_data.attributes.name:
             return []
@@ -461,23 +603,14 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             author=self.organization,
             markings=[self.tlp_marking],
         )
-        relationship = Relationship(
-            type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=intrusion_set,
-            author=self.organization,
-            markings=[self.tlp_marking],
-        )
 
-        return [
-            intrusion_set.to_stix2_object(),
-            relationship.to_stix2_object(),
-        ]
+        return self._indicates(ioc_entry, intrusion_set, evidence)
 
     def _create_relation_software_toolkit(
         self,
         ioc_entry: Indicator,
         software_toolkit_data: IOCDeltaRelationshipItem,
+        evidence: str | None = None,
     ) -> list[_STIXBase]:
         if (
             not software_toolkit_data.attributes
@@ -493,23 +626,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             markings=[self.tlp_marking],
         )
 
-        relationship = Relationship(
-            type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=software_toolkit,
-            author=self.organization,
-            markings=[self.tlp_marking],
-        )
-
-        return [
-            software_toolkit.to_stix2_object(),
-            relationship.to_stix2_object(),
-        ]
+        return self._indicates(ioc_entry, software_toolkit, evidence)
 
     def _create_relation_attack_technique(
         self,
         ioc_entry: Indicator,
         attack_technique_data: IOCDeltaRelationshipItem,
+        evidence: str | None = None,
     ) -> list[_STIXBase]:
         if not attack_technique_data.id:
             return []
@@ -532,15 +655,4 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             markings=[self.tlp_marking],
         )
 
-        relationship = Relationship(
-            type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=attack_pattern,
-            author=self.organization,
-            markings=[self.tlp_marking],
-        )
-
-        return [
-            attack_pattern.to_stix2_object(),
-            relationship.to_stix2_object(),
-        ]
+        return self._indicates(ioc_entry, attack_pattern, evidence)

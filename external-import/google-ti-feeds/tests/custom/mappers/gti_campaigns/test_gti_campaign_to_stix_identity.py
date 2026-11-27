@@ -11,24 +11,25 @@ from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
     TargetedIndustry,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
+from tests.factories import GTIModelFactory
 
-class TargetedIndustryFactory(ModelFactory[TargetedIndustry]):
+
+class TargetedIndustryFactory(GTIModelFactory[TargetedIndustry]):
     """Factory for TargetedIndustry model."""
 
     __model__ = TargetedIndustry
 
 
-class CampaignModelFactory(ModelFactory[CampaignModel]):
+class CampaignModelFactory(GTIModelFactory[CampaignModel]):
     """Factory for CampaignModel."""
 
     __model__ = CampaignModel
 
 
-class GTICampaignDataFactory(ModelFactory[GTICampaignData]):
+class GTICampaignDataFactory(GTIModelFactory[GTICampaignData]):
     """Factory for GTICampaignData."""
 
     __model__ = GTICampaignData
@@ -416,7 +417,7 @@ def test_gti_campaign_to_stix_identity_with_empty_industry_group(
 ):
     """Test conversion of GTI campaign with empty industry_group but valid industry."""
     # GIVEN: A GTI campaign containing industry data with empty industry_group
-    # but valid industry field for identity creation
+    # but valid industry field
     mapper = _given_gti_campaign_identity_mapper(
         campaign_with_empty_industry_group, mock_organization, mock_tlp_marking
     )
@@ -424,12 +425,9 @@ def test_gti_campaign_to_stix_identity_with_empty_industry_group(
     # WHEN: Converting the GTI campaign data to STIX identity objects
     identities = _when_convert_to_stix(mapper)
 
-    # THEN: Identity should be created since industry field is valid
-    # even though industry_group is empty, but the sector name will be empty
-    # since the mapper uses industry_group for sector naming
-    _then_stix_identities_created_successfully(identities)
-    assert len(identities) == 1  # noqa: S101
-    assert identities[0].name == "" or identities[0].name is None  # noqa: S101
+    # THEN: No identity is created, as for the other collections: the sector is
+    # named after the industry group (it used to be created with an empty name)
+    assert identities == []  # noqa: S101
 
 
 @pytest.mark.order(1)

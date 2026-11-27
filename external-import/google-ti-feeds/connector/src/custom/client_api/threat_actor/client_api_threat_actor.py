@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
+from connector.src.custom.client_api.page_limits import collection_page_limit
 
 
 class ClientAPIThreatActor(BaseClientAPI):
@@ -77,7 +78,7 @@ class ClientAPIThreatActor(BaseClientAPI):
                 {
                     "params": {
                         "filter": "collection_type:threat-actor",
-                        "limit": 40,
+                        "limit": collection_page_limit("threat-actor"),
                         "order": "last_modification_date+",
                     },
                     "cursor": initial_state.get("cursor") if initial_state else None,

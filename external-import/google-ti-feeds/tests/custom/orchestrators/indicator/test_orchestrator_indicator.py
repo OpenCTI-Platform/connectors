@@ -6,17 +6,19 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from connector.src.custom.models.gti.gti_assessment_model import (
+    GTIAssessment,
+    Severity,
+    ThreatScore,
+    Verdict,
+)
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaAttributes,
     IOCDeltaEntry,
-    IOCDeltaGTIAssessment,
     IOCDeltaRelationshipData,
     IOCDeltaRelationshipItem,
     IOCDeltaRelationshipItemAttributes,
     IOCDeltaRelationships,
-    IOCDeltaSeverity,
-    IOCDeltaThreatScore,
-    IOCDeltaVerdict,
 )
 from pydantic import HttpUrl
 from pydantic.types import SecretStr
@@ -91,6 +93,12 @@ class DummyConfig:
         self.indicator_min_score = indicator_min_score
         self.indicator_require_malware_family = False
         self.indicator_require_threat_actor = False
+        self.indicator_scoring = "threat_score"
+        self.indicator_min_verdict = "any"
+        self.ioc_tags_as_labels = False
+        self.indicator_infrastructure = []
+        self.indicator_infrastructure_limit = 10
+        self.extended_descriptions = False
         self.indicator_subentities = [
             "malware_families",
             "threat_actors",
@@ -122,10 +130,10 @@ SAMPLE_FILE_ENTRY = IOCDeltaEntry(
         meaningful_name="malware.exe",
         names=["malware.exe"],
         size=12345,
-        gti_assessment=IOCDeltaGTIAssessment(
-            verdict=IOCDeltaVerdict(value="VERDICT_MALICIOUS"),
-            threat_score=IOCDeltaThreatScore(value=85),
-            severity=IOCDeltaSeverity(value="SEVERITY_HIGH"),
+        gti_assessment=GTIAssessment(
+            verdict=Verdict(value="VERDICT_MALICIOUS"),
+            threat_score=ThreatScore(value=85),
+            severity=Severity(value="SEVERITY_HIGH"),
         ),
         last_modification_date=1700000000,
     ),
@@ -162,10 +170,10 @@ def patch_fetch_ioc_delta_package(monkeypatch: Any) -> Any:
 
     async def _fake_fetch_ioc_delta_package(
         self: Any, package_id: str, ioc_type: str
-    ) -> list[IOCDeltaEntry]:
+    ) -> list[dict[str, Any]]:
         """Return the sample IOC delta entries for file type; empty otherwise."""
         if ioc_type == "file":
-            return [SAMPLE_FILE_ENTRY]
+            return [SAMPLE_FILE_ENTRY.model_dump()]
         return []
 
     monkeypatch.setattr(
@@ -430,8 +438,8 @@ async def test_process_package_with_empty_entries_returns_early(
 
 def _given_file_entries_with_techniques(
     technique_names: list[str | None], entry_count: int
-) -> list[IOCDeltaEntry]:
-    """Build file IOC entries, each carrying one technique per given name."""
+) -> list[dict[str, Any]]:
+    """Build file IOC entries as the client returns them (dicts), each carrying one technique per given name."""
     techniques = [
         IOCDeltaRelationshipItem(
             type="attack-technique",
@@ -447,12 +455,15 @@ def _given_file_entries_with_techniques(
     return [
         SAMPLE_FILE_ENTRY.model_copy(
             update={
+                # A distinct IOC per entry: the orchestrator keeps the latest
+                # entry of each IOC of a package.
+                "id": f"{SAMPLE_FILE_ENTRY.id[:-2]}{index:02d}",
                 "relationships": IOCDeltaRelationships(
                     attack_techniques=IOCDeltaRelationshipData(data=techniques)
-                )
+                ),
             }
-        )
-        for _ in range(entry_count)
+        ).model_dump()
+        for index in range(entry_count)
     ]
 
 
@@ -475,7 +486,7 @@ async def test_process_package_logs_one_warning_for_techniques_without_name(
 
     entries = _given_file_entries_with_techniques([None, "", "   "], entry_count=2)
 
-    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[dict[str, Any]]:
         return entries
 
     monkeypatch.setattr(
@@ -506,7 +517,7 @@ async def test_process_package_counter_is_reset_between_packages(
 
     entries = _given_file_entries_with_techniques([None], entry_count=1)
 
-    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[dict[str, Any]]:
         return entries
 
     monkeypatch.setattr(
@@ -537,7 +548,7 @@ async def test_process_package_no_warning_when_all_techniques_have_a_name(
         ["Network Service Discovery", "Process Injection"], entry_count=2
     )
 
-    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[IOCDeltaEntry]:
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[dict[str, Any]]:
         return entries
 
     monkeypatch.setattr(
@@ -558,7 +569,7 @@ def test_log_relationships_summary(gti_config: DummyConfig, caplog: Any) -> None
     """_log_relationships_summary logs when subentities_ids is non-empty."""
     ind_orch = _get_indicator_orchestrator(gti_config, caplog)
     subentities_ids = {"malware": ["id1", "id2"], "campaign": ["id3"]}
-    ind_orch._log_relationships_summary(subentities_ids, 0, 5, "indicator")
+    ind_orch._log_relationships_summary(subentities_ids, 0, 5)
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any("Found relationships" in msg for msg in all_messages)  # noqa: S101
 
@@ -575,7 +586,7 @@ def test_log_entities_summary(gti_config: DummyConfig, caplog: Any) -> None:
             self.type = entity_type
 
     entities = [FakeEntity("indicator"), FakeEntity("indicator"), FakeEntity("malware")]
-    ind_orch._log_entities_summary(entities, 0, 3, "indicator")
+    ind_orch._log_entities_summary(entities, 0, 3)
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any(
         "Converted to STIX entities" in msg for msg in all_messages
