@@ -22,6 +22,11 @@ if __name__ == "__main__":
         )
 
         connector = SilentpushConnector(config=settings, helper=helper)
+        if not connector.client.ping():
+            helper.connector_logger.error(
+                "[SilentPush] PING FAILED, check your API key!"
+            )
+            exit(1)
         connector.run()
     except Exception:
         traceback.print_exc()

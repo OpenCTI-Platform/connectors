@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from connectors_sdk.models import (
+    URL,
     BaseIdentifiedEntity,
     BaseObservableEntity,
     ExternalReference,
@@ -12,6 +13,7 @@ from connectors_sdk.models import (
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 from pycti import OpenCTIConnectorHelper
 from silentpush_client import SilentpushClient
+from stix2.exceptions import InvalidValueError
 
 
 class Enricher:
@@ -39,6 +41,7 @@ class Enricher:
         self.octi_observables = []
         self.client = client
         self.enriched_data = dict()
+        self.webscan_data = list()
         self.source = None
         self.helper.connector_logger.debug(f"init stix_entity: {self.stix_entity}")
 
@@ -137,26 +140,52 @@ class Enricher:
         """
         Add certificates enrichment data to the octi bundle
         """
-        certificates = self.enriched_data.get("scan_data", {}).get("certificates")
-        if not certificates:
+        if not self.webscan_data:
             return
-        for certificate in certificates:
-            serial_number = certificate.get("serial_number")
+        for webscan_data in self.webscan_data:
+            ssl_data = {k: v for k, v in webscan_data.items() if k.startswith("ssl.")}
+            self.helper.connector_logger.debug(f"ssl_data '{ssl_data}'")
+            serial_number = ssl_data.get("ssl.serial_number")
             if not serial_number:
                 continue
             self.helper.connector_logger.debug(
                 f"building certificate '{serial_number}'"
             )
-            certificate = X509Certificate(
-                hashes={HashAlgorithm.SHA1: certificate.get("fingerprint_sha1")},
-                serial_number=serial_number,
-                signature_algorithm="sha1",
-                issuer=certificate.get("issuer_organization"),
-                validity_not_before=datetime.fromisoformat(
-                    certificate.get("not_before")
-                ),
-                validity_not_after=datetime.fromisoformat(certificate.get("not_after")),
+            raw_hash = ssl_data.get("ssl.SHA1")
+            normalized_hash = (
+                raw_hash.replace(":", "").replace(" ", "").strip().lower()
+                if raw_hash is not None
+                else None
             )
+            not_before = ssl_data.get("ssl.not_before")
+            not_after = ssl_data.get("ssl.not_after")
+            try:
+                certificate = X509Certificate(
+                    hashes=(
+                         {HashAlgorithm.SHA1: normalized_hash}
+                         if normalized_hash
+                         else None
+                    ),
+                    serial_number=serial_number,
+                    signature_algorithm="sha1",
+                    issuer=ssl_data.get("ssl.issuer.organization"),
+                    validity_not_before=(
+                         datetime.fromisoformat(not_before)
+                         if not_before is not None
+                         else None
+                     ),
+                    validity_not_after=(
+                         datetime.fromisoformat(not_after)
+                         if not_after is not None
+                         else None
+                     ),
+                )
+            except (InvalidValueError, ValueError, TypeError, AttributeError) as err:
+                self.helper.connector_logger.warning(
+                     "Skipping invalid certificate",
+                     meta={"serial_number": serial_number, "error": str(err)},
+                )
+                continue
             self.add_target_and_relationship(
                 certificate, RelationshipType.RELATED_TO, "Certificate"
             )
@@ -165,15 +194,27 @@ class Enricher:
         """
         Add favicon enrichment data to the octi bundle
         """
-        favicon = self.enriched_data.get("scan_data", {}).get("favicon")
-        if not favicon:
-            return
-        for k, v in favicon[0].items():
-            if k.startswith("favicon") and v:
-                favicon = File(name=f"{k}: {v}", hashes={HashAlgorithm.MD5: v})
+
+        for webscan_data in self.webscan_data:
+            if not webscan_data.get("favicon_md5"):
+                continue
+            favicon_file = File(
+                name="favicon",
+                hashes={HashAlgorithm.MD5: webscan_data.get("favicon_md5")},
+            )
+            for favicon_url_path in webscan_data.get("favicon_urls", []) or []:
+                if not favicon_url_path:
+                    continue
+                favicon_url = URL(value=favicon_url_path)
                 self.add_target_and_relationship(
-                    favicon, RelationshipType.RELATED_TO, "Favicon"
+                    favicon_url,
+                    RelationshipType.RELATED_TO,
+                    "Favicon URLs",
+                    favicon_file,
                 )
+            self.add_target_and_relationship(
+                favicon_file, RelationshipType.RELATED_TO, "Favicon"
+            )
 
     def extract_labels(self) -> dict:
         """

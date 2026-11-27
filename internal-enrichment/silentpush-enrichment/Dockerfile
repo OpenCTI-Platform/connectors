@@ -7,10 +7,13 @@ WORKDIR /opt/opencti-connector-silentpush-enrichment
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev libmagic
 
 RUN cd /opt/opencti-connector-silentpush-enrichment && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
+
+RUN adduser app --system --home /home/app
+USER app
 
 CMD ["python", "main.py"]

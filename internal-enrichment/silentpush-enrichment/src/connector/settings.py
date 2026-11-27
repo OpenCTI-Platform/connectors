@@ -42,7 +42,7 @@ class SilentpushConfig(BaseConfigModel):
 
     api_base_url: HttpUrl = Field(
         description="External API base URL.",
-        default="https://app.silentpush.com/api/v2/",
+        default="https://api.silentpush.com/api/v1/",
     )
     api_key: SecretStr = Field(description="API key for authentication.")
     max_tlp: str | None = DeprecatedField(

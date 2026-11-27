@@ -24,6 +24,7 @@ class DomainEnricher(Enricher):
             score=self.enriched_data.get("sp_risk_score"),
         )
         self.source = self.domain
+        self.helper.connector_logger.debug(f"domain source: {self.source}")
         self.build_labels()
         self.octi_observables.append(self.source)
 
@@ -37,6 +38,7 @@ class DomainEnricher(Enricher):
         registrar = Organization(
             name=registrar_name,
         )
+        self.helper.connector_logger.debug(f"domain registrar: {registrar}")
         self.add_target_and_relationship(
             registrar, RelationshipType.RELATED_TO, "Registrar"
         )
@@ -69,14 +71,14 @@ class DomainEnricher(Enricher):
 
     def build_asns(self) -> None:
         """
-        Build relationships      [ASN]
-                                  /
+        Build relationships:
                                [DOMAIN]->[IPv4]->[ASN]
                                   \
                                [HOSTNAME]
         and add it to the octi bundle
         """
         diversity_json = self.client.get_diversity_data(self.domain.value)
+        self.helper.connector_logger.debug(f"domain diversity: {diversity_json}")
         if not diversity_json or not diversity_json.get("records"):
             return
         for asn in diversity_json.get("records"):
@@ -85,22 +87,20 @@ class DomainEnricher(Enricher):
                 self.add_target_and_relationship(
                     hostname, RelationshipType.RELATED_TO, "Hostname"
                 )
-            for asn_timeline in asn.get("asn_timelines", []):
+            for asn_timeline in asn.get("timeline", []):
                 ip = asn_timeline.get("ip")
                 if not ip:
                     continue
                 ipv4 = IPV4Address(value=ip)
                 self.add_target_and_relationship(
-                    ipv4, RelationshipType.RELATED_TO, "A Record"
+                    ipv4, RelationshipType.RESOLVES_TO, "A Record"
                 )
                 asn_number = asn_timeline.get("asn")
                 if not asn_number:
                     continue
-                asn_name = asn_timeline.get("asn_name")
+                asn_name = asn_timeline.get("asnname")
                 autonomous_system = AutonomousSystem(number=asn_number, name=asn_name)
-                self.add_target_and_relationship(
-                    autonomous_system, RelationshipType.BELONGS_TO, "ASN"
-                )
+                self.helper.connector_logger.debug(f"domain ASN: {autonomous_system}")
                 self.add_target_and_relationship(
                     autonomous_system, RelationshipType.BELONGS_TO, "ASN", ipv4
                 )
@@ -230,6 +230,13 @@ class DomainEnricher(Enricher):
         """
         Enrich a Domain-Name or Hostname
         """
+        self.enriched_data = self.client.get_enrichment_data(
+            self.API_TYPE, self.stix_entity.get("value")
+        )
+        self.webscan_data = self.client.get_webscan(self.stix_entity.get("value"))
+        self.helper.connector_logger.debug(
+            f"domain json_response: {self.enriched_data}"
+        )
         self.build_domain()
         self.build_registrar()
         self.build_ns_reputation()

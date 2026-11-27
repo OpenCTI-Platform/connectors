@@ -66,14 +66,15 @@ class IPEnricher(Enricher):
         """
         Adds geo location enriched data to the octi bundle
         """
-        country_name = self.enriched_data.get("ip_location", {}).get("country_name")
-        if not country_name:
-            return
-        self.helper.connector_logger.debug(f"building Country: {country_name}")
-        country = Country(name=country_name)
-        self.add_target_and_relationship(
-            country, RelationshipType.RELATED_TO, country_name
-        )
+        for webscan_data in self.webscan_data:
+            country_name = webscan_data.get("geoip.country_name")
+            if not country_name:
+                continue
+            self.helper.connector_logger.debug(f"building Country: {country_name}")
+            country = Country(name=country_name)
+            self.add_target_and_relationship(
+                country, RelationshipType.RELATED_TO, country_name
+            )
 
     def build_ptr(self) -> None:
         """
@@ -95,7 +96,11 @@ class IPEnricher(Enricher):
         json_response = self.client.get_enrichment_data(
             self.API_TYPE, self.ip_without_cidr
         )
-        self.enriched_data = json_response.get("ip2asn")[0]
+        ip2asn = json_response.get("ip2asn") or (
+            json_response.get("response") or {}
+        ).get("ip2asn", [])
+        self.enriched_data = ip2asn[0] if ip2asn else {}
+        self.webscan_data = self.client.get_webscan(self.ip_without_cidr, _type="ip")
         self.helper.connector_logger.debug(f"self.enriched_data: {self.enriched_data}")
 
         self.build_ip()

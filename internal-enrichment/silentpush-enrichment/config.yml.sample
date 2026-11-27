@@ -12,6 +12,6 @@ connector:
   # max_tlp: 'TLP:AMBER' # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
 silentpush:
-  # api_base_url: 'https://app.silentpush.com/api/v2/'
+  # api_base_url: 'https://api.silentpush.com/api/v1/'
   api_key: 'YOUR-SILENT-PUSH-API-KEY'
   # verify_cert: true

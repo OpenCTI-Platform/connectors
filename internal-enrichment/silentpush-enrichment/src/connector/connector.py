@@ -116,10 +116,8 @@ class SilentpushConnector:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
 
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        )
-
+        max_tlp = getattr(self.config.connector, "max_tlp", None) or "amber"
+        valid_max_tlp = self.helper.check_max_tlp(self.tlp, f"TLP:{max_tlp.upper()}")
         if not valid_max_tlp:
             raise ValueError(
                 "[SilentPush] Do not send any data, TLP of the observable is greater than MAX TLP,"

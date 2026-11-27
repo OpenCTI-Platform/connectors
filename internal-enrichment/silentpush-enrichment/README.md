@@ -72,7 +72,7 @@ This connector enriches observables and indicators with Silent Push intelligence
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `silentpush_api_key` | `SILENTPUSH_API_KEY` | Yes | Silent Push API key |
-| `silentpush_api_base_url` | `SILENTPUSH_API_BASE_URL` | No | API base URL (default: https://app.silentpush.com/api/v2/) |
+| `silentpush_api_base_url` | `SILENTPUSH_API_BASE_URL` | No | API base URL (default: https://api.silentpush.com/api/v1/) |
 | `silentpush_verify_cert` | `SILENTPUSH_VERIFY_CERT` | No | Verify SSL certificates (default: true) |
 
 ---
@@ -171,7 +171,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 ## Additional Information
 
 - [Silent Push](https://www.silentpush.com/)
-- Contact: [info@silentpush.com](mailto:info@silentpush.com)
+- Contact: [integrations@silentpush.com](mailto:integrations@silentpush.com)
 
 ### Key Differentiator
 
