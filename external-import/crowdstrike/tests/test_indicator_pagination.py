@@ -98,8 +98,8 @@ def _crowdstrike_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def _build_importer(*, max_records_per_run=None, exclude_types=None):
     """Build an ``IndicatorImporter`` whose API client is a ``MagicMock``.
 
-    The :class:`IndicatorsAPI` / :class:`RelatedActorImporter` /
-    :class:`ReportFetcher` classes are patched out because their
+    The :class:`IndicatorsAPI` / :class:`RelatedActorImporter`
+    classes are patched out because their
     constructors instantiate the CrowdStrike settings / falconpy
     client / pycti API, which would require real credentials at
     construction time. The connector modules are imported lazily so
@@ -130,8 +130,6 @@ def _build_importer(*, max_records_per_run=None, exclude_types=None):
         create_observables=True,
         create_indicators=True,
         exclude_types=exclude_types or [],
-        report_status=0,
-        report_type="threat-report",
         default_x_opencti_score=50,
         indicator_low_score=40,
         indicator_low_score_labels=set(),
@@ -141,7 +139,6 @@ def _build_importer(*, max_records_per_run=None, exclude_types=None):
         indicator_high_score_labels=set(),
         indicator_unwanted_labels=set(),
         indicator_max_age_by_type={},
-        no_file_trigger_import=True,
         scopes={"indicator"},
         attack_lookup=None,
         max_records_per_run=max_records_per_run,
@@ -152,9 +149,6 @@ def _build_importer(*, max_records_per_run=None, exclude_types=None):
         autospec=True,
     ), patch(
         "crowdstrike_feeds_connector.indicator.importer.RelatedActorImporter",
-        autospec=True,
-    ), patch(
-        "crowdstrike_feeds_connector.indicator.importer.ReportFetcher",
         autospec=True,
     ):
         importer = IndicatorImporter(cfg)
