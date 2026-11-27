@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
 
+from connector.observable_note import ObservableNote
 from connector.settings import ConnectorSettings
+from connector.summary_note import NOTE_TITLE, render_summary
 from connectors_sdk import BaseEnrichmentProcessor, EnrichmentMessage
 from connectors_sdk.models import (
     URL,
@@ -55,11 +57,13 @@ class OtxLookup:
     """The answer of OTX to the lookup of an entity.
 
     Attributes:
+        section: OTX API section that answered (`IPv4`, `domain`, `hostname` or `url`).
         page_path: Path of the indicator page on the OTX website of the section that
             answered (`ip`, `domain`, `hostname` or `url`).
         general: The `general` section that answered.
     """
 
+    section: str
     page_path: str
     general: OtxGeneral
 
@@ -69,8 +73,8 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
 
     One call to the OTX `general` endpoint tells whether OTX knows the indicator: it
     does when at least one pulse contains it. A known indicator is rebuilt with an
-    external reference to its OTX page. The summary note and the country sightings
-    are added by the next sub-issues of epic #8537.
+    external reference to its OTX page, and a summary note is attached to it. The
+    country sightings are added by the next sub-issue of epic #8537.
     """
 
     handled_entity_types = frozenset({"IPv4-Addr", "Domain-Name", "Url"})
@@ -95,9 +99,10 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         returned nothing (HTTP 400 or 404).
 
         Returns:
-            The `general` section and the page it belongs to, `None` when OTX has no
-            such indicator or rejects its value. `OtxClient` raises
-            `DataRetrievalError` on any other failure, the fallback call included.
+            The `general` section, with the OTX section and the page it belongs to,
+            `None` when OTX has no such indicator or rejects its value. `OtxClient`
+            raises `DataRetrievalError` on any other failure, the fallback call
+            included.
         """
         observable_type = self._observable_type(message)
         self.logger.debug(
@@ -108,7 +113,7 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         general = self.client.get_general(observable_type.section, value)
         if general is None:
             return None
-        lookup = OtxLookup(observable_type.page_path, general)
+        lookup = OtxLookup(observable_type.section, observable_type.page_path, general)
         if general.pulse_info.is_known or observable_type.fallback is None:
             return lookup
         fallback_section, fallback_page_path = observable_type.fallback
@@ -119,7 +124,7 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         fallback_general = self.client.get_general(fallback_section, value)
         if fallback_general is None:
             return lookup
-        return OtxLookup(fallback_page_path, fallback_general)
+        return OtxLookup(fallback_section, fallback_page_path, fallback_general)
 
     def transform(
         self, data: OtxLookup | None, message: EnrichmentMessage
@@ -127,11 +132,13 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         """Convert the OTX data into connectors-sdk models.
 
         An indicator is known to OTX when at least one pulse contains it: otherwise
-        nothing is sent.
+        nothing is sent. The note is built from the `general` section already fetched:
+        no network call is made here.
 
         Returns:
-            The author, the marking and the observable rebuilt with an OTX external
-            reference, or `[]` when OTX does not know the indicator.
+            The author, the marking, the observable rebuilt with an OTX external
+            reference and the summary note attached to it, or `[]` when OTX does not
+            know the indicator.
         """
         if data is None or not data.general.pulse_info.is_known:
             return []
@@ -151,4 +158,14 @@ class AlienVaultOtxProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                 )
             ],
         )
-        return [self.author, self.tlp_marking, observable]
+        # `created` is never set: the id of the note is built from its abstract, its
+        # content and the id of the observable, so the same OTX data on the same
+        # observable gives the same note, and two observables never share one
+        note = ObservableNote(
+            abstract=NOTE_TITLE,
+            content=render_summary(data.section, data.general),
+            objects=[observable],
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+        return [self.author, self.tlp_marking, observable, note]

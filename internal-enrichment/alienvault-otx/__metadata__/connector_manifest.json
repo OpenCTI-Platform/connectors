@@ -1,7 +1,7 @@
 {
   "title": "AlienVault OTX Enrichment",
   "slug": "alienvault-otx",
-  "description": "This internal enrichment connector queries the AlienVault OTX (Open Threat Exchange) DirectConnect API for IPv4 addresses, domain names and URLs already present in OpenCTI. It adds an external reference to the OTX indicator page, a summary note (reputation, pulse count and related pulses) and sightings from the countries reported by OTX. It is meant to be used on demand, in playbooks, or automatically, and never sends entities marked with a TLP above the configured maximum to OTX. An OTX API key is required.",
+  "description": "This internal enrichment connector queries the AlienVault OTX (Open Threat Exchange) DirectConnect API for IPv4 addresses, domain names and URLs already present in OpenCTI. It adds an external reference to the OTX indicator page, a summary note (OTX reputation and geolocation for IPv4 addresses, plus the tags, malware families, MITRE ATT&CK IDs and targeted industries of the related pulses) and sightings from the countries reported by OTX. It is meant to be used on demand, in playbooks, or automatically, and never sends entities marked with a TLP above the configured maximum to OTX. An OTX API key is required.",
   "short_description": "Enriches IPv4 addresses, domain names and URLs with AlienVault OTX: external reference, summary note and country sightings. Requires an OTX API key.",
   "logo": "internal-enrichment/alienvault-otx/__metadata__/logo.png",
   "use_cases": [

@@ -1,10 +1,10 @@
 # OpenCTI Internal Enrichment Connector: AlienVault OTX
 
 > **Status: under development (epic [#8537](https://github.com/OpenCTI-Platform/connectors/issues/8537)).**
-> The connector looks the observable up in AlienVault OTX and adds an external reference to its OTX
-> page, but it does **not create the summary note or the country sightings yet**: they are added by
-> the next sub-issues of the epic. The configuration described here is the one of the final
-> connector.
+> The connector looks the observable up in AlienVault OTX, adds an external reference to its OTX
+> page and attaches a summary note to it, but it does **not create the country sightings yet**: they
+> are added by the next sub-issue of the epic. The configuration described here is the one of the
+> final connector.
 
 Table of Contents
 
@@ -32,7 +32,8 @@ which imports the pulses you subscribed to. This connector works on demand, on o
 For an IPv4 address, a domain name or a URL, it adds:
 
 - an external reference to the OTX indicator page;
-- _(not implemented yet)_ a summary note (reputation, number of pulses and related pulses);
+- a summary note (OTX reputation and geolocation for IPv4 addresses, and the tags, malware families,
+  MITRE ATT&CK IDs and targeted industries of the pulses that contain the indicator);
 - _(not implemented yet)_ sightings from the countries reported by OTX.
 
 ## Installation
@@ -138,7 +139,8 @@ Whatever the trigger, the connector processes each entity in this order:
    For a `Domain-Name` that the `domain` section does not know (0 pulse), a second call queries the
    `hostname` section, because OTX files subdomains (such as `www.example.com`) under it.
    No second call is made when the `domain` call is rejected (HTTP 400) or answers 404.
-4. **Enrichment**: the observable is enriched when OTX knows it.
+4. **Enrichment**: the observable is enriched, and the summary note is attached to it, when OTX knows it.
+   The note is built from the answer of the `general` lookup: no other call is made.
 
 In a playbook, the connector always sends the bundle it received back, unchanged when it skips the
 entity or finds nothing, so that the next step of the playbook runs. Outside playbooks, a skipped
@@ -166,7 +168,70 @@ For a known indicator, the connector sends:
 - the author `AlienVault`, an organization identity shared with the
   [AlienVault external import connector](../../external-import/alienvault/README.md) (same name, same
   STIX id);
-- the `TLP:CLEAR` marking definition.
+- the `TLP:CLEAR` marking definition;
+- the summary note, described below.
+
+#### Summary note
+
+The note is titled `AlienVault OTX Enrichment Results`, is attached to the observable, has the author
+`AlienVault` and the `TLP:CLEAR` marking. Its content is Markdown, with one `##` section per kind of
+data. A section with no data is left out, and the title and the indicator value are not repeated in the
+content:
+
+| Section               | Content                                                                                            |
+|-----------------------|----------------------------------------------------------------------------------------------------|
+| `General`             | `Type`: the OTX section that answered (`IPv4`, `domain`, `hostname` or `url`). `OTX reputation`: IPv4 addresses only, when OTX gives one (a reputation of `0` is shown). |
+| `Geolocation`         | IPv4 addresses only: the `City`, `Region` and `Country` that OTX has.                              |
+| `Tags`                | The tags of the pulses that contain the indicator.                                                 |
+| `Malware families`    | The malware families of those pulses.                                                              |
+| `MITRE ATT&CK IDs`    | The ATT&CK technique IDs of those pulses (`T1027`).                                                |
+| `Targeted industries` | The targeted industries of those pulses.                                                           |
+
+Example, for an IPv4 address:
+
+```markdown
+## General
+
+- **Type**: IPv4
+- **OTX reputation**: 0
+
+## Geolocation
+
+- **Country**: Netherlands
+
+## Tags
+
+- bruteforce
+- SSH
+- webscanner
+
+## Malware families
+
+- ExampleBot
+
+## MITRE ATT&CK IDs
+
+- T1027
+```
+
+How the lists are built:
+
+- The values come from the pulses that OTX returns with the indicator. OTX returns at most 50 pulses per
+  indicator, so for an indicator in more pulses the note covers the pulses OTX returned.
+- The values of all the pulses are merged. Values that differ only by their case (`ssh`, `SSH`) are one
+  value, shown with the spelling that comes first in character-code order (uppercase before lowercase,
+  e.g. `SSH`). The list is sorted alphabetically, without regard to case, so that the order of the
+  pulses in the answer does not change the note.
+- A tag or an industry that OTX gives as a comma-separated list is split into one item per value.
+- The targeted countries of the pulses are not part of the note.
+- Whitespace inside a value (line breaks and tabs included) is collapsed to a single space, and the
+  characters that Markdown would interpret (``\ ` * _ [ ] < > | #``) are escaped with a backslash.
+
+There is one note per observable. Its identifier is built from its title, its content and the
+identifier of the observable, so two observables never share a note, even when their summaries are
+identical. Enriching the same observable again with unchanged OTX data updates the same note. When the
+OTX data has changed, the content is different and a new note is created for that observable: the
+previous one is kept.
 
 ### Errors
 

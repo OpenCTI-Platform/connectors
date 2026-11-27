@@ -166,7 +166,7 @@ def _assert_enriched_bundle(
     original: list[dict[str, Any]],
     reference_url: str | None = None,
 ) -> None:
-    """The bundle sent holds the author, the marking and the enriched observable."""
+    """The bundle sent holds the author, the marking, the observable and its note."""
     objects = _sent_objects(helper)
     by_id = {obj["id"]: obj for obj in objects}
     entity_id = ENTITIES[entity_type]["id"]
@@ -188,6 +188,21 @@ def _assert_enriched_bundle(
     assert by_id[AUTHOR_ID]["name"] == "AlienVault"
     markings = [obj for obj in objects if obj["type"] == "marking-definition"]
     assert [marking["x_opencti_definition"] for marking in markings] == ["TLP:CLEAR"]
+    # The note summarises the OTX answer and is attached to the entity only
+    notes = [obj for obj in objects if obj["type"] == "note"]
+    assert len(notes) == 1
+    assert notes[0]["abstract"] == "AlienVault OTX Enrichment Results"
+    assert notes[0]["content"].startswith("## General\n\n- **Type**: ")
+    # Reputation and geolocation only for IPv4, even though these tests answer every
+    # type with the IPv4 fixture
+    is_ipv4 = entity_type == "IPv4-Addr"
+    assert ("- **OTX reputation**: 0" in notes[0]["content"]) is is_ipv4
+    assert ("## Geolocation" in notes[0]["content"]) is is_ipv4
+    assert notes[0]["object_refs"] == [entity_id]
+    assert notes[0]["created_by_ref"] == AUTHOR_ID
+    assert notes[0]["object_marking_refs"] == [markings[0]["id"]]
+    # The entity, the related object, the author, the marking and the note: no more
+    assert len(objects) == 5
     assert _dangling_references(objects) == []
 
 
@@ -254,7 +269,7 @@ class TestInScope:
 
         result = connector.callback(data)
 
-        assert result == "Entity enriched with 3 objects"
+        assert result == "Entity enriched with 4 objects"
         processor.client.get_general.assert_called_once()
         helper.send_stix2_bundle.assert_called_once()
         _assert_enriched_bundle(helper, entity_type, original)
@@ -350,7 +365,7 @@ class TestHostnameFallback:
 
         result = connector.callback(data)
 
-        assert result == "Entity enriched with 3 objects"
+        assert result == "Entity enriched with 4 objects"
         assert [c.args for c in processor.client.get_general.call_args_list] == [
             ("domain", "malicious.example"),
             ("hostname", "malicious.example"),
