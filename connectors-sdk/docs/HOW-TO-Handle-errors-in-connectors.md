@@ -124,6 +124,14 @@ The SDK only defines the errors connectors use. When none fits, propose a new er
 
     → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
 
+- **A `ConnectorError` records itself: never call the `ErrorStore`**
+
+    → Creating a `ConnectorError` records it in the `ErrorStore`, a singleton. The connector only raises the error, or handles it (for example, logs it and skips the item). The store keeps errors only while it is recording. Only the SDK starts and stops recording (`start_recording()` and `stop_recording()`), around each call of the callback that pycti runs (a scheduled run, an enrichment message, a stream event, ...), and `stop_recording()` returns the errors of the call. The SDK does not do it for any connector yet, so for now no error is kept.
+
+    → Recording never raises: creating an error can never crash a connector.
+
+    → A subclass that overrides `__init__` must call `super().__init__()`, or its errors are not recorded.
+
 ## Example
 
 Non working example of error handling in a connector:

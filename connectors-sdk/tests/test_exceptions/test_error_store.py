@@ -1,5 +1,6 @@
-"""Offer tests for the store of standardized connector errors."""
+"""Offer tests for the store of connector errors."""
 
+import logging
 import threading
 
 import pytest
@@ -13,11 +14,11 @@ THREADS = 8
 
 
 @pytest.fixture(autouse=True)
-def empty_store():
-    """Clear the shared store before and after each test."""
-    ErrorStore().clear()
+def recording_off():
+    """Stop recording and empty the shared store before and after each test."""
+    ErrorStore().stop_recording()
     yield
-    ErrorStore().clear()
+    ErrorStore().stop_recording()
 
 
 def _run_in_threads(target) -> None:
@@ -44,9 +45,9 @@ def test_store_is_the_same_instance_everywhere():
 
 def test_getting_the_store_again_keeps_its_errors():
     """Test that calling ErrorStore() again does not reset it."""
-    # Given a recorded error
+    # Given an error created while recording
+    ErrorStore().start_recording()
     error = DataConversionError("bad item")
-    ErrorStore().record_error(error)
     # When getting the store again
     store = ErrorStore()
     # Then the error should still be there
@@ -65,106 +66,244 @@ def test_concurrent_first_creation_returns_one_instance(monkeypatch):
     assert all(store is stores[0] for store in stores)
 
 
-def test_record_error():
-    """Test that a handled error is recorded."""
-    # Given a handled error
+def test_new_store_does_not_record(monkeypatch):
+    """Test that a new store keeps nothing until recording starts."""
+    # Given a new store
+    monkeypatch.setattr(ErrorStore, "_instance", None)
+    # When an error is created
+    DataConversionError("bad item")
+    # Then nothing should be kept
+    assert ErrorStore().get_errors() == []
+
+
+def test_connector_error_created_while_recording_is_recorded_once():
+    """Test that a ConnectorError records itself, once, while recording is on."""
+    # Given recording on
+    ErrorStore().start_recording()
+    # When creating an error
     error = DataConversionError("bad item")
-    # When recording it
-    ErrorStore().record_error(error)
-    # Then it should be returned
-    assert ErrorStore().get_errors() == [error]
+    # Then it should be recorded once
+    errors = ErrorStore().stop_recording()
+    assert len(errors) == 1
+    assert errors[0] is error
 
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        pytest.param(ValueError("x"), id="exception"),
-        pytest.param(DataConversionError, id="error_class"),
-        pytest.param("data.conversion", id="string"),
-    ],
-)
-def test_record_error_rejects_non_connector_errors(value):
-    """Test that recording anything but a ConnectorError fails and records nothing."""
-    # Given a store holding one error
-    error = DataConversionError("bad item")
-    ErrorStore().record_error(error)
-    # When recording something that is not a ConnectorError
-    # Then a TypeError should be raised
-    with pytest.raises(TypeError, match="ConnectorError instances only"):
-        ErrorStore().record_error(value)
-    # And the store should be unchanged
-    assert ErrorStore().get_errors() == [error]
+def test_connector_error_created_while_not_recording_is_not_kept():
+    """Test that an error created while recording is off is not kept."""
+    # Given recording off
+    # When creating an error
+    DataConversionError("bad item")
+    # Then nothing should be kept, even after recording starts
+    assert ErrorStore().get_errors() == []
+    ErrorStore().start_recording()
+    assert ErrorStore().stop_recording() == []
 
 
-def test_same_error_recorded_twice_is_kept_twice():
-    """Test that the store does not deduplicate."""
-    # Given an error recorded twice
-    error = DataConversionError("bad item")
-    ErrorStore().record_error(error)
-    ErrorStore().record_error(error)
-    # Then it should be returned twice
-    assert ErrorStore().get_errors() == [error, error]
+def test_record_error_while_not_recording_keeps_nothing():
+    """Test that record_error keeps nothing and does not raise when not recording."""
+    # Given recording off
+    # When recording an error by hand
+    ErrorStore().record_error(ValueError("x"))
+    # Then nothing should be kept
+    assert ErrorStore().get_errors() == []
 
 
-def test_get_errors_returns_the_objects_in_recording_order():
-    """Test that the recorded objects come back as they are, in order."""
-    # Given two recorded errors
+def test_errors_created_after_stop_recording_are_not_kept():
+    """Test that stop_recording turns recording off."""
+    # Given recording started then stopped
+    ErrorStore().start_recording()
+    ErrorStore().stop_recording()
+    # When creating an error
+    DataConversionError("too late")
+    # Then nothing should be kept
+    assert ErrorStore().get_errors() == []
+
+
+def test_start_recording_discards_previous_errors():
+    """Test that starting to record empties the store."""
+    # Given an error left by a previous call that never stopped recording
+    ErrorStore().start_recording()
+    DataConversionError("previous call")
+    # When starting to record again
+    ErrorStore().start_recording()
+    # Then only the new errors should be returned
+    error = ProviderApiTimeoutError("this call")
+    assert ErrorStore().stop_recording() == [error]
+
+
+def test_stop_recording_returns_the_errors_in_recording_order():
+    """Test that stop_recording returns the recorded objects, in order."""
+    # Given two errors created while recording
+    ErrorStore().start_recording()
     first = DataConversionError("bad item")
     second = ProviderApiTimeoutError("timed out")
-    ErrorStore().record_error(first)
-    ErrorStore().record_error(second)
-    # When reading the errors
-    errors = ErrorStore().get_errors()
+    # When stopping recording
+    errors = ErrorStore().stop_recording()
     # Then they should be the same objects, in recording order
     assert len(errors) == 2
     assert errors[0] is first
     assert errors[1] is second
 
 
+def test_stop_recording_empties_the_store_and_returns_a_new_list():
+    """Test that the returned list is detached from the store."""
+    # Given an error created while recording
+    ErrorStore().start_recording()
+    error = DataConversionError("bad item")
+    # When stopping recording
+    errors = ErrorStore().stop_recording()
+    # Then the store should be empty
+    assert ErrorStore().get_errors() == []
+    # And changing the returned list should not change the store
+    errors.append(ValueError("x"))
+    assert ErrorStore().get_errors() == []
+    assert errors[0] is error
+
+
+def test_stop_recording_when_not_recording_returns_an_empty_list():
+    """Test that stopping when recording is off returns an empty list."""
+    # Given recording off
+    # Then closing should return an empty list
+    assert ErrorStore().stop_recording() == []
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(ValueError("x"), id="builtin_exception"),
+        pytest.param(KeyError("missing"), id="lookup_error"),
+    ],
+)
+def test_record_error_accepts_any_exception(error):
+    """Test that an exception that is not a ConnectorError is kept as it is."""
+    # Given recording on
+    ErrorStore().start_recording()
+    # When recording another exception
+    ErrorStore().record_error(error)
+    # Then it should be returned as it is
+    errors = ErrorStore().stop_recording()
+    assert len(errors) == 1
+    assert errors[0] is error
+
+
+def test_same_error_recorded_twice_is_kept_once():
+    """Test that recording an error already in the store does not add it again."""
+    # Given errors recorded twice while recording
+    ErrorStore().start_recording()
+    error = ValueError("x")
+    ErrorStore().record_error(error)
+    ErrorStore().record_error(error)
+    connector_error = DataConversionError("bad item")  # recorded when created
+    ErrorStore().record_error(connector_error)
+    # Then each one should be returned once
+    assert ErrorStore().stop_recording() == [error, connector_error]
+
+
+def test_equal_but_distinct_errors_are_all_kept():
+    """Test that two errors with the same class and message are both kept."""
+    # Given two items failing with the same message while recording
+    ErrorStore().start_recording()
+    first = DataConversionError("missing field")
+    second = DataConversionError("missing field")
+    # Then both errors should be returned
+    errors = ErrorStore().stop_recording()
+    assert len(errors) == 2
+    assert errors[0] is first
+    assert errors[1] is second
+
+
+def test_emptied_store_accepts_the_same_error_again():
+    """Test that an error can be recorded again once the store was emptied."""
+    error = ValueError("x")
+    # Given an error recorded in a previous call
+    ErrorStore().start_recording()
+    ErrorStore().record_error(error)
+    ErrorStore().stop_recording()
+    # When recording it in a new call, and again after clear()
+    ErrorStore().start_recording()
+    ErrorStore().record_error(error)
+    assert ErrorStore().get_errors() == [error]
+    ErrorStore().clear()
+    ErrorStore().record_error(error)
+    # Then it should be returned
+    assert ErrorStore().stop_recording() == [error]
+
+
 def test_get_errors_returns_a_copy():
     """Test that changing the returned list does not change the store."""
-    # Given a recorded error
+    # Given an error created while recording
+    ErrorStore().start_recording()
     error = DataConversionError("bad item")
-    ErrorStore().record_error(error)
     # When clearing the returned list
     ErrorStore().get_errors().clear()
     # Then the store should still hold the error
     assert ErrorStore().get_errors() == [error]
 
 
-def test_get_errors_on_empty_store():
-    """Test that an empty store returns an empty list."""
-    # Given nothing recorded
-    # Then reading should return an empty list
-    assert ErrorStore().get_errors() == []
-
-
-def test_clear():
-    """Test that clearing removes the recorded errors, and recording works after."""
-    # Given a recorded error
-    ErrorStore().record_error(DataConversionError("previous run"))
+def test_clear_keeps_recording_on():
+    """Test that clearing removes the errors but does not stop recording."""
+    # Given an error created while recording
+    ErrorStore().start_recording()
+    DataConversionError("bad item")
     # When clearing the store
     ErrorStore().clear()
     # Then it should be empty
     assert ErrorStore().get_errors() == []
-    # And errors recorded afterwards should be returned alone
-    error = ProviderApiTimeoutError("this run")
-    ErrorStore().record_error(error)
-    assert ErrorStore().get_errors() == [error]
+    # And errors created afterwards should still be recorded
+    error = ProviderApiTimeoutError("after clear")
+    assert ErrorStore().stop_recording() == [error]
 
 
-def test_concurrent_recording_loses_nothing():
-    """Test that errors recorded from several threads are all kept, once each."""
-    # Given errors to record from several threads at the same time
+def test_store_failure_does_not_break_error_creation(monkeypatch, caplog):
+    """Test that a failure inside the store is logged and never breaks creating an error."""
+
+    # Given a store whose recording fails
+    def fail(self, error):
+        raise RuntimeError("store is broken")
+
+    monkeypatch.setattr(ErrorStore, "record_error", fail)
+    ErrorStore().start_recording()
+    # When creating an error
+    error = DataConversionError("bad item")
+    # Then the error should be created normally
+    assert str(error) == "bad item"
+    assert error.args == ("bad item",)
+    # And the failure should be logged, with the error
+    [record] = [r for r in caplog.records if r.name.endswith("connector_errors")]
+    assert record.levelno == logging.ERROR
+    assert record.getMessage() == "Failed to record a connector error in the ErrorStore"
+    assert record.attributes == {"error": error}
+    assert isinstance(record.exc_info[1], RuntimeError)
+
+
+def test_error_created_in_another_thread_while_recording_is_recorded():
+    """Test that the recording flag is shared by the threads of the process."""
+    # Given recording started in the main thread
+    ErrorStore().start_recording()
+    created = []
+    # When a worker thread creates an error
+    thread = threading.Thread(
+        target=lambda: created.append(DataConversionError("from a worker"))
+    )
+    thread.start()
+    thread.join()
+    # Then it should be recorded
+    assert ErrorStore().stop_recording() == created
+
+
+def test_concurrent_creation_loses_nothing():
+    """Test that errors created in several threads while recording are all kept, once each."""
+    # Given recording on
+    ErrorStore().start_recording()
     per_thread = 500
 
-    def record():
+    def create():
         for index in range(per_thread):
-            ErrorStore().record_error(DataConversionError(f"item {index}"))
+            DataConversionError(f"item {index}")
 
-    # When recording them concurrently
-    _run_in_threads(record)
+    # When creating errors in several threads at the same time
+    _run_in_threads(create)
     # Then every error should be returned, each one once
-    errors = ErrorStore().get_errors()
+    errors = ErrorStore().stop_recording()
     assert len(errors) == THREADS * per_thread
     assert len({id(error) for error in errors}) == THREADS * per_thread
