@@ -17,3 +17,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CVELISTV5_REPO_BRANCH | `string` |  | string | `"main"` | Branch of the upstream git repository to follow. |
 | CVELISTV5_LOCAL_PATH | `string` |  | string | `"/opt/cvelistV5"` | Local path where the clone is kept. Must be writable by the connector; mount a volume there to keep the clone across restarts. |
 | CVELISTV5_HISTORY_START_YEAR | `integer` |  | integer | `2024` | Oldest year of CVE records to import on the initial run (minimum 1999; a lower value falls back to the default). |
+| CVELISTV5_IMPORT_HISTORY | `boolean` |  | boolean | `true` | Import the existing CVE records on the first run. Set to false to skip the catch-up and only ingest records changed after the connector starts. Has no effect once the connector has a state. |

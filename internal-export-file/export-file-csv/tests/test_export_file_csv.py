@@ -1,7 +1,6 @@
 """Tests for the export-file-csv connector column-filtering logic.
 
-The connector module file name is hyphenated (`export-file-csv.py`) and is not
-importable as a normal package, so it is loaded by path via importlib.
+The connector module (`src/main.py`) is loaded by path via importlib.
 """
 
 import csv
@@ -12,12 +11,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "src", "export-file-csv.py")
-)
+_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "main.py"))
 _spec = importlib.util.spec_from_file_location("export_file_csv", _SRC)
 if _spec is None or _spec.loader is None:
-    raise ImportError(f"Could not load export-file-csv module from {_SRC}")
+    raise ImportError(f"Could not load main module from {_SRC}")
 export_file_csv = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(export_file_csv)
 ExportFileCsv = export_file_csv.ExportFileCsv
@@ -208,6 +205,71 @@ class TestExportDictListToCsv:
         # row-generation logic actually populates it (regression test).
         assert "hashes_MD5" in headers
         assert rows[1][headers.index("hashes_MD5")] == "abc"
+
+    def test_external_references_export_their_url(self):
+        connector = _make_connector()
+        data = [
+            {
+                "name": "report",
+                "externalReferences": [
+                    {
+                        "id": "ref-1",
+                        "source_name": "blog",
+                        "url": "https://example.com/a",
+                        "external_id": None,
+                    },
+                    {
+                        "id": "ref-2",
+                        "source_name": "mitre-attack",
+                        "url": None,
+                        "external_id": "T1059",
+                    },
+                    {
+                        "id": "ref-3",
+                        "source_name": "internal",
+                        "url": None,
+                        "external_id": None,
+                    },
+                ],
+            }
+        ]
+        rows = list(
+            csv.reader(
+                io.StringIO(connector.export_dict_list_to_csv(data)),
+                delimiter=";",
+            )
+        )
+        headers = rows[0]
+        assert (
+            rows[1][headers.index("externalReferences")]
+            == "https://example.com/a,T1059,internal"
+        )
+
+
+class TestRenderValue:
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("text", "text"),
+            (3, "3"),
+            (1.5, "1.5"),
+            (["a", "b"], "a,b"),
+            ([{"name": "n1"}, {"name": None}], "n1,"),
+            ([{"definition": "TLP:RED"}, {"definition": None}], "TLP:RED,"),
+            ([{"value": "v1"}, {"value": None}], "v1,"),
+            ([{"observable_value": "1.2.3.4"}, {"observable_value": None}], "1.2.3.4,"),
+            ([{"source_name": None}], ""),
+            ([], ""),
+            ([1, 2], ""),
+            ({"name": "n"}, "n"),
+            ({"value": "v"}, "v"),
+            ({"observable_value": "o"}, "o"),
+            ({"other": "x"}, ""),
+            (None, ""),
+        ],
+    )
+    def test_render_value(self, value, expected):
+        assert ExportFileCsv._render_value(value) == expected
 
 
 class TestExportDictListToCsvBom:

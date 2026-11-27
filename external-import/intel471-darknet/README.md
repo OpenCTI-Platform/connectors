@@ -17,9 +17,6 @@ OpenCTI as a fully linked STIX 2.1 bundle.
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Intel 471 Darknet connector environment variables](#intel-471-darknet-connector-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -33,7 +30,7 @@ OpenCTI as a fully linked STIX 2.1 bundle.
 The connector authenticates against the Intel 471 REST API with an
 HTTP-Basic credential pair, enumerates the configured watcher groups and
 their watchers, then polls the alerts endpoint on the schedule given by
-`CONNECTOR_RUN_EVERY`. Each alert is normalised into a STIX bundle made
+`CONNECTOR_DURATION_PERIOD`. Each alert is normalised into a STIX bundle made
 of:
 
 - one `Incident` per alert,
@@ -56,39 +53,16 @@ of:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in
-`docker-compose.yml` (for Docker) or in `src/config.yml` (for manual
-deployment). The provided `src/config.yml.sample` can be used as a
-template.
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+For a manual deployment, the configuration file is `src/config.yml`: `src/config.yml.sample` can be used as a template.
 
-### Base connector environment variables
-
-| Parameter            | config.yml             | Docker environment variable      | Default              | Mandatory | Description                                                                                                          |
-|----------------------|------------------------|----------------------------------|----------------------|-----------|----------------------------------------------------------------------------------------------------------------------|
-| Connector ID         | id                     | `CONNECTOR_ID`                   |                      | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                            |
-| Connector Type       | type                   | `CONNECTOR_TYPE`                 | `EXTERNAL_IMPORT`    | Yes       | Must be `EXTERNAL_IMPORT`.                                                                                           |
-| Connector Name       | name                   | `CONNECTOR_NAME`                 | `Intel 471 Darknet`  | No        | Name of the connector as it appears in OpenCTI.                                                                      |
-| Connector Scope      | scope                  | `CONNECTOR_SCOPE`                | `intel471-darknet`   | No        | Connector scope (used by OpenCTI to dispatch work).                                                                  |
-| Log Level            | log_level              | `CONNECTOR_LOG_LEVEL`            | `info`               | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.                                                          |
-| Run Every            | run_every              | `CONNECTOR_RUN_EVERY`            |                      | Yes       | Polling interval in the form `<int><d\|h\|m\|s>` (e.g. `7d`, `12h`, `10m`, `30s`).                                   |
-| Update existing data | update_existing_data   | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`              | No        | If `true`, allow updates of existing entities. Otherwise OpenCTI leaves them as-is.                                  |
-
-### Intel 471 Darknet connector environment variables
-
-| Parameter               | config.yml                              | Docker environment variable                | Default                          | Mandatory | Description                                                                                                                                              |
-|-------------------------|-----------------------------------------|--------------------------------------------|----------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| API URL                 | intel471.api_url                        | `INTEL471_API_URL`                         | `https://api.intel471.com/v1`    | No        | Base URL of the Intel 471 REST API.                                                                                                                      |
-| API username            | intel471.api_username                   | `INTEL471_API_USERNAME`                    |                                  | Yes       | Intel 471 API username (HTTP Basic).                                                                                                                     |
-| API key                 | intel471.api_key                        | `INTEL471_API_KEY`                         |                                  | Yes       | Intel 471 API key (HTTP Basic password).                                                                                                                 |
-| Initial history alerts  | intel471_darknet.initial_history_alerts | `INTEL471_DARKNET_INITIAL_HISTORY_ALERTS`  | `0`                              | No        | Unix epoch (seconds) of the earliest alert to import on the first run. Subsequent runs only fetch alerts newer than the previous successful run.        |
-| TLP marking             | intel471_darknet.tlp                    | `INTEL471_DARKNET_TLP`                     | `AMBER`                          | No        | Marking applied to every entity created by the connector. One of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                                       |
+`CONNECTOR_RUN_EVERY` (`<int><d|h|m|s>`, e.g. `10m`) is deprecated: it is
+still read and converted into `CONNECTOR_DURATION_PERIOD` when the latter is
+not set.
 
 ## Deployment
 
@@ -126,7 +100,7 @@ docker compose up -d
 ## Usage
 
 Once the connector is running, it polls the Intel 471 alerts endpoint
-on the cadence set by `CONNECTOR_RUN_EVERY`. The first run imports every
+on the cadence set by `CONNECTOR_DURATION_PERIOD`. The first run imports every
 alert newer than `INTEL471_DARKNET_INITIAL_HISTORY_ALERTS`; subsequent
 runs only import alerts newer than the previous successful run (stored
 as `last_run` in the connector state).
@@ -208,7 +182,7 @@ never written to the logs.
 |------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
 | `INTEL471_API_USERNAME` / `INTEL471_API_KEY` missing | The connector cannot authenticate. Provide both credentials.                                                                            |
 | `Unsupported INTEL471_DARKNET_TLP value …`           | Use one of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                                                                            |
-| `CONNECTOR_RUN_EVERY is required …`                  | Provide a value such as `7d`, `12h`, `10m`, `30s`.                                                                                      |
+| `CONNECTOR_DURATION_PERIOD … must be strictly positive` | Provide a non-zero ISO-8601 duration such as `PT30S`, `PT10M`, `PT12H`, `P7D`.                                                       |
 | `Intel 471 request failed (status=4xx/5xx)`          | Inspect the Intel 471 console for credential / quota issues. The connector logs the URL and HTTP status (never the body).                |
 
 ## Additional information
