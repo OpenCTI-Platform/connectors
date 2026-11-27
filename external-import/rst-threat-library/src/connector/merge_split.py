@@ -145,7 +145,11 @@ def analyze_merge_split(
             for s in sorted(split_off_sids)
             if s in api_by_sid and s != oc_sid
         ]
-        if not conflicting_aliases and not split_off_items:
+        # Splits strip aliases from an OpenCTI object. A name-only collision
+        # with another upstream (no aliases to remove) is a merge duplicate,
+        # not a split — otherwise Earth Naga / Flax Typhoon-style pairs are
+        # misclassified and excluded from fusion.
+        if not conflicting_aliases:
             continue
 
         plan.splits.append(

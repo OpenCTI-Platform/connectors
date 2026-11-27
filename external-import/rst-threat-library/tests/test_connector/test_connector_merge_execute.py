@@ -478,12 +478,14 @@ def test_execute_merge_fuses_into_preferred_survivor(connector, monkeypatch):
     connector._analyst_locks_entity = MagicMock(return_value=False)
     connector._opencti_fusion_merge = MagicMock(return_value=["malware--dup"])
 
+    allowed_author = {"standard_id": "identity--allowed"}
     preferred = {
         "id": "uuid-preferred",
         "standard_id": "malware--preferred",
         "name": "Preferred",
         "aliases": ["a", "b", "c"],
         "confidence": 40,
+        "createdBy": allowed_author,
     }
     duplicate = {
         "id": "uuid-dup",
@@ -491,6 +493,7 @@ def test_execute_merge_fuses_into_preferred_survivor(connector, monkeypatch):
         "name": "Dup",
         "aliases": [],
         "confidence": 40,
+        "createdBy": allowed_author,
     }
     api_target = {
         "id": "uuid-api",
@@ -498,6 +501,7 @@ def test_execute_merge_fuses_into_preferred_survivor(connector, monkeypatch):
         "name": "API",
         "aliases": ["a"],
         "confidence": 40,
+        "createdBy": allowed_author,
     }
 
     def read_side_effect(obj_type, sid):

@@ -804,13 +804,14 @@ def test_merge_split_processor_raises_when_reconcile_fails(connector):
         processor.process()
 
 
-def test_processor_persist_does_not_save_mid_run(connector):
+def test_processor_persist_does_not_save_mid_run(connector, monkeypatch):
     from connector.data_processors import ThreatObjectImportProcessor
     from connector.state import ConnectorState
 
     processor = ThreatObjectImportProcessor("malware")
     processor.state = ConnectorState()
-    processor.state.save = MagicMock()
+    save_mock = MagicMock()
+    monkeypatch.setattr(processor.state, "save", save_mock)
     processor._persist_state_dict({"cursor_malware": "2024-01-01T00:00:00.000Z"})
     assert getattr(processor.state, "cursor_malware") == "2024-01-01T00:00:00.000Z"
-    processor.state.save.assert_not_called()
+    save_mock.assert_not_called()
