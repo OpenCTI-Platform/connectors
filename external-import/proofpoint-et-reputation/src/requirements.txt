@@ -1,4 +1,4 @@
-pycti==7.261124.0
+pycti==7.261127.0
 pydantic==2.14.4
 requests~=2.33.0
 stix2~=3.0.1
