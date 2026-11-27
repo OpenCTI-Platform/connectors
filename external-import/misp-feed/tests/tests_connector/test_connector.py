@@ -1,6 +1,7 @@
 from typing import Any
 from unittest.mock import MagicMock
 
+import pycti
 import pytest
 import stix2
 from connector import ConnectorSettings, MispFeed
@@ -97,7 +98,11 @@ def test_process_attribute_without_comment(attribute_type, value):
         "to_ids": True,
         "timestamp": "1700000000",
     }
-    author = stix2.Identity(name="author", identity_class="organization")
+    author = stix2.Identity(
+        id=pycti.Identity.generate_id(name="author", identity_class="organization"),
+        name="author",
+        identity_class="organization",
+    )
 
     # Settings are frozen and both outputs are disabled by default
     config = MagicMock()
