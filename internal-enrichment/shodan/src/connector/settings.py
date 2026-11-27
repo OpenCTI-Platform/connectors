@@ -50,6 +50,18 @@ class ShodanConfig(BaseConfigModel):
         description="Returns the results of the search against the enriched indicator (Search the SHODAN database).",
         default=True,
     )
+    max_bundle_size_mb: int = Field(
+        description=(
+            "Maximum request/STIX bundle size in MiB for indicator search enrichment. "
+            "Set below the OpenCTI platform body limit (`app:max_payload_body_size`: "
+            "50 MB by default, 10 MB when `app:http:secure_by_default` is enabled) to "
+            "leave room for `pycti` metadata and request envelope overhead; applies in "
+            "playbooks and when `CONNECTOR_QUEUE_PROTOCOL=api`. When reached, remaining "
+            "hosts are omitted and noted in the summary note."
+        ),
+        default=40,
+        gt=0,
+    )
     create_note: bool = Field(
         description="Adds Shodan results to a note, otherwise it is saved in the description.",
         default=True,

@@ -27,6 +27,7 @@ from connectors_sdk.models.enums import TLPLevel
                     "token": "SecretStr",
                     "default_score": 42,
                     "import_search_results": True,
+                    "max_bundle_size_mb": 16,
                     "create_note": True,
                     "use_isp_name_for_asn": True,
                 },

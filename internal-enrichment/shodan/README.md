@@ -72,6 +72,7 @@ This connector enriches IPv4 observables and Shodan pattern indicators with comp
 | `shodan_token` | `SHODAN_TOKEN` | Yes | Shodan API token |
 | `shodan_default_score` | `SHODAN_DEFAULT_SCORE` | No | Default score for created indicators |
 | `shodan_import_search_results` | `SHODAN_IMPORT_SEARCH_RESULTS` | No | Import search results for indicators (default: true) |
+| `shodan_max_bundle_size_mb` | `SHODAN_MAX_BUNDLE_SIZE_MB` | No | Maximum request/STIX bundle size in MiB for indicator search host enrichment (default: `40`). Keep below the OpenCTI platform HTTP body limit (`app:max_payload_body_size`: `50 MB` by default, or `10 MB` when `app:http:secure_by_default` is enabled) with headroom for `pycti` metadata (`granted_refs`) and the request envelope; applies in playbooks and when `CONNECTOR_QUEUE_PROTOCOL=api`. When the limit is reached, remaining hosts are cut and recorded in the summary note. |
 | `shodan_create_note` | `SHODAN_CREATE_NOTE` | No | Create note with facets for indicators |
 | `shodan_use_isp_name` | `SHODAN_USE_ISP_NAME` | No | Use ISP name for ASN |
 

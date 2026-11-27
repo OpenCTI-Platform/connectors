@@ -43,6 +43,7 @@ class ShodanConnector:
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
+        self.max_bundle_size_mb = self.config.shodan.max_bundle_size_mb
         self.create_note = self.config.shodan.create_note
         self.use_isp_name_for_asn = self.config.shodan.use_isp_name_for_asn
 
@@ -397,6 +398,22 @@ class ShodanConnector:
             self.stix_objects.append(stix_note)
         return stix_observable
 
+    @staticmethod
+    def _serialize(obj) -> str:
+        return obj.serialize() if hasattr(obj, "serialize") else json.dumps(obj)
+
+    def _request_size(self, bundle: str) -> int:
+        """Return the size in bytes of the request payload carrying this bundle."""
+        playbook = self.helper.playbook
+        if playbook is None:
+            return len(bundle.encode("utf-8"))
+        # In a playbook, both bundles travel as JSON strings inside the GraphQL payload,
+        # so quotes, newlines, and non-ASCII characters are JSON-escaped again.
+        previous_bundle = playbook.get("previous_bundle") or ""
+        return len(json.dumps(bundle).encode("utf-8")) + len(
+            json.dumps(previous_bundle).encode("utf-8")
+        )
+
     def _generate_stix_bundle(
         self, data, stix_objects, stix_entity, score=None, only_objects=False
     ):
@@ -447,6 +464,7 @@ class ShodanConnector:
                     response, bundle_objects, stix_entity
                 )
                 # Send STIX2 Bundle
+                self._bundle_sent = True
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except shodan.APIError as e:
@@ -479,79 +497,136 @@ class ShodanConnector:
                 )
                 threats.append(indicates_stix_entity)
             try:
-                bundle_objects = []
-                number_processed = 1
+                max_bytes = self.max_bundle_size_mb * 1024 * 1024
+                shodan_identity_obj = self.shodan_identity.to_stix2_object()
+                base_objects = {
+                    obj["id"]: obj for obj in [shodan_identity_obj, *stix_objects]
+                }
+
                 # Facets
-                result = self.shodanAPI.count(pattern_value, facets=FACETS)
+                count_result = self.shodanAPI.count(pattern_value, facets=FACETS)
+                total_results = count_result["total"]
                 note_title = "Shodan Summary Information"
-                note_content = (
+                base_note_content = (
                     "### Global\n"
                     "| Value | Count |\n|------|-------|\n"
-                    f"| Total Results | {result['total']} |\n"
+                    f"| Total Results | {total_results} |\n"
                 )
-                for facet in result["facets"]:
-                    note_content += (
+                for facet in count_result["facets"]:
+                    base_note_content += (
                         f"### {FACET_TITLES[facet]}\n\n"
                         "| Value | Count |\n|------|-------|\n"
                     )
-                    for term in result["facets"][facet]:
-                        note_content += f"| {term['value']} | {term['count']} |\n"
-                    note_content += "\n"
+                    for term in count_result["facets"][facet]:
+                        base_note_content += f"| {term['value']} | {term['count']} |\n"
+                    base_note_content += "\n"
 
-                # Generate Note
                 created = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-                note = stix2.Note(
-                    id=Note.generate_id(created, note_content),
-                    abstract=note_title,
-                    content=note_content,
-                    created_by_ref=self.shodan_identity.id,
-                    object_refs=[stix_entity["id"]],
-                )
-                bundle_objects.append(note)
 
-                # Get Shodan API Response
+                def build_bundle(host_batches: list, is_truncated: bool) -> str:
+                    note_content = base_note_content
+                    if is_truncated:
+                        note_content += (
+                            f"> **Note:** Imported {len(host_batches)} of "
+                            f"{total_results} matching hosts "
+                            f"(bundle size limit of {self.max_bundle_size_mb} MiB reached).\n"
+                        )
+                    note = stix2.Note(
+                        id=Note.generate_id(created, note_content),
+                        abstract=note_title,
+                        content=note_content,
+                        created_by_ref=self.shodan_identity.id,
+                        object_refs=[stix_entity["id"]],
+                    )
+                    objects = dict(base_objects)
+                    for batch in host_batches:
+                        objects.update({obj["id"]: obj for obj in batch})
+                    objects[note["id"]] = note
+                    return self.helper.stix2_create_bundle(list(objects.values()))
+
+                hosts = []
+                truncated = False
+                # 1. Starting size from the base bundle (including Shodan identity + note)
+                size = self._request_size(build_bundle([], False))
+                is_playbook = self.helper.playbook is not None
+
                 if self.import_search_results:
-                    results = self.shodanAPI.search_cursor(pattern_value)
-                    for result in results:
-                        stix_entity_ip = json.loads(
-                            stix2.IPv4Address(
-                                type="ipv4-addr", value=result["ip_str"]
-                            ).serialize()
-                        )
-                        stix_objects.append(stix_entity_ip)
-                        rel = self._generate_stix_relationship(
-                            stix_entity_ip["id"], "related-to", stix_entity["id"]
-                        )
-                        stix_objects.append(rel)
-
-                        for threat in threats:
-                            rel = self._generate_stix_relationship(
-                                stix_entity_ip["id"], "related-to", threat["id"]
-                            )
-                            stix_objects.append(rel)
-
+                    for search_hit in self.shodanAPI.search_cursor(pattern_value):
+                        ip_str = search_hit["ip_str"]
                         try:
-                            response = self.shodanAPI.host(result["ip_str"])
-                        except Exception:
+                            response = self.shodanAPI.host(ip_str)
+                        except Exception as err:
+                            self.helper.connector_logger.warning(
+                                "Shodan host lookup failed, skipping host",
+                                {"ip": ip_str, "error": str(err)},
+                            )
                             continue
 
-                        # Generate a stix bundle
-                        bundle_objects = bundle_objects + self._generate_stix_bundle(
-                            response, stix_objects, stix_entity_ip, score, True
+                        stix_entity_ip = json.loads(
+                            stix2.IPv4Address(
+                                type="ipv4-addr", value=ip_str
+                            ).serialize()
                         )
-                        number_processed = number_processed + 1
-                else:
-                    # If import_search_results is False, we only generate the stix bundle from the pattern
-                    bundle_objects = self._generate_stix_bundle(
-                        {"data": []}, stix_objects, stix_entity, score, True
+                        host_seed_objects = [
+                            stix_entity_ip,
+                            self._generate_stix_relationship(
+                                stix_entity_ip["id"], "related-to", stix_entity["id"]
+                            ),
+                        ]
+                        for threat in threats:
+                            host_seed_objects.append(
+                                self._generate_stix_relationship(
+                                    stix_entity_ip["id"], "related-to", threat["id"]
+                                )
+                            )
+
+                        host_objects = self._generate_stix_bundle(
+                            response, host_seed_objects, stix_entity_ip, score, True
+                        )
+                        # 2. Running total: stop before adding a host that exceeds the budget
+                        host_size = sum(
+                            len(
+                                (
+                                    json.dumps(self._serialize(obj))
+                                    if is_playbook
+                                    else self._serialize(obj)
+                                ).encode("utf-8")
+                            )
+                            for obj in host_objects
+                        )
+                        if size + host_size > max_bytes:
+                            truncated = True
+                            break
+
+                        hosts.append(host_objects)
+                        size += host_size
+
+                # 3. Exact check against the built bundle request size
+                bundle = build_bundle(hosts, truncated)
+                while hosts and self._request_size(bundle) > max_bytes:
+                    hosts.pop()
+                    truncated = True
+                    bundle = build_bundle(hosts, True)
+
+                if self._request_size(bundle) > max_bytes:
+                    raise ValueError(
+                        f"Base Shodan STIX bundle exceeds SHODAN_MAX_BUNDLE_SIZE_MB "
+                        f"({self.max_bundle_size_mb} MiB)"
                     )
 
-                # Send STIX2 Bundle
-                bundle_objects.insert(0, self.shodan_identity.to_stix2_object())
-                uniq_bundles_objects = list(
-                    {obj["id"]: obj for obj in bundle_objects}.values()
-                )
-                bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                if truncated:
+                    self.helper.connector_logger.warning(
+                        "Reached SHODAN_MAX_BUNDLE_SIZE_MB limit; truncated indicator host enrichment",
+                        {
+                            "query": pattern_value,
+                            "total_results": total_results,
+                            "hosts_imported": len(hosts),
+                            "max_bundle_size_mb": self.max_bundle_size_mb,
+                        },
+                    )
+
+                number_processed = 1 + len(hosts)
+                self._bundle_sent = True
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 self.helper.log_info(
                     f"{number_processed} processed items, {len(bundles_sent)} generated bundle(s)"
@@ -570,16 +645,18 @@ class ShodanConnector:
             raise ValueError(f"Unsupported type: {stix_entity['type']}")
 
     def process_message(self, data: Dict) -> str:
+        self._bundle_sent = False
+        original_objects = list(data.get("stix_objects") or [])
         try:
-            self._process_message(data)
+            return self._process_message(data)
         except Exception as e:
             self.helper.connector_logger.error(
                 "[CONNECTOR] An unexpected Error occurred", {"error_message": str(e)}
             )
-            # If an error occurs, we send the original stix objects back
-            self.helper.send_stix2_bundle(
-                self.helper.stix2_create_bundle(data["stix_objects"])
-            )
+            if not self._bundle_sent and original_objects:
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(original_objects)
+                )
             raise e
 
     def run(self):
