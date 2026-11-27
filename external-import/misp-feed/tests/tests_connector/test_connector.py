@@ -2,6 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+import stix2
 from connector import ConnectorSettings, MispFeed
 
 
@@ -75,3 +76,38 @@ def test_retrieve_data_with_authorization_header_sets_it(fake_requests_get):
     fake_requests_get.assert_called_once()
     kwargs = fake_requests_get.call_args.kwargs
     assert kwargs.get("headers") == {"Authorization": "Bearer secret"}
+
+
+@pytest.mark.parametrize(
+    "attribute_type,value",
+    [
+        ("ip-dst", "1.2.3.4"),
+        ("yara", "rule r { condition: true }"),
+        ("sigma", "title: r"),
+    ],
+)
+def test_process_attribute_without_comment(attribute_type, value):
+    """The MISP "comment" field is optional: an attribute without it must still
+    produce its indicator instead of failing on the missing key."""
+    attribute = {
+        "uuid": "5e3c0a1e-1111-4222-8333-944455556666",
+        "type": attribute_type,
+        "category": "Network activity",
+        "value": value,
+        "to_ids": True,
+        "timestamp": "1700000000",
+    }
+    author = stix2.Identity(name="author", identity_class="organization")
+
+    # Settings are frozen and both outputs are disabled by default
+    config = MagicMock()
+    config.misp_feed.create_indicators = True
+    config.misp_feed.create_observables = True
+    config.misp_feed.import_to_ids_no_score = None
+    connector = MispFeed(config=config, helper=MagicMock())
+
+    result = connector._process_attribute(
+        author, [], [], [], None, [], attribute, "2", False
+    )
+
+    assert result["indicator"]["pattern"]
