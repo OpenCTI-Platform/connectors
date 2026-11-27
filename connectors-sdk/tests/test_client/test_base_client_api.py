@@ -498,6 +498,17 @@ class TestParseResponse:
         result = client._parse_response(resp)
         assert result == {"ok": True}
 
+    def test_parse_response_malformed_json_raises_api_client_error(self, client):
+        resp = requests.Response()
+        resp.status_code = 200
+        resp.headers["Content-Type"] = "application/json"
+        resp._content = b'{"key": '
+        with pytest.raises(ApiClientError) as exc_info:
+            client._parse_response(resp)
+        assert exc_info.value.status_code == 200
+        assert exc_info.value.response_body == '{"key": '
+        assert isinstance(exc_info.value.__cause__, ValueError)
+
     def test_parse_response_no_content_type_tries_json(self, client):
         """When Content-Type is missing, tries JSON parsing."""
         resp = _mock_response(json_data={"fallback": True}, text='{"fallback": true}')
