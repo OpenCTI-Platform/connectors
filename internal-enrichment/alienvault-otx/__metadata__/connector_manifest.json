@@ -1,0 +1,27 @@
+{
+  "title": "AlienVault OTX Enrichment",
+  "slug": "alienvault-otx",
+  "description": "This internal enrichment connector queries the AlienVault OTX (Open Threat Exchange) DirectConnect API for IPv4 addresses, domain names and URLs already present in OpenCTI. It adds an external reference to the OTX indicator page, a summary note (reputation, pulse count and related pulses) and sightings from the countries reported by OTX. It is meant to be used on demand, in playbooks, or automatically, and never sends entities marked with a TLP above the configured maximum to OTX. An OTX API key is required.",
+  "short_description": "Enriches IPv4 addresses, domain names and URLs with AlienVault OTX: external reference, summary note and country sightings. Requires an OTX API key.",
+  "logo": "internal-enrichment/alienvault-otx/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261117.0",
+  "subscription_link": "https://levelblue.com/open-threat-exchange",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/alienvault-otx",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-alienvault-otx",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

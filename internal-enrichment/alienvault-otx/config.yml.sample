@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  # name: 'AlienVault OTX' # optional (default: 'AlienVault OTX')
+  # scope: 'IPv4-Addr' # optional, comma-separated entity types among 'IPv4-Addr', 'Domain-Name', 'Url' (default: 'IPv4-Addr')
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  max_tlp: 'TLP:AMBER' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
+
+alienvault_otx:
+  api_key: 'ChangeMe'
+  # api_base_url: 'https://otx.alienvault.com' # optional (default: 'https://otx.alienvault.com')
