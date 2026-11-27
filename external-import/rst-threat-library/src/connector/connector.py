@@ -706,9 +706,7 @@ class RSTThreatLibrary:
         for obj_type in self.object_types:
             if obj_type not in _MERGE_SPLIT_TYPES:
                 continue
-            if not self._apply_merge_split_for_type(
-                client, state, timestamp, obj_type
-            ):
+            if not self._apply_merge_split_for_type(client, state, timestamp, obj_type):
                 success = False
         return success
 
@@ -1400,7 +1398,9 @@ class RSTThreatLibrary:
 
         # Keep each SDO chunk self-contained for cleanup_inconsistent_bundle:
         # re-attach all referenced identities to every emitted chunk.
-        sdo_chunk_size = max(1, batch_size - len(identities)) if identities else batch_size
+        sdo_chunk_size = (
+            max(1, batch_size - len(identities)) if identities else batch_size
+        )
         total_chunks = (len(rest) + sdo_chunk_size - 1) // sdo_chunk_size
         for chunk_idx, offset in enumerate(range(0, len(rest), sdo_chunk_size)):
             chunk = identities + rest[offset : offset + sdo_chunk_size]
@@ -1511,9 +1511,7 @@ class RSTThreatLibrary:
 
         return False
 
-    def _send_bundle_with_retries(
-        self, stix_objects: List[Any], obj_type: str
-    ) -> bool:
+    def _send_bundle_with_retries(self, stix_objects: List[Any], obj_type: str) -> bool:
         """Push via injected WorkManager send with the connector retry policy."""
         if self._send_bundle is None:
             raise RuntimeError(

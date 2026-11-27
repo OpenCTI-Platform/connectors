@@ -101,13 +101,14 @@ def test_apply_merge_split_for_type_handles_catalogue_fetch_failure(connector):
     client = MagicMock()
     client.iter_all_items.side_effect = RuntimeError("catalogue down")
 
-    ok = connector._apply_merge_split_for_type(
-        client, {}, 1, ThreatObjectType.MALWARE
-    )
+    ok = connector._apply_merge_split_for_type(client, {}, 1, ThreatObjectType.MALWARE)
 
     assert ok is False
     connector.helper.connector_logger.error.assert_called()
-    assert "catalogue fetch failed" in connector.helper.connector_logger.error.call_args.args[0]
+    assert (
+        "catalogue fetch failed"
+        in connector.helper.connector_logger.error.call_args.args[0]
+    )
 
 
 def test_apply_merge_split_for_type_returns_when_no_candidates(connector):
@@ -639,12 +640,12 @@ def test_read_opencti_entity_routes_by_type(connector):
         "standard_id": "intrusion-set--1"
     }
 
-    assert connector._read_opencti_entity(
-        ThreatObjectType.MALWARE, "malware--1"
-    ) == {"standard_id": "malware--1"}
-    assert connector._read_opencti_entity(
-        ThreatObjectType.TOOLS, "tool--1"
-    ) == {"standard_id": "tool--1"}
+    assert connector._read_opencti_entity(ThreatObjectType.MALWARE, "malware--1") == {
+        "standard_id": "malware--1"
+    }
+    assert connector._read_opencti_entity(ThreatObjectType.TOOLS, "tool--1") == {
+        "standard_id": "tool--1"
+    }
     assert connector._read_opencti_entity(
         ThreatObjectType.CAMPAIGNS, "campaign--1"
     ) == {"standard_id": "campaign--1"}
@@ -759,7 +760,9 @@ def test_sdk_connector_start_schedules_callback(monkeypatch):
     helper.schedule_process.assert_called_once()
     kwargs = helper.schedule_process.call_args.kwargs
     assert kwargs["message_callback"] == connector.callback
-    assert kwargs["duration_period"] == settings.connector.duration_period.total_seconds()
+    assert (
+        kwargs["duration_period"] == settings.connector.duration_period.total_seconds()
+    )
 
 
 def test_execute_split_defers_alias_removal_when_split_off_skipped(connector):

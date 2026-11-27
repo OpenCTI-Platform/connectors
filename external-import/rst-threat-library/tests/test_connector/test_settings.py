@@ -226,9 +226,7 @@ def test_settings_requires_api_key():
 
 
 def test_config_json_schema_includes_connector_id_and_password_apikey():
-    schema = ConnectorSettings.config_json_schema(
-        connector_name="RST Threat Library"
-    )
+    schema = ConnectorSettings.config_json_schema(connector_name="RST Threat Library")
     assert "CONNECTOR_ID" in schema["properties"]
     assert schema["properties"]["CONNECTOR_ID"]["type"] == "string"
     assert "CONNECTOR_ID" in schema["required"]
