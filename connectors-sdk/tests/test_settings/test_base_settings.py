@@ -551,6 +551,44 @@ def test_base_connector_settings_should_provide_helper_config(
     }
 
 
+def test_base_connector_settings_helper_config_should_omit_none_values(
+    mock_environment,
+):
+    """Test that `to_helper_config` omits unset `Optional` fields instead of passing `None` to pycti."""
+
+    # Given: A connector declaring an optional pycti option which is not set
+    class _ConnectorConfig(BaseExternalImportConnectorConfig):
+        send_to_directory_retention: int | None = None
+
+    class _Settings(BaseExternalImportConnectorSettings):
+        connector: _ConnectorConfig = Field(
+            default_factory=_ConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The helper config dict is generated
+    helper_config = _Settings().to_helper_config()
+
+    # Then: The unset option is absent, so that pycti applies its own default
+    assert "send_to_directory_retention" not in helper_config["connector"]
+
+
+def test_base_connector_settings_helper_config_should_keep_recover_none_keyword(
+    mock_environment, monkeypatch
+):
+    """Test that omitting `None` values keeps the "none" keyword of a disabled stream recovery."""
+
+    # Given: A stream connector disabling recovery, without any recover date
+    monkeypatch.setenv("CONNECTOR_LIVE_STREAM_ID", "stream--uid")
+    monkeypatch.setenv("CONNECTOR_LIVE_STREAM_RECOVER", "false")
+
+    # When: The helper config dict is generated
+    helper_config = BaseStreamConnectorSettings().to_helper_config()
+
+    # Then: pycti still receives the "none" keyword, and unset values are omitted
+    assert helper_config["connector"]["live_stream_recover_iso_date"] == "none"
+    assert "live_stream_start_timestamp" not in helper_config["connector"]
+
+
 def test_base_connector_settings_model_json_schema_generates_the_default_json_schema():
     """Test that model_json_schema generates the default JSON schema."""
 
