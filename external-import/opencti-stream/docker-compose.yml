@@ -38,4 +38,7 @@ services:
       # events). Leave unset to emit a null applicant; set a user UUID to avoid bundles the
       # diode-import connector would reject.
       # - STREAM_DEFAULT_APPLICANT_ID=ChangeMeUserUUID
+      # Embed the content of the files attached to each object in the bundles, so the target
+      # instance also receives them. Disabled by default because it increases bundle sizes.
+      # - STREAM_INCLUDE_FILES=false
     restart: always

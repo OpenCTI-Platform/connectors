@@ -6,13 +6,12 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=Obstracts
-      - CONNECTOR_SCOPE=obstracts
-      - CONNECTOR_CONFIDENCE_LEVEL=70
-      - CONNECTOR_LOG_LEVEL=error
-      - OBSTRACTS_BASE_URL=http://api.obstracts.com/
-      - OBSTRACTS_API_KEY=
-      - OBSTRACTS_FEED_IDS=
-      - OBSTRACTS_INTERVAL_HOURS=60
-      - OBSTRACTS_DAYS_TO_BACKFILL=7
+      # - CONNECTOR_NAME=Obstracts
+      # - CONNECTOR_SCOPE=obstracts
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
+      - OBSTRACTS_API_KEY=ChangeMe
+      # - OBSTRACTS_BASE_URL=https://api.obstracts.com/
+      # - OBSTRACTS_FEED_IDS= # comma separated feed ids, empty for every subscribed feed
+      # - OBSTRACTS_DAYS_TO_BACKFILL=7
     restart: always

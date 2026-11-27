@@ -8,27 +8,7 @@ It creates **Observables** and **Indicators** in OpenCTI from the C2 configurati
 
 ## Configuration
 
-| Parameter                       | Docker envvar                       | Description                                                                                                                                       |
-|---------------------------------|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                   | `OPENCTI_URL`                       | The URL of the OpenCTI platform.                                                                                                                  |
-| `opencti_token`                 | `OPENCTI_TOKEN`                     | The default admin token configured in the OpenCTI platform parameters file.                                                                       |
-| `connector_id`                  | `CONNECTOR_ID`                      | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                |
-| `connector_type`                | `CONNECTOR_TYPE`                    | Must be `EXTERNAL_IMPORT`.                                                                                                                        |
-| `connector_name`                | `CONNECTOR_NAME`                    | The name of the connector, e.g. `BeaconBeagle`.                                                                                                   |
-| `connector_scope`               | `CONNECTOR_SCOPE`                   | The connector scope. Use `beaconbeagle` (recommended); aligned with the rest of `external-import/` connectors and with `templates/external-import/docker-compose.yml`. |
-| `connector_log_level`           | `CONNECTOR_LOG_LEVEL`               | The log level for this connector — one of `debug`, `info`, `warn`, `error` (less verbose).                                                        |
-| `beaconbeagle_url`              | `BEACONBEAGLE_URL`                  | The BeaconBeagle C2 list URL (default: `https://beaconbeagle.com/api/v1/c2?...&sort=firsttime&order=desc`).                                       |
-| `beaconbeagle_add_urls`         | `BEACONBEAGLE_ADD_URLS`             | Save URLs from BeaconBeagle into OpenCTI (`true`/`false`).                                                                                        |
-| `beaconbeagle_add_useragent`    | `BEACONBEAGLE_ADD_USERAGENT`        | Save User-Agent strings as observables (`true`/`false`).                                                                                          |
-| `beaconbeagle_link_tool`        | `BEACONBEAGLE_LINK_TOOL`            | Tool name (e.g. `CobaltStrike`) to link observables to. Leave empty to skip the link.                                                             |
-| `beaconbeagle_link_ap`          | `BEACONBEAGLE_LINK_AP`              | Attack-pattern reference. Either a plain name or `<MITRE_ID> <name>` (e.g. `T1071 Standard Application Layer Protocol`). Leave empty to skip.     |
-| `beaconbeagle_link_country`     | `BEACONBEAGLE_LINK_COUNTRY`         | Create a Country location for each C2 IP and link it (`true`/`false`).                                                                            |
-| `beaconbeagle_link_bgpas`       | `BEACONBEAGLE_LINK_BGPAS`           | Create an Autonomous-System observable for each C2 IP and link it (`true`/`false`).                                                               |
-| `beaconbeagle_search_bgpas`     | `BEACONBEAGLE_SEARCH_BGPAS`         | Fall back to `whois -h bgp.tools` when BeaconBeagle's payload is missing the AS / country fields. **Generates traffic to bgp.tools** (`true`/`false`). |
-| `beaconbeagle_link_watermark`   | `BEACONBEAGLE_LINK_WATERMARK_TXT`   | Suffix appended to the Text observable that tracks CobaltStrike licence watermarks (leave empty to disable).                                      |
-| `beaconbeagle_links_duration`   | `BEACONBEAGLE_LINKS_DURATION`       | Duration in hours used as the indicator `valid_from`–`valid_until` window when BeaconBeagle does not provide a `lasttime` for a C2 entry.         |
-| `beaconbeagle_interval`         | `BEACONBEAGLE_INTERVAL`             | Run frequency in hours.                                                                                                                           |
-| `beaconbeagle_marking`          | `BEACONBEAGLE_MARKING`              | Marking definition on every produced object (`TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`).                  |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
 ## Docker Compose Example
 

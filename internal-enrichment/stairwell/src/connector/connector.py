@@ -159,7 +159,7 @@ class StairwellConnector:
             resolutions_limit=s.resolutions_limit,
             sightings_limit=s.sightings_limit,
             opencti_base_url=str(config.opencti.url).rstrip("/"),
-            max_tlp=f"TLP:{config.connector.max_tlp.value.upper()}",
+            max_tlp=config.connector.max_tlp,
         )
 
     def _in_scope(self, observable: dict[str, Any]) -> bool:

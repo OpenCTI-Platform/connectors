@@ -74,6 +74,7 @@ This connector enriches IPv4 observables with:
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `shodan_ssl_verify` | `SHODAN_SSL_VERIFY` | No | Verify SSL connections (default: true) |
+| `shodan_timeout` | `SHODAN_TIMEOUT` | No | Request timeout in seconds (default: 30) |
 
 ---
 
@@ -100,6 +101,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_MAX_TLP=TLP:CLEAR
       - SHODAN_SSL_VERIFY=true
+      - SHODAN_TIMEOUT=30
     restart: always
 ```
 

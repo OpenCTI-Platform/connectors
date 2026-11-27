@@ -26,3 +26,4 @@ microsoft_defender_incidents:
   import_start_date: 'P30D'
   #api_base_url: 'https://graph.microsoft.com/v1.0'
   #incident_path: '/security/incidents'
+  #status_mapping: 'active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,resolved:CLOSED,redirected:CLOSED'

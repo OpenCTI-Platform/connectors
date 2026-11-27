@@ -72,7 +72,7 @@ _SCO_TYPES = frozenset(
 # STIX types that carry neither an author nor markings.
 _UNATTRIBUTABLE_TYPES = frozenset({"marking-definition", "language-content"})
 
-_EXCLUDED_EXTERNAL_REFERENCES = frozenset({"dwi-screenshot", "dwi-screenshot-2"})
+_EXCLUDED_EXTERNAL_REFERENCE_PREFIX = "dwi-screenshot"
 
 
 def _parse_timestamp(value: object) -> datetime | None:
@@ -221,7 +221,8 @@ class DarkWebInformerConnector:
             for ref in references
             if not (
                 isinstance(ref, dict)
-                and ref.get("source_name") in _EXCLUDED_EXTERNAL_REFERENCES
+                and isinstance(ref.get("source_name"), str)
+                and ref["source_name"].startswith(_EXCLUDED_EXTERNAL_REFERENCE_PREFIX)
             )
         ]
         if len(kept) == len(references):

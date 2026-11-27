@@ -1,70 +1,75 @@
-import requests
-from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
+"""EXAMPLE HTTP client -- shows how to call an external API.
+
+`TemplateClient`, its `/ip/{ip}` endpoint and the `IPReputation` model are
+an example: they do not match any real API. Rewrite them for the API your
+connector calls.
+
+The client keeps all the network code (base URL, authentication, requests,
+errors) in one place. The processors only call its methods, and get
+validated, typed objects back (see `template_client/models.py`).
+
+`BaseClientApi` (from `connectors-sdk`) already provides:
+    - an HTTP session, created on the first request;
+    - retries with backoff on 429 and 5xx responses;
+    - optional rate limiting;
+    - typed exceptions for HTTP errors (`ApiNotFoundError` on 404,
+      `ApiServerError` on 5xx...).
+
+The client does not catch these exceptions: it lets them go up to the
+processor, which decides what an error means. For example, a 404 means that
+the source does not know the entity: this is not a failure.
+
+TODO:
+    - [ ] Rename `TemplateClient` and the `template_client` package
+        (e.g. `CyberThreatApiClient` and `cyber_threat_api_client`).
+    - [ ] Change `session_headers` for the authentication scheme of your API.
+    - [ ] Replace `get_ip_reputation` with one method per endpoint you call.
+"""
+
+from connectors_sdk import BaseClientApi
+from template_client.models import IPReputation
 
 
-class TemplateClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str):
-        """
-        Initialize the client with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `api_key`) if necessary.
+class TemplateClient(BaseClientApi):
+    """EXAMPLE client -- rewrite it for your own API."""
+
+    def __init__(self, base_url: str, api_key: str):
+        """Create the client.
 
         Args:
-            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (str): The external API base URL.
-            api_key (str): The API key to authenticate the connector to the external API.
+            base_url: The external API base URL.
+            api_key: The API key used to authenticate every request.
+
+        Add any other argument your API needs (a second credential, a proxy...).
         """
-        self.helper = helper
+        super().__init__(base_url=base_url)
 
-        self.base_url = base_url
-        # Define headers in session and update when needed
-        headers = {"Bearer": api_key}
-        self.session = requests.Session()
-        self.session.headers.update(headers)
+        self._api_key = api_key
 
-    def _request_data(self, api_url: str, params=None):
+    @property
+    def session_headers(self) -> dict[str, str]:
+        """The HTTP headers sent with every request.
+
+        `BaseClientApi` reads this property once, when it creates the HTTP
+        session (on the first request). Never log these headers: they contain
+        the API key.
         """
-        Internal method to handle API requests
-        :return: Response in JSON format
+        return {
+            "Accept": "application/json",
+            "Authorization": "Bearer " + self._api_key,
+        }
+
+    def get_ip_reputation(self, ip: str) -> IPReputation:
+        """EXAMPLE -- get the reputation of an IP address.
+
+        Args:
+            ip: The IP address.
+
+        Returns:
+            The reputation of the IP, validated against `IPReputation`.
+
+        Raises:
+            ApiNotFoundError: If the API does not know the IP (HTTP 404).
+            ApiClientError: If the request fails for another reason.
         """
-        try:
-            response = self.session.get(api_url, params=params)
-
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
-
-            response.raise_for_status()
-            return response
-
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
-            )
-            return None
-
-    def get_entity(self, params=None) -> dict:
-        """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
-        """
-        try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-
-            # EXAMPLE
-            # response = self._request_data(self.config.api_base_url, params=params)
-
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            raise NotImplementedError
-
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+        return IPReputation.model_validate(self._get(f"/ip/{ip}"))

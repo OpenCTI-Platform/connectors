@@ -32,6 +32,7 @@ import requests
 import stix2
 import yaml
 from assemblyline_client import get_client
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import MarkingDefinition, OpenCTIConnectorHelper, get_config_variable
 
 # OpenCTI's canonical ID for the custom TLP:CLEAR marking definition. The
@@ -377,11 +378,17 @@ class AssemblyLineConnector:
 
     def _check_tlp(self, observable: Dict[str, Any]) -> None:
         """Raise ``ValueError`` when the observable's TLP exceeds the max."""
-        tlp = self._source_tlp(observable)
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.assemblyline_max_tlp):
+        tlp_levels = [
+            marking["definition"]
+            for marking in observable.get("objectMarking", []) or []
+            if marking.get("definition_type") == "TLP" and marking.get("definition")
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.assemblyline_max_tlp
+        ):
             raise ValueError(
-                f"Do not send any data, TLP of the observable ({tlp}) is greater than "
-                f"max TLP ({self.assemblyline_max_tlp})"
+                f"Do not send any data, TLP of the observable ({', '.join(tlp_levels)}) "
+                f"is greater than max TLP ({self.assemblyline_max_tlp})"
             )
 
     def _resolve_submission_classification(self, observable: Dict[str, Any]) -> str:

@@ -6,7 +6,6 @@ import sys
 
 import pytest
 import vcr
-from pycti import OpenCTIConnectorHelper
 
 # Add src/ to path
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
@@ -117,9 +116,6 @@ class StubHelper:
 
     def send_stix2_bundle(self, bundle, **kwargs):
         return ["bundle-1"]
-
-    # pycti's real helper, so tests exercise its actual contract (#7955).
-    check_max_tlp = staticmethod(OpenCTIConnectorHelper.check_max_tlp)
 
 
 @pytest.fixture

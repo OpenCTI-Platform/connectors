@@ -13,7 +13,6 @@ connector:
 ctm360_cbs:
   api_base_url: 'https://cbs.ctm360.com'
   api_key: 'ChangeMe'
-  import_interval: 86400
   import_incidents: true
   import_malware_logs: true
   import_breached_credentials: true

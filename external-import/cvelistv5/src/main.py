@@ -1,18 +1,14 @@
 """OpenCTI cvelistV5 connector entrypoint."""
 
-import os
 import sys
 import traceback
 from datetime import datetime, timezone
 
-import yaml
 from cve_processor import CVEProcessor
 from git_handler import GitHandler
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
-DEFAULT_REPO_URL = "https://github.com/CVEProject/cvelistV5.git"
-DEFAULT_REPO_BRANCH = "main"
-DEFAULT_LOCAL_PATH = "/opt/cvelistV5"
 DEFAULT_START_YEAR = 2024
 MIN_START_YEAR = 1999
 
@@ -21,53 +17,14 @@ class CVEListV5Connector:
     """External import connector that ingests CVEs from CVEProject/cvelistV5."""
 
     def __init__(self) -> None:
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as config_file:
-                config = yaml.safe_load(config_file) or {}
-        else:
-            config = {}
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.repo_url = self.config.cvelistv5.repo_url
+        self.repo_branch = self.config.cvelistv5.repo_branch
+        self.local_path = self.config.cvelistv5.local_path
 
-        self.repo_url = (
-            get_config_variable(
-                "CVELISTV5_REPO_URL",
-                ["cvelistv5", "repo_url"],
-                config,
-            )
-            or DEFAULT_REPO_URL
-        )
-        self.repo_branch = (
-            get_config_variable(
-                "CVELISTV5_REPO_BRANCH",
-                ["cvelistv5", "repo_branch"],
-                config,
-            )
-            or DEFAULT_REPO_BRANCH
-        )
-        self.local_path = (
-            get_config_variable(
-                "CVELISTV5_LOCAL_PATH",
-                ["cvelistv5", "local_path"],
-                config,
-            )
-            or DEFAULT_LOCAL_PATH
-        )
-
-        start_year = get_config_variable(
-            "CVELISTV5_HISTORY_START_YEAR",
-            ["cvelistv5", "history_start_year"],
-            config,
-            isNumber=True,
-            default=DEFAULT_START_YEAR,
-        )
-        try:
-            start_year = int(start_year)
-        except (TypeError, ValueError):
-            start_year = DEFAULT_START_YEAR
+        start_year = self.config.cvelistv5.history_start_year
         if start_year < MIN_START_YEAR:
             self.helper.connector_logger.warning(
                 "Configured history_start_year is below the minimum supported year, "
@@ -76,13 +33,9 @@ class CVEListV5Connector:
             )
             start_year = DEFAULT_START_YEAR
         self.start_year = start_year
+        self.import_history = self.config.cvelistv5.import_history
 
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            config,
-            default="PT1H",
-        )
+        self.duration_period = self.config.connector.duration_period
 
         # Lazy initialized inside _process_updates() so a missing / unreachable
         # upstream repository does not prevent the connector container from booting.
@@ -92,8 +45,8 @@ class CVEListV5Connector:
     def _ensure_git_handler(self) -> GitHandler:
         if self.git_handler is None:
             self.helper.connector_logger.info(
-                "Initializing local clone of cvelistV5 repository (this may take a "
-                "few minutes on first run)...",
+                "Initializing local clone of cvelistV5 repository (about 8 GB, 15 "
+                "minutes or more on first run, no progress is logged meanwhile)...",
                 {"repo_url": self.repo_url, "local_path": self.local_path},
             )
             self.git_handler = GitHandler(
@@ -129,6 +82,11 @@ class CVEListV5Connector:
         try:
             git_handler = self._ensure_git_handler()
             git_handler.pull_updates()
+
+            if git_handler.last_run_time is None and not self.import_history:
+                self._skip_initial_import(git_handler, run_started_at, work_id)
+                return
+
             files_to_process = git_handler.get_updated_files(self.start_year)
             self.helper.connector_logger.info(
                 "Processing CVE records.", {"files": len(files_to_process)}
@@ -170,11 +128,35 @@ class CVEListV5Connector:
             self.helper.connector_logger.error(message)
             self.helper.api.work.to_processed(work_id, message, in_error=True)
 
+    def _skip_initial_import(
+        self, git_handler: GitHandler, run_started_at: datetime, work_id: str
+    ) -> None:
+        """Record a state at once without importing the existing records.
+
+        Used on the first run when ``import_history`` is false: the next runs
+        only ingest the records changed after ``run_started_at``.
+        """
+        git_handler.update_last_run_time(run_started_at)
+        self.helper.set_state(
+            {
+                "last_run": run_started_at.isoformat(),
+                "last_run_processed": 0,
+                "last_run_failed": 0,
+                "initial_import_skipped": True,
+            }
+        )
+        message = (
+            "Initial catch-up skipped by configuration; live updates from "
+            f"{run_started_at.isoformat()}."
+        )
+        self.helper.connector_logger.info(message)
+        self.helper.api.work.to_processed(work_id, message)
+
     def start(self) -> None:
         self.helper.connector_logger.info("Starting CVEListV5 connector.")
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self._process_updates,
-            duration_period=self.duration_period,
+            duration_period=self.duration_period.total_seconds(),
         )
 
 

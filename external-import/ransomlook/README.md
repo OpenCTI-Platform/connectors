@@ -131,6 +131,28 @@ For an intentional one-shot run, set `CONNECTOR_RUN_AND_TERMINATE=true` and `CON
 
 ## Runtime behavior
 
+- Successful claim deliveries retain a bounded fingerprint of the date-index record
+  for six hours, so unchanged replayed claims normally do not fetch their full group
+  history or dedicated post again during that period. Claims that will leave the
+  date-based replay window after the current run are always fetched so freshness
+  does not hide their last opportunity for an update. Successful actor profiles are
+  refreshed after 24 hours when their group is encountered again. Source or
+  configuration changes invalidate these disposable receipts, and failed or
+  incomplete deliveries remain retryable. While a claim remains in the replay
+  window, details become eligible for refresh on the next run after six hours;
+  a new, changed, due, or departing claim still fetches group history. Changes
+  after a claim leaves the replay window may not be detected.
+  Receipts are limited to 10,000 entries per type and contain no source bodies.
+- HTTP 429 responses and source-wide refusal stop the run and stage a
+  source-specific cooldown. The connector respects `Retry-After` seconds or HTTP
+  dates; when no usable value is supplied, it waits one hour. A 403 from the posts
+  index or from two distinct core resources triggers this cooldown; different
+  post-title query parameters count as distinct resources, so two item-specific
+  refusals can also trigger it. Optional endpoint refusals remain isolated. A
+  recurring run resumes after the cooldown, while a one-shot run reports the
+  deferral. Cooldown state is sent to OpenCTI by the helper's heartbeat; a
+  process that exits or restarts before that heartbeat may lose the newly
+  staged cooldown.
 - The first run starts `RANSOMLOOK_INITIAL_HISTORY_DAYS` in the past and processes at most seven days per cycle, so large backfills cannot create unbounded bundles.
 - After the first successful claims checkpoint, changing `RANSOMLOOK_INITIAL_HISTORY_DAYS` alone does not start another backfill. To intentionally re-run an older interval, stop the connector, clear this connector's saved state, set the larger lookback, and restart it.
 - Later runs replay one day before the saved cursor. Stable IDs make this safe and allow late upstream publications to be collected.
@@ -140,7 +162,10 @@ For an intentional one-shot run, set `CONNECTOR_RUN_AND_TERMINATE=true` and `CON
 - Actor-profile retry records are admitted only while actor enrichment is enabled. Disabling the feature performs no pending profile calls and clears the obsolete backlog after the claims checkpoint succeeds.
 - Group metadata enrichment is best-effort. If an all-history group response exceeds the configured limit, the connector fetches only each current claim's dedicated post and continues importing the core graph.
 - Invalid or incomplete individual posts are logged and skipped.
-- RansomLook API calls retry rate limits and transient server failures with exponential backoff. Every physical retry consumes the run request budget, and timeouts, streamed reads, and backoff are constrained by the shared run deadline.
+- RansomLook API calls retry transient server failures with exponential backoff. Every physical retry consumes the run request budget, and timeouts, streamed reads, and backoff are constrained by the shared run deadline.
+- If a recurring run cannot connect to RansomLook after its retries, the run
+  reports the failure without advancing the claims checkpoint and tries again at
+  the next scheduled interval.
 - Responses larger than `RANSOMLOOK_MAX_RESPONSE_SIZE_MB` are rejected before conversion.
 - Claim and enrichment object lists are deduplicated and every top-level STIX reference is validated against the complete logical graph. Sink objects such as Reports are grouped with their transitive dependencies; shared author, marking, group, or observable dependencies are repeated across groups when needed. Each dependency-complete input contains at most `RANSOMLOOK_MAX_OBJECTS_PER_BUNDLE` objects and is valid independently. Each is published atomically with `no_split=true`, so no per-chunk cleanup can strip a cross-bundle reference and concurrent workers cannot race a Report ahead of a Relationship in the same closure. Inputs are also packed under `RANSOMLOOK_MAX_BUNDLE_SIZE_MB`. During claim assembly, oversized optional direct leak/analysis context is omitted first; if necessary, oversized Report evidence is omitted next and recorded as an optional skip. The Incident, victim, group, and core relationships still deliver. A core or non-claim closure above either cap fails before queue submission with its state left retryable. All inputs remain under one work item.
 - Each run emits a content-free metrics summary covering posts fetched, accepted, and skipped; objects and bundles delivered; optional skips; and accepted/rejected Artifact counts and decoded-byte budget consumption.
@@ -167,7 +192,7 @@ Verify `OPENCTI_URL`, `OPENCTI_TOKEN`, and network reachability. The connector u
 
 ### RansomLook requests fail or time out
 
-Confirm HTTPS access to the configured API host. Set `CONNECTOR_LOG_LEVEL=debug` to inspect request failures. HTTP 429 and transient 5xx responses are retried automatically.
+Confirm HTTPS access to the configured API host. Set `CONNECTOR_LOG_LEVEL=debug` to inspect request failures. HTTP 429 defers collection until the source cooldown expires; transient 5xx responses are retried automatically.
 
 ### No objects are imported
 

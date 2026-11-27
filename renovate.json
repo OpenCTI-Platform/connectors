@@ -138,6 +138,17 @@
       "semanticCommitType": "chore"
     },
     {
+      "description": "Group pydantic and pydantic-core into a single PR per base branch: pydantic pins an exact pydantic-core, so bumping one alone breaks dependency resolution. No semanticCommitType override: these are runtime dependencies, so the default 'fix(deps)' prefix is right.",
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchPackageNames": [
+        "pydantic",
+        "pydantic-core"
+      ],
+      "groupName": "pydantic"
+    },
+    {
       "description": "Group GitHub Actions updates into a single PR per base branch; they only affect CI, never the shipped connectors.",
       "matchManagers": [
         "github-actions"

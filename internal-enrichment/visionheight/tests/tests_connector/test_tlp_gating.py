@@ -5,24 +5,16 @@ import pytest
 import stix2
 from connector.connector import VisionHeightConnector
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models.enums import TLPLevel
 from pycti import Identity, OpenCTIConnectorHelper
 
-# The form the connector passes to `check_max_tlp` for each `connector.max_tlp` value
-MAX_TLP_LEVELS = [f"TLP:{level.upper()}" for level in TLPLevel]
-
 
 def _make_connector(max_tlp: str = "TLP:AMBER+STRICT") -> VisionHeightConnector:
-    """Build a connector wired with the *real* ``check_max_tlp``.
-
-    The rest of the TLP gating suite mocks ``check_max_tlp``, which cannot catch a
-    mismatch between the value the connector passes and what ``pycti`` accepts.
-    Here the genuine implementation is used so the whole gate is exercised.
-    """
+    """Build a connector whose TLP gate is the real SDK check (pycti's order)."""
     connector = VisionHeightConnector.__new__(VisionHeightConnector)
     connector.helper = MagicMock()
     connector.helper.connect_scope = "ipv4-addr,domain-name"
-    connector.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
     connector.client = MagicMock()
     connector.converter_to_stix = MagicMock()
     connector.config = MagicMock()
@@ -38,17 +30,18 @@ def _marked(tlp: str) -> dict:
 # ---------- configurable levels ----------
 
 
-@pytest.mark.parametrize("max_tlp", MAX_TLP_LEVELS)
-def test_configurable_max_tlp_is_a_key_pycti_knows(max_tlp):
-    """``check_max_tlp`` indexes a dict by the max TLP, so an unknown key raises.
-
-    ``TLP:CLEAR`` is allowed under every cap, so a ``True`` result proves every
-    value accepted by ``connector.max_tlp`` is a valid key rather than a ``KeyError``.
+@pytest.mark.parametrize("max_tlp", list(TLPLevel))
+def test_every_configurable_max_tlp_works_with_the_tlp_check(max_tlp):
+    """``TLP:CLEAR`` is allowed under every cap, so a ``True`` result proves every
+    value accepted by ``connector.max_tlp`` works with the SDK TLP check.
     """
-    assert OpenCTIConnectorHelper.check_max_tlp("TLP:CLEAR", max_tlp) is True
+    assert (
+        InternalEnrichmentConnector.is_entity_tlp_allowed(["TLP:CLEAR"], max_tlp)
+        is True
+    )
 
 
-# ---------- gating against the real check_max_tlp ----------
+# ---------- gating against the real TLP check ----------
 
 
 @pytest.mark.parametrize(
@@ -97,7 +90,7 @@ def test_observable_at_or_below_cap_is_allowed(max_tlp, tlp):
     ],
 )
 def test_unmarked_observable_is_allowed(opencti_entity):
-    """No TLP marking means no cap to enforce: ``check_max_tlp`` returns early."""
+    """No TLP marking means no cap to enforce."""
     connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
 
     connector.extract_and_check_markings(opencti_entity)
@@ -120,7 +113,7 @@ def test_marked_observable_does_not_raise_key_error():
         OpenCTIConnectorHelper.check_max_tlp("TLP:GREEN", "amber+strict")
 
     # The settings now normalize a lowercase value to the matching TLP level, that the
-    # connector converts to the canonical form, so the gate simply passes.
+    # SDK TLP check converts to the canonical form, so the gate simply passes.
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:

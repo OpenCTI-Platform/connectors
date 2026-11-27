@@ -95,7 +95,7 @@ standalone while pointing `OPENCTI_URL` at your running platform:
 ```yaml
 services:
   connector-ctm360-hackerview-feed:
-    image: opencti/connector-ctm360-hackerview:latest
+    image: opencti/connector-ctm360-hackerview-feed:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -136,7 +136,7 @@ docker compose up -d connector-ctm360-hackerview-feed
 
 | Variable | Description | Default | Required |
 |---|---|---|---|
-| `CONNECTOR_ID` | Unique UUID for this connector instance | — | Yes |
+| `CONNECTOR_ID` | Unique UUID for this connector instance | `a9424db4-ebdf-4090-a52e-f505794cdd4c` | No |
 | `CONNECTOR_NAME` | Display name shown in OpenCTI | `CTM360-HackerView` | No |
 | `CONNECTOR_SCOPE` | Connector scope label | `CTM360-HackerView` | No |
 | `CONNECTOR_TYPE` | Connector type (must not be changed) | `EXTERNAL_IMPORT` | No |

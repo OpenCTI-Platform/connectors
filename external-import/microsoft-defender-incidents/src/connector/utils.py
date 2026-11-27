@@ -1,3 +1,4 @@
+import math
 import re
 from datetime import datetime
 
@@ -50,11 +51,16 @@ def format_datetime(date_str: str | None) -> str:
 
 def format_date(date: str) -> int:
     """
-    :param date:
-    :return:
+    Convert an ISO 8601 date to a Unix timestamp in whole seconds, rounded DOWN.
+
+    The result is used as the connector state and queried with `lastUpdateDateTime gt <state>`: rounding up
+    (12:00:00.6 -> 12:00:01) would skip another incident updated within the same second.
+
+    :param date: ISO 8601 date string, e.g. `2024-01-15T12:00:00.6Z`.
+    :return: The timestamp in seconds, floored.
     """
     incident_last_update_timestamp = parse(date).timestamp()
-    return int(round(incident_last_update_timestamp))
+    return int(math.floor(incident_last_update_timestamp))
 
 
 def find_matching_file_ids(malware_name: str, stix_objects: list) -> list | None:

@@ -260,6 +260,45 @@ class TestFlushBatchProcessor:
 
 
 # =====================
+# _build_attack_technique_data tests
+# =====================
+
+
+class TestBuildAttackTechniqueData:
+    """Tests for BaseOrchestrator._build_attack_technique_data."""
+
+    @pytest.mark.parametrize(
+        "attack_technique_entities",
+        [
+            pytest.param([], id="no-entity"),
+            pytest.param([MagicMock(id=None)], id="entity-without-id"),
+        ],
+    )
+    def test_given_no_entity_with_an_id_when_build_then_returns_none(
+        self, attack_technique_entities
+    ):
+        """Without any technique ID, there is nothing to convert."""
+        orch, _ = _make_orchestrator()
+
+        assert orch._build_attack_technique_data(attack_technique_entities) is None
+
+    def test_given_entity_without_id_when_build_then_entity_ignored(self):
+        """An entity without an ID is left out of both ids and names."""
+        orch, _ = _make_orchestrator()
+        named_technique = MagicMock(id="T1046")
+        named_technique.attributes.name = "Network Service Discovery"
+        technique_without_id = MagicMock(id=None)
+        technique_without_id.attributes.name = "Process Injection"
+
+        attack_technique_data = orch._build_attack_technique_data(
+            [named_technique, technique_without_id]
+        )
+
+        assert attack_technique_data.ids == ["T1046"]
+        assert attack_technique_data.names == {"T1046": "Network Service Discovery"}
+
+
+# =====================
 # run() tests
 # =====================
 
@@ -356,6 +395,7 @@ class TestOrchestratorRun:
 
         fake_attack_technique = MagicMock()
         fake_attack_technique.id = "attack-pattern--xyz"
+        fake_attack_technique.attributes.name = "Network Service Discovery"
 
         orch.client_api.fetch_subentities = AsyncMock(
             return_value={
@@ -387,6 +427,90 @@ class TestOrchestratorRun:
         call_kwargs = orch.converter.convert_subentities_to_stix_with_linking.call_args
         subentities_arg = call_kwargs.kwargs.get("subentities", {})
         assert "attack_techniques" in subentities_arg
+        attack_technique_data = subentities_arg["attack_techniques"][0]
+        assert attack_technique_data.ids == ["attack-pattern--xyz"]
+        assert attack_technique_data.names == {
+            "attack-pattern--xyz": "Network Service Discovery"
+        }
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "nameless_name",
+        [
+            pytest.param(None, id="attributes-none"),
+            pytest.param("", id="empty-name"),
+            pytest.param("   ", id="blank-name"),
+        ],
+    )
+    async def test_given_attack_technique_without_name_when_run_then_skipped_and_warning_logged(
+        self, caplog, nameless_name
+    ):
+        """A technique without a name gets no entry in names and a warning is logged."""
+        orch, _ = _make_orchestrator()
+        orch.client_api = MagicMock()
+        orch.client_api.real_total_software_toolkits = 1
+
+        fake_toolkit = MagicMock()
+        fake_toolkit.id = "tool--abc"
+
+        async def _fetch(initial_state):
+            yield [fake_toolkit]
+
+        orch.client_api.fetch_software_toolkits = _fetch
+
+        named_technique = MagicMock()
+        named_technique.id = "T1046"
+        named_technique.attributes.name = "Network Service Discovery"
+        nameless_technique = MagicMock()
+        nameless_technique.id = "T1055"
+        if nameless_name is None:
+            nameless_technique.attributes = None
+        else:
+            nameless_technique.attributes.name = nameless_name
+
+        orch.client_api.fetch_subentities = AsyncMock(
+            return_value={
+                "attack_techniques": [named_technique, nameless_technique],
+            }
+        )
+
+        fake_stix = MagicMock()
+        fake_stix.type = "tool"
+        orch.converter.convert_software_toolkit_to_stix = MagicMock(
+            return_value=[fake_stix]
+        )
+        orch.converter.convert_subentities_to_stix_with_linking = MagicMock(
+            return_value=[]
+        )
+
+        mock_bp = MagicMock()
+        mock_bp.flush.return_value = None
+        mock_bp.config.batch_size = 9999
+        mock_bp.config.work_name_template = "Batch #1 (~ 0/0 software toolkits)"
+        mock_bp.get_current_batch_size.return_value = 0
+        orch.batch_processor = mock_bp
+
+        with caplog.at_level(
+            logging.WARNING, logger="test_orchestrator_software_toolkit"
+        ):
+            await orch.run(initial_state=None)
+
+        call_kwargs = orch.converter.convert_subentities_to_stix_with_linking.call_args
+        attack_technique_data = call_kwargs.kwargs["subentities"]["attack_techniques"][
+            0
+        ]
+        assert attack_technique_data.ids == ["T1046", "T1055"]
+        assert attack_technique_data.names == {"T1046": "Network Service Discovery"}
+        warnings = [
+            record
+            for record in caplog.records
+            if record.getMessage().startswith(
+                "Skipping attack techniques without a name"
+            )
+        ]
+        assert len(warnings) == 1
+        assert warnings[0].levelno == logging.WARNING
+        assert "'attack_technique_without_name_count': 1" in warnings[0].getMessage()
 
     @pytest.mark.asyncio
     async def test_given_api_raises_when_run_then_flush_still_called(self):

@@ -1,10 +1,11 @@
 import sys
 
 import stix2
-from connector.client_api import ConnectorClient
+from connector.client_api import ConnectorClient, IncidentsFetchError
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import detect_ip_version, find_matching_file_ids, format_date
+from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
 
@@ -332,6 +333,9 @@ class MicrosoftDefenderIncidentsConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        # Set before the try: an interruption before initiate_work must reach a clean stop
+        work_id = None
+        last_incident_timestamp = None
         try:
             last_incident_timestamp = self._get_last_incident_date()
             if last_incident_timestamp:
@@ -352,20 +356,48 @@ class MicrosoftDefenderIncidentsConnector:
             # A token is valid for 1 hour so we get a fresh one on every run
             self.client.set_oauth_token()
 
-            # Get incidents
-            stix_objects = []
-            incidents = self.client.get_incidents(last_incident_timestamp)
+            # Resolve the optional Defender status mapping into Status ids once per run
+            self.converter_to_stix.refresh_workflow_ids()
 
-            # Incidents are listed from oldest to most recent.
-            for incident in reversed(incidents):
+            # Get incidents. If a page fails, the incidents fetched so far are still sent (their ids are
+            # deterministic) but the state does not move: older incidents of the window were never fetched.
+            fetch_complete = True
+            try:
+                incidents = self.client.get_incidents(last_incident_timestamp)
+            except IncidentsFetchError as err:
+                fetch_complete = False
+                incidents = err.incidents
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Incident fetch incomplete, the state will not be updated in this run.",
+                    {
+                        "error": str(err),
+                        "fetched_incidents": len(incidents),
+                        "last_incident_timestamp": last_incident_timestamp,
+                    },
+                )
+
+            # Graph lists incidents newest first and this API documents no $orderby: the batch is sorted here
+            # (oldest first) and the state is the maximum lastUpdateDateTime, never the last element.
+            incidents = sorted(
+                incidents, key=lambda incident: parse(incident["lastUpdateDateTime"])
+            )
+            stix_objects = []
+            batch_last_timestamp = None
+            for incident in incidents:
                 incident_stix_objects = self._extract_intelligence(incident)
                 stix_objects.extend(incident_stix_objects)
-                last_incident_timestamp = format_date(incident["lastUpdateDateTime"])
+                incident_timestamp = format_date(incident["lastUpdateDateTime"])
+                if (
+                    batch_last_timestamp is None
+                    or incident_timestamp > batch_last_timestamp
+                ):
+                    batch_last_timestamp = incident_timestamp
 
             if not stix_objects:
-                self.helper.connector_logger.info(
-                    f"{self.helper.connect_name} connector successfully run, no new data to send."
-                )
+                if fetch_complete:
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name} connector successfully run, no new data to send."
+                    )
                 return
 
             # Initiate a new work
@@ -386,14 +418,22 @@ class MicrosoftDefenderIncidentsConnector:
                 cleanup_inconsistent_bundle=True,
             )
 
-            self._set_last_incident_date(last_incident_timestamp)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_incident_timestamp as "
-                + str(last_incident_timestamp)
-            )
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
+            if fetch_complete and batch_last_timestamp is not None:
+                last_incident_timestamp = batch_last_timestamp
+                self._set_last_incident_date(last_incident_timestamp)
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_incident_timestamp as "
+                    + str(last_incident_timestamp)
+                )
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info(message)
+            else:
+                message = (
+                    f"{self.helper.connect_name} connector run with an incomplete incident fetch, "
+                    f"last_incident_timestamp kept at {last_incident_timestamp}"
+                )
+                self.helper.api.work.to_processed(work_id, message, in_error=True)
+                self.helper.connector_logger.warning(message)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",

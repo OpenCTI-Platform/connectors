@@ -217,3 +217,27 @@ def test_should_create_client_with_configured_ssl_verification(
         a1000_mock.call_args.kwargs["verify"]
         is config.reversinglabs_spectra_analyze.ssl_verify
     )
+
+
+def test_should_refuse_entity_with_one_tlp_above_max_tlp():
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
+    entity = {
+        "objectMarking": [
+            {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+            {"definition_type": "TLP", "definition": "TLP:AMBER"},
+        ]
+    }
+
+    with pytest.raises(ValueError, match="TLP of the observable is greater"):
+        connector._check_tlp_markings(entity)
+
+
+def test_should_allow_entity_without_tlp():
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
+    entity = {"objectMarking": [{"definition_type": "PAP", "definition": "PAP:RED"}]}
+
+    connector._check_tlp_markings(entity)

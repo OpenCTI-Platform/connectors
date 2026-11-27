@@ -1,5 +1,6 @@
 from connector.extractor import ExtractedIOC, extract_iocs
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import (
     URL,
     DomainName,
@@ -33,15 +34,16 @@ class IOCExtractorConnector:
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> None:
         """Extract TLP from entity and check against max_tlp config."""
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp):
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             raise ValueError(
-                f"Do not send any data, TLP of the observable ({tlp}) is greater "
-                f"than MAX TLP ({max_tlp})"
+                f"Do not send any data, TLP of the observable ({', '.join(tlp_levels)}) "
+                f"is greater than MAX TLP ({max_tlp})"
             )
 
     @staticmethod

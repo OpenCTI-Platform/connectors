@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from connector.const import SCORE_STEPS
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 from shadowtrackr_client import ShadowTrackrClient
 
@@ -61,7 +62,6 @@ class ShadowTrackrConnector:
         )
 
         # Define variables
-        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.replace_with_lower_score = (
             self.config.shadowtrackr.replace_with_lower_score
         )
@@ -103,17 +103,16 @@ class ShadowTrackrConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
-        tlp = None
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
+        max_tlp = self.config.connector.max_tlp
 
-        valid_max_tlp = self.helper.check_max_tlp(tlp, self.max_tlp)
-
-        if not valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, max_tlp):
             msg = (
-                f"[ShadowTrackr] Do not send any data, TLP of the observable '{tlp}' is greater than MAX TLP '{self.max_tlp}',"
+                f"[ShadowTrackr] Do not send any data, TLP of the observable '{', '.join(tlp_levels)}' is greater than MAX TLP '{max_tlp}',"
                 "the connector does not has access to this observable, please check the group of the connector user"
             )
             raise ValueError(msg)

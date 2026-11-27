@@ -10,7 +10,6 @@
 """
 
 import base64
-import ipaddress
 import json
 from collections import OrderedDict
 from datetime import datetime
@@ -20,6 +19,8 @@ import requests
 import stix2
 from stix2 import Report
 from stix2.properties import ListProperty, ReferenceProperty
+
+from .utils import is_ip_v4_address, is_ip_v6_address
 
 TLP_MAP = {
     "white": stix2.TLP_WHITE,
@@ -243,7 +244,7 @@ class Indicator(RFStixEntity):
 
         # If there are related entities
         if related_entities_links and len(related_entities_links) > 0:
-            related_entities_hits = related_entities_links["hits"]
+            related_entities_hits = related_entities_links.get("hits")
             if (
                 related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
             ):  # Sometimes, hits is not empty but sections is
@@ -295,20 +296,12 @@ class IPAddress(Indicator):
     """Converts IP address to IP indicator and observable"""
 
     def is_ipv6(self):
-        """Determine whether the provided IP string is IPv6."""
-        try:
-            ipaddress.IPv6Address(self.name)
-            return True
-        except ipaddress.AddressValueError:
-            return False
+        """Determine whether the provided IP string is an IPv6 address or range."""
+        return is_ip_v6_address(self.name)
 
     def is_ipv4(self):
-        """Determine whether the provided IP string is IPv4."""
-        try:
-            ipaddress.IPv4Address(self.name)
-            return True
-        except ipaddress.AddressValueError:
-            return False
+        """Determine whether the provided IP string is an IPv4 address or range."""
+        return is_ip_v4_address(self.name)
 
     def _create_pattern(self):
         if self.is_ipv6() is True:
@@ -317,7 +310,7 @@ class IPAddress(Indicator):
             return f"[ipv4-addr:value = '{self.name}']"
         else:
             raise ValueError(
-                f"'This pattern value {self.name}' is not a valid IPv4 or IPv6 address."
+                f"'This pattern value {self.name}' is not a valid IPv4 or IPv6 address or range."
             )
 
     def _create_obs(self):
@@ -335,7 +328,7 @@ class IPAddress(Indicator):
             )
         else:
             raise ValueError(
-                f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address."
+                f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address or range."
             )
 
     def to_stix_bundle(self):

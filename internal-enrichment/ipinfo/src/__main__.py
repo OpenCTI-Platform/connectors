@@ -5,6 +5,7 @@ from typing import Dict
 import pycountry
 import requests
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import (
     Location,
     OpenCTIConnectorHelper,
@@ -134,12 +135,15 @@ class IpInfoConnector:
         opencti_entity = data["enrichment_entity"]
 
         # Extract TLP and validate
-        tlp = "TLP:CLEAR"
-        for marking_definition in opencti_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

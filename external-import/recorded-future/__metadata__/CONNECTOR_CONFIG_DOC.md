@@ -30,7 +30,12 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES | `boolean` |  | boolean | `false` | Whether to also import the context entities of analyst notes, i.e. entities referenced in the note's context but not tagged as primary. Disabled by default as they can add a lot of noise and false positives. |
 | RECORDED_FUTURE_PULL_RISK_LIST | `boolean` |  | boolean | `false` | Whether to import Recorded Future risk lists. |
 | RECORDED_FUTURE_RISKRULES_AS_LABEL | `boolean` |  | boolean | `false` | Whether to import risk rules as labels in OpenCTI. |
-| RECORDED_FUTURE_RISK_LIST_THRESHOLD | `integer` |  | `0 < x ` | `70` | Minimum risk score threshold (0-100) for importing risk list entities. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD | `integer` |  | `0 <= x <= 100` | `70` | Minimum risk score (0-100) for importing risk list entities. Applies to every risk list without a threshold of its own (`risk_list_threshold_<list>`). Set to 0 to import all entities. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP | `integer` |  | `0 <= x <= 100` | `null` | Minimum risk score (0-100) for the IP address risk list. Overrides `risk_list_threshold` for this list when set. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN | `integer` |  | `0 <= x <= 100` | `null` | Minimum risk score (0-100) for the domain risk list. Overrides `risk_list_threshold` for this list when set. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL | `integer` |  | `0 <= x <= 100` | `null` | Minimum risk score (0-100) for the URL risk list. Overrides `risk_list_threshold` for this list when set. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH | `integer` |  | `0 <= x <= 100` | `null` | Minimum risk score (0-100) for the hash risk list. Overrides `risk_list_threshold` for this list when set. |
+| RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY | `integer` |  | `0 <= x <= 100` | `null` | Minimum risk score (0-100) for the vulnerability risk list. Overrides `risk_list_threshold` for this list when set. |
 | RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES | `array` |  | Length: `string >= 1` | `["Malware", "Hash", "URL", "Threat Actor", "MitreAttackIdentifier"]` | Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier. |
 | RECORDED_FUTURE_PULL_THREAT_MAPS | `boolean` |  | boolean | `false` | Whether to import Threat Actors and Malware from Recorded Future threat maps. |
 | ALERT_ENABLE | `boolean` |  | boolean | `false` | Whether to enable fetching Recorded Future alerts. |

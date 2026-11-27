@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [RST Noise Control Configuration](#rst-noise-control-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -50,37 +47,13 @@ Key features:
 ---
 
 ## Configuration
-Configuring the connector is straightforward. The minimal setup requires entering the RST Cloud API key and specifying the OpenCTI connection settings. 
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,Domain-Name,Url,StixFile,indicator` |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### RST Noise Control Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `rst_noise_control_api_key` | `RST_NOISE_CONTROL_API_KEY` | Yes | RST Cloud API key |
-| `rst_noise_control_base_url` | `RST_NOISE_CONTROL_BASE_URL` | No | API base URL (default: https://api.rstcloud.net/v1) |
-| `rst_noise_control_max_tlp` | `RST_NOISE_CONTROL_MAX_TLP` | No | Maximum TLP (default: TLP:AMBER+STRICT) |
-| `rst_noise_control_update_confidence` | `RST_NOISE_CONTROL_UPDATE_CONFIDENCE` | No | Update confidence based on result |
-| `rst_noise_control_update_score` | `RST_NOISE_CONTROL_UPDATE_SCORE` | No | Update score based on result |
-| `rst_noise_control_change_action_score_change` | `RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE` | No | Score reduction for "Change" action (default: 10) |
-| `rst_noise_control_drop_action_score_change` | `RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE` | No | Score reduction for "Drop" action (default: 50) |
-| `rst_noise_control_drop_action_detection_flag` | `RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG` | No | Unset detection flag on Drop (default: true) |
+In `config.yml`, the connector parameters go in the `rst_noise_control` section (the legacy `rst-noise-control` section name is still accepted).
 
 ---
 
@@ -101,25 +74,14 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=RST Noise Control
-      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
-      - CONNECTOR_AUTO=false
-      - CONNECTOR_LOG_LEVEL=error
-      - RST_NOISE_CONTROL_BASE_URL=https://api.rstcloud.net/v1
       - RST_NOISE_CONTROL_API_KEY=ChangeMe
-      - RST_NOISE_CONTROL_MAX_TLP=TLP:AMBER+STRICT
-      - RST_NOISE_CONTROL_UPDATE_CONFIDENCE=true
-      - RST_NOISE_CONTROL_UPDATE_SCORE=true
-      - RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE=10
-      - RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE=50
-      - RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG=true
     restart: always
 ```
 
 ### Manual Deployment
 
 1. Clone the repository
-2. Copy `config.yml.sample` to `config.yml` and configure
+2. Copy `src/config.yml.sample` to `src/config.yml` and configure
 3. Install dependencies: `pip install -r requirements.txt`
 4. Run the connector
 

@@ -1,5 +1,6 @@
 """Tests for the CYNA connector orchestration logic."""
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -12,13 +13,13 @@ def make_config(**overrides):
     cyna = SimpleNamespace(
         api_base_url="https://cyna.example.com",
         api_key=SecretStr("secret"),
-        import_interval=1,
         page_size=25,
         max_pages=100,
     )
     for key, value in overrides.items():
         setattr(cyna, key, value)
-    return SimpleNamespace(ctm360_cyna=cyna)
+    connector = SimpleNamespace(duration_period=timedelta(seconds=1))
+    return SimpleNamespace(connector=connector, ctm360_cyna=cyna)
 
 
 @pytest.fixture

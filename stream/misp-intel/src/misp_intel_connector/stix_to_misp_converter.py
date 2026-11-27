@@ -10,11 +10,31 @@ import re
 import traceback
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from pymisp import MISPEvent, MISPObject, MISPSighting
 
 from .event_tags import build_marking_lookup
+
+EVENT_REPORT_NAME_MAX_LENGTH = 255
+
+
+def description_report_uuid(event_uuid: str) -> str:
+    """
+    Return the stable UUID of the event report holding the container description.
+
+    The UUID only depends on the MISP event UUID, so the same report is found
+    again (and updated in place) each time the container is converted.
+
+    :param event_uuid: UUID of the MISP event
+    :return: UUID string of the description event report
+    """
+    return str(
+        uuid5(
+            NAMESPACE_URL,
+            f"opencti:misp-intel:container-description:{event_uuid}",
+        )
+    )
 
 
 class STIXtoMISPConverter:
@@ -440,13 +460,17 @@ class STIXtoMISPConverter:
         # Set analysis status
         event.analysis = 2  # Completed
 
-        # Add description if available
-        if "description" in container:
-            event.add_attribute(
-                type="comment",
-                value=container["description"],
-                category="Other",
-                comment="Event description",
+        # Export the description as a markdown event report
+        description = (container.get("description") or "").strip()
+        if description:
+            # pymisp strips surrounding whitespace on serialization and MISP
+            # limits the report name to 255 characters: normalize both here so
+            # the stored values match what is compared on later updates
+            event.add_event_report(
+                name=str(event.info).strip()[:EVENT_REPORT_NAME_MAX_LENGTH].strip(),
+                content=description,
+                uuid=description_report_uuid(event.uuid),
+                distribution=self.config.misp.distribution_level,
             )
 
         # Process labels as tags

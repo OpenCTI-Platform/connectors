@@ -8,18 +8,18 @@ from typing import TYPE_CHECKING, Any, cast
 
 import stix2
 import yaml
+from connectors_sdk.models import TLPMarking
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
     CrowdStrikeAPIError,
     create_organization,
-    get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.attack_lookup import (
-    AttackTechniqueLookup,
     AttackTechniqueLookupError,
+    CustomAttackTechniqueLookup,
+    GithubAttackTechniqueLookup,
 )
-from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -66,9 +66,7 @@ class CrowdStrike:
         self.helper = helper
 
         scopes = self.config.crowdstrike.scopes
-        tlp_marking = self._convert_tlp_to_marking_definition(
-            self.config.crowdstrike.tlp
-        )
+        tlp_marking = TLPMarking(level=self.config.crowdstrike.tlp).to_stix2_object()
 
         create_observables = self.config.crowdstrike.create_observables
         create_indicators = self.config.crowdstrike.create_indicators
@@ -121,19 +119,24 @@ class CrowdStrike:
         # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
         self.attack_lookup = None
         try:
-            attack_version = self.config.crowdstrike.attack_version
-            attack_url_override = (
-                str(self.config.crowdstrike.attack_enterprise_url)
-                if self.config.crowdstrike.attack_enterprise_url
-                else None
-            )
-            self.attack_lookup = AttackTechniqueLookup(
-                attack_version=attack_version,
-                enterprise_attack_url=attack_url_override,
-            )
+            attack_enterprise_url = self.config.crowdstrike.attack_enterprise_url
+            if attack_enterprise_url:
+                self.attack_lookup = CustomAttackTechniqueLookup(
+                    enterprise_attack_url=str(attack_enterprise_url)
+                )
+            else:
+                self.attack_lookup = GithubAttackTechniqueLookup(
+                    attack_version=self.config.crowdstrike.attack_version
+                )
+
+            # Sources that failed before the one that provided the dataset (e.g. a missing versioned file).
+            for retrieval_error in self.attack_lookup.retrieval_errors:
+                self.helper.log_warning(
+                    f"ATT&CK Enterprise dataset source skipped: {retrieval_error}"
+                )
 
             self.helper.log_info(
-                f"Loaded ATT&CK Enterprise dataset ({attack_version}) from {self.attack_lookup.enterprise_attack_url} "
+                f"Loaded ATT&CK Enterprise dataset from {self.attack_lookup.enterprise_attack_url} "
                 f"with {len(self.attack_lookup.attack_techniques)} techniques"
             )
         except AttackTechniqueLookupError as e:
@@ -297,14 +300,6 @@ class CrowdStrike:
         return "_".join(yaml_path).upper()
 
     @classmethod
-    def _convert_tlp_to_marking_definition(
-        cls, tlp_value: str | None
-    ) -> stix2.MarkingDefinition:
-        if tlp_value is None:
-            return DEFAULT_TLP_MARKING_DEFINITION
-        return get_tlp_string_marking_definition(tlp_value)
-
-    @classmethod
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
@@ -395,12 +390,8 @@ class CrowdStrike:
         friendly_name = (
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
-        connect_id = self.helper.connect_id
-        if not connect_id:
-            raise ValueError("OpenCTI helper connect_id is not set")
-
         work_id = self.helper.api.work.initiate_work(
-            cast(str, connect_id), friendly_name
+            self.config.connector.id, friendly_name
         )
         work_id = cast(str, work_id)
 

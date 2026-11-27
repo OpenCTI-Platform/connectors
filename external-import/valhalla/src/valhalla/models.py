@@ -100,6 +100,10 @@ class StixObjects(BaseModel):
     type: str
     id: str
     external_references: List[ExternalReference] | None = None
+    revoked: bool | None = None
+    relationship_type: str | None = None
+    source_ref: str | None = None
+    target_ref: str | None = None
 
 
 class StixEnterpriseAttack(BaseModel):

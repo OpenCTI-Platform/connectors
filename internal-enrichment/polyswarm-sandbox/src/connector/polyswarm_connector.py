@@ -16,6 +16,7 @@ from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.sandbox_processor import SandboxProcessor
 from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 
 
@@ -35,7 +36,6 @@ class PolySwarmConnector:
         self._local = threading.local()
 
         ps = config.polyswarm
-        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
         self.replace_with_lower_score = ps.replace_with_lower_score
 
         self.polyswarm_client = PolySwarmClient(
@@ -1236,10 +1236,9 @@ class PolySwarmConnector:
                 )
 
             # ── TLP CHECK (#38)
-            max_tlp = self.max_tlp
+            max_tlp = self.config.connector.max_tlp
             if max_tlp and stix_objects:
-                # check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of
-                # marking ids, so check each TLP marking on the entity.
+                # Check the TLP definitions ("TLP:GREEN"), not the marking ids
                 tlp_levels = [
                     m["definition"]
                     for m in opencti_entity.get("objectMarking") or []
@@ -1247,8 +1246,8 @@ class PolySwarmConnector:
                     and m.get("definition_type") == "TLP"
                     and m.get("definition")
                 ]
-                if any(
-                    not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels
+                if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                    tlp_levels, max_tlp
                 ):
                     self.helper.connector_logger.info(
                         f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"

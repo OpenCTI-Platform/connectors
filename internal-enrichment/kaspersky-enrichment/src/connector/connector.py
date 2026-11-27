@@ -5,6 +5,7 @@ from connector.use_cases.enrich_file import FileEnricher
 from connector.use_cases.enrich_ipv4 import Ipv4Enricher
 from connector.use_cases.enrich_url import UrlEnricher
 from connector.utils import entity_in_scope
+from connectors_sdk import InternalEnrichmentConnector
 from kaspersky_client import KasperskyClient
 from pycti import OpenCTIConnectorHelper
 
@@ -131,16 +132,17 @@ class KasperskyConnector:
             observable = data["stix_entity"]
             obs_type = opencti_entity["entity_type"]
 
-            tlp = "TLP:CLEAR"
-            for object_marking in opencti_entity["objectMarking"]:
-                if object_marking["definition_type"] == "TLP":
-                    tlp = object_marking["definition"]
+            tlp_levels = [
+                object_marking["definition"]
+                for object_marking in opencti_entity["objectMarking"]
+                if object_marking["definition_type"] == "TLP"
+            ]
 
-            if not self.helper.check_max_tlp(
-                tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, self.config.connector.max_tlp
             ):
-                message = f"""Do not send any data, TLP of the entity is ({tlp}), which
-                  is greater than MAX TLP: (TLP:{self.config.connector.max_tlp.upper()})"""
+                message = f"""Do not send any data, TLP of the entity is ({", ".join(tlp_levels)}), which
+                  is greater than MAX TLP: ({self.config.connector.max_tlp})"""
                 self.helper.connector_logger.warning(
                     message,
                     {

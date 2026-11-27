@@ -66,5 +66,5 @@ def test_pro_client_get_victims_uses_victims_endpoint_with_year_and_month():
 
     # Then
     client._get.assert_called_once_with(
-        "/victims", params={"year": year, "month": month}
+        "/victims/", params={"year": year, "month": month}
     )

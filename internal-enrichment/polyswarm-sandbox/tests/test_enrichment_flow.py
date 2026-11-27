@@ -8,8 +8,8 @@ verifies the full pipeline end-to-end with mocked dependencies.
 from unittest.mock import MagicMock, patch
 
 import pytest
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models.enums import TLPLevel
-from pycti import OpenCTIConnectorHelper
 
 from tests.test_connector import make_connector
 
@@ -41,8 +41,8 @@ def _opencti_entity():
 
 
 # ── TLP check ───────────────────────────────────────────────────────────────
-# make_connector() wires pycti's real check_max_tlp, so these tests run against
-# its actual contract: one TLP definition such as "TLP:GREEN" (#7955).
+# The connector checks the TLP definitions (such as "TLP:GREEN") with the SDK
+# helper, which uses pycti's real check_max_tlp (#7955).
 
 
 def _marked(*definitions):
@@ -73,25 +73,12 @@ def _reaches_download(c, opencti_entity):
 
 
 class TestTlpCheck:
-    """check_max_tlp must receive a TLP name, not the list of marking ids."""
-
-    def test_real_helper_rejects_a_list_of_marking_ids(self):
-        """Guards the contract the old code got wrong."""
-        with pytest.raises(AttributeError):
-            OpenCTIConnectorHelper.check_max_tlp(
-                ["marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"],
-                "TLP:AMBER",
-            )
+    """The TLP definitions of the entity are checked, not its marking ids."""
 
     @pytest.mark.parametrize("level", list(TLPLevel))
     def test_every_configurable_max_tlp_is_accepted_by_the_helper(self, level):
-        """Mirrors how __init__ formats CONNECTOR_MAX_TLP for check_max_tlp."""
-        max_tlp = f"TLP:{level.upper()}"
-        assert OpenCTIConnectorHelper.check_max_tlp("TLP:CLEAR", max_tlp)
-
-    def test_connector_uses_the_real_helper(self):
-        c = make_connector()
-        assert c.helper.check_max_tlp is OpenCTIConnectorHelper.check_max_tlp
+        """Every CONNECTOR_MAX_TLP value can be given to the SDK TLP check."""
+        assert InternalEnrichmentConnector.is_entity_tlp_allowed(["TLP:CLEAR"], level)
 
     @pytest.mark.parametrize("tlp", ["TLP:CLEAR", "TLP:WHITE", "TLP:GREEN"])
     def test_marked_artifact_within_max_tlp_is_enriched(self, tlp):

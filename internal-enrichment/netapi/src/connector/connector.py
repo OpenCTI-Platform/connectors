@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 import idna
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import Reference, TLPMarking
 from netapi_client import NetAPIClient
 from pycti import MarkingDefinition as PyctiMarkingDefinition
@@ -139,9 +140,14 @@ class NetAPIConnector:
 
     def _check_tlp(self, tlps: list[str]) -> None:
         """Refuse an observable whose TLP is above CONNECTOR_MAX_TLP."""
-        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        max_tlp = self.config.connector.max_tlp
         for tlp in tlps:
-            if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
+            # One TLP at a time, so that the message names the TLP refused
+            is_readable = isinstance(tlp, str)
+            if (
+                not is_readable
+                or not InternalEnrichmentConnector.is_entity_tlp_allowed([tlp], max_tlp)
+            ):
                 raise EnrichmentSkipped(
                     f"Observable is {tlp}, above the maximum "
                     f"{max_tlp}: not sent to NetAPI"

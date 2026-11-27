@@ -122,12 +122,12 @@ All variables are required unless a default is listed.
 
 | Variable                    | Description                                              | Default           |
 |-----------------------------|----------------------------------------------------------|-------------------|
-| `CONNECTOR_ID`              | Unique UUIDv4 for this connector instance.               | —                 |
+| `CONNECTOR_ID`              | Unique UUIDv4 for this connector instance.               | `6c7aa0f8-dd1b-419b-bb51-e8502c08c056` |
 | `CONNECTOR_NAME`            | Display name in OpenCTI.                                 | `CTM360-CYNA`     |
-| `CONNECTOR_SCOPE`           | Connector scope label (required; the provided samples use `ctm360-cyna`). | —    |
+| `CONNECTOR_SCOPE`           | Connector scope label. | `ctm360-cyna` |
 | `CONNECTOR_TYPE`            | Must be `EXTERNAL_IMPORT`.                               | `EXTERNAL_IMPORT` |
 | `CONNECTOR_LOG_LEVEL`       | Logging verbosity: `debug`, `info`, `warning`, `error` (the provided samples set `info`). | `error`           |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration required by the SDK base config (the provided samples set `PT24H`); runtime scheduling actually uses `CTM360_CYNA_IMPORT_INTERVAL`. | —             |
+| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration to wait between two import cycles, for example `PT24H`. | `PT24H`           |
 
 ### CTM360 CYNA settings
 
@@ -135,9 +135,20 @@ All variables are required unless a default is listed.
 |-----------------------------|-------------------------------------------------------------------------|------------------------------|
 | `CTM360_CYNA_API_BASE_URL`  | CYNA API base URL.                                                      | `https://cyna.ctm360.com`    |
 | `CTM360_CYNA_API_KEY`       | API key for CYNA authentication. **Required.**                          | —                            |
-| `CTM360_CYNA_IMPORT_INTERVAL` | Seconds between import cycles (used by the connector's internal loop). | `86400` (24 hours)           |
+| `CTM360_CYNA_IMPORT_INTERVAL` | **Deprecated**, use `CONNECTOR_DURATION_PERIOD`. Seconds between import cycles. It is only read when `CONNECTOR_DURATION_PERIOD` is not set. | —                            |
 | `CTM360_CYNA_PAGE_SIZE`     | Number of news items fetched per API page.                              | `25`                         |
 | `CTM360_CYNA_MAX_PAGES`     | Maximum pages to fetch per import cycle (safety cap).                   | `100`                        |
+
+### Upgrade note
+
+`CONNECTOR_DURATION_PERIOD` was previously required but ignored: the loop used
+`CTM360_CYNA_IMPORT_INTERVAL`. It now drives the loop and takes precedence over
+`CTM360_CYNA_IMPORT_INTERVAL`. The provided samples set `CONNECTOR_DURATION_PERIOD`
+to `PT24H`, so if you tuned the interval and kept that value, the connector goes
+back to one import per day.
+
+Move your value to `CONNECTOR_DURATION_PERIOD` (for example `PT1H` instead of
+`CTM360_CYNA_IMPORT_INTERVAL=3600`) and remove `CTM360_CYNA_IMPORT_INTERVAL`.
 
 ---
 
@@ -156,7 +167,7 @@ Once the connector is running it will:
    objects and `related-to` relationships.
 6. Send the STIX 2.1 bundle to OpenCTI via `send_stix2_bundle`.
 7. Persist `last_run` in connector state.
-8. Sleep for `CTM360_CYNA_IMPORT_INTERVAL` seconds before the next cycle.
+8. Sleep for `CONNECTOR_DURATION_PERIOD` before the next cycle.
 
 Import progress is visible in OpenCTI under **Data > Ingestion > Connectors** by
 clicking the connector and reviewing its work queue.

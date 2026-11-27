@@ -356,3 +356,259 @@ class TestRiskListRunNonVuln:
 
         add_labels_call = mock_stix_obj.add_labels.call_args[0][0]
         assert "No Score Rule" in add_labels_call
+
+
+# ── Tests for RiskList.run() state handling ───────────────────────────────────
+
+
+# Scenario: keys saved by other modules while the risk lists run are kept
+def test_run_keeps_state_keys_saved_by_other_modules_meanwhile():
+    helper = _mock_helper()
+    state_at_start = {
+        "last_risk_lists_run": "2026-11-01 00:00:00",
+        "last_analyst_notes_run": "2026-11-01 00:00:00",
+    }
+    # Analyst Notes and Threat Maps run in parallel threads and save the state
+    # while the risk lists are being pulled.
+    state_before_save = {
+        "last_risk_lists_run": "2026-11-01 00:00:00",
+        "last_analyst_notes_run": "2026-11-05 09:00:00",
+        "last_threat_maps_run": "2026-11-05 09:00:00",
+    }
+    helper.get_state.side_effect = [state_at_start, state_before_save]
+    risk_list = _build_risk_list(helper=helper)
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", {}):
+        risk_list.run()
+
+    helper.connector_logger.error.assert_not_called()
+    saved_state = helper.set_state.call_args.kwargs["state"]
+    assert saved_state["last_analyst_notes_run"] == "2026-11-05 09:00:00"
+    assert saved_state["last_threat_maps_run"] == "2026-11-05 09:00:00"
+    assert saved_state["last_risk_lists_run"] != "2026-11-01 00:00:00"
+
+
+# ── Tests for per-row error handling in RiskList.run() ───────────────────────
+
+
+def _risk_list_row(name):
+    return {
+        "Name": name,
+        "Risk": "80",
+        "FirstSeen": "2025-01-01T00:00:00.000Z",
+        "LastSeen": "2025-04-01T00:00:00.000Z",
+        "RuleCriticality": "[3]",
+        "RiskRules": '["Test Rule"]',
+        "Links": "{}",
+    }
+
+
+def _mock_stix_obj():
+    stix_obj = MagicMock()
+    stix_obj.to_stix_bundle.return_value = MagicMock(
+        objects=[1], serialize=MagicMock(return_value="{}")
+    )
+    return stix_obj
+
+
+# Scenario: one row that fails to convert does not abort the rest of the risk list
+def test_failing_row_is_skipped_and_remaining_rows_are_processed():
+    helper = _mock_helper()
+    risk_list = _build_risk_list(helper=helper)
+
+    bad_obj = _mock_stix_obj()
+    bad_obj.map_data.side_effect = KeyError("hits")
+    good_obj = _mock_stix_obj()
+    ip_mapper = {
+        "IP": {
+            "class": MagicMock(side_effect=[bad_obj, good_obj]),
+            "path": "/public/opencti/default_ip.csv",
+        }
+    }
+    rows = [_risk_list_row("1.1.1.1"), _risk_list_row("2.2.2.2")]
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", ip_mapper), patch(
+        "csv.DictReader", return_value=iter(rows)
+    ):
+        risk_list.run()
+
+    # The good row is still sent and the run completes
+    helper.send_stix2_bundle.assert_called_once()
+    helper.api.work.to_processed.assert_called_once()
+    helper.set_state.assert_called_once()
+    assert "last_risk_lists_run" in helper.set_state.call_args.kwargs["state"]
+    # The bad row is reported as a warning, not as a run-level error
+    helper.connector_logger.warning.assert_called_once()
+    assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
+    helper.connector_logger.error.assert_not_called()
+
+
+# Scenario: a row with malformed fields is skipped and the next row is still sent
+@pytest.mark.parametrize(
+    "bad_fields",
+    [
+        {"RuleCriticality": "[invalid]"},
+        {"RuleCriticality": "[3,3]", "RiskRules": '["Only one rule"]'},
+    ],
+)
+def test_row_with_malformed_fields_is_skipped_and_next_row_is_processed(bad_fields):
+    helper = _mock_helper()
+    risk_list = _build_risk_list(helper=helper)
+
+    stix_class = MagicMock(return_value=_mock_stix_obj())
+    ip_mapper = {"IP": {"class": stix_class, "path": "/public/opencti/default_ip.csv"}}
+    rows = [
+        {**_risk_list_row("1.1.1.1"), **bad_fields},
+        _risk_list_row("2.2.2.2"),
+    ]
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", ip_mapper), patch(
+        "csv.DictReader", return_value=iter(rows)
+    ):
+        risk_list.run()
+
+    # Only the valid row is converted and sent, and the run completes
+    stix_class.assert_called_once()
+    assert stix_class.call_args.args[0] == "2.2.2.2"
+    helper.send_stix2_bundle.assert_called_once()
+    helper.set_state.assert_called_once()
+    helper.connector_logger.warning.assert_called_once()
+    assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
+    helper.connector_logger.error.assert_not_called()
+
+
+# ── Tests for the per risk list score thresholds ─────────────────────────────
+
+
+def _vuln_row(name, risk):
+    return {
+        "Name": name,
+        "Risk": risk,
+        "FirstSeen": "2025-01-01T00:00:00.000Z",
+        "LastSeen": "2025-04-01T00:00:00.000Z",
+        "EvidenceDetails": "",
+    }
+
+
+def _run_ip_and_vuln_lists(
+    risk_list_threshold, risk_list_thresholds, ip_rows, vuln_rows
+):
+    """Run the IP and the vulnerability risk lists, return the names converted per list."""
+    helper = _mock_helper()
+    rfapi = MagicMock()
+    rfapi.check_vul_entitlement.return_value = True
+    risk_list = RiskList(
+        helper=helper,
+        rfapi=rfapi,
+        tlp="white",
+        risk_list_threshold=risk_list_threshold,
+        risklist_related_entities=[],
+        riskrules_as_label=False,
+        risk_list_thresholds=risk_list_thresholds,
+    )
+    ip_class = MagicMock(side_effect=lambda *args, **kwargs: _mock_stix_obj())
+    vuln_class = MagicMock(side_effect=lambda *args, **kwargs: _mock_stix_obj())
+    mapper = {
+        "IpAddress": {"class": ip_class, "path": "/public/opencti/default_ip.csv"},
+        "Vuln": {
+            "class": vuln_class,
+            "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
+        },
+    }
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", mapper), patch(
+        "csv.DictReader", side_effect=[iter(ip_rows), iter(vuln_rows)]
+    ):
+        risk_list.run()
+
+    helper.connector_logger.error.assert_not_called()
+    ip_names = [call.args[0] for call in ip_class.call_args_list]
+    vuln_names = [call.args[0] for call in vuln_class.call_args_list]
+    return ip_names, vuln_names
+
+
+def _ip_row(name, risk):
+    return {**_risk_list_row(name), "Risk": risk}
+
+
+# Scenario: a strict threshold for indicators and no filtering for vulnerabilities
+def test_per_list_threshold_overrides_global_threshold_for_its_list_only():
+    ip_names, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds={"Vuln": 0},
+        ip_rows=[_ip_row("1.1.1.1", "80"), _ip_row("2.2.2.2", "10")],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "80"), _vuln_row("CVE-2025-0002", "0")],
+    )
+
+    # The IP list keeps the global threshold of 70
+    assert ip_names == ["1.1.1.1"]
+    # The vulnerability list uses its own threshold of 0
+    assert vuln_names == ["CVE-2025-0001", "CVE-2025-0002"]
+
+
+# Scenario: a list without a threshold of its own uses the global threshold
+@pytest.mark.parametrize("risk_list_thresholds", [None, {}, {"Vuln": None}])
+def test_global_threshold_applies_when_list_has_no_threshold(risk_list_thresholds):
+    _, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds=risk_list_thresholds,
+        ip_rows=[],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "70"), _vuln_row("CVE-2025-0002", "69")],
+    )
+
+    assert vuln_names == ["CVE-2025-0001"]
+
+
+# Scenario: a list threshold stricter than the global one
+def test_per_list_threshold_can_be_stricter_than_global_threshold():
+    ip_names, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=None,
+        risk_list_thresholds={"IpAddress": 90},
+        ip_rows=[_ip_row("1.1.1.1", "95"), _ip_row("2.2.2.2", "89")],
+        vuln_rows=[_vuln_row("CVE-2025-0001", "5")],
+    )
+
+    assert ip_names == ["1.1.1.1"]
+    # No global threshold: the vulnerability list is not filtered
+    assert vuln_names == ["CVE-2025-0001"]
+
+
+# Scenario: a threshold of 0 also keeps rows with an empty or non-numeric risk
+def test_zero_threshold_keeps_rows_without_numeric_risk():
+    _, vuln_names = _run_ip_and_vuln_lists(
+        risk_list_threshold=70,
+        risk_list_thresholds={"Vuln": 0},
+        ip_rows=[],
+        vuln_rows=[_vuln_row("CVE-2025-0001", ""), _vuln_row("CVE-2025-0002", "n/a")],
+    )
+
+    assert vuln_names == ["CVE-2025-0001", "CVE-2025-0002"]
+
+
+# Scenario: the filtered row is logged with its list, score and threshold
+def test_row_below_threshold_is_logged_with_list_threshold():
+    helper = _mock_helper()
+    risk_list = RiskList(
+        helper=helper,
+        rfapi=MagicMock(),
+        tlp="white",
+        risk_list_threshold=70,
+        risklist_related_entities=[],
+        riskrules_as_label=False,
+        risk_list_thresholds={"IpAddress": 90},
+    )
+
+    bundle = risk_list._row_to_bundle(
+        _ip_row("1.1.1.1", "80"), "IpAddress", {"class": MagicMock()}, None
+    )
+
+    assert bundle is None
+    helper.connector_logger.info.assert_called_once_with(
+        "[RISK LIST] Ignoring object below the risk list threshold",
+        meta={
+            "name": "1.1.1.1",
+            "risk_list": "IpAddress",
+            "risk_score": 80,
+            "risk_score_threshold": 90,
+        },
+    )

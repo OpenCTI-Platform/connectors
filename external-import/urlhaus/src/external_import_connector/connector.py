@@ -62,6 +62,12 @@ class ConnectorURLhaus:
         """
         self.config = config
         self.helper = helper
+        if self.config.urlhaus.has_legacy_csv_url:
+            self.helper.connector_logger.warning(
+                "URLHAUS_CSV_URL points to the retired public download and is "
+                "ignored: the export URL is built from URLHAUS_AUTH_KEY. "
+                "Remove URLHAUS_CSV_URL from the configuration."
+            )
         self.state = ConnectorState()
         self.client = ConnectorClient(self.helper, self.config, self.state)
         self.converter_to_stix = ConverterToStix(
@@ -113,6 +119,7 @@ class ConnectorURLhaus:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+        work_id = None
         try:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
@@ -179,6 +186,12 @@ class ConnectorURLhaus:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            # Report the failure on the work: the state is not updated, so the
+            # next run retries from the same point.
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, f"Connector run failed: {err}", in_error=True
+                )
 
     def run(self) -> None:
         """

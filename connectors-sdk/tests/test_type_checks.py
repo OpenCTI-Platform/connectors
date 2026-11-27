@@ -78,3 +78,23 @@ def test_external_import_generics_type_checks():
         f"Unexpected mypy errors (line, code): {unexpected}\n"
         f"mypy output:\n{output}"
     )
+
+
+def test_internal_enrichment_generics_type_checks():
+    """Test that `mypy` reports exactly the errors marked with `# E:`."""
+    # Given a module with positive cases (no error) and marked negative cases
+    source = TYPE_CHECKS_DIR / "check_internal_enrichment_generics.py"
+    expected = _expected_errors(source)
+    assert expected  # the module must contain negative cases
+
+    # When strict mypy checks it
+    actual, output = _mypy_errors(source)
+
+    # Then every marked rejection is reported and nothing else is
+    missing = sorted(expected - actual)
+    unexpected = sorted(actual - expected)
+    assert not missing and not unexpected, (
+        f"Missing mypy errors (line, code): {missing}\n"
+        f"Unexpected mypy errors (line, code): {unexpected}\n"
+        f"mypy output:\n{output}"
+    )
