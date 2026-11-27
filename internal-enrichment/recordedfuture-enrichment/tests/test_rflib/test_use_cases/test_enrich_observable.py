@@ -230,3 +230,41 @@ def test_enrichment_without_indicator_ignores_invalid_indicator_pattern(risk_sco
     assert not any(
         isinstance(obj, Indicator) and "reilly" in obj.name for obj in octi_objects
     )
+
+
+def test_enrichment_of_ipv6_creates_ipv6_indicator():
+    enricher = make_enricher(threshold=0)
+
+    octi_objects = enricher.process_observable_enrichment(
+        make_enrichment(
+            value="2001:0db8:85a3:0000:0000:8a2e:0370:7334", entity_type="IpAddress"
+        )
+    )
+
+    indicator = next(
+        obj
+        for obj in octi_objects
+        if isinstance(obj, Indicator)
+        and obj.name == "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+    )
+    assert indicator.main_observable_type == "IPv6-Addr"
+
+
+def test_enrichment_twice_gives_the_same_risk_score_note():
+    enricher = make_enricher(threshold=0)
+
+    first_run = enricher.process_observable_enrichment(make_enrichment())
+    second_run = enricher.process_observable_enrichment(make_enrichment())
+
+    first_note = next(
+        obj
+        for obj in first_run
+        if isinstance(obj, Note) and obj.abstract == "Recorded Future Risk Score"
+    )
+    second_note = next(
+        obj
+        for obj in second_run
+        if isinstance(obj, Note) and obj.abstract == "Recorded Future Risk Score"
+    )
+
+    assert first_note.to_stix2_object().id == second_note.to_stix2_object().id

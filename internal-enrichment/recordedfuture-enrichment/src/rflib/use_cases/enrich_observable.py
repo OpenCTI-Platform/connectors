@@ -1,5 +1,4 @@
 from copy import deepcopy
-from datetime import datetime, timezone
 
 from connectors_sdk.models import (
     URL,
@@ -160,7 +159,7 @@ class ObservableEnricher:
                                 score=risk_score,
                                 pattern=f"[ipv6-addr:value = '{entity_value}']",
                                 pattern_type="stix",
-                                main_observable_type="IPv4-Addr",
+                                main_observable_type="IPv6-Addr",
                                 author=self.author,
                             )
                         )
@@ -384,7 +383,7 @@ class ObservableEnricher:
                 octi_notes.append(
                     Note(
                         abstract="Recorded Future Risk Score",
-                        publication_date=datetime.now(tz=timezone.utc),
+                        created=None,
                         content="{}/99".format(observable_enrichment.risk.score),
                         author=self.author,
                     )
@@ -395,7 +394,7 @@ class ObservableEnricher:
                     octi_notes.append(
                         Note(
                             abstract=evidence.rule,
-                            publication_date=evidence.timestamp,
+                            created=evidence.timestamp,
                             content=evidence.evidenceString,
                             author=self.author,
                         )
