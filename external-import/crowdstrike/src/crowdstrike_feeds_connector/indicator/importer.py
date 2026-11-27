@@ -11,7 +11,6 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels
-from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
@@ -33,8 +32,6 @@ class IndicatorImporterConfig(NamedTuple):
     create_observables: bool
     create_indicators: bool
     exclude_types: List[str]
-    report_status: int
-    report_type: str
     default_x_opencti_score: int
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
@@ -44,7 +41,6 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
     indicator_max_age_by_type: Dict[str, Optional[timedelta]]
-    no_file_trigger_import: bool
     scopes: set[str]
     attack_lookup: Optional[AttackTechniqueLookup]
     max_records_per_run: Optional[int] = None
@@ -95,8 +91,6 @@ class IndicatorImporter(BaseImporter):
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
         self.exclude_types = config.exclude_types
-        self.report_status = config.report_status
-        self.report_type = config.report_type
         self.default_x_opencti_score = config.default_x_opencti_score
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
@@ -106,7 +100,6 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.indicator_max_age_by_type = config.indicator_max_age_by_type
-        self.no_file_trigger_import = config.no_file_trigger_import
         self.scopes = config.scopes
         # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
         self.attack_lookup = config.attack_lookup
@@ -123,15 +116,9 @@ class IndicatorImporter(BaseImporter):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(
-            config.config, config.helper, self.no_file_trigger_import
-        )
-
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info("Running indicator importer with state: {0}...", state)
-
-        self._clear_report_fetcher_cache()
 
         # Start every run with an empty batch. A previous run that failed
         # mid-batch did not save its state, so its pending indicators are
@@ -192,9 +179,6 @@ class IndicatorImporter(BaseImporter):
         )
 
         return new_state
-
-    def _clear_report_fetcher_cache(self) -> None:
-        self.report_fetcher.clear_cache()
 
     # FalconPy / CrowdStrike caps a single ``QueryIntelIndicatorEntities``
     # call at 5000 records. We pick 1000 over the maximum to keep each
@@ -613,9 +597,6 @@ class IndicatorImporter(BaseImporter):
                 return True
 
         return False
-
-    def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
-        return self.report_fetcher.get_by_codes(codes)
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:

@@ -19,8 +19,6 @@ def _importer(bundle_size: int | None = None) -> IndicatorImporter:
         create_observables=True,
         create_indicators=True,
         exclude_types=[],
-        report_status=0,
-        report_type="threat-report",
         default_x_opencti_score=50,
         indicator_low_score=40,
         indicator_low_score_labels=set(),
@@ -30,7 +28,6 @@ def _importer(bundle_size: int | None = None) -> IndicatorImporter:
         indicator_high_score_labels=set(),
         indicator_unwanted_labels=set(),
         indicator_max_age_by_type={},
-        no_file_trigger_import=True,
         scopes={"indicator"},
         attack_lookup=None,
     )
