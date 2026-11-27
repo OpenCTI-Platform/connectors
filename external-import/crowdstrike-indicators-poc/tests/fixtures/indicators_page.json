@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "query_time": 0.123,
+    "pagination": {"offset": 0, "limit": 1000, "total": 2},
+    "powered_by": "msa-api",
+    "trace_id": "00000000-0000-0000-0000-000000000000"
+  },
+  "errors": [],
+  "resources": [
+    {
+      "id": "domain_evil.example",
+      "indicator": "evil.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1700000000,
+      "last_updated": 1700000005,
+      "_marker": "1700000005aaa0001",
+      "malicious_confidence": "high",
+      "reports": ["CSIT-00001"],
+      "actors": ["EXAMPLEBEAR"],
+      "malware_families": ["ExampleRAT"],
+      "kill_chains": ["C2"],
+      "ip_address_types": [],
+      "domain_types": ["ActorControlled"],
+      "labels": [
+        {"name": "MaliciousConfidence/High", "created_on": 1700000000, "last_valid_on": 1700000005}
+      ],
+      "relations": [
+        {"id": "ip_address_192.0.2.1", "indicator": "192.0.2.1", "type": "ip_address", "created_date": 1700000000, "last_valid_date": 1700000005}
+      ],
+      "targets": ["Government"],
+      "threat_types": ["Criminal"],
+      "vulnerabilities": []
+    },
+    {
+      "id": "hash_sha256_0000000000000000000000000000000000000000000000000000000000000000",
+      "indicator": "0000000000000000000000000000000000000000000000000000000000000000",
+      "type": "hash_sha256",
+      "last_updated": 1700000007,
+      "_marker": "1700000007bbb0002"
+    }
+  ]
+}

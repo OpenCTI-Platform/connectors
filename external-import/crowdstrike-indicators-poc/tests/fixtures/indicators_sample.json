@@ -1,0 +1,1426 @@
+{
+  "meta": {
+    "query_time": 0.1,
+    "pagination": {
+      "offset": 0,
+      "limit": 1000,
+      "total": 11
+    },
+    "powered_by": "msa-api",
+    "trace_id": "00000000-0000-0000-0000-000000000000"
+  },
+  "errors": [],
+  "resources": [
+    {
+      "id": "hash_sha1_a544af123662c61ae0664b4d41457639d24ed7f1",
+      "indicator": "a544af123662c61ae0664b4d41457639d24ed7f1",
+      "type": "hash_sha1",
+      "deleted": false,
+      "published_date": 1791635519,
+      "last_updated": 1791763308,
+      "reports": [],
+      "actors": [],
+      "malware_families": [
+        "ExampleFamily1"
+      ],
+      "kill_chains": [],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "high",
+      "_marker": "179176330800000000000000000000000000000001",
+      "labels": [
+        {
+          "name": "MaliciousConfidence/High",
+          "created_on": 1791635519,
+          "last_valid_on": 1791763308
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "MitreATTCK/Collection/DataFromLocalSystem",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/CredentialsFromPasswordStores",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/InputCapture",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ValidAccounts",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/Reconnaissance/Credentials",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/Polymorphic",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Commodity",
+        "CredentialHarvesting",
+        "InformationStealer",
+        "Polymorphic"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "hash_md5_10c9e2cde0416ca92132df8805841b00",
+      "indicator": "10c9e2cde0416ca92132df8805841b00",
+      "type": "hash_md5",
+      "deleted": false,
+      "published_date": 1791635519,
+      "last_updated": 1791763308,
+      "reports": [],
+      "actors": [],
+      "malware_families": [
+        "ExampleFamily1"
+      ],
+      "kill_chains": [],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "high",
+      "_marker": "179176330800000000000000000000000000000002",
+      "labels": [
+        {
+          "name": "MaliciousConfidence/High",
+          "created_on": 1791635519,
+          "last_valid_on": 1791763308
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "MitreATTCK/Collection/DataFromLocalSystem",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/CredentialsFromPasswordStores",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/InputCapture",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ValidAccounts",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/Reconnaissance/Credentials",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        },
+        {
+          "name": "ThreatType/Polymorphic",
+          "created_on": 1791635521,
+          "last_valid_on": 1791635521
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Commodity",
+        "CredentialHarvesting",
+        "InformationStealer",
+        "Polymorphic"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "url_http://malicious-3.example/path/3?id=fixture",
+      "indicator": "http://malicious-3.example/path/3?id=fixture",
+      "type": "url",
+      "deleted": false,
+      "published_date": 1781374408,
+      "last_updated": 1791770545,
+      "reports": [],
+      "actors": [],
+      "malware_families": [],
+      "kill_chains": [],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "low",
+      "_marker": "179177054500000000000000000000000000000003",
+      "labels": [
+        {
+          "name": "MaliciousConfidence/Low",
+          "created_on": 1781374408,
+          "last_valid_on": 1791770545
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [],
+      "vulnerabilities": []
+    },
+    {
+      "id": "hash_sha256_8c09b37123eb0d9dcec63788149e576b1614ed481ad002512d0a47a09cbf59fc",
+      "indicator": "8c09b37123eb0d9dcec63788149e576b1614ed481ad002512d0a47a09cbf59fc",
+      "type": "hash_sha256",
+      "deleted": false,
+      "published_date": 1791147406,
+      "last_updated": 1791789494,
+      "reports": [],
+      "actors": [
+        "EXAMPLEBEAR"
+      ],
+      "malware_families": [
+        "ExampleFamily1",
+        "ExampleFamily2",
+        "ExampleFamily3"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives",
+        "Installation"
+      ],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "high",
+      "_marker": "179178949400000000000000000000000000000004",
+      "labels": [
+        {
+          "name": "Actor/EXAMPLEBEAR",
+          "created_on": 1791273126,
+          "last_valid_on": 1765037803
+        },
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "MaliciousConfidence/High",
+          "created_on": 1791147406,
+          "last_valid_on": 1791789494
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "Malware/ExampleFamily2",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "Malware/ExampleFamily3",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "MitreATTCK/Collection/DataFromLocalSystem",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/DataObfuscation",
+          "created_on": 1674064562,
+          "last_valid_on": 1674064562
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/NonStandardPort",
+          "created_on": 1674064568,
+          "last_valid_on": 1674064568
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/RemoteFileCopy",
+          "created_on": 1740490889,
+          "last_valid_on": 1777453288
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/StandardNonApplicationLayerProtocol",
+          "created_on": 1674064565,
+          "last_valid_on": 1674064565
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/SymmetricCryptography",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064571
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/WebProtocols",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064559
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/CredentialsFromPasswordStores",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/InputCapture",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/BinaryPadding",
+          "created_on": 1674064552,
+          "last_valid_on": 1674064552
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/HiddenFilesAndDirectories",
+          "created_on": 1674064535,
+          "last_valid_on": 1674064535
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/MatchLegitimateNameOrLocation",
+          "created_on": 1740490889,
+          "last_valid_on": 1740490889
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/ObfuscatedFilesOrInformation",
+          "created_on": 1674064549,
+          "last_valid_on": 1674064549
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/ThreadExecutionHijacking",
+          "created_on": 1674064555,
+          "last_valid_on": 1674064555
+        },
+        {
+          "name": "MitreATTCK/Impact/StoredDataManipulation",
+          "created_on": 1674064574,
+          "last_valid_on": 1674064574
+        },
+        {
+          "name": "MitreATTCK/Impact/TransmittedDataManipulation",
+          "created_on": 1674064576,
+          "last_valid_on": 1674064576
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ReplicationThroughRemovableMedia",
+          "created_on": 1674064510,
+          "last_valid_on": 1674064510
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ValidAccounts",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/LateralMovement/ReplicationThroughRemovableMedia",
+          "created_on": 1674064514,
+          "last_valid_on": 1674064514
+        },
+        {
+          "name": "MitreATTCK/Persistence/HijackExecutionFlow",
+          "created_on": 1674064519,
+          "last_valid_on": 1674064519
+        },
+        {
+          "name": "MitreATTCK/Persistence/RegistryRunKeysStartupFolder",
+          "created_on": 1674064522,
+          "last_valid_on": 1674064522
+        },
+        {
+          "name": "MitreATTCK/Persistence/ShortcutModification",
+          "created_on": 1674064526,
+          "last_valid_on": 1674064526
+        },
+        {
+          "name": "MitreATTCK/PrivilegeEscalation/WindowsService",
+          "created_on": 1674064530,
+          "last_valid_on": 1674064530
+        },
+        {
+          "name": "MitreATTCK/Reconnaissance/Credentials",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Botnet",
+          "created_on": 1674064499,
+          "last_valid_on": 1674064499
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Malware",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064504
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Server",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064496
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/UploadMalware",
+          "created_on": 1674064506,
+          "last_valid_on": 1674064506
+        },
+        {
+          "name": "ThreatType/Botnet",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1791147410,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1791273126,
+          "last_valid_on": 1765037803
+        },
+        {
+          "name": "ThreatType/Downloader",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "ThreatType/Mineware",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/Polymorphic",
+          "created_on": 1791147410,
+          "last_valid_on": 1791273126
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Botnet",
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "Downloader",
+        "InformationStealer",
+        "Mineware",
+        "Polymorphic"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "hash_sha1_0cf6a0048ea1c355212b6630ebcd34f463691845",
+      "indicator": "0cf6a0048ea1c355212b6630ebcd34f463691845",
+      "type": "hash_sha1",
+      "deleted": false,
+      "published_date": 1791147406,
+      "last_updated": 1791789494,
+      "reports": [],
+      "actors": [
+        "EXAMPLEBEAR"
+      ],
+      "malware_families": [
+        "ExampleFamily1",
+        "ExampleFamily2",
+        "ExampleFamily3"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives",
+        "Installation"
+      ],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "high",
+      "_marker": "179178949400000000000000000000000000000005",
+      "labels": [
+        {
+          "name": "Actor/EXAMPLEBEAR",
+          "created_on": 1791273126,
+          "last_valid_on": 1765037803
+        },
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "MaliciousConfidence/High",
+          "created_on": 1791147406,
+          "last_valid_on": 1791789494
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "Malware/ExampleFamily2",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "Malware/ExampleFamily3",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "MitreATTCK/Collection/DataFromLocalSystem",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/DataObfuscation",
+          "created_on": 1674064562,
+          "last_valid_on": 1674064562
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/NonStandardPort",
+          "created_on": 1674064568,
+          "last_valid_on": 1674064568
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/RemoteFileCopy",
+          "created_on": 1740490889,
+          "last_valid_on": 1777453288
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/StandardNonApplicationLayerProtocol",
+          "created_on": 1674064565,
+          "last_valid_on": 1674064565
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/SymmetricCryptography",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064571
+        },
+        {
+          "name": "MitreATTCK/CommandAndControl/WebProtocols",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064559
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/CredentialsFromPasswordStores",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/CredentialAccess/InputCapture",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/BinaryPadding",
+          "created_on": 1674064552,
+          "last_valid_on": 1674064552
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/HiddenFilesAndDirectories",
+          "created_on": 1674064535,
+          "last_valid_on": 1674064535
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/MatchLegitimateNameOrLocation",
+          "created_on": 1740490889,
+          "last_valid_on": 1740490889
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/ObfuscatedFilesOrInformation",
+          "created_on": 1674064549,
+          "last_valid_on": 1674064549
+        },
+        {
+          "name": "MitreATTCK/DefenseEvasion/ThreadExecutionHijacking",
+          "created_on": 1674064555,
+          "last_valid_on": 1674064555
+        },
+        {
+          "name": "MitreATTCK/Impact/StoredDataManipulation",
+          "created_on": 1674064574,
+          "last_valid_on": 1674064574
+        },
+        {
+          "name": "MitreATTCK/Impact/TransmittedDataManipulation",
+          "created_on": 1674064576,
+          "last_valid_on": 1674064576
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ReplicationThroughRemovableMedia",
+          "created_on": 1674064510,
+          "last_valid_on": 1674064510
+        },
+        {
+          "name": "MitreATTCK/InitialAccess/ValidAccounts",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/LateralMovement/ReplicationThroughRemovableMedia",
+          "created_on": 1674064514,
+          "last_valid_on": 1674064514
+        },
+        {
+          "name": "MitreATTCK/Persistence/HijackExecutionFlow",
+          "created_on": 1674064519,
+          "last_valid_on": 1674064519
+        },
+        {
+          "name": "MitreATTCK/Persistence/RegistryRunKeysStartupFolder",
+          "created_on": 1674064522,
+          "last_valid_on": 1674064522
+        },
+        {
+          "name": "MitreATTCK/Persistence/ShortcutModification",
+          "created_on": 1674064526,
+          "last_valid_on": 1674064526
+        },
+        {
+          "name": "MitreATTCK/PrivilegeEscalation/WindowsService",
+          "created_on": 1674064530,
+          "last_valid_on": 1674064530
+        },
+        {
+          "name": "MitreATTCK/Reconnaissance/Credentials",
+          "created_on": 1777450227,
+          "last_valid_on": 1777450227
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Botnet",
+          "created_on": 1674064499,
+          "last_valid_on": 1674064499
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Malware",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064504
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/Server",
+          "created_on": 1740490889,
+          "last_valid_on": 1674064496
+        },
+        {
+          "name": "MitreATTCK/ResourceDevelopment/UploadMalware",
+          "created_on": 1674064506,
+          "last_valid_on": 1674064506
+        },
+        {
+          "name": "ThreatType/Botnet",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1791147410,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1791273126,
+          "last_valid_on": 1765037803
+        },
+        {
+          "name": "ThreatType/Downloader",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1791147410,
+          "last_valid_on": 1791147410
+        },
+        {
+          "name": "ThreatType/Mineware",
+          "created_on": 1791273126,
+          "last_valid_on": 1791273126
+        },
+        {
+          "name": "ThreatType/Polymorphic",
+          "created_on": 1791147410,
+          "last_valid_on": 1791273126
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Botnet",
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "Downloader",
+        "InformationStealer",
+        "Mineware",
+        "Polymorphic"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "ip_address_192.0.2.6",
+      "indicator": "192.0.2.6",
+      "type": "ip_address",
+      "deleted": false,
+      "published_date": 1674481864,
+      "last_updated": 1791794811,
+      "reports": [],
+      "actors": [],
+      "malware_families": [
+        "ExampleFamily4",
+        "ExampleFamily5"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives",
+        "C2",
+        "Installation"
+      ],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "unverified",
+      "_marker": "179179481100000000000000000000000000000006",
+      "labels": [
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1674481867,
+          "last_valid_on": 1674481867
+        },
+        {
+          "name": "KillChain/C2",
+          "created_on": 1674481864,
+          "last_valid_on": 1791794811
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1674481867,
+          "last_valid_on": 1674481867
+        },
+        {
+          "name": "Malware/ExampleFamily4",
+          "created_on": 1674481867,
+          "last_valid_on": 1674481867
+        },
+        {
+          "name": "Malware/ExampleFamily5",
+          "created_on": 1791794811,
+          "last_valid_on": 1791794811
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1674481867,
+          "last_valid_on": 1791794811
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1791794811,
+          "last_valid_on": 1791794811
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1791794811,
+          "last_valid_on": 1791794811
+        },
+        {
+          "name": "ThreatType/RAT",
+          "created_on": 1674481867,
+          "last_valid_on": 1791794811
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "RAT"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "domain_malicious-7.example",
+      "indicator": "malicious-7.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1422626748,
+      "last_updated": 1792006039,
+      "reports": [],
+      "actors": [],
+      "malware_families": [
+        "ExampleFamily4",
+        "ExampleFamily6",
+        "ExampleFamily7"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives",
+        "C2",
+        "Installation"
+      ],
+      "ip_address_types": [],
+      "domain_types": [
+        "Sinkholed"
+      ],
+      "malicious_confidence": "unverified",
+      "_marker": "179200603900000000000000000000000000000007",
+      "labels": [
+        {
+          "name": "DomainType/Sinkholed",
+          "created_on": 1422626748,
+          "last_valid_on": 1792006039
+        },
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        },
+        {
+          "name": "KillChain/C2",
+          "created_on": 1422626748,
+          "last_valid_on": 1792006039
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        },
+        {
+          "name": "Malware/ExampleFamily4",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        },
+        {
+          "name": "Malware/ExampleFamily6",
+          "created_on": 1588307785,
+          "last_valid_on": 1588307785
+        },
+        {
+          "name": "Malware/ExampleFamily7",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        },
+        {
+          "name": "Status/Historic",
+          "created_on": 1422626748,
+          "last_valid_on": 1792006039
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        },
+        {
+          "name": "ThreatType/RAT",
+          "created_on": 1588307786,
+          "last_valid_on": 1588307786
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Commodity",
+        "RAT"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "domain_malicious-8.example",
+      "indicator": "malicious-8.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1623855723,
+      "last_updated": 1792557721,
+      "reports": [],
+      "actors": [],
+      "malware_families": [
+        "ExampleFamily8",
+        "ExampleFamily4",
+        "ExampleFamily9",
+        "ExampleFamily10",
+        "ExampleFamily5",
+        "ExampleFamily11"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives",
+        "C2",
+        "Delivery",
+        "Exploitation",
+        "Installation",
+        "Reconnaissance",
+        "Weaponization"
+      ],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "unverified",
+      "_marker": "179255772100000000000000000000000000000008",
+      "labels": [
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1634726336,
+          "last_valid_on": 1634726336
+        },
+        {
+          "name": "KillChain/C2",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "KillChain/Delivery",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "KillChain/Exploitation",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "KillChain/Reconnaissance",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "KillChain/Weaponization",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "Malware/ExampleFamily8",
+          "created_on": 1645476444,
+          "last_valid_on": 1645476444
+        },
+        {
+          "name": "Malware/ExampleFamily4",
+          "created_on": 1634726336,
+          "last_valid_on": 1634726336
+        },
+        {
+          "name": "Malware/ExampleFamily9",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "Malware/ExampleFamily10",
+          "created_on": 1623855726,
+          "last_valid_on": 1623855726
+        },
+        {
+          "name": "Malware/ExampleFamily5",
+          "created_on": 1624126001,
+          "last_valid_on": 1624126001
+        },
+        {
+          "name": "Malware/ExampleFamily11",
+          "created_on": 1680807610,
+          "last_valid_on": 1680807610
+        },
+        {
+          "name": "ThreatType/Backdoor",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1624126001,
+          "last_valid_on": 1624126001
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1676386884,
+          "last_valid_on": 1676386884
+        },
+        {
+          "name": "ThreatType/DDoS",
+          "created_on": 1680807610,
+          "last_valid_on": 1680807610
+        },
+        {
+          "name": "ThreatType/DeploymentFramework",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/Exploit",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1680807610,
+          "last_valid_on": 1680807610
+        },
+        {
+          "name": "ThreatType/Keylogger",
+          "created_on": 1680807610,
+          "last_valid_on": 1680807610
+        },
+        {
+          "name": "ThreatType/Modular",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/OpenSource",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/RAT",
+          "created_on": 1634676036,
+          "last_valid_on": 1634676036
+        },
+        {
+          "name": "ThreatType/Ransomware",
+          "created_on": 1680807610,
+          "last_valid_on": 1680807610
+        },
+        {
+          "name": "ThreatType/Targeted",
+          "created_on": 1613484273,
+          "last_valid_on": 1613485690
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Backdoor",
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "DDoS",
+        "DeploymentFramework",
+        "Exploit",
+        "InformationStealer",
+        "Keylogger",
+        "Modular",
+        "OpenSource",
+        "RAT",
+        "Ransomware",
+        "Targeted"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "domain_malicious-9.example",
+      "indicator": "malicious-9.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1624282856,
+      "last_updated": 1792566112,
+      "reports": [],
+      "actors": [
+        "EXAMPLEBEAR"
+      ],
+      "malware_families": [
+        "ExampleFamily12",
+        "ExampleFamily1",
+        "ExampleFamily13",
+        "ExampleFamily14",
+        "ExampleFamily2"
+      ],
+      "kill_chains": [
+        "C2",
+        "Delivery"
+      ],
+      "ip_address_types": [],
+      "domain_types": [
+        "LegitimateCompromised"
+      ],
+      "malicious_confidence": "unverified",
+      "_marker": "179256611200000000000000000000000000000009",
+      "labels": [
+        {
+          "name": "Actor/EXAMPLEBEAR",
+          "created_on": 1624282861,
+          "last_valid_on": 1624282861
+        },
+        {
+          "name": "DomainType/LegitimateCompromised",
+          "created_on": 1624282856,
+          "last_valid_on": 1792566112
+        },
+        {
+          "name": "KillChain/C2",
+          "created_on": 1624282856,
+          "last_valid_on": 1792566112
+        },
+        {
+          "name": "KillChain/Delivery",
+          "created_on": 1631958599,
+          "last_valid_on": 1631958599
+        },
+        {
+          "name": "Malware/ExampleFamily12",
+          "created_on": 1631958599,
+          "last_valid_on": 1631958599
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1697865090,
+          "last_valid_on": 1697865090
+        },
+        {
+          "name": "Malware/ExampleFamily13",
+          "created_on": 1678303563,
+          "last_valid_on": 1678303563
+        },
+        {
+          "name": "Malware/ExampleFamily14",
+          "created_on": 1698158094,
+          "last_valid_on": 1698158094
+        },
+        {
+          "name": "Malware/ExampleFamily2",
+          "created_on": 1624282861,
+          "last_valid_on": 1624282861
+        },
+        {
+          "name": "Status/Historic",
+          "created_on": 1624282856,
+          "last_valid_on": 1792566112
+        },
+        {
+          "name": "ThreatType/Botnet",
+          "created_on": 1624282861,
+          "last_valid_on": 1624282861
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1678303563,
+          "last_valid_on": 1678303563
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1697865090,
+          "last_valid_on": 1697865090
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1605807120,
+          "last_valid_on": 1637417886
+        },
+        {
+          "name": "ThreatType/DDoS",
+          "created_on": 1698158094,
+          "last_valid_on": 1698158094
+        },
+        {
+          "name": "ThreatType/Downloader",
+          "created_on": 1678303563,
+          "last_valid_on": 1678303563
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1697865090,
+          "last_valid_on": 1697865090
+        },
+        {
+          "name": "ThreatType/PointOfSale",
+          "created_on": 1678303563,
+          "last_valid_on": 1678303563
+        },
+        {
+          "name": "ThreatType/RAT",
+          "created_on": 1631958599,
+          "last_valid_on": 1631958599
+        },
+        {
+          "name": "ThreatType/Targeted",
+          "created_on": 1635277324,
+          "last_valid_on": 1637660246
+        },
+        {
+          "name": "ThreatType/TargetedCrimeware",
+          "created_on": 1631958599,
+          "last_valid_on": 1631958599
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Botnet",
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "DDoS",
+        "Downloader",
+        "InformationStealer",
+        "PointOfSale",
+        "RAT",
+        "Targeted",
+        "TargetedCrimeware"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "domain_malicious-10.example",
+      "indicator": "malicious-10.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1661081964,
+      "last_updated": 1792572756,
+      "reports": [],
+      "actors": [
+        "EXAMPLEBEAR"
+      ],
+      "malware_families": [
+        "ExampleFamily15",
+        "ExampleFamily1",
+        "ExampleFamily16",
+        "ExampleFamily17"
+      ],
+      "kill_chains": [
+        "ActionOnObjectives"
+      ],
+      "ip_address_types": [],
+      "domain_types": [
+        "ActorControlled"
+      ],
+      "malicious_confidence": "medium",
+      "_marker": "17925727560000000000000000000000000000000a",
+      "labels": [
+        {
+          "name": "Actor/EXAMPLEBEAR",
+          "created_on": 1661081967,
+          "last_valid_on": 1676656692
+        },
+        {
+          "name": "CSD/CSA-000001",
+          "created_on": 1661260047,
+          "last_valid_on": 1661260047
+        },
+        {
+          "name": "CSD/CSA-000002",
+          "created_on": 1787820833,
+          "last_valid_on": 1787820833
+        },
+        {
+          "name": "DomainType/ActorControlled",
+          "created_on": 1661081964,
+          "last_valid_on": 1792572755
+        },
+        {
+          "name": "KillChain/ActionOnObjectives",
+          "created_on": 1687415887,
+          "last_valid_on": 1687415887
+        },
+        {
+          "name": "MaliciousConfidence/Medium",
+          "created_on": 1661081964,
+          "last_valid_on": 1792572755
+        },
+        {
+          "name": "Malware/ExampleFamily15",
+          "created_on": 1687415887,
+          "last_valid_on": 1687415887
+        },
+        {
+          "name": "Malware/ExampleFamily1",
+          "created_on": 1683553259,
+          "last_valid_on": 1683553259
+        },
+        {
+          "name": "Malware/ExampleFamily16",
+          "created_on": 1775057084,
+          "last_valid_on": 1775057084
+        },
+        {
+          "name": "Malware/ExampleFamily17",
+          "created_on": 1661568895,
+          "last_valid_on": 1661568895
+        },
+        {
+          "name": "ThreatType/Botnet",
+          "created_on": 1661568895,
+          "last_valid_on": 1775057084
+        },
+        {
+          "name": "ThreatType/Commodity",
+          "created_on": 1683553259,
+          "last_valid_on": 1775057084
+        },
+        {
+          "name": "ThreatType/CredentialHarvesting",
+          "created_on": 1683553259,
+          "last_valid_on": 1683553259
+        },
+        {
+          "name": "ThreatType/Criminal",
+          "created_on": 1687767996,
+          "last_valid_on": 1676656692
+        },
+        {
+          "name": "ThreatType/CryptoCurrencyTheft",
+          "created_on": 1687415887,
+          "last_valid_on": 1687415887
+        },
+        {
+          "name": "ThreatType/Downloader",
+          "created_on": 1661568895,
+          "last_valid_on": 1661568895
+        },
+        {
+          "name": "ThreatType/InformationStealer",
+          "created_on": 1683553259,
+          "last_valid_on": 1683553259
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "Botnet",
+        "Commodity",
+        "CredentialHarvesting",
+        "Criminal",
+        "CryptoCurrencyTheft",
+        "Downloader",
+        "InformationStealer"
+      ],
+      "vulnerabilities": []
+    },
+    {
+      "id": "domain_malicious-11.example",
+      "indicator": "malicious-11.example",
+      "type": "domain",
+      "deleted": false,
+      "published_date": 1724781640,
+      "last_updated": 1792813372,
+      "reports": [],
+      "actors": [
+        "EXAMPLESPIDER",
+        "EXAMPLEPANDA"
+      ],
+      "malware_families": [
+        "ExampleFamily18"
+      ],
+      "kill_chains": [
+        "Installation"
+      ],
+      "ip_address_types": [],
+      "domain_types": [],
+      "malicious_confidence": "high",
+      "_marker": "17928133720000000000000000000000000000000b",
+      "labels": [
+        {
+          "name": "Actor/EXAMPLESPIDER",
+          "created_on": 1767816345,
+          "last_valid_on": 1767816345
+        },
+        {
+          "name": "Actor/EXAMPLEPANDA",
+          "created_on": 1765037830,
+          "last_valid_on": 1765037830
+        },
+        {
+          "name": "CSD/CSA-000003",
+          "created_on": 1724781681,
+          "last_valid_on": 1724781681
+        },
+        {
+          "name": "KillChain/Installation",
+          "created_on": 1724782189,
+          "last_valid_on": 1724782189
+        },
+        {
+          "name": "MaliciousConfidence/High",
+          "created_on": 1724781640,
+          "last_valid_on": 1792813372
+        },
+        {
+          "name": "Malware/ExampleFamily18",
+          "created_on": 1724782189,
+          "last_valid_on": 1724782189
+        },
+        {
+          "name": "Status/Active",
+          "created_on": 1724781640,
+          "last_valid_on": 1792813372
+        },
+        {
+          "name": "ThreatType/RAT",
+          "created_on": 1724782189,
+          "last_valid_on": 1724782189
+        },
+        {
+          "name": "ThreatType/Targeted",
+          "created_on": 1765037830,
+          "last_valid_on": 1765037830
+        }
+      ],
+      "relations": [],
+      "targets": [],
+      "threat_types": [
+        "RAT",
+        "Targeted"
+      ],
+      "vulnerabilities": []
+    }
+  ]
+}

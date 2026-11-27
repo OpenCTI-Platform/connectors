@@ -1,0 +1,5 @@
+{
+  "meta": {"query_time": 0.01, "trace_id": "00000000-0000-0000-0000-000000000000"},
+  "errors": [{"code": 403, "message": "access denied, authorization failed"}],
+  "resources": []
+}

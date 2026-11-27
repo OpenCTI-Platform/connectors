@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crowdstrike-indicators-poc"
+version = "0.1.0"
+description = "Proof of concept: CrowdStrike Falcon Intelligence indicators through source-independent connector contracts."
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "crowdstrike-falconpy==1.6.6",
+    "pydantic==2.14.0",
+    "pydantic-settings==2.16.2",
+    "stix2==3.0.2",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==9.1.1",
+]
+
+[project.scripts]
+connector-cli = "shared.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
