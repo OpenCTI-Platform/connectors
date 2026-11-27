@@ -5,9 +5,10 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk.shared.spamhaus import (
-    SpamhausAuthenticationError,
-    SpamhausUnavailableError,
+from connectors_sdk import (
+    ProviderApiAuthenticationError,
+    ProviderApiInvalidResponseError,
+    ProviderApiServerError,
 )
 from src.__main__ import FeedRow, ThreatFox
 
@@ -356,10 +357,14 @@ class TestFallbackToTheCommunityKey:
     @pytest.mark.parametrize(
         "error",
         [
-            SpamhausUnavailableError("Spamhaus cannot answer (HTTP 503)"),
-            SpamhausAuthenticationError("check the Spamhaus credentials"),
+            ProviderApiServerError("Spamhaus cannot answer (HTTP 503)"),
+            ProviderApiAuthenticationError("check the Spamhaus credentials"),
+            # E.g. a `since` the API refuses: the feed cannot be read at all.
+            ProviderApiInvalidResponseError(
+                "Spamhaus rejected the request (HTTP 400) for /threatfox/v1/iocs"
+            ),
         ],
-        ids=["unavailable", "rejected"],
+        ids=["unavailable", "rejected", "request-refused"],
     )
     def test_commercial_failure_falls_back_to_the_csv_with_a_warning(
         self, connector, error
@@ -390,7 +395,7 @@ class TestFallbackToTheCommunityKey:
     def test_the_commercial_checkpoint_is_kept_after_a_csv_fallback(self, connector):
         checkpoint = datetime(2027, 1, 5, 0, 0, tzinfo=UTC).timestamp()
         connector.spamhaus_client = FakeSpamhausClient(
-            error=SpamhausUnavailableError("Spamhaus cannot answer (HTTP 503)")
+            error=ProviderApiServerError("Spamhaus cannot answer (HTTP 503)")
         )
         connector.download_csv = MagicMock(
             return_value=iter(
@@ -429,7 +434,7 @@ class TestFallbackToTheCommunityKey:
     def test_only_commercial_credentials_fail_the_run(self, connector):
         connector.community_fallback = False
         connector.spamhaus_client = FakeSpamhausClient(
-            error=SpamhausAuthenticationError(
+            error=ProviderApiAuthenticationError(
                 "Spamhaus rejected the login (HTTP 401): check the Spamhaus credentials"
             )
         )
@@ -445,7 +450,7 @@ class TestFallbackToTheCommunityKey:
     def test_only_commercial_and_unavailable_fails_the_run(self, connector):
         connector.community_fallback = False
         connector.spamhaus_client = FakeSpamhausClient(
-            error=SpamhausUnavailableError("Spamhaus cannot answer (HTTP 503)")
+            error=ProviderApiServerError("Spamhaus cannot answer (HTTP 503)")
         )
 
         assert run(connector) is False
@@ -474,7 +479,7 @@ class TestSecrets:
     def test_failure_messages_and_logs_hold_no_secret(self, connector):
         connector.community_fallback = False
         connector.spamhaus_client = FakeSpamhausClient(
-            error=SpamhausAuthenticationError(
+            error=ProviderApiAuthenticationError(
                 "Spamhaus rejected the login (HTTP 401): check the Spamhaus credentials"
             )
         )

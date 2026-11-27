@@ -19,8 +19,9 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import stix2
 import validators
+from connectors_sdk import ProviderApiError
 from connectors_sdk.exceptions.error import DataRetrievalError
-from connectors_sdk.shared.spamhaus import SpamhausClient, SpamhausCommercialError
+from connectors_sdk.shared.spamhaus import SpamhausClient
 from pycti import (
     Indicator,
     Malware,
@@ -277,7 +278,7 @@ class ThreatFox:
                     work_id=work_id,
                 )
 
-        except SpamhausCommercialError as err:
+        except ProviderApiError as err:
             # No community Auth-Key to fall back to: the message (no secret in
             # it) tells the operator what to check.
             self.helper.connector_logger.error(
@@ -325,7 +326,7 @@ class ThreatFox:
         if self.spamhaus_client is not None:
             try:
                 rows = self.fetch_spamhaus_rows(last_processed_entry, now_dt)
-            except SpamhausCommercialError as err:
+            except ProviderApiError as err:
                 if not self.community_fallback:
                     raise
                 self.helper.connector_logger.warning(
