@@ -18,6 +18,7 @@ import csv
 import http.client
 import io
 import os
+import re
 import ssl
 import sys
 import time
@@ -303,6 +304,7 @@ class ThreatFox:
             # One object per STIX id: rows sharing an observable, indicator or
             # malware would otherwise overwrite each other on ingestion
             bundle_objects = self._merge_duplicates(bundle_objects)
+            bundle_objects = self._describe_ports(bundle_objects)
 
             # Build and send bundle
             bundle = stix2.Bundle(
@@ -670,8 +672,7 @@ class ThreatFox:
         """
         Collapse objects sharing an id into one, in first-seen order.
         Lists and references are unioned, score/confidence take the maximum,
-        other fields keep the first (newest) row's value. Observables and
-        indicators reported on several ports get a per-port description.
+        other fields keep the first (newest) row's value.
         """
         merged: Dict[str, Dict] = {}
         for obj in objects:
@@ -700,44 +701,153 @@ class ThreatFox:
                 if props.get(key) is not None:
                     first[key] = max(first.get(key) or 0, props[key])
 
-        sightings = getattr(self, "_port_sightings", {})
         result = []
         for obj in objects:
             props = merged.pop(obj.id, None)
             if props is None:
                 continue  # already emitted at its first occurrence
-            description = self._multi_port_description(sightings.get(obj.id, []))
-            if description:
-                # SCOs carry descriptions as x_opencti_description
-                key = (
-                    "description"
-                    if obj.type == "indicator"
-                    else "x_opencti_description"
-                )
-                props[key] = description
             result.append(stix2.parse(props, allow_custom=True))
         return result
 
+    # ------------------------- Port descriptions -------------------------
+    # An ingested description replaces the stored one, so the ThreatFox text
+    # goes under its own heading and the rest of the stored description is
+    # sent back unchanged. Ports from earlier runs are kept in the section.
+
+    SECTION_HEADING = "### ThreatFox"
+    _LOOKUP_BATCH = 500
+    _SINGLE_PORT = re.compile(r"^Traffic seen on port (\S+)$")
+    _PORT_LINE = re.compile(r"^- (\S+?)(?: \((.*)\))?$")
+    _MULTI_PORT_HEADER = "Activity seen across multiple ports:"
+
+    def _describe_ports(self, objects: List) -> List:
+        """
+        Set the ThreatFox section of each IP observable/indicator description.
+        Reads the stored descriptions from OpenCTI, keeps text outside the
+        section, and lists this run's ports plus any already in the section.
+        """
+        sightings = getattr(self, "_port_sightings", {})
+        targets = [o for o in objects if sightings.get(o.id)]
+        if not targets:
+            return objects
+        stored = self._stored_descriptions(targets)
+        result = []
+        for obj in objects:
+            if not sightings.get(obj.id):
+                result.append(obj)
+                continue
+            other, ports = self._split_description(stored.get(obj.id))
+            ports.update(self._run_ports(sightings[obj.id]))
+            section = f"{self.SECTION_HEADING}\n\n{self._port_description(ports)}"
+            # SCOs carry descriptions as x_opencti_description
+            key = "description" if obj.type == "indicator" else "x_opencti_description"
+            props = dict(obj)
+            props[key] = f"{other}\n\n{section}" if other else section
+            result.append(stix2.parse(props, allow_custom=True))
+        return result
+
+    def _stored_descriptions(self, objects: List) -> Dict[str, str]:
+        """Standard id -> description held in OpenCTI, for the given objects."""
+        queries = {
+            "indicator": (self.helper.api.indicator, "description"),
+            "observable": (
+                self.helper.api.stix_cyber_observable,
+                "x_opencti_description",
+            ),
+        }
+        ids: Dict[str, List[str]] = {"indicator": [], "observable": []}
+        for obj in objects:
+            ids["indicator" if obj.type == "indicator" else "observable"].append(obj.id)
+        stored: Dict[str, str] = {}
+        for kind, kind_ids in ids.items():
+            api, field = queries[kind]
+            for i in range(0, len(kind_ids), self._LOOKUP_BATCH):
+                batch = kind_ids[i : i + self._LOOKUP_BATCH]
+                entities = api.list(
+                    filters={
+                        "mode": "and",
+                        "filters": [{"key": "standard_id", "values": batch}],
+                        "filterGroups": [],
+                    },
+                    customAttributes=f"id standard_id {field}",
+                    first=len(batch),
+                    getAll=True,
+                )
+                for entity in entities or []:
+                    if entity.get(field):
+                        stored[entity["standard_id"]] = entity[field]
+        return stored
+
+    def _split_description(
+        self, description: Optional[str]
+    ) -> Tuple[str, Dict[str, Optional[str]]]:
+        """
+        Split a stored description into (text outside the ThreatFox section,
+        port -> details listed in it). A block starts at the section heading,
+        or at unheaded port text from builds before the heading existed, and
+        runs while lines are blank or port lines, so text anyone adds after it
+        is kept.
+        """
+        lines = (description or "").strip().splitlines()
+
+        def is_start(line: str) -> bool:
+            return line in (
+                self.SECTION_HEADING,
+                self._MULTI_PORT_HEADER,
+            ) or bool(self._SINGLE_PORT.match(line))
+
+        ours = set()
+        i = 0
+        while i < len(lines):
+            if not is_start(lines[i]):
+                i += 1
+                continue
+            j = i + 1
+            while j < len(lines) and (
+                not lines[j].strip()
+                or is_start(lines[j])
+                or self._PORT_LINE.match(lines[j])
+            ):
+                j += 1
+            ours.update(range(i, j))
+            i = j
+        ports: Dict[str, Optional[str]] = {}
+        for i in sorted(ours):
+            single = self._SINGLE_PORT.match(lines[i])
+            listed = self._PORT_LINE.match(lines[i])
+            if single:
+                ports[single.group(1)] = None
+            elif listed:
+                ports[listed.group(1)] = listed.group(2)
+        other = "\n".join(line for i, line in enumerate(lines) if i not in ours)
+        return re.sub(r"\n{3,}", "\n\n", other).strip(), ports
+
     @staticmethod
-    def _multi_port_description(sightings: List["FeedRow"]) -> Optional[str]:
-        """Per-port description for an IP reported on two or more ports, else None."""
-        by_port: Dict[str, "FeedRow"] = {}
+    def _run_ports(sightings: List["FeedRow"]) -> Dict[str, str]:
+        """Port -> details from this run's rows, newest row per port."""
+        ports: Dict[str, str] = {}
         for ioc in sightings:
-            by_port.setdefault(ioc.port, ioc)  # rows arrive newest first
-        if len(by_port) < 2:
-            return None
-        lines = ["Activity seen across multiple ports:", ""]
-        for port in sorted(
-            by_port, key=lambda p: (not p.isdigit(), int(p) if p.isdigit() else 0, p)
-        ):
-            ioc = by_port[port]
+            if ioc.port in ports:
+                continue  # rows arrive newest first
             details = [f"first seen {ioc.first_seen:%Y-%m-%d %H:%M} UTC"]
             if ioc.threat_type:
                 details.append(ioc.threat_type)
             if ioc.malware_printable or ioc.fk_malware:
                 details.append(ioc.malware_printable or ioc.fk_malware)
             details.append(f"confidence {ioc.confidence_level}")
-            lines.append(f"- {port} ({', '.join(details)})")
+            ports[ioc.port] = ", ".join(details)
+        return ports
+
+    @staticmethod
+    def _port_description(ports: Dict[str, Optional[str]]) -> str:
+        """'Traffic seen on port N' for one port, else a per-port list."""
+        if len(ports) == 1:
+            return f"Traffic seen on port {next(iter(ports))}"
+        lines = [ThreatFox._MULTI_PORT_HEADER, ""]
+        for port in sorted(
+            ports, key=lambda p: (not p.isdigit(), int(p) if p.isdigit() else 0, p)
+        ):
+            lines.append(f"- {port} ({ports[port]})" if ports[port] else f"- {port}")
         return "\n".join(lines)
 
     # ---------------------- External references ----------------------

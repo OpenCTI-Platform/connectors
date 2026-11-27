@@ -170,13 +170,15 @@ graph LR
 
 | ThreatFox IOC Type   | OpenCTI Entity      | Description                                      |
 |----------------------|---------------------|--------------------------------------------------|
-| ip:port              | IPv4-Addr           | IP address (port stored in description)          |
+| ip:port              | IPv4-Addr           | IP address (ports listed in the description)     |
 | domain               | Domain-Name         | Domain name                                      |
 | url                  | URL                 | URL observable                                   |
 | md5_hash             | File (MD5)          | MD5 file hash                                    |
 | sha1_hash            | File (SHA-1)        | SHA-1 file hash                                  |
 | sha256_hash          | File (SHA-256)      | SHA-256 file hash                                |
 | Malware name         | Malware             | Malware family (`is_family: true`)               |
+
+An IP reported on several ports becomes one observable. Its ports are listed under a `### ThreatFox` heading in the observable and indicator descriptions, each with its first-seen date, threat type, malware and confidence. Any other text in the description is kept, and each run replaces only that section, keeping ports listed by earlier runs.
 
 ### Processing Details
 
