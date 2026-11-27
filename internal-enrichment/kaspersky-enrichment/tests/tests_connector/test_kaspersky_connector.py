@@ -33,9 +33,20 @@ class TestKasperskyConnector(object):
     @pytest.mark.usefixtures("fixture_data")
     def test_skip_entity_with_lower_tlp(self, fixture_data):
         with mock.patch.object(self.mock_config.connector, "max_tlp", TLPLevel.GREEN):
-            self.mock_helper.check_max_tlp.return_value = False
             assert (
                 self.connector.process_message(fixture_data)
                 == """Do not send any data, TLP of the entity is (TLP:RED), which
-                  is greater than MAX TLP: (TLP:GREEN)"""
+                  is greater than MAX TLP: (green)"""
             )
+
+    @pytest.mark.usefixtures("fixture_data")
+    def test_skip_entity_with_one_tlp_above_max_tlp(self, fixture_data):
+        # Every TLP of the entity is checked, not only the last one
+        fixture_data["enrichment_entity"]["objectMarking"] = [
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        ]
+        with mock.patch.object(self.mock_config.connector, "max_tlp", TLPLevel.AMBER):
+            result = self.connector.process_message(fixture_data)
+
+        assert result.startswith("Do not send any data")

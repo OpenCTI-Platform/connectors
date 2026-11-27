@@ -72,7 +72,6 @@ def test_connector_skips_high_tlp(mock_opencti_helper, stub_config_dict):
     but still forward the original bundle unchanged for playbook compatibility."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=False)
     helper.connector_logger = MagicMock()
     helper.connector_logger.info = MagicMock(return_value="skipped")
     helper.stix2_create_bundle = MagicMock(
@@ -101,12 +100,44 @@ def test_connector_skips_high_tlp(mock_opencti_helper, stub_config_dict):
     helper.stix2_create_bundle.assert_called_once_with(original_objects)
 
 
+def test_connector_skips_entity_with_one_tlp_above_max(
+    mock_opencti_helper, stub_config_dict
+):
+    """Every TLP of the observable is checked, not only the first one."""
+    config = make_stub_config(stub_config_dict)
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    helper.connector_logger = MagicMock()
+    helper.stix2_create_bundle = MagicMock(
+        return_value={"type": "bundle", "objects": []}
+    )
+    helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
+    mock_client = MagicMock()
+    connector = Connector(config=config, helper=helper, client=mock_client)
+
+    data = {
+        "enrichment_entity": {
+            "objectMarking": [
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+            ],
+        },
+        "stix_entity": {
+            "type": "domain-name",
+            "value": "example.com",
+            "id": "domain-name--00000000-0000-4000-8000-000000000099",
+        },
+        "stix_objects": [],
+    }
+
+    connector.process_message(data)
+    mock_client.passive_dns_for_domain.assert_not_called()
+
+
 def test_connector_skips_unsupported_type(mock_opencti_helper, stub_config_dict):
     """process_message should skip enrichment for unsupported observable types,
     but still forward the original bundle unchanged for playbook compatibility."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.connector_logger.info = MagicMock(return_value="skipped")
     helper.stix2_create_bundle = MagicMock(
@@ -143,7 +174,6 @@ def test_connector_skips_type_outside_configured_scope(
     stub_config_dict["connector"]["scope"] = "Domain-Name,Hostname"
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.connector_logger.info = MagicMock(return_value="skipped")
     helper.stix2_create_bundle = MagicMock(
@@ -179,7 +209,6 @@ def test_ns2domain_pivot_only_follows_actual_nameservers(
     stub_config_dict["zetalytics"]["max_ns_pivot_results"] = 50
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -217,7 +246,6 @@ def test_mx2domain_pivot_follows_mx_hosts(mock_opencti_helper, stub_config_dict)
     stub_config_dict["zetalytics"]["max_mx_pivot_results"] = 50
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -252,7 +280,6 @@ def test_process_message_ip_happy_path(mock_opencti_helper, stub_config_dict):
     """process_message should route IP observables through _enrich_ip and send a bundle."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -295,7 +322,6 @@ def test_process_message_sends_anchor_bundle_without_results(
     stub_config_dict["zetalytics"]["include_ns_glue"] = False
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -334,7 +360,6 @@ def test_process_message_creates_note_when_no_results(
     stub_config_dict["zetalytics"]["create_note_when_no_results"] = True
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -374,7 +399,6 @@ def test_enrich_domain_fails_work_when_every_endpoint_fails(
     stub_config_dict["zetalytics"]["include_mx2domain"] = True
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -420,7 +444,6 @@ def test_pivots_survive_their_own_endpoint_failing(
     stub_config_dict["zetalytics"]["include_mx2domain"] = True
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -462,7 +485,6 @@ def test_process_message_forwards_original_bundle_on_unexpected_error(
     playbook-compatibility guarantee as the TLP/scope skip paths."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -493,7 +515,6 @@ def test_enrich_ip_fails_work_when_every_endpoint_fails(
     """Same behaviour as domains, for the IP enrichment path."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -529,7 +550,6 @@ def test_partial_endpoint_failure_does_not_fail_work(
     other queries failed."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -565,7 +585,6 @@ def test_historical_whois_uses_dedicated_converter(
     stub_config_dict["zetalytics"]["max_whois_results"] = 5
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}
@@ -601,9 +620,10 @@ def test_derived_objects_do_not_downgrade_source_observable_marking(
     """Enriching a TLP:RED observable with a connector configured for a looser
     marking_definition (TLP:AMBER) must not publish derived objects at
     TLP:AMBER -- they should inherit the source's more restrictive TLP:RED."""
+    # The max TLP lets a TLP:RED observable through
+    stub_config_dict["connector"]["max_tlp"] = "red"
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
-    helper.check_max_tlp = MagicMock(return_value=True)
     helper.connector_logger = MagicMock()
     helper.stix2_create_bundle = MagicMock(
         return_value={"type": "bundle", "objects": []}

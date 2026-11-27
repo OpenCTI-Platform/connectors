@@ -193,8 +193,10 @@ When a marking or a report type is removed from a container, the update event of
 | Labels                  | Tags             | Container labels as event tags           |
 | Markings                | Tags             | Container markings of the types set in `MISP_MARKING_TYPES_TO_CONVERT` as event tags |
 | Report Types            | Tags             | Report types as `report-type:*` event tags |
-| Description             | Comment Attribute| Added as comment attribute               |
+| Description             | Event Report     | Event report named after the container, updated in place on each update |
 | Analysis Status         | Analysis         | Always set to 2 (Completed)              |
+
+If the description is cleared in OpenCTI, the existing event report is left unchanged in MISP. Events exported by earlier versions held the description in an "Event description" comment attribute: it is deleted on the next update of the container, once the event report is in MISP. If the event report is deleted in MISP, it is restored on the next update of the container.
 
 ### Threat Level Calculation
 

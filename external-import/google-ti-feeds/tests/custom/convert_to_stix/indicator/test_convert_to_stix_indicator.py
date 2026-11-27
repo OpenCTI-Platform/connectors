@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
+import pycti
 import pytest
 from connector.src.custom.convert_to_stix.indicator.convert_to_stix_indicator import (
     ConvertToSTIXIndicator,
@@ -225,6 +226,7 @@ def _given_relationships(
     threat_actor_name: str | None = None,
     software_toolkit_name: str | None = None,
     attack_technique_id: str | None = None,
+    attack_technique_name: str | None = None,
 ) -> IOCDeltaRelationships:
     rels = IOCDeltaRelationships()
     if malware_name is not None:
@@ -277,6 +279,11 @@ def _given_relationships(
                 IOCDeltaRelationshipItem(
                     type="attack-technique",
                     id=attack_technique_id,
+                    attributes=(
+                        IOCDeltaRelationshipItemAttributes(name=attack_technique_name)
+                        if attack_technique_name is not None
+                        else None
+                    ),
                 )
             ]
         )
@@ -938,7 +945,9 @@ class TestRelationAttackTechniqueValid:
         assert ioc_entry is not None  # noqa: S101
 
         technique_data = IOCDeltaRelationshipItem(
-            type="attack-technique", id="T1059.001"
+            type="attack-technique",
+            id="T1059.001",
+            attributes=IOCDeltaRelationshipItemAttributes(name="PowerShell"),
         )
         # When
         result = converter._create_relation_attack_technique(ioc_entry, technique_data)
@@ -1315,12 +1324,24 @@ def _given_converter_with_subentities(
     )
 
 
-def _given_entry_with_malware_and_technique() -> dict:
+def _given_entry_with_malware_and_technique(
+    attack_technique_name: str | None = None,
+) -> dict:
     return _given_file_entry(
         relationships=_given_relationships(
-            malware_name="emotet", attack_technique_id="T1027"
+            malware_name="emotet",
+            attack_technique_id="T1027",
+            attack_technique_name=attack_technique_name,
         )
     )
+
+
+def _get(obj: object, key: str) -> object:
+    return obj.get(key) if isinstance(obj, dict) else getattr(obj, key)
+
+
+def _stix_type_of(obj: object) -> object:
+    return _get(obj, "type")
 
 
 def _then_stix_type_absent(result: list, stix_type: str) -> None:
@@ -1353,10 +1374,104 @@ class TestIndicatorSubentities:
             logger, ["malware_families", "attack_techniques"]
         )
         # When
-        result = _when_convert(converter, _given_entry_with_malware_and_technique())
+        result = _when_convert(
+            converter,
+            _given_entry_with_malware_and_technique(
+                attack_technique_name="Obfuscated Files or Information"
+            ),
+        )
         # Then – indicator + (malware + rel) + (attack pattern + rel)
         _then_returns_n_objects(result, 5)
         _then_stix_type_present(result, "attack-pattern")
+
+    def test_attack_pattern_uses_technique_name_and_keeps_id(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – a technique returned with its GTI name
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "attack_techniques"]
+        )
+        # When
+        result = _when_convert(
+            converter,
+            _given_entry_with_malware_and_technique(
+                attack_technique_name="Obfuscated Files or Information"
+            ),
+        )
+        # Then – named after the technique, never after its ID, and the ID only
+        # depends on the MITRE ID so it still merges with MITRE ATT&CK
+        attack_pattern = next(
+            obj for obj in result if _stix_type_of(obj) == "attack-pattern"
+        )
+        name = _get(attack_pattern, "name")
+        ap_id = _get(attack_pattern, "id")
+        expected_id = pycti.AttackPattern.generate_id(name="T1027", x_mitre_id="T1027")
+        assert name == "Obfuscated Files or Information"  # noqa: S101
+        assert name != "T1027"  # noqa: S101
+        assert ap_id == expected_id  # noqa: S101
+        assert _get(attack_pattern, "x_mitre_id") == "T1027"  # noqa: S101
+
+    @pytest.mark.parametrize(
+        "attack_technique_name",
+        [
+            pytest.param(None, id="attributes-none"),
+            pytest.param("", id="empty-name"),
+            pytest.param("   ", id="blank-name"),
+        ],
+    )
+    def test_attack_technique_without_name_is_skipped_and_counted(
+        self,
+        logger: logging.Logger,
+        caplog: pytest.LogCaptureFixture,
+        attack_technique_name: str | None,
+    ) -> None:
+        # Given – a technique returned without attributes, or with a blank name
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "attack_techniques"]
+        )
+        # When
+        with caplog.at_level(logging.WARNING, logger=logger.name):
+            result = _when_convert(
+                converter,
+                _given_entry_with_malware_and_technique(
+                    attack_technique_name=attack_technique_name
+                ),
+            )
+        # Then – indicator + (malware + rel) only; the skip is counted, not logged
+        _then_returns_n_objects(result, 3)
+        _then_stix_type_absent(result, "attack-pattern")
+        assert converter.pop_skipped_attack_technique_count() == 1  # noqa: S101
+        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert not warnings  # noqa: S101
+
+    def test_several_techniques_without_name_are_all_counted(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – two IOC entries, each with a technique without a name
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "attack_techniques"]
+        )
+        # When
+        _when_convert(converter, _given_entry_with_malware_and_technique())
+        _when_convert(converter, _given_entry_with_malware_and_technique())
+        # Then – the count covers both entries, and popping it resets it
+        assert converter.pop_skipped_attack_technique_count() == 2  # noqa: S101
+        assert converter.pop_skipped_attack_technique_count() == 0  # noqa: S101
+
+    def test_attack_technique_with_name_is_not_counted(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "attack_techniques"]
+        )
+        # When
+        _when_convert(
+            converter,
+            _given_entry_with_malware_and_technique(attack_technique_name="Name"),
+        )
+        # Then
+        assert converter.pop_skipped_attack_technique_count() == 0  # noqa: S101
 
     def test_empty_subentities_keeps_indicator_only(
         self, logger: logging.Logger

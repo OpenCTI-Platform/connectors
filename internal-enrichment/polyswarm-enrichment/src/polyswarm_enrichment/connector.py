@@ -16,6 +16,7 @@ Enriches file observables with comprehensive threat intelligence including:
 import traceback
 from datetime import datetime, timezone
 
+from connectors_sdk import InternalEnrichmentConnector
 from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.settings import ConnectorSettings
@@ -43,8 +44,6 @@ class ConnectorTemplate:
         self.helper = helper
 
         ps = settings.polyswarm
-        # max_tlp: refuse enrichment for observables above this TLP level
-        self.max_tlp = f"TLP:{settings.connector.max_tlp.upper()}"
         # replace_with_lower_score: if False, skip score update when existing score is higher
         self.replace_with_lower_score = ps.replace_with_lower_score
         # Network IOC extraction config (#43)
@@ -782,19 +781,23 @@ class ConnectorTemplate:
         return entity_type in scopes
 
     @staticmethod
-    def _get_tlp(stix_entity: dict, opencti_entity: dict = None) -> str | None:
-        """Extract TLP marking name from a STIX entity or OpenCTI entity."""
+    def _get_tlp_levels(stix_entity: dict, opencti_entity: dict = None) -> list[str]:
+        """Extract the TLP marking names from the OpenCTI entity or the STIX entity."""
         # Try OpenCTI entity objectMarking first
         if opencti_entity:
-            for marking in opencti_entity.get("objectMarking", []):
-                definition = marking.get("definition", "")
-                if definition.startswith("TLP:"):
-                    return definition
+            tlp_levels = [
+                marking.get("definition", "")
+                for marking in opencti_entity.get("objectMarking", [])
+                if marking.get("definition", "").startswith("TLP:")
+            ]
+            if tlp_levels:
+                return tlp_levels
         # Fallback to STIX object_marking_refs
-        for ref in stix_entity.get("object_marking_refs", []):
-            if ref in _TLP_MARKING_TO_NAME:
-                return _TLP_MARKING_TO_NAME[ref]
-        return None
+        return [
+            _TLP_MARKING_TO_NAME[ref]
+            for ref in stix_entity.get("object_marking_refs", [])
+            if ref in _TLP_MARKING_TO_NAME
+        ]
 
     def process_message(self, data: dict) -> str:
         """Process the enrichment request."""
@@ -823,13 +826,16 @@ class ConnectorTemplate:
                                 break
 
             # #38 — max_tlp: refuse enrichment for high-TLP observables
-            entity_tlp = self._get_tlp(observable, opencti_entity)
-            if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
-                entity_tlp, self.max_tlp
+            tlp_levels = self._get_tlp_levels(observable, opencti_entity)
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, self.settings.connector.max_tlp
             ):
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
-                    {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
+                    {
+                        "entity_tlp": tlp_levels,
+                        "max_tlp": self.settings.connector.max_tlp,
+                    },
                 )
                 return "Observable TLP exceeds configured max_tlp"
 

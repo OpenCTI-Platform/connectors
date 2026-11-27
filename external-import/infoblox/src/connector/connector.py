@@ -135,7 +135,7 @@ class Infoblox:
         elif object_type == "HOST":
             # TIDE does not always send `domain` on HOST records; `host`
             # carries the hostname then (#7400).
-            name = threat.get("domain") or threat.get("host")
+            name = threat.get("host") or threat.get("domain")
             if not name:
                 self.helper.connector_logger.warning(
                     "Skipping Infoblox HOST threat without a domain or host value",

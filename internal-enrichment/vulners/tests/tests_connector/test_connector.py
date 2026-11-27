@@ -29,11 +29,10 @@ def fake_bundle() -> dict:
     }
 
 
-def _make_helper(*, check_max_tlp_result: bool = True) -> MagicMock:
+def _make_helper() -> MagicMock:
     """Build a fake `OpenCTIConnectorHelper`."""
     helper = MagicMock()
     helper.work_id = None
-    helper.check_max_tlp.return_value = check_max_tlp_result
     helper.send_stix2_bundle.return_value = ["bundle-1"]
     helper.stix2_create_bundle.side_effect = lambda objects: json.dumps(
         {"type": "bundle", "objects": objects}
@@ -95,7 +94,7 @@ def _make_message(
 
 def test_in_scope_vulnerability_sends_bundle(monkeypatch, fake_bundle):
     """A Vulnerability within max TLP triggers send_stix2_bundle with the bundle."""
-    helper = _make_helper(check_max_tlp_result=True)
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 
@@ -107,7 +106,6 @@ def test_in_scope_vulnerability_sends_bundle(monkeypatch, fake_bundle):
     result = connector.process_message(data)
 
     assert result == "Done"
-    helper.check_max_tlp.assert_called_once_with("TLP:AMBER", "TLP:AMBER")
     helper.send_stix2_bundle.assert_called_once()
     sent_payload = helper.send_stix2_bundle.call_args.args[0]
     assert json.loads(sent_payload) == fake_bundle
@@ -118,9 +116,9 @@ def test_in_scope_vulnerability_sends_bundle(monkeypatch, fake_bundle):
     )
 
 
-def test_no_marking_defaults_to_clear_and_enriches(monkeypatch, fake_bundle):
-    """An entity with no TLP marking defaults to TLP:CLEAR and is enriched."""
-    helper = _make_helper(check_max_tlp_result=True)
+def test_no_marking_is_enriched(monkeypatch, fake_bundle):
+    """An entity with no TLP marking is enriched."""
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 
@@ -131,7 +129,6 @@ def test_no_marking_defaults_to_clear_and_enriches(monkeypatch, fake_bundle):
     result = connector.process_message(data)
 
     assert result == "Done"
-    helper.check_max_tlp.assert_called_once_with("TLP:CLEAR", "TLP:AMBER")
     helper.send_stix2_bundle.assert_called_once()
 
 
@@ -140,7 +137,7 @@ def test_tlp_above_max_passes_inbound_bundle_through(monkeypatch, fake_bundle):
     Playbook context (no event_type): an entity above max_tlp is not enriched,
     but the inbound bundle is forwarded unchanged so the playbook can continue.
     """
-    helper = _make_helper(check_max_tlp_result=False)
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 
@@ -152,7 +149,6 @@ def test_tlp_above_max_passes_inbound_bundle_through(monkeypatch, fake_bundle):
     result = connector.process_message(data)
 
     assert result == "Skipped (TLP too high)"
-    helper.check_max_tlp.assert_called_once_with("TLP:RED", "TLP:AMBER")
     # No Vulners data must be fetched when the TLP gate blocks the entity.
     get_bundle.assert_not_called()
     # The inbound bundle is passed through unchanged.
@@ -168,9 +164,27 @@ def test_tlp_above_max_passes_inbound_bundle_through(monkeypatch, fake_bundle):
     )
 
 
+def test_one_tlp_above_max_is_not_enriched(monkeypatch, fake_bundle):
+    """Every TLP of the entity is checked, not only the last one."""
+    helper = _make_helper()
+    settings = _make_settings()
+    connector = _build_connector(helper, settings, monkeypatch)
+
+    get_bundle = MagicMock(return_value=fake_bundle)
+    monkeypatch.setattr(connector.client, "get_bundle", get_bundle)
+
+    data = _make_message(marking_definition="TLP:GREEN", event_type="create")
+    data["enrichment_entity"]["objectMarking"].insert(0, _tlp_marking("TLP:RED"))
+
+    result = connector.process_message(data)
+
+    assert result == "Skipped (TLP too high)"
+    get_bundle.assert_not_called()
+
+
 def test_tlp_above_max_manual_enrichment_sends_nothing(monkeypatch, fake_bundle):
     """Manual/internal enrichment (event_type present): skip without sending."""
-    helper = _make_helper(check_max_tlp_result=False)
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 
@@ -188,7 +202,7 @@ def test_tlp_above_max_manual_enrichment_sends_nothing(monkeypatch, fake_bundle)
 
 def test_non_cve_name_is_skipped_with_passthrough(monkeypatch, fake_bundle):
     """A Vulnerability whose name is not a CVE id is skipped, bundle forwarded."""
-    helper = _make_helper(check_max_tlp_result=True)
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 
@@ -210,7 +224,7 @@ def test_non_cve_name_is_skipped_with_passthrough(monkeypatch, fake_bundle):
 
 def test_empty_bundle_is_skipped_with_passthrough(monkeypatch):
     """An empty bundle from Vulners forwards the inbound bundle and closes work."""
-    helper = _make_helper(check_max_tlp_result=True)
+    helper = _make_helper()
     settings = _make_settings()
     connector = _build_connector(helper, settings, monkeypatch)
 

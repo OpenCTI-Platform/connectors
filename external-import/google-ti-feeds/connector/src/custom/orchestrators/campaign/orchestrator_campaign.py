@@ -11,9 +11,6 @@ from connector.src.custom.configs import (
 from connector.src.custom.convert_to_stix.campaign.convert_to_stix_campaign import (
     ConvertToSTIXCampaign,
 )
-from connector.src.custom.models.gti.gti_attack_technique_id_model import (
-    GTIAttackTechniqueIDData,
-)
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
@@ -109,28 +106,21 @@ class OrchestratorCampaign(BaseOrchestrator):
                             },
                         )
 
-                    attack_technique_entities = subentities.pop("attack_techniques", [])
-                    attack_technique_ids = [
-                        attack_technique.id
-                        for attack_technique in attack_technique_entities
-                        if getattr(attack_technique, "id", None)
-                    ]
+                    attack_technique_data = self._build_attack_technique_data(
+                        subentities.pop("attack_techniques", [])
+                    )
 
-                    if attack_technique_ids:
+                    subentities_detailed = subentities
+
+                    if attack_technique_data:
                         self.logger.info(
                             "Using ID-only approach for attack techniques (quota optimization)",
                             {
                                 "prefix": LOG_PREFIX,
-                                "attack_technique_count": len(attack_technique_ids),
+                                "attack_technique_count": len(
+                                    attack_technique_data.ids
+                                ),
                             },
-                        )
-
-                    subentities_detailed = subentities
-
-                    # Convert attack technique IDs to proper model format for conversion
-                    if attack_technique_ids:
-                        attack_technique_data = GTIAttackTechniqueIDData.from_id_list(
-                            attack_technique_ids
                         )
                         subentities_detailed["attack_techniques"] = [
                             attack_technique_data

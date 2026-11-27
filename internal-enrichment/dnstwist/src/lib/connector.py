@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 import dnstwist
+from connectors_sdk import InternalEnrichmentConnector
 from lib.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
@@ -243,29 +244,25 @@ class DnsTwistConnector:
                     continue
         return "Success"
 
-    @staticmethod
-    def _extract_tlp(entity: dict) -> str | None:
-        """Return the TLP marking definition of the entity, or None if it has none."""
-        for marking in entity.get("objectMarking") or []:
-            if marking.get("definition_type") == "TLP":
-                return marking.get("definition")
-        return None
-
     def process_message(self, data):
         """Processing the DNS enrichment request"""
         self.helper.log_info("process data: " + str(data))
         self.entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
         if observable["entity_type"] == "Domain-Name":
-            entity_tlp = self._extract_tlp(observable)
-            if not OpenCTIConnectorHelper.check_max_tlp(
-                entity_tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+            tlp_levels = [
+                marking.get("definition")
+                for marking in observable.get("objectMarking") or []
+                if marking.get("definition_type") == "TLP"
+            ]
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, self.config.connector.max_tlp
             ):
                 self.helper.connector_logger.warning(
                     "Skipping enrichment: entity TLP is above the max TLP",
                     {
-                        "entity_tlp": entity_tlp,
-                        "max_tlp": f"TLP:{self.config.connector.max_tlp.upper()}",
+                        "entity_tlp": tlp_levels,
+                        "max_tlp": self.config.connector.max_tlp,
                     },
                 )
                 return "Skipping enrichment: entity TLP is above the max TLP"

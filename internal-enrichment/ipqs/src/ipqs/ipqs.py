@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import pycti
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -776,8 +777,7 @@ class IPQSConnector:
         failure-Note path so the gate and the failure-note marking
         extractor cannot diverge on the shape contract.
         """
-        tlp = self.default_tlp_string
-        found_in_primary = False
+        tlp_levels = []
         # Primary: GraphQL ``objectMarking`` (list of dicts).
         raw_object_marking = observable.get("objectMarking")
         if isinstance(raw_object_marking, list):
@@ -785,13 +785,13 @@ class IPQSConnector:
                 if not isinstance(marking_definition, dict):
                     continue
                 if marking_definition.get("definition_type") == "TLP":
-                    tlp = _normalize_tlp(
-                        marking_definition.get("definition"),
-                        fallback=self.default_tlp_string,
+                    tlp_levels.append(
+                        _normalize_tlp(
+                            marking_definition.get("definition"),
+                            fallback=self.default_tlp_string,
+                        )
                     )
-                    found_in_primary = True
-                    break
-        if not found_in_primary:
+        if not tlp_levels:
             # Fallback: alternate ``object_marking_refs`` shape.
             raw_marking_refs = observable.get("object_marking_refs")
             if isinstance(raw_marking_refs, list):
@@ -799,9 +799,11 @@ class IPQSConnector:
                     if isinstance(ref, str):
                         resolved = _MARKING_ID_TO_TLP.get(ref)
                         if resolved is not None:
-                            tlp = resolved
-                            break
-        return OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
+                            tlp_levels.append(resolved)
+        # An observable without TLP is handled with the default TLP
+        return InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels or [self.default_tlp_string], self.max_tlp
+        )
 
     # ------------------------------------------------------------------
     # Darkweb-Leak branch (User-Account observables)

@@ -9,6 +9,7 @@ import jbxapi
 import pycti
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk import InternalEnrichmentConnector
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 
 
@@ -667,25 +668,21 @@ class JoeSandboxConnector:
                 bundle_objects.append(relationship)
         return bundle_objects
 
-    @staticmethod
-    def _extract_tlp(entity: dict) -> str | None:
-        """Return the TLP marking definition of the entity, or None if it has none."""
-        for marking in entity.get("objectMarking") or []:
-            if marking.get("definition_type") == "TLP":
-                return marking.get("definition")
-        return None
-
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
-        entity_tlp = self._extract_tlp(observable)
-        if not OpenCTIConnectorHelper.check_max_tlp(
-            entity_tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        tlp_levels = [
+            marking.get("definition")
+            for marking in observable.get("objectMarking") or []
+            if marking.get("definition_type") == "TLP"
+        ]
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.config.connector.max_tlp
         ):
             self.helper.connector_logger.warning(
                 "Skipping enrichment: entity TLP is above the max TLP",
                 {
-                    "entity_tlp": entity_tlp,
-                    "max_tlp": f"TLP:{self.config.connector.max_tlp.upper()}",
+                    "entity_tlp": tlp_levels,
+                    "max_tlp": self.config.connector.max_tlp,
                 },
             )
             if not data.get("event_type"):

@@ -45,33 +45,6 @@ def test__is_entity_in_scope(mocked_helper: Mock) -> None:
 
 @pytest.mark.usefixtures("mock_config")
 @pytest.mark.parametrize(
-    "markings, expected_tlp",
-    [
-        ([], None),
-        ([{"definition_type": "TLP", "definition": "TLP:AMBER"}], "TLP:AMBER"),
-        ([{"definition_type": "PAP", "definition": "PAP:AMBER"}], None),
-        (
-            [
-                {"definition_type": "TLP", "definition": "TLP:AMBER"},
-                {"definition_type": "PAP", "definition": "PAP:AMBER"},
-            ],
-            "TLP:AMBER",
-        ),
-    ],
-)
-def test__extract_tlp(
-    mocked_helper: Mock, markings: list[dict[str, str]], expected_tlp: str | None
-) -> None:
-    connector = Connector(
-        config=ConfigLoader(),
-        helper=mocked_helper,
-        client=Mock(),
-    )
-    assert connector._extract_tlp(markings) == expected_tlp
-
-
-@pytest.mark.usefixtures("mock_config")
-@pytest.mark.parametrize(
     "markings",
     [
         [],
@@ -99,6 +72,23 @@ def test__validate_entity_tlp_rejects_excessive_tlp(mocked_helper: Mock) -> None
         client=Mock(),
     )
     markings = [{"definition_type": "TLP", "definition": "TLP:RED"}]
+
+    with pytest.raises(MaxTlpError, match="exceeds MAX TLP"):
+        connector._validate_entity_tlp(markings)
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__validate_entity_tlp_rejects_one_excessive_tlp(mocked_helper: Mock) -> None:
+    # Every TLP of the entity is checked, not only the first one
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    markings = [
+        {"definition_type": "TLP", "definition": "TLP:GREEN"},
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+    ]
 
     with pytest.raises(MaxTlpError, match="exceeds MAX TLP"):
         connector._validate_entity_tlp(markings)
@@ -154,9 +144,7 @@ def test__process_max_tlp_error(mocked_helper: Mock) -> None:
             original_stix_objects=[],
         )
     assert exc_info.typename == "MaxTlpError"
-    assert exc_info.value.args == (
-        "TLP TLP:RED of observable exceeds MAX TLP TLP:AMBER",
-    )
+    assert exc_info.value.args == ("TLP TLP:RED of observable exceeds MAX TLP amber",)
 
 
 @pytest.mark.usefixtures("mock_config")

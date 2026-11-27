@@ -4,18 +4,17 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'RST WHOIS API'
-  scope: 'Domain-Name,Url,indicator'
-  auto: false # Enable/disable auto-enrichment of observables an indicators
-  log_level: 'info'
+  # name: 'RST WHOIS API'
+  # scope: 'Domain-Name,Url,indicator'
+  # auto: false # Enable/disable auto-enrichment of observables and indicators
+  # log_level: 'error'
+  # max_tlp: 'TLP:AMBER+STRICT'
 
-rst-whois-api:
-  base_url: 'https://api.rstcloud.net/v1'
+rst_whois_api:
   api_key: 'ChangeMe'
-  timeout: 10
-  max_tlp: 'TLP:AMBER+STRICT'
-  whois_output_object: note
-  update_output_action: overwrite
-  output_format: standard
-  output_include_raw: false
+  # base_url: 'https://api.rstcloud.net/v1'
+  # timeout: 10
+  # whois_output_object: 'note' # note or description
+  # update_output_action: 'overwrite' # overwrite or append
+  # output_format: 'standard' # standard or extended
+  # output_include_raw: false

@@ -43,39 +43,19 @@ def test__is_entity_in_scope(mocked_helper: Mock) -> None:
 
 @pytest.mark.usefixtures("mock_config")
 @pytest.mark.parametrize(
-    "markings, expected_tlp",
-    [
-        ([], None),
-        ([{"definition_type": "TLP", "definition": "TLP:AMBER"}], "TLP:AMBER"),
-        ([{"definition_type": "PAP", "definition": "PAP:AMBER"}], None),
-        (
-            [
-                {"definition_type": "TLP", "definition": "TLP:AMBER"},
-                {"definition_type": "PAP", "definition": "PAP:AMBER"},
-            ],
-            "TLP:AMBER",
-        ),
-    ],
-)
-def test__extract_tlp(
-    mocked_helper: Mock, markings: list[dict[str, str]], expected_tlp: str | None
-) -> None:
-    connector = Connector(
-        config=ConfigLoader(),
-        helper=mocked_helper,
-        client=Mock(),
-    )
-    assert connector._extract_tlp(markings) == expected_tlp
-
-
-@pytest.mark.usefixtures("mock_config")
-@pytest.mark.parametrize(
     "markings, expected",
     [
         ([], True),
         ([{"definition_type": "TLP", "definition": "TLP:AMBER"}], True),
         ([{"definition_type": "TLP", "definition": "TLP:RED"}], False),
         ([{"definition_type": "PAP", "definition": "PAP:AMBER"}], True),
+        (
+            [
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+            ],
+            False,
+        ),
     ],
 )
 def test__is_entity_tlp_allowed(

@@ -1,5 +1,6 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
+from connectors_sdk import InternalEnrichmentConnector
 from connectors_sdk.models import BaseIdentifiedEntity
 from connectors_sdk.models.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
@@ -122,15 +123,19 @@ class RFEnrichmentConnector:
                 )
                 self.helper.connector_logger.error(message)
                 raise ValueError(message)
-            tlp = "TLP:CLEAR"
-            for marking_definition in enrichment_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    tlp = marking_definition["definition"]
-            if not self.helper.check_max_tlp(
-                tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+            tlp_levels = [
+                marking_definition["definition"]
+                for marking_definition in enrichment_entity["objectMarking"]
+                if marking_definition["definition_type"] == "TLP"
+            ]
+            max_tlp = self.config.connector.max_tlp
+            if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+                tlp_levels, max_tlp
             ):
-                message = f"Do not send any data, TLP of the entity is ({tlp}), "
-                f"which is greater than MAX TLP: (TLP:{self.config.connector.max_tlp.upper()})"
+                message = (
+                    f"Do not send any data, TLP of the entity is ({', '.join(tlp_levels)}), "
+                    f"which is greater than MAX TLP: ({max_tlp})"
+                )
                 self.helper.connector_logger.warning(
                     message,
                     {"entity_type": entity_type, "entity_stix_id": entity_stix_id},

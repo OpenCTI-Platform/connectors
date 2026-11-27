@@ -29,17 +29,13 @@ class StubConnectorSettings(ConnectorSettings):
 
 
 class FakeHelper:
-    def __init__(self, max_tlp_ok: bool = True):
+    def __init__(self):
         self.connector_logger = MagicMock()
         self.connect_id = "connector-id"
         self.connect_name = "Test Connector"
         self.connect_scope = "IPv4-Addr"
-        self._max_tlp_ok = max_tlp_ok
         self.stix2_create_bundle = MagicMock(return_value="serialized-bundle")
         self.send_stix2_bundle = MagicMock()
-
-    def check_max_tlp(self, tlp, max_tlp):
-        return self._max_tlp_ok
 
     def listen(self, callback):
         self._callback = callback
@@ -196,3 +192,81 @@ def test_process_message_sends_bundle_when_data_is_available():
     assert send_kwargs["bundle"] == "serialized-bundle"
     assert send_kwargs["update"] is True
     assert send_kwargs["cleanup_inconsistent_bundle"] is True
+
+
+def test_process_message_refuses_entity_with_one_tlp_above_max():
+    # Given an entity with two TLPs, one of them above the max TLP (amber)
+    settings = StubConnectorSettings()
+    helper = FakeHelper()
+    connector = PureSignalScoutConnector(config=settings, helper=helper)
+    connector.client.get_entity = MagicMock()
+
+    # When
+    result = connector.process_message(
+        {
+            "enrichment_entity": {
+                "standard_id": "observable--3",
+                "entity_type": "IPv4-Addr",
+                "value": "1.1.1.1",
+                "objectMarking": [
+                    {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+                    {"definition_type": "TLP", "definition": "TLP:RED"},
+                ],
+            }
+        }
+    )
+
+    # Then
+    assert result.startswith("Error:")
+    connector.client.get_entity.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_process_message_allows_entity_without_tlp():
+    # Given an entity without any TLP marking
+    settings = StubConnectorSettings()
+    helper = FakeHelper()
+    connector = PureSignalScoutConnector(config=settings, helper=helper)
+    connector.client.get_entity = MagicMock(return_value=None)
+
+    # When
+    result = connector.process_message(
+        {
+            "enrichment_entity": {
+                "standard_id": "observable--4",
+                "entity_type": "IPv4-Addr",
+                "value": "1.1.1.1",
+                "objectMarking": [
+                    {"definition_type": "statement", "definition": "Internal"},
+                ],
+            }
+        }
+    )
+
+    # Then
+    assert result == "No intelligence data found"
+    connector.client.get_entity.assert_called_once_with("IPv4-Addr", "1.1.1.1")
+
+
+def test_process_message_allows_entity_with_null_object_marking():
+    # Given an entity whose objectMarking is null
+    settings = StubConnectorSettings()
+    helper = FakeHelper()
+    connector = PureSignalScoutConnector(config=settings, helper=helper)
+    connector.client.get_entity = MagicMock(return_value=None)
+
+    # When
+    result = connector.process_message(
+        {
+            "enrichment_entity": {
+                "standard_id": "observable--5",
+                "entity_type": "IPv4-Addr",
+                "value": "1.1.1.1",
+                "objectMarking": None,
+            }
+        }
+    )
+
+    # Then
+    assert result == "No intelligence data found"
+    connector.client.get_entity.assert_called_once_with("IPv4-Addr", "1.1.1.1")

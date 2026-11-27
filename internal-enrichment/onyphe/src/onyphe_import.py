@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
+from connectors_sdk import InternalEnrichmentConnector
 from internal_enrichment_connector.config_loader import ConfigConnector
 from onyphe_api import APIError, Onyphe
 from onyphe_references import (
@@ -254,17 +255,18 @@ class ONYPHEConnector:
         return stix_x509
 
     def _extract_and_check_markings(self, entity):
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+        tlp_levels = [
+            marking_definition["definition"]
+            for marking_definition in entity["objectMarking"]
+            if marking_definition["definition_type"] == "TLP"
+        ]
 
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
-        if not is_valid_max_tlp:
+        if not InternalEnrichmentConnector.is_entity_tlp_allowed(
+            tlp_levels, self.max_tlp
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return tlp
 
     def _generate_stix_relationship(
         self, source_ref, stix_core_relationship_type, target_ref
