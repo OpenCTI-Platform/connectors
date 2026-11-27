@@ -592,7 +592,7 @@ def test_process_message_closes_the_work_in_error_when_the_bundle_cannot_be_sent
     ]
     # The work does not stay in progress in OpenCTI
     helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "Failed to send the bundle", in_error=True
+        "work-id", "Failed to send the bundle: ConnectionError", in_error=True
     )
     # The interval is not marked as collected: the next run collects it again
     helper.set_state.assert_not_called()
@@ -621,7 +621,7 @@ def test_process_message_reports_the_send_error_when_the_work_cannot_be_closed(
         }
     ]
     helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "Failed to send the bundle", in_error=True
+        "work-id", "Failed to send the bundle: ConnectionError", in_error=True
     )
     helper.connector_logger.error.assert_any_call(
         "[CONNECTOR] Failed to close the work in error",

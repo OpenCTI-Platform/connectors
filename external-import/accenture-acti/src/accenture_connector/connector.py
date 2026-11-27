@@ -395,12 +395,17 @@ class ConnectorAccenture:
     def _close_work_in_error(self, work_id: str, err: Exception) -> None:
         """Close a work in error, so that it does not stay in progress in OpenCTI.
 
+        The message of the work names the type of the error, so that the cause is
+        visible in OpenCTI without the connector logs.
+
         A failure to close the work is logged, never raised: the caller re-raises
         the error that made the work fail.
         """
         try:
             self.helper.api.work.to_processed(
-                work_id, "Failed to send the bundle", in_error=True
+                work_id,
+                f"Failed to send the bundle: {type(err).__name__}",
+                in_error=True,
             )
         except Exception as close_err:  # noqa: BLE001
             self.helper.connector_logger.error(

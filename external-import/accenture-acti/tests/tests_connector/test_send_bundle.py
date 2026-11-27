@@ -35,7 +35,7 @@ def test_a_failed_send_closes_the_work_in_error_and_raises(connector):
         connector._send_bundle(0, BUNDLE)
 
     connector.helper.api.work.to_processed.assert_called_once_with(
-        "work-1", "Failed to send the bundle", in_error=True
+        "work-1", "Failed to send the bundle: ConnectionError", in_error=True
     )
 
 
@@ -81,5 +81,5 @@ def test_a_failed_send_is_the_error_returned_by_the_run(connector):
         ("other.unknown", "[ConnectionError] queue unreachable")
     ]
     connector.helper.api.work.to_processed.assert_called_once_with(
-        "work-1", "Failed to send the bundle", in_error=True
+        "work-1", "Failed to send the bundle: ConnectionError", in_error=True
     )
