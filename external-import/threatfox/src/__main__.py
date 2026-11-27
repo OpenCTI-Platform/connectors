@@ -15,17 +15,20 @@ import urllib.request
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import stix2
 import validators
+from connectors_sdk import ProviderApiError
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.shared.spamhaus import SpamhausClient
 from pycti import (
     Indicator,
     Malware,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
+from pycti import __version__ as pycti_version
 from src.models.configs.config_loader import ConfigLoader
 from stix2.base import _Observable as Observable
 
@@ -34,6 +37,12 @@ BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 RETRY_BASE_DELAY = 60  # seconds, first retry after a failed run
 # Bounds 2**n for a long run of failures; the interval caps the delay long before.
 MAX_BACKOFF_EXPONENT = 30
+# Spamhaus commercial API (JWT): query endpoint and page size (the API maximum).
+SPAMHAUS_IOCS_PATH = "/threatfox/v1/iocs"
+SPAMHAUS_PAGE_SIZE = 100
+# Without a checkpoint, ask for the same window as the community `recent.csv`.
+SPAMHAUS_FIRST_RUN_WINDOW = timedelta(days=2)
+RFC3339_UTC = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class ThreatFoxDownloadError(DataRetrievalError):
@@ -43,6 +52,14 @@ class ThreatFoxDownloadError(DataRetrievalError):
 # pylint:disable=too-many-instance-attributes
 class ThreatFox:
     """ThreatFox connector"""
+
+    # Commercial mode only (set in `__init__`); None means community mode.
+    spamhaus_client: Optional[SpamhausClient] = None
+    # Whether a community Auth-Key can take over when the commercial mode fails.
+    community_fallback: bool = True
+    # Set by `fetch_rows` when the current run was served by the community export
+    # after the commercial mode failed.
+    csv_fallback_used: bool = False
 
     def __init__(self):
         """Initializer"""
@@ -59,6 +76,18 @@ class ThreatFox:
                 "Remove THREATFOX_CSV_URL from the configuration."
             )
         self.threatfox_csv_url = self.config.threatfox.export_url
+        self.community_fallback = self.config.threatfox.community_configured
+        if self.config.threatfox.use_commercial:
+            self.spamhaus_client = SpamhausClient(
+                username=self.config.threatfox.spamhaus_username,
+                password=self.config.threatfox.spamhaus_password,
+                connector_name="threatfox",
+                connector_version=pycti_version,
+            )
+            self.helper.connector_logger.info(
+                "Spamhaus commercial mode enabled",
+                meta={"community_fallback": self.community_fallback},
+            )
         self.threatfox_import_offline = self.config.threatfox.import_offline
         self.threatfox_interval = self.config.threatfox.interval
         self.create_indicators = self.config.threatfox.create_indicators
@@ -192,19 +221,10 @@ class ThreatFox:
             "Threat Fox run @ " + now_dt.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        csv.register_dialect(
-            "custom",
-            delimiter=",",
-            quotechar='"',
-            skipinitialspace=True,
-        )
-
         last_processed_entry_running_max = 0
+        self.csv_fallback_used = False
 
         try:
-            lines = self.download_csv()
-            csv_reader = csv.reader(lines, dialect="custom")
-
             bundle_objects = []
 
             last_processed_entry = state.get("last_processed_entry")  # epoch
@@ -216,23 +236,7 @@ class ThreatFox:
 
             last_processed_entry_running_max = last_processed_entry
 
-            for i, row in enumerate(csv_reader):
-                if len(row) > 15:
-                    self.helper.log_info(
-                        f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
-                    )
-                    continue
-                # A bad row must not fail the run: it would fail again on
-                # every retry for as long as it stays in the export.
-                try:
-                    ioc = FeedRow(row)
-                except (IndexError, ValueError) as err:
-                    self.helper.connector_logger.warning(
-                        "The csv line cannot be parsed and will be ignored",
-                        meta={"line": i, "error": str(err), "data": row},
-                    )
-                    continue
-
+            for i, ioc in enumerate(self.fetch_rows(last_processed_entry, now_dt)):
                 # skip unwanted IOC types
                 if ALL_TYPES not in self.ioc_to_import:
                     if ioc.type not in self.ioc_to_import:
@@ -274,6 +278,14 @@ class ThreatFox:
                     work_id=work_id,
                 )
 
+        except ProviderApiError as err:
+            # No community Auth-Key to fall back to: the message (no secret in
+            # it) tells the operator what to check.
+            self.helper.connector_logger.error(
+                "Spamhaus commercial API failed", meta={"error": str(err)}
+            )
+            self.helper.api.work.to_processed(work_id, str(err), in_error=True)
+            return False
         except Exception:  # pylint:disable=broad-exception-caught
             # Keep `last_run` unchanged so the next loop retries instead of
             # waiting a full interval, and report the work as failed.
@@ -282,6 +294,12 @@ class ThreatFox:
                 work_id, "Connector run failed, see connector logs", in_error=True
             )
             return False
+
+        # The community export only covers the recent window. After a fallback,
+        # keep the checkpoint of the commercial API, otherwise the next healthy
+        # commercial run would start after entries that neither source imported.
+        if self.csv_fallback_used:
+            last_processed_entry_running_max = last_processed_entry
 
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"
@@ -294,6 +312,98 @@ class ThreatFox:
         )
         self.helper.api.work.to_processed(work_id, message)
         return True
+
+    def fetch_rows(
+        self, last_processed_entry: float, now_dt: datetime
+    ) -> Iterator[FeedRow]:
+        """Yield the IOCs to import, from Spamhaus (commercial mode) or abuse.ch.
+
+        When the commercial mode fails and a community Auth-Key is configured,
+        the community export is used instead, with a warning. Without an
+        Auth-Key the error propagates and fails the run.
+        """
+
+        if self.spamhaus_client is not None:
+            try:
+                rows = self.fetch_spamhaus_rows(last_processed_entry, now_dt)
+            except ProviderApiError as err:
+                if not self.community_fallback:
+                    raise
+                self.helper.connector_logger.warning(
+                    "Spamhaus commercial API failed, falling back to the "
+                    "community abuse.ch Auth-Key",
+                    meta={"error": str(err)},
+                )
+                self.csv_fallback_used = True
+            else:
+                yield from rows
+                return
+
+        yield from self.fetch_csv_rows()
+
+    def fetch_spamhaus_rows(
+        self, last_processed_entry: float, now_dt: datetime
+    ) -> List[FeedRow]:
+        """Read every page of `GET /threatfox/v1/iocs` since the checkpoint.
+
+        The pages are read in full before any row is returned, so a failure in
+        the middle falls back to the community export without a partial import.
+        """
+
+        if last_processed_entry:
+            since = datetime.fromtimestamp(last_processed_entry, UTC)
+        else:
+            since = now_dt - SPAMHAUS_FIRST_RUN_WINDOW
+        self.helper.connector_logger.info(
+            "Fetching Threat Fox IOCs from Spamhaus",
+            meta={"since": since.strftime(RFC3339_UTC)},
+        )
+
+        rows: List[FeedRow] = []
+        for page in self.spamhaus_client.paginate(
+            SPAMHAUS_IOCS_PATH,
+            params={"since": since.strftime(RFC3339_UTC)},
+            page_size=SPAMHAUS_PAGE_SIZE,
+        ):
+            for item in page:
+                # A bad item must not fail the run: it would fail again on
+                # every retry for as long as it stays in the feed.
+                try:
+                    rows.append(FeedRow.from_api(item))
+                except (AttributeError, KeyError, TypeError, ValueError) as err:
+                    # `item` may not be a dict (null, string...): no `.get`.
+                    item_id = item.get("id") if isinstance(item, dict) else None
+                    self.helper.connector_logger.warning(
+                        "A Spamhaus IOC cannot be parsed and will be ignored",
+                        meta={"id": item_id, "error": repr(err)},
+                    )
+        return rows
+
+    def fetch_csv_rows(self) -> Iterator[FeedRow]:
+        """Yield the IOCs of the community CSV export."""
+
+        csv.register_dialect(
+            "custom",
+            delimiter=",",
+            quotechar='"',
+            skipinitialspace=True,
+        )
+        csv_reader = csv.reader(self.download_csv(), dialect="custom")
+        for i, row in enumerate(csv_reader):
+            if len(row) > 15:
+                self.helper.log_info(
+                    f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
+                )
+                continue
+            # A bad row must not fail the run: it would fail again on
+            # every retry for as long as it stays in the export.
+            try:
+                yield FeedRow(row)
+            except (IndexError, ValueError) as err:
+                self.helper.connector_logger.warning(
+                    "The csv line cannot be parsed and will be ignored",
+                    meta={"line": i, "error": str(err), "data": row},
+                )
 
     def download_csv(self) -> Iterable[str]:
         """
@@ -587,6 +697,53 @@ class FeedRow:
     tags: List[str]
     anonymous: bool
     reporter: str
+
+    @classmethod
+    def from_api(cls, item: Dict[str, Any]) -> "FeedRow":
+        """Build a row from an item of the Spamhaus `GET /threatfox/v1/iocs`.
+
+        The item is turned into the CSV columns, so both sources share the same
+        normalization (aliases, unknown malware, tags...).
+
+        Raises:
+            KeyError: A required field is missing (`id`, `ioc`, `ioc_type`,
+                `first_seen`).
+            ValueError: A date or the confidence is not valid.
+        """
+
+        def utc_text(value: Optional[str]) -> str:
+            if not value:
+                return ""
+            moment = datetime.fromisoformat(value)
+            if moment.tzinfo is not None:
+                moment = moment.astimezone(UTC)
+            return moment.strftime("%Y-%m-%d %H:%M:%S")
+
+        tags = item.get("tags") or []
+        if not isinstance(tags, str):
+            tags = ",".join(str(tag) for tag in tags)
+
+        return cls(
+            (
+                utc_text(item["first_seen"]),
+                str(item["id"]),
+                item["ioc"],
+                item["ioc_type"],
+                item.get("threat_type") or "",
+                item.get("malware") or "unknown",
+                item.get("malware_alias") or "",
+                item.get("malware_printable")
+                or item.get("malware")
+                or "Unknown malware",
+                utc_text(item.get("last_seen")),
+                str(item.get("confidence_level") or 0),
+                str(bool(item.get("is_compromised"))),
+                item.get("reference") or "",
+                tags,
+                "1" if item.get("reporter") == "anonymous" else "0",
+                item.get("reporter") or "",
+            )
+        )
 
     def __init__(self, row: Tuple) -> None:
         """Initializer"""

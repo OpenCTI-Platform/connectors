@@ -9,6 +9,10 @@ services:
       - CONNECTOR_NAME=ThreatFox
       - CONNECTOR_SCOPE=threatfox
       - CONNECTOR_LOG_LEVEL=error
-      - THREATFOX_AUTH_KEY=ChangeMe # From https://auth.abuse.ch
+      # Set at least one of the two modes. With both, the commercial one wins and
+      # the Auth-Key is the fallback.
+      - THREATFOX_AUTH_KEY=ChangeMe # Community mode, from https://auth.abuse.ch
+      # - THREATFOX_SPAMHAUS_USERNAME=ChangeMe # Commercial mode, Spamhaus Customer Portal
+      # - THREATFOX_SPAMHAUS_PASSWORD=ChangeMe
       - THREATFOX_INTERVAL=3 # In days
     restart: always

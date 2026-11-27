@@ -52,7 +52,23 @@
     },
     "THREATFOX_AUTH_KEY": {
       "default": null,
-      "description": "abuse.ch Auth-Key, available at https://auth.abuse.ch. Required unless `csv_url` is set.",
+      "description": "abuse.ch Auth-Key (community mode), available at https://auth.abuse.ch. Optional when Spamhaus credentials are set.",
+      "format": "password",
+      "minLength": 1,
+      "type": "string",
+      "writeOnly": true
+    },
+    "THREATFOX_SPAMHAUS_USERNAME": {
+      "default": null,
+      "description": "Username of the Spamhaus abuse.ch API account (commercial mode), from the Spamhaus Customer Portal. Needs `spamhaus_password`.",
+      "format": "password",
+      "minLength": 1,
+      "type": "string",
+      "writeOnly": true
+    },
+    "THREATFOX_SPAMHAUS_PASSWORD": {
+      "default": null,
+      "description": "Password of the Spamhaus abuse.ch API account (commercial mode). Needs `spamhaus_username`.",
       "format": "password",
       "minLength": 1,
       "type": "string",
@@ -60,7 +76,7 @@
     },
     "THREATFOX_CSV_URL": {
       "default": null,
-      "description": "Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. The retired public URL (https://threatfox.abuse.ch/export/...) is ignored.",
+      "description": "Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. Only used in community mode. The retired public URL (https://threatfox.abuse.ch/export/...) is ignored.",
       "format": "password",
       "minLength": 1,
       "type": "string",

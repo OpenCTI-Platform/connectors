@@ -7,4 +7,8 @@ connector:
   id: 'ChangeMe'
 
 threatfox:
-  auth_key: 'ChangeMe' # From https://auth.abuse.ch
+  # Set at least one of the two modes. With both, the commercial one wins and
+  # the Auth-Key is the fallback.
+  auth_key: 'ChangeMe' # Community mode, from https://auth.abuse.ch
+  # spamhaus_username: 'ChangeMe' # Commercial mode, Spamhaus Customer Portal
+  # spamhaus_password: 'ChangeMe'
