@@ -453,7 +453,10 @@ def test_wait_for_opencti_entity_raises_when_all_attempts_error(monkeypatch):
             attempts=2,
             delay_s=0.01,
         )
-    assert any("attempt 3/3" in msg for msg in info_msgs)
+    info_msgs = [
+        str(c.args[0]) for c in helper.connector_logger.info.call_args_list if c.args
+    ]
+    assert any("attempt 2/2" in msg for msg in info_msgs)
 
 
 def test_batch_send_splits_oversized_lists_into_chunks(connector):
