@@ -64,7 +64,17 @@ class SekoiaConnector(object):
 
     @cached_property
     def requested_types(self) -> str:
-        return self.helper.connect_scope
+        """Comma-separated STIX types sent to Sekoia as `match[type]`.
+
+        pycti gives the scope as a list when it comes from the settings, and as
+        the raw string when it comes from the CONNECTOR_SCOPE environment
+        variable. `requests` sends a list as repeated `match[type]` parameters,
+        which the Sekoia API answers with an empty page, so always send a string.
+        """
+        scope = self.helper.connect_scope
+        if isinstance(scope, str):
+            return scope
+        return ",".join(scope or [])
 
     def process_message(self):
         self.helper.connector_logger.info("Starting SEKOIA.IO connector")
@@ -470,7 +480,8 @@ class SekoiaConnector(object):
                 return res.content
             return res.json()
         except RequestException as ex:
-            if ex.response:
+            # A Response is falsy for 4xx/5xx statuses: compare with None
+            if ex.response is not None:
                 error = f"Request failed with status: {ex.response.status_code}"
                 self.helper.connector_logger.error(error)
             else:
