@@ -14,7 +14,12 @@ connector:
 
 urlhaus_recent_payloads:
   api_url: 'https://urlhaus-api.abuse.ch/v1/'
-  api_key: 'ChangeMe' # Required, issued for free by URLHaus - https://urlhaus-api.abuse.ch/#auth_key
+  # Authentication: set an abuse.ch Auth-Key (community) and/or Spamhaus credentials (commercial).
+  # When both are set, the Spamhaus commercial API is used and the Auth-Key is the fallback.
+  auth_key: 'ChangeMe' # abuse.ch Auth-Key, issued for free - https://auth.abuse.ch (formerly `api_key`)
+  # spamhaus_username: 'ChangeMe' # Spamhaus abuse.ch API account, from the Spamhaus Customer Portal
+  # spamhaus_password: 'ChangeMe'
+  # import_start_date: 'P1D' # Spamhaus commercial API only: how far back to import on the first run (ISO-8601 datetime or duration)
   cooldown_seconds: 300 # Time to wait in seconds between subsequent requests
   include_filetypes: 'exe,zip,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll' # (Optional) Only download files if file type matches. (Comma separated)
   include_signatures: '' # (Optional) Only download files if match these Yara rules. (Comma separated)
