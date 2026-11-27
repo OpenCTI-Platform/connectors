@@ -1407,13 +1407,17 @@ class RSTThreatLibrary:
         self, stix_objects: List[Any], obj_type: str
     ) -> bool:
         """Push via injected WorkManager send with the connector retry policy."""
-        assert self._send_bundle is not None
+        if self._send_bundle is None:
+            raise RuntimeError(
+                "SDK WorkManager send hook is not configured (_send_bundle)"
+            )
+        send_bundle = self._send_bundle
         max_retries = max(1, int(self._max_retries))
         retry_delay = self._retry_delay
 
         for attempt in range(max_retries):
             try:
-                return bool(self._send_bundle(stix_objects, obj_type))
+                return bool(send_bundle(stix_objects, obj_type))
             except Exception as ex:
                 if self._is_retryable_upload_error(ex):
                     self.helper.connector_logger.error(
