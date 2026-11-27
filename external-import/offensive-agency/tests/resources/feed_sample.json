@@ -1,0 +1,108 @@
+{
+  "type": "bundle",
+  "id": "bundle--00000000-0000-5000-8000-000000000000",
+  "objects": [
+    {
+      "type": "identity",
+      "spec_version": "2.1",
+      "id": "identity--00000000-0000-5000-8000-000000000001",
+      "created": "2026-01-01T00:00:00.000Z",
+      "modified": "2026-01-01T00:00:00.000Z",
+      "name": "Example publisher",
+      "identity_class": "organization",
+      "description": "Example licence notice."
+    },
+    {
+      "type": "tool",
+      "spec_version": "2.1",
+      "id": "tool--00000000-0000-5000-8000-000000000101",
+      "created": "2026-01-01T00:00:00.000Z",
+      "modified": "2026-01-01T00:00:00.000Z",
+      "created_by_ref": "identity--00000000-0000-5000-8000-000000000001",
+      "name": "Agent Alpha",
+      "description": "Example offensive agent.",
+      "tool_types": ["exploitation"],
+      "external_references": [
+        {"source_name": "example", "url": "https://example.com/agent/alpha"}
+      ]
+    },
+    {
+      "type": "tool",
+      "spec_version": "2.1",
+      "id": "tool--00000000-0000-5000-8000-000000000102",
+      "created": "2026-01-01T00:00:00.000Z",
+      "modified": "2026-01-01T00:00:00.000Z",
+      "created_by_ref": "identity--00000000-0000-5000-8000-000000000001",
+      "name": "Agent Beta",
+      "description": null,
+      "tool_types": null,
+      "external_references": null
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--00000000-0000-5000-8000-000000000201",
+      "created": "2026-01-10T00:00:00.000Z",
+      "modified": "2026-01-10T00:00:00.000Z",
+      "valid_from": "2026-01-10T00:00:00.000Z",
+      "created_by_ref": "identity--00000000-0000-5000-8000-000000000001",
+      "name": "Exposed agent: Agent Alpha",
+      "description": "Example exposed console.",
+      "indicator_types": ["anomalous-activity"],
+      "labels": ["agent:alpha", "network:hosting"],
+      "confidence": 85,
+      "pattern": "[ipv4-addr:value = '198.51.100.1']",
+      "pattern_type": "stix",
+      "external_references": [
+        {"source_name": "example", "url": "https://example.com/host/198.51.100.1"}
+      ]
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--00000000-0000-5000-8000-000000000202",
+      "created": "2026-01-08T00:00:00.000Z",
+      "modified": "2026-01-12T00:00:00.000Z",
+      "valid_from": "2026-01-08T00:00:00.000Z",
+      "created_by_ref": "identity--00000000-0000-5000-8000-000000000001",
+      "name": "Exposed agent: Agent Alpha",
+      "description": "Example exposed console.",
+      "indicator_types": ["anomalous-activity"],
+      "labels": ["agent:alpha", "agent:beta", "network:cloud"],
+      "confidence": 50,
+      "pattern": "[ipv4-addr:value = '198.51.100.2']",
+      "pattern_type": "stix",
+      "external_references": null
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--00000000-0000-5000-8000-000000000301",
+      "created": "2026-01-10T00:00:00.000Z",
+      "modified": "2026-01-10T00:00:00.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--00000000-0000-5000-8000-000000000201",
+      "target_ref": "tool--00000000-0000-5000-8000-000000000101"
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--00000000-0000-5000-8000-000000000302",
+      "created": "2026-01-08T00:00:00.000Z",
+      "modified": "2026-01-12T00:00:00.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--00000000-0000-5000-8000-000000000202",
+      "target_ref": "tool--00000000-0000-5000-8000-000000000101"
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--00000000-0000-5000-8000-000000000303",
+      "created": "2026-01-08T00:00:00.000Z",
+      "modified": "2026-01-12T00:00:00.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--00000000-0000-5000-8000-000000000202",
+      "target_ref": "tool--00000000-0000-5000-8000-000000000102"
+    }
+  ]
+}
