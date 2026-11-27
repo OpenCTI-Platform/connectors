@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+from connectors_sdk import (
+    DataNotFoundError,
+    ErrorStore,
+    ProviderApiInvalidResponseError,
+)
+
 # STIX 2.1 cyber observable types (SCOs). OpenCTI uses
 # ``x_opencti_created_by_ref`` on SCOs because the STIX 2.1 spec only defines
 # ``created_by_ref`` on SDOs/SROs; setting it on an SCO produces an invalid
@@ -27,11 +33,6 @@ _STIX_SCO_TYPES = frozenset(
         "x509-certificate",
     }
 )
-
-# Hard upper bound on consecutive failed pages before giving up on the
-# current handler run. A regular ``schedule_iso`` cycle will pick up where
-# we left off, so bailing out is safer than spinning forever.
-_MAX_PAGE_FAILURES = 5
 
 
 class BaseHandler(ABC):
@@ -60,8 +61,8 @@ class BaseHandler(ABC):
         # Per-run success flags consumed by ``TeamT5Connector.process_message``
         # to decide whether the persisted ``last_run`` cursor can be safely
         # advanced. ``aborted`` flips to ``True`` when
-        # ``retrieve_bundle_references`` bails out after
-        # ``_MAX_PAGE_FAILURES`` consecutive failed pages; ``partial_push``
+        # ``retrieve_bundle_references`` stops on a page that failed after
+        # the client's retries; ``partial_push``
         # flips to ``True`` when ``push_objects`` failed to push every
         # retrieved bundle (e.g. one of the per-bundle STIX downloads
         # returned ``None`` / contained no objects / had no ``stix_url``).
@@ -115,7 +116,6 @@ class BaseHandler(ABC):
         # even though token exchange already honours it.
         url = f"{self.config.teamt5.api_base_url.rstrip('/')}{self.url_suffix}"
         retrieved_bundle_refs = []
-        failure_count = 0
         # Reset success flags at the top of each retrieval pass so a
         # previous-cycle failure does not stick to the handler instance
         # (the connector instantiates each handler once and re-uses it
@@ -135,28 +135,29 @@ class BaseHandler(ABC):
             # downloads in ``push_objects`` — see
             # ``Teamt5Client.request_data`` docstring for the rationale.
             data = self.client.request_data(url, params, throttle=True)
-            if not data or not data.get("success"):
-                failure_count += 1
-                self.helper.connector_logger.warning(
-                    f"Unable to retrieve {self.name}: response from server was unsuccessful "
-                    f"(attempt {failure_count}/{_MAX_PAGE_FAILURES})"
+            if data is None or not data.get("success"):
+                # The client already retried the failed request (see
+                # ``RetryingAdapter``): a page that still fails
+                # stops the listing. Signal partial-failure to the caller so
+                # the connector's persisted ``last_run`` cursor is NOT
+                # advanced past the unprocessed listing tail — advancing it
+                # would silently skip every bundle that was published after
+                # ``last_run`` but before the page that failed.
+                self.helper.connector_logger.error(
+                    f"Giving up on {self.name} retrieval: response from server was "
+                    "unsuccessful; the next scheduled run will retry."
                 )
-                if failure_count >= _MAX_PAGE_FAILURES:
-                    self.helper.connector_logger.error(
-                        f"Giving up on {self.name} retrieval after {failure_count} consecutive "
-                        "failed pages; the next scheduled run will retry."
+                self.aborted = True
+                # ``None`` is a failure the client recorded. A payload without
+                # ``success`` raised nothing, so it is recorded here. The run
+                # continues with the next handler: recorded, not raised.
+                if data is not None:
+                    ErrorStore().record_error(
+                        ProviderApiInvalidResponseError(
+                            f"{self.name} listing answered without success"
+                        )
                     )
-                    # Signal partial-failure to the caller so the
-                    # connector's persisted ``last_run`` cursor is NOT
-                    # advanced past the unprocessed listing tail —
-                    # advancing it would silently skip every bundle
-                    # that was published after ``last_run`` but before
-                    # the page that failed.
-                    self.aborted = True
-                    break
-                continue
-
-            failure_count = 0
+                break
 
             # Using template method, map each bundle reference based on the retrieved data.
             bundle_refs = [
@@ -219,15 +220,33 @@ class BaseHandler(ABC):
                 continue
 
             pushable_refs += 1
+            # Report references carry an ``alias``, IOC bundle references an ``id``.
+            # The URL stays out of the error message: it may be signed.
+            ref_id = bundle_ref.get("id") or bundle_ref.get("alias")
+
+            # A skipped bundle counts as a partial push, which holds ``last_run``:
+            # it is recorded as a data error, so the run reports why. The cause of
+            # a failed download is recorded by the client.
 
             # Retrieve the STIX Bundle corresponding to the bundle reference
             stix_bundle = self.client.request_data(bundle_url)
             if stix_bundle is None:
+                ErrorStore().record_error(
+                    DataNotFoundError(
+                        f"{self.name} {ref_id} skipped: its STIX bundle could not "
+                        "be downloaded"
+                    )
+                )
                 continue
 
             stix_content = stix_bundle.get("objects")
             if stix_content is None or len(stix_content) == 0:
                 self.helper.connector_logger.info("API Returned bundle with no items.")
+                ErrorStore().record_error(
+                    DataNotFoundError(
+                        f"{self.name} {ref_id} skipped: its STIX bundle has no objects"
+                    )
+                )
                 continue
 
             # Append author and TLP Marking to objects in the bundle

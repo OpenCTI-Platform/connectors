@@ -1,8 +1,14 @@
 import sys
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 import stix2
+from connectors_sdk import (
+    ConnectorError,
+    ErrorStore,
+    OctiUnreachableError,
+    UnknownError,
+)
 from pycti import Identity as pyctiIdentity
 from pycti import MarkingDefinition, OpenCTIConnectorHelper
 from stix2 import Identity
@@ -38,7 +44,64 @@ class TeamT5Connector:
             self.client, helper, config, self.author, self.tlp_ref
         )
 
-    def process_message(self) -> None:
+    @staticmethod
+    def _return_run_error_list(
+        run_error: Optional[ConnectorError] = None,
+    ) -> list[dict[str, Any]]:
+        """Return the errors of the run in the pycti format.
+
+        :param run_error: The error that stopped the run, if any.
+        :return: The errors recorded in the ErrorStore during the run, in the order
+            they were recorded, then the error that stopped the run, if any. It
+            comes last because pycti keeps one error per code, the last one: an
+            earlier error with the same code must not replace it.
+        """
+        errors = list(ErrorStore().get_errors())
+        if run_error is not None:
+            errors.append(run_error)
+        return [error.convert_to_pycti_format() for error in errors]
+
+    def _close_work_in_error(self, work_id: Optional[str], err: Exception) -> None:
+        """Close the Work left open by a failed run, marking it ``in_error``.
+
+        Without it, a crash mid-run leaves the Work stuck in the "running" state in
+        the OpenCTI UI. The close call is itself guarded so that a platform
+        partition that caused the original failure cannot also crash the error
+        handler: its failure is recorded in the ErrorStore as an
+        ``OctiUnreachableError``.
+
+        :param work_id: The id of the Work left open, or ``None`` if none is open.
+        :param err: The error that stopped the run.
+        """
+        if work_id is None:
+            return
+        try:
+            self.helper.api.work.to_processed(
+                work_id,
+                f"Unhandled exception: {err}",
+                in_error=True,
+            )
+        except Exception as close_err:  # noqa: BLE001
+            ErrorStore().record_error(
+                OctiUnreachableError(
+                    f"Failed to mark work {work_id} as in_error: {close_err}"
+                )
+            )
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Failed to mark work as in_error",
+                meta={"work_id": work_id, "error": str(close_err)},
+            )
+
+    def process_message(self) -> list[dict[str, Any]]:
+        """Run one scheduled import of TeamT5 reports and indicator bundles.
+
+        :return: The errors of the run, in the pycti format: the errors handled
+            during the run, then the error that stopped the run, if any. Empty when
+            nothing failed.
+        """
+        # A run starts with an empty store: the errors of the previous run are not
+        # reported again
+        ErrorStore().clear()
 
         self.helper.connector_logger.info(f"{self.config.connector.name}: Starting Run")
 
@@ -70,7 +133,7 @@ class TeamT5Connector:
                 )
 
             # ``last_run`` is only advanced when every handler completes
-            # without partial failure (no ``_MAX_PAGE_FAILURES`` bail-out
+            # without partial failure (no listing aborted on a failed page
             # AND every retrieved bundle was successfully pushed). Holding
             # the cursor at its previous value on partial failure lets the
             # next scheduled run retry the unprocessed tail — advancing
@@ -90,7 +153,7 @@ class TeamT5Connector:
                 )
 
                 if handler.aborted:
-                    # ``_MAX_PAGE_FAILURES`` bail-out — the listing did
+                    # Listing aborted on a failed page — the listing did
                     # not complete, so the cursor stays where it is.
                     had_partial_failure = True
 
@@ -118,8 +181,8 @@ class TeamT5Connector:
                     work_id = None
 
                 elif handler.aborted:
-                    # Distinct log line when the listing bailed out after
-                    # ``_MAX_PAGE_FAILURES`` consecutive failed pages —
+                    # Distinct log line when the listing bailed out on a
+                    # page that failed after the client's retries —
                     # the run actually FAILED to retrieve the upstream
                     # listing and the next scheduled cycle will retry,
                     # so logging "No new ... found" here would lie to
@@ -128,8 +191,8 @@ class TeamT5Connector:
                     # the abort flag flipped, so the cursor is also held
                     # at its previous value.
                     self.helper.connector_logger.warning(
-                        f"{handler.name} retrieval aborted after consecutive "
-                        f"failed pages; no objects were imported and "
+                        f"{handler.name} retrieval aborted on a failed page; "
+                        f"no objects were imported and "
                         f"last_run will be held at its previous value so "
                         f"the next scheduled run retries."
                     )
@@ -156,6 +219,7 @@ class TeamT5Connector:
                     f"{self.helper.connect_name} connector successfully run, storing last_run as "
                     + current_state_datetime
                 )
+            return self._return_run_error_list()
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -163,30 +227,27 @@ class TeamT5Connector:
                 meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
-        except Exception as err:
-            # Structured ``meta`` + ``exc_info=True`` so the traceback survives
-            # in the connector log and the failing call is actually actionable.
-            # If a Work was open when the exception fired, close it with
-            # ``in_error=True`` so it does not stay stuck in the "running"
-            # state in the OpenCTI UI; the close call is itself wrapped in a
-            # defensive ``try`` so a platform partition that caused the
-            # original failure cannot also crash this handler.
+        except ConnectorError as err:
+            # A standardized error stopped the run: it is reported as is, with
+            # its own code and criticity.
             self.helper.connector_logger.error(
                 "[CONNECTOR] Unhandled exception during run",
                 meta={"error": str(err)},
             )
-            if work_id is not None:
-                try:
-                    self.helper.api.work.to_processed(
-                        work_id,
-                        f"Unhandled exception: {err}",
-                        in_error=True,
-                    )
-                except Exception as close_err:  # noqa: BLE001
-                    self.helper.connector_logger.error(
-                        "[CONNECTOR] Failed to mark work as in_error",
-                        meta={"work_id": work_id, "error": str(close_err)},
-                    )
+            self._close_work_in_error(work_id, err)
+            return self._return_run_error_list(err)
+        except Exception as err:
+            # Any other exception is reported as an UnknownError. Its message
+            # names the exception type: ``str(KeyError('objects'))`` alone would
+            # only say ``'objects'``.
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unhandled exception during run",
+                meta={"error": str(err)},
+            )
+            self._close_work_in_error(work_id, err)
+            unknown_error = UnknownError(f"{type(err).__name__}: {err}")
+            unknown_error.__cause__ = err
+            return self._return_run_error_list(unknown_error)
 
     def _create_tlp_marking(self, level: str) -> stix2.MarkingDefinition:
         """
