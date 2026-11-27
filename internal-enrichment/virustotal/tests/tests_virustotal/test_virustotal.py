@@ -297,7 +297,7 @@ class TestFileEnrichWithoutSha256(unittest.TestCase):
         self.connector.file_import_yara = False
         self.connector.file_create_note_full_report = False
 
-    def _enrich(self, hashes: dict) -> MagicMock:
+    def _enrich(self, hashes: dict, attributes: dict | None = None) -> MagicMock:
         processor = FileProcessor(
             self.connector,
             [],
@@ -306,7 +306,7 @@ class TestFileEnrichWithoutSha256(unittest.TestCase):
             False,
         )
         builder = MagicMock()
-        processor._enrich(builder, {"data": {"attributes": {}}})
+        processor._enrich(builder, {"data": {"attributes": attributes or {}}})
         return builder
 
     def test_uses_observable_sha256(self):
@@ -317,8 +317,33 @@ class TestFileEnrichWithoutSha256(unittest.TestCase):
         )
         builder.update_labels.assert_called_once_with()
 
-    def test_skips_indicator_when_no_sha256_is_known(self):
+    def _assert_pattern(self, builder: MagicMock, algo: str, value: str) -> None:
+        builder.create_indicator_based_on.assert_called_once_with(
+            self.connector.file_indicator_config,
+            f"[file:hashes.'{algo}' = '{value}']",
+        )
+
+    def test_report_sha256_wins_over_observable_sha256(self):
+        builder = self._enrich({"SHA-256": "a" * 64}, {"sha256": "c" * 64})
+        self._assert_pattern(builder, "SHA-256", "c" * 64)
+
+    def test_falls_back_to_sha1(self):
+        builder = self._enrich({"SHA-1": "d" * 40, "MD5": "b" * 32})
+        self._assert_pattern(builder, "SHA-1", "d" * 40)
+
+    def test_falls_back_to_md5(self):
         builder = self._enrich({"MD5": "b" * 32})
+        self._assert_pattern(builder, "MD5", "b" * 32)
+
+    def test_skips_malformed_hash(self):
+        builder = self._enrich({"SHA-256": "a" * 63 + "'", "MD5": "b" * 32})
+        self._assert_pattern(builder, "MD5", "b" * 32)
+
+    def test_skips_indicator_when_no_valid_hash_is_known(self):
+        builder = self._enrich({"SHA-256": " " + "a" * 64})
         builder.create_indicator_based_on.assert_not_called()
         builder.update_labels.assert_called_once_with()
-        self.connector.helper.connector_logger.warning.assert_called_once()
+        self.connector.helper.connector_logger.warning.assert_called_once_with(
+            "[VirusTotal] No valid hash available, indicator not created",
+            meta={"hash": " " + "a" * 64},
+        )

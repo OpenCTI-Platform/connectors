@@ -1,3 +1,4 @@
+import re
 from typing import TYPE_CHECKING
 
 from virustotal.client import VirusTotalQuotaExceededError
@@ -46,20 +47,7 @@ class FileProcessor(EntityProcessor):
                 self.opencti_entity["entity_type"] == "StixFile"
                 and not self.opencti_entity.get("name")
             )
-            # VT can omit "sha256" from the report: update_hashes then leaves
-            # the SHA-256 already known on the observable, if there is one.
-            known_sha256 = self.stix_entity.get("hashes", {}).get("SHA-256")
-            sha256 = attributes.get("sha256") or known_sha256
-            if sha256:
-                builder.create_indicator_based_on(
-                    self.connector.file_indicator_config,
-                    f"[file:hashes.'SHA-256' = '{sha256}']",
-                )
-            else:
-                self.helper.connector_logger.warning(
-                    "[VirusTotal] No SHA-256 available, indicator not created",
-                    {"hash": self._resolve_hash()},
-                )
+            self._create_hash_indicator(builder, attributes)
 
         builder.update_labels()
 
@@ -110,6 +98,34 @@ class FileProcessor(EntityProcessor):
 
         raise ValueError(
             "Unable to enrich the observable: it has no SHA-256, SHA-1, or MD5 hash."
+        )
+
+    def _create_hash_indicator(
+        self, builder: "VirusTotalBuilder", attributes: dict
+    ) -> None:
+        """Create the file Indicator from the best hash known for the file.
+
+        VT can omit "sha256" from the report, so for each algorithm the value
+        already on the observable is the fallback. That value is user-editable,
+        hence the format check before it goes into the STIX pattern.
+        """
+        known_hashes = self.stix_entity.get("hashes", {})
+        for algo, vt_key, length in (
+            ("SHA-256", "sha256", 64),
+            ("SHA-1", "sha1", 40),
+            ("MD5", "md5", 32),
+        ):
+            value = attributes.get(vt_key) or known_hashes.get(algo)
+            if value and re.fullmatch(rf"[0-9a-fA-F]{{{length}}}", value):
+                builder.create_indicator_based_on(
+                    self.connector.file_indicator_config,
+                    f"[file:hashes.'{algo}' = '{value}']",
+                )
+                return
+
+        self.helper.connector_logger.warning(
+            "[VirusTotal] No valid hash available, indicator not created",
+            meta={"hash": self._resolve_hash()},
         )
 
     def _upload_artifact_and_recheck(self, hash_value: str) -> dict | None:
