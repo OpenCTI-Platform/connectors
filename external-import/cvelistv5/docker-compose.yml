@@ -14,6 +14,7 @@ services:
       # - CVELISTV5_REPO_BRANCH=main
       # - CVELISTV5_LOCAL_PATH=/opt/cvelistV5
       # - CVELISTV5_HISTORY_START_YEAR=2024 # Min 1999; 2019 gives CVSS v3.1 coverage
+      # - CVELISTV5_IMPORT_HISTORY=true # false: skip the initial catch-up, ingest only records changed after the first run
     volumes:
       - cvelistv5-clone:/opt/cvelistV5
     restart: always
