@@ -78,8 +78,9 @@ class MergeSplitProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
 
         with self.work_manager:
             success = self.engine._apply_merge_split(client, state_dict, timestamp)
+            # Raise inside the context so WorkManager marks the work in_error.
+            if not success:
+                raise RuntimeError("RST Threat Library merge/split reconcile failed")
 
         self.state.apply_mutable_dict(state_dict)
-        if not success:
-            raise RuntimeError("RST Threat Library merge/split reconcile failed")
         self.logger.info("Merge/split reconcile completed")

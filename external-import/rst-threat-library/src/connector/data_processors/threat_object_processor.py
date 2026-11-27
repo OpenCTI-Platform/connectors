@@ -87,12 +87,13 @@ class ThreatObjectImportProcessor(BaseDataProcessor[ConnectorSettings, Connector
             success = self.engine._cycle_type(
                 client, self.obj_type, state_dict, timestamp, seed
             )
+            # Raise inside the context so WorkManager marks the work in_error.
+            if not success:
+                raise RuntimeError(
+                    f"RST Threat Library import failed for object type '{self.obj_type}'"
+                )
 
         self.state.apply_mutable_dict(state_dict)
-        if not success:
-            raise RuntimeError(
-                f"RST Threat Library import failed for object type '{self.obj_type}'"
-            )
         self.logger.info(
             "Threat object import completed",
             meta={"object_type": self.obj_type},
