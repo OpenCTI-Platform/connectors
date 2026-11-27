@@ -111,5 +111,44 @@ def test_split_rule_header_on_closing_brace_line(newline, header):
     rules = convert_yara_rules_to_yara_model(feed).rules
 
     assert [rule.name for rule in rules] == ["rule_a", "rule_b"]
-    assert rules[0].rule.rstrip().endswith("true" + newline + "}")
+    assert rules[0].rule.endswith("true" + newline + "}" + newline)
     assert rules[1].rule.startswith(header.lstrip())
+
+
+def test_split_consecutive_rule_headers_on_closing_brace_lines():
+    feed = "\n".join(
+        [
+            "rule rule_a {",
+            "    condition:",
+            "        true",
+            "}rule rule_b {",
+            "    condition:",
+            "        true",
+            "}rule rule_c {",
+            "    condition:",
+            "        true",
+            "}",
+            "",
+        ]
+    )
+
+    rules = convert_yara_rules_to_yara_model(feed).rules
+
+    assert [rule.name for rule in rules] == ["rule_a", "rule_b", "rule_c"]
+
+
+def test_closing_brace_line_without_rule_header_is_not_split():
+    feed = "\n".join(
+        [
+            "rule rule_a {",
+            "    condition:",
+            "        true",
+            "}rule_b {",
+            "",
+        ]
+    )
+
+    rules = convert_yara_rules_to_yara_model(feed).rules
+
+    assert [rule.name for rule in rules] == ["rule_a"]
+    assert rules[0].rule.endswith("}rule_b {\n")
