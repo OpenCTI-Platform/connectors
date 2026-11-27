@@ -359,7 +359,7 @@ def extract_article(url: str, html: str) -> Article | None:
     title all come from the same extraction (trafilatura.extract would run
     the whole extraction again for each output format).
     """
-    html = _prepare(html)
+    html = _prepare(html, url)
     document = _extract(html, url)
     if document is None or document.body is None:
         return None
@@ -1336,12 +1336,158 @@ def _drop_paid_ads(document: lxml.etree._Element) -> int:
     return dropped
 
 
-def _prepare(html: str) -> str:
+# Paths of a publisher's own commercial pages (after an optional locale such
+# as /en-us/): a link from the end of an article to one of them sells the
+# publisher's products.
+_COMMERCIAL_PATH = re.compile(
+    r"^/(?:[a-z]{2}(?:[-_][a-z]{2})?/)?"
+    r"(?:premium|pricing|prices?|buy|purchase|products?|trial|free-trial"
+    r"|downloads?|store|shop|plans?|subscribe|subscriptions?|checkout)"
+    r"(?:[/?#.]|$)",
+    re.IGNORECASE,
+)
+# Elements a promotion block never holds: indicators and data sit there.
+_DATA_TAGS = frozenset({"pre", "code", "table", "ul", "ol", "dl"})
+
+
+def _is_commercial_link(href: str, url: str) -> bool:
+    """The link points at a commercial page of the page's own site."""
+    target = urljoin(url, href.strip())
+    return _same_site(target, url) and bool(
+        _COMMERCIAL_PATH.match(urlparse(target).path or "/")
+    )
+
+
+def _is_review_link(href: str, url: str) -> bool:
+    """The link points at a third-party review of the page's publisher.
+
+    Another site, and a path naming both a review and the publisher (the
+    first label of the page's registrable domain: malwarebytes for
+    www.malwarebytes.com).
+    """
+    target = urljoin(url, href.strip())
+    site = get_fld(url, fail_silently=True)
+    if site is None or _same_site(target, url):
+        return False
+    path = unquote(urlparse(target).path).lower()
+    return "review" in path and site.split(".")[0].lower() in path
+
+
+def _has_indicator(text: str) -> bool:
+    return any(
+        _INDICATOR.match(word.strip("()[]<>{},;:!?'\"\u201c\u201d\u2018\u2019"))
+        for word in text.split()
+    )
+
+
+def _promotion_block(element: lxml.etree._Element, url: str) -> bool:
+    """The element is the publisher promoting its own products.
+
+    Short (_AD_TEXT), no h1, indicator, code, table or list inside, and
+    every link goes either to a commercial page of the page's own site
+    (_is_commercial_link) or to a third-party review of the publisher
+    (_is_review_link), with at least one of the first kind. A lone
+    paragraph or heading (no dedicated container) is promotion only when
+    its links make most of its text: a sentence of the article that cites
+    the publisher's product page is kept.
+    """
+    if element.tag == "h1" or any(True for _ in element.iter("h1")):
+        return False
+    if any(
+        isinstance(child.tag, str) and child.tag in _DATA_TAGS
+        for child in element.iter()
+    ):
+        return False
+    text = element.text_content()
+    if _length(text) > _AD_TEXT or _has_indicator(text):
+        return False
+    hrefs = [(link.get("href") or "").strip() for link in element.iter("a")]
+    if not hrefs or not all(hrefs):
+        return False
+    commercial = [_is_commercial_link(href, url) for href in hrefs]
+    if not any(commercial):
+        return False
+    if not all(
+        own or _is_review_link(href, url) for href, own in zip(hrefs, commercial)
+    ):
+        return False
+    core = element
+    while (
+        len(core) == 1
+        and isinstance(core[0].tag, str)
+        and not (core.text or "").strip()
+        and not (core[0].tail or "").strip()
+    ):
+        core = core[0]
+    if core.tag == "p" or core.tag in _HEADINGS:
+        linked = sum(_length(anchor.text_content()) for anchor in core.iter("a"))
+        return 2 * linked >= _length(core.text_content())
+    return True
+
+
+def _blank(element: lxml.etree._Element) -> bool:
+    """No text, link or media: a spacer of the layout."""
+    return not _length(element.text_content()) and not any(
+        True for _ in element.iter("a", "img", "picture", "video", "iframe")
+    )
+
+
+def _article_containers(document: lxml.etree._Element) -> list:
+    return document.xpath(
+        f'//*[@itemprop="articleBody" or @{_BODY_MARK}'
+        ' or contains(concat(" ", normalize-space(@class), " "), " entry-content ")]'
+    )
+
+
+def _drop_trailing_promotion(document: lxml.etree._Element, url: str) -> int:
+    """Remove the publisher's promotion blocks that end the article body.
+
+    Malwarebytes closes every post, inside div.entry-content and between two
+    hr separators, with a block quoting a review of its product and linking
+    to its /premium page: trafilatura kept it as the article's last lines.
+    Only the trailing blocks of the article container (itemprop=articleBody,
+    the _BODY_MARK body or .entry-content) are candidates, never a block in
+    the middle of the body or the container itself, and each is told by
+    generic signals (_promotion_block), not by a list of sites. The hr
+    separators left at the end are removed with them. Returns the number of
+    blocks removed.
+    """
+    if get_fld(url, fail_silently=True) is None:
+        return 0
+    dropped = 0
+    for container in _article_containers(document):
+        if container.getroottree().getroot() is not document:
+            continue
+        removed = False
+        separators = []
+        for child in reversed(list(container)):
+            if not isinstance(child.tag, str):
+                continue
+            if child.tag == "hr" or _blank(child):
+                separators.append(child)
+                continue
+            if not _promotion_block(child, url):
+                break
+            for element in (child, *separators):
+                element.drop_tree()
+            separators = []
+            removed = True
+            dropped += 1
+        if removed:
+            for separator in separators:
+                separator.drop_tree()
+    return dropped
+
+
+def _prepare(html: str, url: str = "") -> str:
     """Rework the layouts that make trafilatura drop indicators.
 
     - Sponsored ad units inside the article (paid display callouts): their
       heading, promo text and call to action are not the article. They are
       removed first (_drop_paid_ads).
+    - The publisher's own promotion block at the end of the article body (a
+      review quote and a link to its premium page): removed when the page's
+      URL is known (_drop_trailing_promotion).
     - Code shown by a syntax highlighter with a line-number gutter (Crayon,
       SyntaxHighlighter, Pygments, GitHub...) is a <table>: trafilatura
       kept the numbers as a column of paragraphs and each line of code as
@@ -1374,6 +1520,10 @@ def _prepare(html: str) -> str:
     if dropped:
         LOGGER.debug("Dropped %d sponsored ad unit(s) from the page", dropped)
     changed = _join_sibling_blocks(document) or bool(dropped)
+    promoted = _drop_trailing_promotion(document, url)
+    if promoted:
+        LOGGER.debug("Dropped %d trailing promotion block(s)", promoted)
+        changed = True
     changed = _pipe_tables(document) or changed
     for table in list(document.iter("table")):
         if table.getparent() is None or table.xpath("ancestor::table"):

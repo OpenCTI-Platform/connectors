@@ -14,6 +14,7 @@ from connector.article import (
     _code_lines,
     _drop_empty_headings,
     _is_paid_link,
+    _prepare,
     _restore_code_elements,
     article_match,
     check_public_url,
@@ -855,3 +856,83 @@ def test_keeps_an_article_paragraph_that_holds_a_paid_link():
     article = extract_article(RSS_REFERENCE["url"], _ad_post("", closing))
     assert "malvertising campaign" in article.text
     assert "on several news sites." in article.text
+
+
+REVIEW = "https://reviews.example.net/software/example-antivirus-review/"
+
+
+def _promo_post(tail: str, closing: str = "Closing words of the article.") -> str:
+    return (
+        f"<html><head><title>{NAME}</title></head><body><h1>{NAME}</h1>"
+        '<article><div class="entry-content">'
+        + "".join(
+            f"<p>Paragraph {i} of the report on the ransomware campaign.</p>"
+            for i in range(20)
+        )
+        + f"<p>{closing}</p>{tail}</div></article></body></html>"
+    )
+
+
+def test_drops_the_publisher_promotion_block_that_ends_the_article():
+    promo = (
+        '<hr class="separator"><div class="columns">'
+        f'<div class="column"><figure><a href="{REVIEW}"></a></figure></div>'
+        '<div class="column"><h3>"One of the best suites on the planet."</h3>'
+        f'<p>According to Reviews. <a href="{REVIEW}">Read their review</a> '
+        '<a href="https://www.example.com/premium">Get premium</a></p></div>'
+        '<div class="column"></div></div><hr class="separator">'
+    )
+    article = extract_article(RSS_REFERENCE["url"], _promo_post(promo))
+    assert "best suites" not in article.text
+    assert "Read their review" not in article.text
+    assert "example.com/premium" not in article.html
+    assert "reviews.example.net" not in article.html
+    assert "<hr" not in article.html
+    assert article.text.rstrip().endswith("Closing words of the article.")
+    assert all(f"Paragraph {i} of the report" in article.text for i in range(20))
+
+
+def test_keeps_a_last_paragraph_citing_the_publisher_product_page():
+    closing = (
+        "Customers of the vendor can check their exposure with the "
+        '<a href="https://www.example.com/products/scanner">scanner</a> '
+        "described in the advisory before patching."
+    )
+    article = extract_article(RSS_REFERENCE["url"], _promo_post("", closing))
+    assert "before patching." in article.text
+    assert "example.com/products/scanner" in article.html
+
+
+def test_keeps_a_promotion_like_block_in_the_middle_of_the_article():
+    promo = '<p><a href="https://www.example.com/premium">Get premium</a></p>'
+    html = _promo_post("").replace("<p>Paragraph 10 of", f"{promo}<p>Paragraph 10 of")
+    # trafilatura drops a link-only line by itself: _prepare must keep it.
+    assert "Get premium" in _prepare(html, RSS_REFERENCE["url"])
+
+
+@pytest.mark.parametrize(
+    "tail",
+    [
+        # A link to another site that is not a review of the publisher.
+        '<p><a href="https://www.example.com/premium">Get premium</a> '
+        '<a href="https://partner.example.org/blog/post">partner</a></p>',
+        # An indicator inside.
+        '<p><a href="https://www.example.com/download">Download</a> '
+        "192.168.10.20</p>",
+        # A list inside.
+        '<div><ul><li><a href="https://www.example.com/pricing">Pricing</a>'
+        "</li></ul></div>",
+        # Only a review link, no commercial page of the site.
+        f'<p><a href="{REVIEW}">Read the review</a></p>',
+    ],
+)
+def test_keeps_a_trailing_block_that_is_not_only_promotion(tail):
+    html = _promo_post(tail)
+    assert _prepare(html, RSS_REFERENCE["url"]) == html
+
+
+def test_drops_no_trailing_block_without_the_page_url():
+    promo = '<p><a href="https://www.example.com/premium">Get premium</a></p>'
+    html = _promo_post(promo)
+    assert _prepare(html) == html
+    assert _prepare(html, RSS_REFERENCE["url"]) != html
