@@ -9,7 +9,7 @@ from .mapping import (
     OBSERVABLE_TYPES,
     THREAT_TYPE,
 )
-from .utils import get_hash_name, get_obs_value
+from .utils import get_obs_value
 
 
 class ConverterToStix:
@@ -160,10 +160,9 @@ class ConverterToStix:
                 mime_type = None
             if "1KHASH" in hashes:
                 hashes.pop("1KHASH", None)
-            file_hash = get_hash_name(hashes)
             return stix2.File(
                 hashes=hashes,
-                name=entity.get("names")[0] if entity.get("names") else file_hash,
+                name=entity.get("names")[0] if entity.get("names") else None,
                 ctime=entity.get("modified"),
                 mtime=entity.get("modified"),
                 size=file_size,
