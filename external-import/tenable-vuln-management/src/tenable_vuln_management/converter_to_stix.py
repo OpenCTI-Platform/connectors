@@ -188,17 +188,29 @@ class ConverterToStix:
             value=asset.mac_address,
         )
 
-    def _make_ipv4_address(self, asset: Asset) -> IPAddress:
-        return IPAddress(
-            author=self.author,
-            object_marking_refs=self.object_marking_refs,
-            version="v4",
-            value=asset.ipv4,
-            resolves_to_mac_addresses=(
-                [self._make_mac_address(asset)]
-                if asset.mac_address is not None
-                else None
-            ),
+    def _make_ipv4_address(self, asset: Asset) -> IPAddress | None:
+        """Create an IPv4 address object for the given asset, if available.
+
+        Args:
+            asset (Asset): The asset containing the IPv4 address.
+
+        Returns:
+            IPAddress | None: An IPAddress object for the IPv4 address if available, otherwise None.
+        """
+        return (
+            IPAddress(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                version="v4",
+                value=asset.ipv4,
+                resolves_to_mac_addresses=(
+                    [self._make_mac_address(asset)]
+                    if asset.mac_address is not None
+                    else None
+                ),
+            )
+            if asset.ipv4
+            else None
         )
 
     def _make_ipv6_address(self, asset: Asset) -> IPAddress | None:
@@ -260,8 +272,15 @@ class ConverterToStix:
                 object_marking_refs=self.object_marking_refs,
                 value=asset.fqdn,
                 resolves_to_domain_names=None,
-                resolves_to_ips=[self._make_ipv4_address(asset)]
-                + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
+                resolves_to_ips=[
+                    ip
+                    for ip in (
+                        self._make_ipv4_address(asset),
+                        self._make_ipv6_address(asset),
+                    )
+                    if ip is not None
+                ]
+                or None,
             )
         else:
             self.helper.connector_logger.warning(

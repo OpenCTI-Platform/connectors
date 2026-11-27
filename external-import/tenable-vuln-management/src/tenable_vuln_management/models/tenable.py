@@ -270,7 +270,7 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     )
     hostname: str = Field(..., description="The hostname of the asset.")
     uuid: str = Field(..., description="The UUID of the asset.")
-    ipv4: str = Field(..., description="The IPv4 address of the asset.")
+    ipv4: Optional[str] = Field(None, description="The IPv4 address of the asset.")
     ipv6: Optional[str] = Field(None, description="The IPv6 address of the asset.")
     last_authenticated_results: Optional[datetime] = Field(
         None, description="The timestamp of the last authentication results."
@@ -314,13 +314,15 @@ class Scan(FrozenBaseModelWithWarnedExtra):
     Represents details about the scan that detected the vulnerability.
     """
 
-    schedule_uuid: str = Field(..., description="The UUID of the scan schedule.")
-    started_at: datetime = Field(
-        ..., description="The timestamp when the scan started."
+    schedule_uuid: Optional[str] = Field(
+        None, description="The UUID of the scan schedule."
+    )
+    started_at: Optional[datetime] = Field(
+        None, description="The timestamp when the scan started."
     )
     uuid: str = Field(..., description="The UUID of the scan.")
     target: Optional[str] = Field(
-        ...,
+        None,
         description="The IP address or fully qualified domain name of the asset targeted in the scan.",
     )
 

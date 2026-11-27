@@ -596,3 +596,107 @@ def test_converter_to_stix_process_asset_without_operating_system(
     )  # ipv4, hostname, mac, ipv6, domain_name (no operating_system)
     # Relationships should match observables count
     assert len(result["relationships"]) == 5
+
+
+def test_converter_to_stix_make_ipv4_address_with_none(
+    mock_helper, mock_config, fake_asset
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And an asset without IPv4 address (e.g. IPv6-only host)
+    asset_without_ipv4 = fake_asset.model_copy(update={"ipv4": None})
+
+    # When calling make_ipv4_address
+    ipv4_address = converter_to_stix._make_ipv4_address(asset=asset_without_ipv4)
+
+    # Then it should return None
+    assert ipv4_address is None
+
+
+@pytest.mark.parametrize(
+    "ipv6, expected_resolves_to_ips_count",
+    [
+        pytest.param("2001:db8:199e:6fb9:2edd:67f0:3f30:c7", 1, id="ipv6_only"),
+        pytest.param(None, None, id="no_ip"),
+    ],
+)
+def test_converter_to_stix_make_domain_name_without_ipv4(
+    mock_helper, mock_config, fake_asset, ipv6, expected_resolves_to_ips_count
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And an asset with a FQDN but without IPv4 address
+    asset_without_ipv4 = fake_asset.model_copy(update={"ipv4": None, "ipv6": ipv6})
+
+    # When calling _make_domain_name
+    domain_name = converter_to_stix._make_domain_name(asset_without_ipv4)
+
+    # Then the DomainName only resolves to the available IP addresses
+    assert isinstance(domain_name, DomainName)
+    if expected_resolves_to_ips_count is None:
+        assert domain_name.resolves_to_ips is None
+    else:
+        assert len(domain_name.resolves_to_ips) == expected_resolves_to_ips_count
+    # And it can be converted to a STIX object
+    _ = domain_name.to_stix2_object()
+
+
+def test_converter_to_stix_process_asset_without_ipv4(
+    mock_helper, mock_config, fake_asset
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And an asset without IPv4 address
+    asset_without_ipv4 = fake_asset.model_copy(update={"ipv4": None})
+
+    # When calling process_asset
+    result = converter_to_stix.process_asset(asset=asset_without_ipv4)
+
+    # Then the system object should still be created
+    assert result["system"].name == "sharepoint2016"
+    # Observables should not include an IPv4 address
+    assert (
+        len(result["observables"]) == 5
+    )  # hostname, mac, ipv6, domain_name, operating_system (no ipv4)
+    # Relationships should match observables count
+    assert len(result["relationships"]) == 5
+
+
+def test_converter_to_stix_process_vuln_finding_with_scan_uuid_only_and_no_ipv4(
+    mock_helper, mock_config, fake_vuln_finding
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And a finding whose scan holds only its uuid and whose asset has no IPv4
+    vuln_finding = VulnerabilityFinding.model_validate(
+        {
+            **fake_vuln_finding.model_dump(),
+            "asset": {**fake_vuln_finding.asset.model_dump(), "ipv4": None},
+            "scan": {"uuid": fake_vuln_finding.scan.uuid},
+        }
+    )
+
+    # When calling process_vuln_finding
+    result = converter_to_stix.process_vuln_finding(vuln_finding=vuln_finding)
+
+    # Then the System and the Vulnerability are still created and linked
+    systems = [item for item in result if isinstance(item, System)]
+    vulnerabilities = [item for item in result if isinstance(item, Vulnerability)]
+    has_relationships = [item for item in result if isinstance(item, HasRelationship)]
+    assert len(systems) == 1
+    assert len(vulnerabilities) == 1
+    assert len(has_relationships) == 1
+    # And every object can be converted to a STIX object
+    _ = [item.to_stix2_object() for item in result]
