@@ -10,11 +10,7 @@ import stix2
 import yaml
 from connectors_sdk.models import TLPMarking
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
-from crowdstrike_feeds_services.utils import (
-    CrowdStrikeAPIError,
-    create_organization,
-    timestamp_to_datetime,
-)
+from crowdstrike_feeds_services.utils import create_organization, timestamp_to_datetime
 from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookupError,
     CustomAttackTechniqueLookup,
@@ -345,7 +341,8 @@ class CrowdStrike:
 
                 try:
                     importer_state = importer.start(work_id, new_state)
-                except CrowdStrikeAPIError as e:
+                except Exception as e:  # noqa: B902
+                    self._error("{0} importer failed: {1}", importer_name, str(e))
                     self.helper.api.work.to_processed(
                         work_id,
                         str(e),

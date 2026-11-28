@@ -83,6 +83,48 @@ def test_process_message_marks_api_error_as_failed_work_and_runs_next_importer()
     assert stored_states
 
 
+def test_process_message_marks_any_importer_error_as_failed_work_and_runs_next_importer():
+    connector = CrowdStrike.__new__(CrowdStrike)
+
+    connector.helper = MagicMock()
+    connector.helper.connect_name = "CrowdStrike"
+
+    connector._current_unix_timestamp = MagicMock(return_value=1234567890)
+    connector._load_state = MagicMock(return_value={"yara_master_e_tag": "old"})
+    connector._initiate_work = MagicMock(side_effect=["work-1", "work-2"])
+
+    failing = MagicMock()
+    failing.name = "Yara"
+    # what pycti raises when OpenCTI rejects an update
+    failing.start.side_effect = ValueError(
+        {"name": "FUNCTIONAL_ERROR", "message": "This update will produce a duplicate"}
+    )
+
+    working = MagicMock()
+    working.name = "Vulnerability"
+    working.start.return_value = {"vulnerability_latest": 1}
+
+    connector.importers = [failing, working]
+
+    connector.process_message()
+
+    to_processed = connector.helper.api.work.to_processed
+    assert to_processed.call_count == 2
+    assert to_processed.call_args_list[0].args[0] == "work-1"
+    assert (
+        "This update will produce a duplicate" in to_processed.call_args_list[0].args[1]
+    )
+    assert to_processed.call_args_list[0].kwargs == {"in_error": True}
+    assert to_processed.call_args_list[1].args[0] == "work-2"
+    assert "in_error" not in to_processed.call_args_list[1].kwargs
+
+    # the failing importer keeps its state, the run still ends with last_run
+    final_state = connector.helper.set_state.call_args_list[-1].args[0]
+    assert final_state["yara_master_e_tag"] == "old"
+    assert final_state["vulnerability_latest"] == 1
+    assert "last_run" in final_state
+
+
 class _UnauthorizedIntel:
     """Stands in for falconpy ``Intel``: every call returns a 401 envelope."""
 
