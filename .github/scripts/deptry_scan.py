@@ -225,9 +225,11 @@ def main() -> int:
         return 2
 
     results_dir.mkdir(parents=True, exist_ok=True)
-    err_file = results_dir / f"{name}.err"
-    warn_file = results_dir / f"{name}.warn"
-    has_dep001 = False
+    # deptry reports one issue per import statement. Annotations keep every
+    # location, but the PR comment lists each (module, code) pair only once.
+    # dicts are used as insertion-ordered sets.
+    err_lines: dict[str, None] = {}
+    warn_lines: dict[str, None] = {}
 
     for issue in issues:
         code = issue.get("error", {}).get("code", "")
@@ -241,29 +243,32 @@ def main() -> int:
                 f"::error file={file},line={line},title=Undeclared dependency::"
                 f"{module} is imported but not declared in {declared_in}"
             )
-            with err_file.open("a") as fh:
-                fh.write(
-                    f"- `{module}` (DEP001) in `{connector}`: "
-                    f"imported but not declared in `{declared_in}`\n"
-                )
-            has_dep001 = True
+            err_lines[
+                f"- `{module}` (DEP001) in `{connector}`: "
+                f"imported but not declared in `{declared_in}`\n"
+            ] = None
         elif code == "DEP003":
             annotate(
                 f"::warning file={file},line={line},title=Transitive dependency::"
                 f"{module} is imported but only available transitively; add it to {declared_in}"
             )
-            with warn_file.open("a") as fh:
-                fh.write(f"- `{module}` (DEP003, transitive) in `{declared_in}`\n")
+            warn_lines[f"- `{module}` (DEP003, transitive) in `{declared_in}`\n"] = None
         elif code == "DEP002":
             line = declared_line(declared_in, module)
             annotate(
                 f"::warning file={declared_in},line={line},title=Unused dependency::"
                 f"{module} is listed in {declared_in} but not imported in {connector}"
             )
-            with warn_file.open("a") as fh:
-                fh.write(f"- `{module}` (DEP002, unused) in `{declared_in}`\n")
+            warn_lines[f"- `{module}` (DEP002, unused) in `{declared_in}`\n"] = None
 
-    return 1 if has_dep001 else 0
+    # Only create a result file when it has content: the report job treats any
+    # existing file as a finding.
+    if err_lines:
+        (results_dir / f"{name}.err").write_text("".join(err_lines))
+    if warn_lines:
+        (results_dir / f"{name}.warn").write_text("".join(warn_lines))
+
+    return 1 if err_lines else 0
 
 
 if __name__ == "__main__":
