@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-abuseipdb-taxii:
+    image: opencti/connector-abuseipdb-taxii:latest
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters
+      # - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      # - CONNECTOR_NAME=AbuseIPDB TAXII
+      # - CONNECTOR_SCOPE=abuseipdb-taxii
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO 8601 duration between two runs
+      # Connector's custom execution parameters
+      # AbuseIPDB account email and one of its API keys (not the account password)
+      - ABUSEIPDB_TAXII_USERNAME=ChangeMe
+      - ABUSEIPDB_TAXII_PASSWORD=ChangeMe
+      # - ABUSEIPDB_TAXII_URL=https://taxii.abuseipdb.com/taxii2/abuseipdb-taxii2/
+      # - ABUSEIPDB_TAXII_COLLECTION_ID=ChangeMe # Collection ID from My TAXII Feeds, only needed with more than one feed
+      # - ABUSEIPDB_TAXII_IMPORT_SINCE=P30D # ISO 8601 duration (relative) or datetime (absolute), first run only
+      # - ABUSEIPDB_TAXII_PAGE_SIZE=1000
+      # - ABUSEIPDB_TAXII_VERIFY_SSL=true
+      # - ABUSEIPDB_TAXII_REQUEST_TIMEOUT_SECONDS=60
+    restart: always
