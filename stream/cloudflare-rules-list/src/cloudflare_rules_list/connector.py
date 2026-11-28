@@ -40,6 +40,8 @@ class Connector:
         # Snapshot of IPv4 values keyed by OpenCTI id.
         self._indicator_cache: dict[str, str] = {}
         self._last_sync_time = 0.0
+        # True while a removal has not been uploaded yet.
+        self._pending_removal = False
 
     # ------------------------------------------------------------------ #
     # IPv4 extraction
@@ -126,6 +128,7 @@ class Connector:
         indicator_id = self._object_id(data)
         if indicator_id and indicator_id in self._indicator_cache:
             del self._indicator_cache[indicator_id]
+            self._pending_removal = True
             self.logger.debug("Removed indicator from cache", meta={"id": indicator_id})
             self._check_sync()
 
@@ -139,7 +142,7 @@ class Connector:
 
     def _sync_to_cloudflare(self) -> None:
         """Push the full IPv4 snapshot to the Cloudflare Rules List."""
-        if not self._indicator_cache:
+        if not self._indicator_cache and not self._pending_removal:
             # Nothing to push -- do not open the throttle window, otherwise the
             # first real indicator to arrive could be delayed by up to
             # sync_interval before it is synced.
@@ -172,6 +175,7 @@ class Connector:
                 )
             else:
                 self.logger.info("Snapshot uploaded", meta={"count": len(items)})
+            self._pending_removal = False
         except CloudflareAPIError as exc:
             self.logger.error("Failed to sync to Cloudflare", meta={"error": str(exc)})
 
