@@ -838,6 +838,8 @@ class MispFeed:
     ):
         if attribute["type"] == "link" and attribute["category"] == "External analysis":
             return None
+        # "comment" is optional in MISP exports: default to an empty string
+        attribute = {**attribute, "comment": attribute.get("comment") or ""}
         resolved_attributes = self._resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
