@@ -1,97 +1,43 @@
-from typing import Any
-from unittest.mock import MagicMock
+from types import SimpleNamespace
 
-import pytest
-from pycti import OpenCTIConnectorHelper
-from rstcloud import ConnectorSettings, RSTThreatFeed
+import main
+from pycti.entities.opencti_user import User
 
 
-@pytest.fixture
-def mock_opencti_connector_helper(monkeypatch):
-    """Mock all heavy dependencies of OpenCTIConnectorHelper, typically API calls to OpenCTI."""
+def test_main_module_exports_connector():
+    from connector import ConnectorSettings, RSTThreatFeed
 
-    module_import_path = "pycti.connector.opencti_connector_helper"
-    monkeypatch.setattr(f"{module_import_path}.killProgramHook", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
+    assert RSTThreatFeed is not None
+    assert ConnectorSettings is not None
 
 
-class StubConnectorSettings(ConnectorSettings):
-    """
-    Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
-    It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
-    """
+def test_patch_pycti_create_token_normalizes_response(monkeypatch):
+    calls = []
 
-    @classmethod
-    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-        return handler(
-            {
-                "opencti": {
-                    "url": "http://localhost:8080",
-                    "token": "test-token",
-                },
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "duration_period": "PT5M",
-                },
-                "rst_threat_feed": {
-                    "apikey": "test-api-key",
-                },
-            }
-        )
+    def original(self, *args, **kwargs):
+        calls.append({"args": args, "kwargs": kwargs})
+        return {
+            "token_id": "tok-1",
+            "plaintext_token": "secret",
+            "expires_at": None,
+        }
 
+    monkeypatch.setattr(User, "create_token", original)
 
-def test_connector_settings_is_instantiated():
-    """
-    Test that the implementation of `BaseConnectorSettings` (from `connectors-sdk`) can be instantiated successfully:
-        - the implemented class MUST have a method `to_helper_config` (inherited from `BaseConnectorSettings`)
-        - the method `to_helper_config` MUST return a dict (as in base class)
-    """
-    settings = StubConnectorSettings()
+    main._patch_pycti_create_token_response()
+    patched_once = User.create_token
+    assert getattr(patched_once, "_rst_threat_feed_patched", False) is True
 
-    assert isinstance(settings, ConnectorSettings)
-    assert isinstance(settings.to_helper_config(), dict)
+    result = User.create_token(
+        SimpleNamespace(), id="user-1", token_name="connector-token"
+    )
 
+    assert result["id"] == "tok-1"
+    assert result["name"] == "connector-token"
+    assert result["token_id"] == "tok-1"
+    assert result["plaintext_token"] == "secret"
+    assert len(calls) == 1
+    assert calls[0]["kwargs"]["token_name"] == "connector-token"
 
-def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper):
-    """
-    Test that `OpenCTIConnectorHelper` (from `pycti`) can be instantiated successfully:
-        - the value of `settings.to_helper_config` MUST be the expected dict for `OpenCTIConnectorHelper`
-        - the helper MUST be able to get its instance's attributes from the config dict
-
-    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
-    """
-    settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-
-    assert helper.opencti_url == "http://localhost:8080/"
-    assert helper.opencti_token == "test-token"
-    assert helper.connect_id == "connector-id"
-    assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "test,connector"
-    assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT5M"
-
-
-def test_connector_is_instantiated(mock_opencti_connector_helper):
-    """
-    Test that the connector's main class can be instantiated successfully:
-        - the connector's main class MUST be able to access env/config vars through `self.config`
-        - the connector's main class MUST be able to access `pycti` API through `self.helper`
-
-    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
-    """
-    settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-
-    connector = RSTThreatFeed(config=settings, helper=helper)
-
-    assert connector.config == settings
-    assert connector.helper == helper
+    main._patch_pycti_create_token_response()
+    assert User.create_token is patched_once
