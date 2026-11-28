@@ -10755,6 +10755,17 @@
             "default": "",
             "description": "Optional mapping from a Microsoft Defender incident status to an OpenCTI Case-Incident workflow status, as comma-separated '<defender status>:<status name or id>' pairs (e.g. 'active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,resolved:CLOSED,redirected:CLOSED'). Defender statuses: active, inProgress, resolved, redirected, awaitingAction (matched case-insensitively). A status name is resolved once per run against the Case-Incident statuses; a UUID is used as the status id. When the incident's status is mapped, the Case-Incident workflow status is set; otherwise it is left unchanged. Empty (default): no workflow status is set.",
             "type": "string"
+          },
+          "MICROSOFT_DEFENDER_INCIDENTS_RECONCILE": {
+            "default": true,
+            "description": "Re-read, on every run, the Defender incidents whose Case-Incident is not in the workflow status mapped to resolved or redirected, and re-send them so status, description and labels converge. Needed for incidents that no longer change in Defender (a redirected incident never does) or that ended before the status mapping was set. Only active when the status mapping maps resolved or redirected.",
+            "type": "boolean"
+          },
+          "MICROSOFT_DEFENDER_INCIDENTS_RECONCILE_MAX_INCIDENTS": {
+            "default": 100,
+            "description": "Maximum number of Defender incidents re-read by the reconcile pass in one run (least recently updated case first, so every open case is reached over successive runs).",
+            "minimum": 1,
+            "type": "integer"
           }
         },
         "required": [
