@@ -5,9 +5,11 @@ import pytest
 import requests
 from pycti import Identity as PyctiIdentity
 from pycti import Indicator as PyctiIndicator
+from pycti import ThreatActor as PyctiThreatActor
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER, ConversionError
 from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
+from rflib.rf_to_stix2 import Malware as RFMalware
 from rflib.rf_to_stix2 import StixNote
 from rflib.rf_to_stix2 import ThreatActor as RFThreatActor
 from rflib.rf_to_stix2 import Vulnerability as RFVulnerability
@@ -1308,3 +1310,35 @@ def test_indicator_map_data_without_hits_skips_related_entities(links):
 
     assert indicator.risk_score == 75
     assert not indicator.related_entities
+
+
+@pytest.mark.parametrize(
+    "rf_type, expected_class",
+    [("Person", ThreatActor), ("Organization", IntrusionSet)],
+)
+def test_malware_map_data_linked_threat_actor_type(rf_type, expected_class):
+    # A RF Person must not become an IntrusionSet: its name can be an alias of
+    # a group's IntrusionSet, which makes the platform rename it on every run
+    malware = RFMalware("KillSec Ransomware", "Malware", tlp="red")
+    links = [
+        {
+            "type": "type:" + rf_type,
+            "name": "KillSec",
+            "attributes": [{"id": "threat_actor", "value": True}],
+        }
+    ]
+
+    malware.map_data({"links": links}, "red")
+    malware.build_bundle(malware)
+
+    [actor] = malware.related_entities
+    assert isinstance(actor, expected_class)
+    if rf_type == "Person":
+        assert actor["resource_level"] == "individual"
+        assert actor["id"] == PyctiThreatActor.generate_id(
+            name="KillSec", opencti_type="Threat-Actor-Individual"
+        )
+    [relationship] = [o for o in malware.objects if isinstance(o, Relationship)]
+    assert relationship["relationship_type"] == "uses"
+    assert relationship["source_ref"] == actor["id"]
+    assert relationship["target_ref"] == malware.stix_obj["id"]

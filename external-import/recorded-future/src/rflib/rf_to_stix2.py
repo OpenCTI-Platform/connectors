@@ -748,13 +748,20 @@ class Malware(RFStixEntity):
                         """
                         If the related entities is a Person or an Organization
                         and if it is defined by RF as a Threat Actor, then create an Intrusion Set
+                        for an Organization, or a Threat Actor Individual for a Person
                         """
                         for risk_attribute in _risk_attributes:
                             if (
                                 risk_attribute["id"] == "threat_actor"
                                 and risk_attribute["value"] is True
                             ):
-                                related_element = IntrusionSet(
+                                # A person's name is often an alias of a group's
+                                # Intrusion Set: sharing that type would make the
+                                # platform rename the group back and forth
+                                actor_class = (
+                                    ThreatActor if _type == "Person" else IntrusionSet
+                                )
+                                related_element = actor_class(
                                     _name, _type, self.author, tlp
                                 )
                                 stix_objs = related_element.to_stix_objects()
@@ -832,7 +839,7 @@ class Malware(RFStixEntity):
                 relationships.append(
                     self._create_rel(self.stix_obj.id, "targets", entity.id)
                 )
-            if entity["type"] in ["intrusion-set"]:
+            if entity["type"] in ["intrusion-set", "threat-actor"]:
                 relationships.append(
                     self._create_rel(entity.id, "uses", self.stix_obj.id)
                 )
