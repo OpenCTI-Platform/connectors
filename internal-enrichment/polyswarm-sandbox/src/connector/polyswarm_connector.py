@@ -352,9 +352,14 @@ class PolySwarmConnector:
                 error_detail=error_detail,
                 recommendations=recommendations,
             )
-            # Build a minimal bundle with just the author identity + error note
+            # Minimal bundle: author, the enriched entity and the error note. The
+            # entity must be in the bundle: cleanup_inconsistent_bundle drops refs
+            # to objects missing from it, which left the note attached to nothing.
             author = self.stix_builder._create_author()
-            bundle = self.helper.stix2_create_bundle([author, error_note])
+            objects = [author, error_note]
+            if isinstance(entity, dict) and entity.get("id"):
+                objects.insert(1, entity)
+            bundle = self.helper.stix2_create_bundle(objects)
             self.helper.send_stix2_bundle(
                 bundle, update=True, cleanup_inconsistent_bundle=True
             )
