@@ -89,11 +89,10 @@ class _CensysEnrichmentConfig(BaseConfigModel):
 
 
 class ConfigLoader(BaseConnectorSettings):
-    connector: _ConnectorConfig = Field(
+    connector: _ConnectorConfig = Field(  # type: ignore[assignment]
         default_factory=_ConnectorConfig,
         description="Internal Enrichment Connector configurations.",
     )
     censys_enrichment: _CensysEnrichmentConfig = Field(
-        default_factory=_CensysEnrichmentConfig,
         description="Censys Enrichment configurations.",
     )

@@ -68,7 +68,11 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
 
@@ -89,7 +93,11 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.host_v1:
                         yield hit.host_v1.resource
 
@@ -112,6 +120,10 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
