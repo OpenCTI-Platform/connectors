@@ -30,6 +30,7 @@ services:
       # (matches PolySwarmConfig.api_url default in src/connector/models/configs/settings.py).
       - POLYSWARM_API_URL=https://api.polyswarm.network
       - POLYSWARM_COMMUNITY=default # Set to 'default' or your private community name based on your PolySwarm license
+      - POLYSWARM_ALLOW_PUBLIC_COMMUNITY=${POLYSWARM_ALLOW_PUBLIC_COMMUNITY:-false} # Uploads to the public 'default' community are refused unless true
       - POLYSWARM_TIMEOUT=300
       
       # ═══════════════════════════════════════════════════════════════════════
