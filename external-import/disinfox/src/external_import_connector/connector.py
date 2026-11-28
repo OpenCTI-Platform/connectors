@@ -6,6 +6,9 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 
+# UTC format expected by the DISINFOX `newer_than` parameter
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
 
 class ConnectorDisinfox:
     """
@@ -66,22 +69,15 @@ class ConnectorDisinfox:
 
         # Get entities from external sources
         state = self.helper.get_state()
-        if state is None:
+        last_fetch = state.get("last_fetch") if state else None
+        if last_fetch:
+            # Previous versions stored the value as "...+00:00Z"
+            last_fetch_date = datetime.fromisoformat(last_fetch.rstrip("Z"))
+        else:  # If its the first run, we set epoch as last_fetch
             self.helper.connector_logger.info("First run, setting last_fetch to epoch")
-            last_fetch = datetime.fromtimestamp(0, tz=timezone.utc).isoformat(
-                timespec="microseconds"
-            )
-        else:
-            last_fetch = state.get("last_fetch")
-            if not last_fetch:  # If its the first run, we set epoch as last_fetch
-                self.helper.connector_logger.info(
-                    "First run, setting last_fetch to epoch"
-                )
-                last_fetch = datetime.fromtimestamp(0).isoformat(
-                    timespec="microseconds"
-                )
-        last_fetch = last_fetch + "Z"
-        now = datetime.now(tz=timezone.utc).isoformat(timespec="microseconds") + "Z"
+            last_fetch_date = datetime.fromtimestamp(0, tz=timezone.utc)
+        last_fetch = last_fetch_date.strftime(DATE_FORMAT)
+        now = datetime.now(tz=timezone.utc).strftime(DATE_FORMAT)
         entities = self.client.get_entities(params={"newer_than": last_fetch})
 
         if entities:
