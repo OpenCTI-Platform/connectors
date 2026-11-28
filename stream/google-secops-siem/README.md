@@ -107,6 +107,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Google Token URI          | secops_siem.token_uri          | `SECOPS_SIEM_TOKEN_URI`          |         | Yes       | Service account `token_uri` value.                   |
 | Google Auth Provider Cert | secops_siem.auth_provider_cert | `SECOPS_SIEM_AUTH_PROVIDER_CERT` |         | Yes       | Service account `auth_provider_x509_cert_url` value. |
 | Google Client Cert URL    | secops_siem.client_cert_url    | `SECOPS_SIEM_CLIENT_CERT_URL`    |         | Yes       | Service account `client_x509_cert_url` value.        |
+| Publish Mode              | secops_siem.publish_mode       | `SECOPS_SIEM_PUBLISH_MODE`       | UDM     | No        | `UDM` (default) or `STIX`. See [Publish modes](#publish-modes). |
 
 For `secops_siem.private_key` in `config.yml`, prefer YAML multiline format to preserve PEM newlines:
 
@@ -192,6 +193,25 @@ The connector only supports the ingestion of Indicator entities with a STIX patt
    - Pattern type = `stix`
 3. Copy the Live Stream ID to the connector configuration
 4. Start the connector
+
+## Publish modes
+
+The connector supports two publish modes, controlled by `SECOPS_SIEM_PUBLISH_MODE`:
+
+### UDM mode (default)
+
+The connector converts STIX indicators to UDM entities and sends them via the `entities:import` API (v1alpha). This is the existing behavior and requires no additional setup in Google SecOps.
+
+### STIX mode (experimental)
+
+The connector sends raw STIX JSON indicators as logs via the `logs:import` API (v1). The raw logs appear in Google SecOps under log type `OPENCTI` and require a **custom parser** in Google SecOps to convert them into UDM entities for correlation and detection.
+
+To use STIX mode:
+1. Set `SECOPS_SIEM_PUBLISH_MODE=STIX`
+2. Deploy a custom parser in Google SecOps for the `OPENCTI` log type that maps STIX JSON fields to UDM entity fields
+3. Verify that parsed entities appear in the Entity Graph
+
+This mode is useful when the default UDM entities:import path does not populate the Entity Graph as expected, or when you want Google SecOps to handle the STIX-to-UDM parsing.
 
 ## Behavior
 

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -71,6 +73,11 @@ class SecOpsSIEMConfig(BaseConfigModel):
     )
     client_cert_url: HttpUrl = Field(
         description="Client x509 certificate URL.",
+    )
+    publish_mode: Literal["UDM", "STIX"] = Field(
+        description="Publish mode: 'UDM' sends pre-formatted UDM entities via entities:import (v1alpha), "
+        "'STIX' sends raw STIX JSON via logs:import (v1) for parsing by a custom Google SecOps parser.",
+        default="UDM",
     )
 
     @field_validator("private_key", mode="before")

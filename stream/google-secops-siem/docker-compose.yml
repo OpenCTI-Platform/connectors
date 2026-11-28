@@ -26,4 +26,5 @@ services:
       # - SECOPS_SIEM_TOKEN_URI=https://oauth2.googleapis.com/token
       # - SECOPS_SIEM_AUTH_PROVIDER_CERT=https://www.googleapis.com/oauth2/v1/certs
       - SECOPS_SIEM_CLIENT_CERT_URL=ChangeMe
+      # - SECOPS_SIEM_PUBLISH_MODE=UDM # UDM (default) or STIX - STIX sends raw JSON via logs:import for custom parser
     restart: always
