@@ -2,7 +2,12 @@ import logging
 
 import requests
 
-from .hostio_utils import dict_to_pretty_markdown, format_value, is_valid_token
+from .hostio_utils import (
+    dict_to_pretty_markdown,
+    format_value,
+    is_valid_token,
+    raise_if_rate_limited,
+)
 from .transform_to_stix import HostIODomainStixTransformation
 
 HOSTIO_ENDPOINT = "https://host.io/api/full/{}"
@@ -48,6 +53,7 @@ class HostIODomain:
             LOGGER.info(
                 f"HTTP Get Request to endpoint ({HOSTIO_ENDPOINT.format(self.domain)})."
             )
+            raise_if_rate_limited(response)
             response.raise_for_status()
             return response.json()
 

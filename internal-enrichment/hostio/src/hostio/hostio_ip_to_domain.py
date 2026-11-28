@@ -2,7 +2,7 @@ import logging
 
 import requests
 
-from .hostio_utils import is_valid_token
+from .hostio_utils import is_valid_token, raise_if_rate_limited
 from .transform_to_stix import HostIOIPtoDomainStixTransform
 
 HOSTIO_ENDPOINT = "https://host.io/api/domains/ip/{}?limit={}&page={}"
@@ -47,10 +47,11 @@ class HostIOIPtoDomain:
             )
 
             LOGGER.info(f"HTTP Get Request to endpoint ({url}).")
+            raise_if_rate_limited(response)
 
             if response.status_code == 200:
                 return response.json()
-            elif response.status_code in (404, 429) and "error" in response.json():
+            elif response.status_code == 404 and "error" in response.json():
                 LOGGER.warn(
                     f"Error while fetching data from ({url}):\n{response.json().get('error')}."
                 )
