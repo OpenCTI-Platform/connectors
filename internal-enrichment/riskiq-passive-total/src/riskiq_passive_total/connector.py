@@ -291,6 +291,8 @@ class RiskIQPassiveTotalConnector:
         :param opencti_entity: observable to enrich
         :return: None
         """
+        # Reset so the TLP of a previous message is never reused
+        self.tlp = None
 
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
