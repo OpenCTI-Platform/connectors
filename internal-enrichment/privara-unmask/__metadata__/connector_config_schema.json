@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/privara-unmask_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Privara Unmask",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "StixFile"
+      ],
+      "description": "The OpenCTI entity types the connector enriches (files carrying an Android package).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
+    "PRIVARA_UNMASK_API_BASE_URL": {
+      "default": "https://app.tajapps.com/api/unmask/v1",
+      "description": "Unmask API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "PRIVARA_UNMASK_API_KEY": {
+      "description": "Unmask API key (pvu_...) with the `submit` and `read` scopes. Create it at https://app.tajapps.com/dashboard/unmask/api (sign up at https://tajapps.com/unmask/).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "PRIVARA_UNMASK_MAX_WAIT": {
+      "default": 3600,
+      "description": "Longest time in seconds to wait for one analysis before giving up (the analysis keeps running; enriching the file again within 24 hours picks up the same job at no extra cost).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "PRIVARA_UNMASK_POLL_INTERVAL": {
+      "default": 30,
+      "description": "First delay in seconds between two status checks when the API gives no Retry-After (it grows up to 120 s; never below 15 s).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "PRIVARA_UNMASK_MAX_FILE_SIZE_MB": {
+      "default": null,
+      "description": "Optional lower size cap in MB. By default the API's own limit is used (GET /balance, limits.max_file_mb).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "PRIVARA_UNMASK_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Also create an observable (URL, IP, domain) for each C2 indicator.",
+      "type": "boolean"
+    },
+    "PRIVARA_UNMASK_NOTIFY_EMAIL": {
+      "default": null,
+      "description": "Send the Privara result e-mail for each analysis (unset: the account's own setting).",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "PRIVARA_UNMASK_API_KEY"
+  ],
+  "additionalProperties": true
+}
