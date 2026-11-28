@@ -145,6 +145,26 @@ class ConnectorClient:
                 raise IncidentsFetchError(str(err), all_incidents) from err
         return all_incidents
 
+    def get_incident(self, incident_id: str) -> dict | None:
+        """
+        Read one incident by its Defender id, with its alerts.
+
+        Used by the reconcile pass: an incident that no longer changes (e.g. redirected) is never returned again by
+        the `lastUpdateDateTime` window, so its current state is read directly.
+
+        :param incident_id: Defender incident id
+        :return: The incident, or None when Defender answers 404 (the incident no longer exists)
+        :raises requests.RequestException: on any other error (the 429 retry of the session applies first)
+        """
+        self.retries_builder()
+        mdi_config = self.config.microsoft_defender_incidents
+        url = f"{mdi_config.api_base_url}{mdi_config.incident_path}/{incident_id}"
+        response = self.session.get(url, params={"$expand": "alerts"})
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json()
+
     def get_incidents(self, last_incident_timestamp: int) -> list[dict]:
         """
         Retrieves incidents and manages the API request lifecycle.

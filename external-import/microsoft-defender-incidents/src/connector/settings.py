@@ -111,6 +111,24 @@ class MicrosoftDefenderIncidentsConfig(BaseConfigModel):
         ),
         default="",
     )
+    reconcile: bool = Field(
+        description=(
+            "Re-read, on every run, the Defender incidents whose Case-Incident is not in the workflow status "
+            "mapped to resolved or redirected, and re-send them so status, description and labels converge. "
+            "Needed for incidents that no longer change in Defender (a redirected incident never does) or that "
+            "ended before the status mapping was set. Only active when the status mapping maps resolved or "
+            "redirected."
+        ),
+        default=True,
+    )
+    reconcile_max_incidents: int = Field(
+        description=(
+            "Maximum number of Defender incidents re-read by the reconcile pass in one run "
+            "(least recently updated case first, so every open case is reached over successive runs)."
+        ),
+        default=100,
+        ge=1,
+    )
 
     @field_validator("status_mapping")
     @classmethod

@@ -122,8 +122,15 @@ download of data by re-running the connector.
 
 ### Defender incident status, classification and determination
 
-Each Defender incident becomes a Case-Incident whose id is derived from the incident name and creation date, so
-every Defender update re-fetched by the connector upserts the same Case-Incident.
+Each Defender incident becomes a Case-Incident. The connector identifies the case by the Defender incident id (the
+`external_id` of its `Microsoft Defender` external reference): at the start of every run it lists the Case-Incidents
+it created, and an incident already seen updates its existing case, name included, even after Defender renamed it as
+alerts correlated. An incident never seen gets a Case-Incident whose id is derived from its name and creation date,
+as before; no existing id changes.
+
+Cases created before this identity rule may exist twice for one renamed incident. Both are kept in sync (status,
+description, labels), the most recently updated one takes the incident's current name, and the run logs them
+("Defender incidents linked to several Case-Incidents") so they can be merged in OpenCTI.
 
 - **Labels**: when present, the incident's `status`, `classification` and `determination` are added as labels
   `defender-status:<value>`, `defender-classification:<value>` and `defender-determination:<value>` (values
@@ -155,10 +162,18 @@ every Defender update re-fetched by the connector upserts the same Case-Incident
   its only status-write guards apply to the request access workflow of Case-RFI. The user's max confidence level
   is the only condition on upsert.
 
-Note on labels after a status change: the platform upsert adds labels to the existing ones, it does not replace
-them. A Case-Incident that moved from `active` to `resolved` in Defender keeps `defender-status:active` next to
-`defender-status:resolved`. Use the workflow status (with a mapping) as the current state; the
-`defender-status:*` labels record every status the incident went through.
+- **Reconcile pass** (`MICROSOFT_DEFENDER_INCIDENTS_RECONCILE`, default `true`): the incremental fetch only returns
+  incidents updated since the last run. An incident that ended before the status mapping was set, or a redirected
+  (merged) incident, never changes again in Defender, so its case would keep its open workflow status forever. When
+  the mapping maps `resolved` or `redirected`, each run lists the connector's Case-Incidents not in those mapped
+  statuses, reads each Defender incident by id (`GET /security/incidents/{id}?$expand=alerts`) and re-sends it, so
+  status, description and labels converge without a state reset. At most
+  `MICROSOFT_DEFENDER_INCIDENTS_RECONCILE_MAX_INCIDENTS` incidents (default 100) are read per run, least recently
+  updated case first; a 429 is retried by the client, an incident Defender no longer has (404) is logged and its
+  case left as is. The reconcile pass never moves the connector state. Without a mapping nothing changes.
+- **Labels reflect the current values**: the platform upsert adds labels, it never removes them, so after sending the
+  bundle the connector removes from each case the `defender-status:*`, `defender-classification:*` and
+  `defender-determination:*` labels that no longer match the incident. Other labels are left untouched.
 
 ## Debugging
 

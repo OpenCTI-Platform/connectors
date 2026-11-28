@@ -1,6 +1,7 @@
 import sys
 
 import stix2
+from connector.case_index import CaseIncidentIndex
 from connector.client_api import ConnectorClient, IncidentsFetchError
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
@@ -54,6 +55,7 @@ class MicrosoftDefenderIncidentsConnector:
         self.converter_to_stix = ConverterToStix(
             self.helper, self.config, self.tlp_marking
         )
+        self.case_index = CaseIncidentIndex(self.helper)
 
     def _get_last_incident_date(self) -> int:
         """
@@ -316,12 +318,118 @@ class MicrosoftDefenderIncidentsConnector:
                             )
                             stix_objects.append(stix_relationship_malware)
 
-        stix_case = self.converter_to_stix.create_custom_case_incident(
-            incident, stix_objects
-        )
-        stix_objects.append(stix_case)
+        # Reuse the case(s) already linked to this Defender incident id: a renamed incident updates its case
+        # instead of creating a second one. An incident never seen keeps the id derived from name and date.
+        targets = self.case_index.targets(
+            incident.get("id"), incident.get("displayName")
+        ) or [(None, None)]
+        case_refs = list(stix_objects)
+        for case_id, case_name in targets:
+            stix_case = self.converter_to_stix.create_custom_case_incident(
+                incident, case_refs, case_id=case_id, case_name=case_name
+            )
+            if stix_case:
+                stix_objects.append(stix_case)
 
         return stix_objects
+
+    def _load_case_index(self) -> bool:
+        """
+        Read the Case-Incidents this connector already created, keyed by Defender incident id.
+        A failure is logged and the run goes on as before (ids derived from name and date, no reconcile).
+        :return: True when the index was read
+        """
+        try:
+            self.case_index.load(self.converter_to_stix.author["id"])
+        except Exception as err:  # noqa: BLE001 - never stop the import
+            self.case_index.cases = {}
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Cannot read the existing Case-Incidents, "
+                "renamed incidents and the reconcile pass are skipped for this run",
+                {"error": str(err)},
+            )
+            return False
+        duplicates = self.case_index.duplicates()
+        if duplicates:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Defender incidents linked to several Case-Incidents "
+                "(created before the identity fix, kept in sync, merge them in OpenCTI if needed)",
+                {"duplicates": duplicates},
+            )
+        return True
+
+    def _reconcile_incidents(self, already_fetched: set[str]) -> list[dict]:
+        """
+        Re-read the Defender incidents whose case is still open in OpenCTI.
+
+        The incremental fetch only returns incidents updated since the state. An incident that ended before the
+        status mapping existed, or whose last update was missed, never changes again in Defender (a redirected
+        incident never does), so its case would keep its open status forever. Each run re-reads up to
+        `reconcile_max_incidents` of them, least recently updated case first.
+
+        :param already_fetched: Defender incident ids already returned by the incremental fetch
+        :return: Current Defender incidents to re-send
+        """
+        mdi_config = self.config.microsoft_defender_incidents
+        if getattr(mdi_config, "reconcile", True) is False:
+            return []
+        closed_status_ids = self.converter_to_stix.closed_workflow_ids()
+        if not closed_status_ids:
+            # Without a mapped closed status there is no open case to converge.
+            return []
+        limit = getattr(mdi_config, "reconcile_max_incidents", 100)
+        if not isinstance(limit, int) or limit <= 0:
+            return []
+        candidates = [
+            incident_id
+            for incident_id in self.case_index.open_incident_ids(closed_status_ids)
+            if incident_id not in already_fetched
+        ][:limit]
+        incidents = []
+        for incident_id in candidates:
+            try:
+                incident = self.client.get_incident(incident_id)
+            except Exception as err:  # noqa: BLE001 - the next run retries it
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Cannot read the Defender incident to reconcile its case",
+                    {"incident_id": incident_id, "error": str(err)},
+                )
+                continue
+            if incident is None:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Defender incident not found, its case is left as is",
+                    {"incident_id": incident_id},
+                )
+                continue
+            incidents.append(incident)
+        if candidates:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Reconcile pass",
+                {"open_cases_checked": len(candidates), "re_sent": len(incidents)},
+            )
+        return incidents
+
+    def _remove_stale_labels(self, incidents: list[dict]) -> None:
+        """
+        Remove the defender-status, defender-classification and defender-determination labels that no longer
+        hold: the bundle upsert only adds labels, so each family would otherwise keep every past value.
+        :param incidents: Defender incidents sent in this run
+        :return: None
+        """
+        for incident in incidents:
+            current = self.converter_to_stix.build_case_incident_labels(incident)
+            for case_id, label_id, value in self.case_index.stale_labels(
+                incident.get("id"), current
+            ):
+                try:
+                    self.helper.api.stix_domain_object.remove_label(
+                        id=case_id, label_id=label_id
+                    )
+                except Exception as err:  # noqa: BLE001 - the next update retries it
+                    self.helper.connector_logger.warning(
+                        "[CONNECTOR] Cannot remove a stale Defender label",
+                        {"case_id": case_id, "label": value, "error": str(err)},
+                    )
 
     def process_message(self) -> None:
         """
@@ -359,6 +467,9 @@ class MicrosoftDefenderIncidentsConnector:
             # Resolve the optional Defender status mapping into Status ids once per run
             self.converter_to_stix.refresh_workflow_ids()
 
+            # Existing cases by Defender incident id (stable identity, reconcile, stale labels)
+            index_loaded = self._load_case_index()
+
             # Get incidents. If a page fails, the incidents fetched so far are still sent (their ids are
             # deterministic) but the state does not move: older incidents of the window were never fetched.
             fetch_complete = True
@@ -393,6 +504,18 @@ class MicrosoftDefenderIncidentsConnector:
                 ):
                     batch_last_timestamp = incident_timestamp
 
+            # Cases still open whose Defender incident is outside the incremental window: re-read and re-send
+            # them. They never move the state (their lastUpdateDateTime is older than the window).
+            reconciled = (
+                self._reconcile_incidents(
+                    {str(incident.get("id")) for incident in incidents}
+                )
+                if index_loaded
+                else []
+            )
+            for incident in reconciled:
+                stix_objects.extend(self._extract_intelligence(incident))
+
             if not stix_objects:
                 if fetch_complete:
                     self.helper.connector_logger.info(
@@ -417,6 +540,8 @@ class MicrosoftDefenderIncidentsConnector:
                 work_id=work_id,
                 cleanup_inconsistent_bundle=True,
             )
+            if index_loaded:
+                self._remove_stale_labels(incidents + reconciled)
 
             if fetch_complete and batch_last_timestamp is not None:
                 last_incident_timestamp = batch_last_timestamp

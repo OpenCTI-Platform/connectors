@@ -225,17 +225,35 @@ class ConverterToStix:
         )
         return stix_incident
 
+    def closed_workflow_ids(self) -> set[str]:
+        """
+        Status ids the mapping gives to the Defender statuses that end an incident (resolved, redirected).
+        :return: Status ids (empty when no mapping applies)
+        """
+        return {
+            self.workflow_ids[status]
+            for status in ("resolved", "redirected")
+            if status in self.workflow_ids
+        }
+
     @handle_stix2_error
     def create_custom_case_incident(
-        self, incident: dict, bundle_objects: list[object]
+        self,
+        incident: dict,
+        bundle_objects: list[object],
+        case_id: str | None = None,
+        case_name: str | None = None,
     ) -> CustomObjectCaseIncident | None:
         """
         Create STIX 2.1 Custom Case Incident object
         :param incident: Incident to create Case Incident from
         :param bundle_objects: List of all the STIX 2.1 objects referring to the incident
+        :param case_id: Standard id of the existing Case-Incident of this Defender incident, if any
+            (default: derived from the incident name and creation date)
+        :param case_name: Name to send with case_id (default: the incident's display name)
         :return: Case Incident in STIX 2.1 format
         """
-        case_incident_name = incident.get("displayName")
+        case_incident_name = case_name or incident.get("displayName")
         case_incident_created_at = format_datetime(incident.get("createdDateTime"))
         case_incident_description = (
             f"Incident from Microsoft Defender "
@@ -251,7 +269,8 @@ class ConverterToStix:
             custom_properties["x_opencti_workflow_id"] = workflow_id
 
         stix_case = CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(case_incident_name, case_incident_created_at),
+            id=case_id
+            or CaseIncident.generate_id(case_incident_name, case_incident_created_at),
             name=case_incident_name,
             description=case_incident_description,
             labels=case_incident_labels or None,
