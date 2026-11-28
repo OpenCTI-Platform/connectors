@@ -496,8 +496,10 @@ def test_every_reference_to_a_refanged_observable_is_rewritten():
     email_id = stix2.EmailAddress(value="admin@filigran.io")["id"]
     ipv6_id = stix2.IPv6Address(value="2001:0db8:85a3:0000:0000:8a2e:0370:7334")["id"]
     ipv4_id = stix2.IPv4Address(value="198.51.100.7")["id"]
+    # The relationship takes the id of its new identity
+    uses_id = pycti.StixCoreRelationship.generate_id("related-to", apt["id"], email_id)
     serialized = refanged_bundle.serialize()
-    for former_id in (email["id"], ipv6["id"], ipv4["id"]):
+    for former_id in (email["id"], ipv6["id"], ipv4["id"], uses["id"]):
         assert former_id not in serialized
     assert dangling_references(refanged_bundle) == set()
     assert object_with_id(refanged_bundle, container["id"])["object_refs"] == [
@@ -507,9 +509,9 @@ def test_every_reference_to_a_refanged_observable_is_rewritten():
         domain["id"],
         message["id"],
         apt["id"],
-        uses["id"],
+        uses_id,
     ]
-    assert object_with_id(refanged_bundle, uses["id"])["target_ref"] == email_id
+    assert object_with_id(refanged_bundle, uses_id)["target_ref"] == email_id
     assert object_with_id(refanged_bundle, domain["id"])["resolves_to_refs"] == [
         ipv4_id
     ]
@@ -613,24 +615,28 @@ def test_relationships_made_identical_by_a_merge_are_merged():
     # When refanging the bundle
     refanged_bundle, summary = refang_bundle_observables(bundle)
 
-    # Then the two relationships to the merged address are one, the report
-    # follows, and the relationships the refang did not touch are kept
+    # Then the two relationships to the merged address are one, under the id
+    # of their identity, the report follows, and the relationships the refang
+    # did not touch are kept
     email_id = stix2.EmailAddress(value="admin@filigran.io")["id"]
+    related_id = pycti.StixCoreRelationship.generate_id(
+        "related-to", apt["id"], email_id
+    )
     assert [obj["id"] for obj in serialized_objects(refanged_bundle)] == [
         apt["id"],
         email_id,
         ipv4["id"],
-        first["id"],
+        related_id,
         untouched["id"],
         untouched_twin["id"],
         container["id"],
     ]
-    assert object_with_id(refanged_bundle, first["id"])["target_ref"] == email_id
+    assert object_with_id(refanged_bundle, related_id)["target_ref"] == email_id
     assert object_with_id(refanged_bundle, container["id"])["object_refs"] == [
         apt["id"],
         email_id,
         ipv4["id"],
-        first["id"],
+        related_id,
         untouched["id"],
         untouched_twin["id"],
     ]
@@ -661,19 +667,21 @@ def test_relationships_sharing_the_identity_of_a_rewritten_one_merge_in_any_orde
     # When refanging the bundle
     refanged_bundle, summary = refang_bundle_observables(bundle)
 
-    # Then one relationship remains, under the first one's id, whatever the
-    # order, and the report follows
-    first_id = relationships[0]["id"]
+    # Then one relationship remains, under the id of its identity, whatever
+    # the order, and the report follows
+    related_id = pycti.StixCoreRelationship.generate_id(
+        "related-to", apt["id"], clean["id"]
+    )
     assert [obj["id"] for obj in serialized_objects(refanged_bundle)] == [
         apt["id"],
         clean["id"],
-        first_id,
+        related_id,
         container["id"],
     ]
     assert object_with_id(refanged_bundle, container["id"])["object_refs"] == [
         apt["id"],
         clean["id"],
-        first_id,
+        related_id,
     ]
     assert dangling_references(refanged_bundle) == set()
     assert summary.merged_objects == 3
