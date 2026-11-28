@@ -63,7 +63,7 @@ class LastInfoSecEnrichment:
         url = "{}/stix21/search/?api_key={}&platform=opencti".format(
             self.api_url, self.lastinfosec_apikey
         )
-        response = requests.post(url, json=body)
+        response = requests.post(url, json=body, proxies=proxy_dic)
 
         if response.status_code == 422:
             return "{} not found...".format(value)
