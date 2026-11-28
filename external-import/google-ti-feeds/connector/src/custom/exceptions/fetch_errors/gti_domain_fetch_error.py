@@ -24,7 +24,7 @@ class GTIDomainFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = "Error fetching domains: {message}"
+        error_msg = f"Error fetching domains: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
 

@@ -24,7 +24,7 @@ class GTIFileFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = "Error fetching files: {message}"
+        error_msg = f"Error fetching files: {message}"
         super().__init__(error_msg, status_code, endpoint, details)
 
         # Add structured data for logging

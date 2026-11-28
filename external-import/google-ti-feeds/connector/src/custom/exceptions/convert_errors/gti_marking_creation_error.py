@@ -15,7 +15,7 @@ class GTIMarkingCreationError(GTIConvertingError):
 
         """
         if tlp_level:
-            error_msg = "Failed to create TLP marking: {message}"
+            error_msg = f"Failed to create TLP marking: {message}"
         else:
             error_msg = f"Failed to create TLP marking: {message}"
 

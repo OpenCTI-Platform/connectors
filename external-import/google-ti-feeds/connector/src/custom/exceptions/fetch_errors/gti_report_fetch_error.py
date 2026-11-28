@@ -27,9 +27,9 @@ class GTIReportFetchError(GTIApiError):
 
         """
         if report_id:
-            error_msg = "Error fetching report: {message}"
+            error_msg = f"Error fetching report: {message}"
         else:
-            error_msg = "Error fetching reports: {message}"
+            error_msg = f"Error fetching reports: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.report_id = report_id

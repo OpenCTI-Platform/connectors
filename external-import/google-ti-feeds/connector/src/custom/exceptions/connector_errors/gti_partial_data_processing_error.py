@@ -29,7 +29,7 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
 
         """
         if interruption_type:
-            error_msg = "Error processing partial data after interruption: {message}"
+            error_msg = f"Error processing partial data after interruption: {message}"
         else:
             error_msg = f"Error processing partial data: {message}"
 

@@ -24,7 +24,7 @@ class GTIUrlFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = "Error fetching URLs: {message}"
+        error_msg = f"Error fetching URLs: {message}"
         super().__init__(error_msg, status_code, endpoint, details)
 
         # Add structured data for logging

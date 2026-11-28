@@ -27,9 +27,9 @@ class GTICampaignFetchError(GTIApiError):
 
         """
         if campaign_id:
-            error_msg = "Error fetching campaign: {message}"
+            error_msg = f"Error fetching campaign: {message}"
         else:
-            error_msg = "Error fetching campaigns: {message}"
+            error_msg = f"Error fetching campaigns: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.campaign_id = campaign_id

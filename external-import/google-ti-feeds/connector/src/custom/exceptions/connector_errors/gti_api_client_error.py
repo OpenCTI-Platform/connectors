@@ -23,7 +23,7 @@ class GTIApiClientError(GTIBaseError):
 
         """
         if client_component:
-            error_msg = "API client error in component: {message}"
+            error_msg = f"API client error in component: {message}"
         else:
             error_msg = message
 

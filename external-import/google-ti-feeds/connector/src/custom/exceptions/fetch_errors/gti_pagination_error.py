@@ -24,7 +24,7 @@ class GTIPaginationError(GTIApiError):
             status_code: HTTP status code, if available
 
         """
-        error_msg = "Pagination error: {message}"
+        error_msg = f"Pagination error: {message}"
 
         super().__init__(error_msg, status_code, endpoint)
         self.page = page
