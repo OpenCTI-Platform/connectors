@@ -24,6 +24,21 @@ TLP_MAP = {
 UNSUPPORTED_VALUES = ["", "None", None, [], {}]
 
 
+class HostIORateLimitError(Exception):
+    """Raised when host.io answers with HTTP 429 (rate limit reached)."""
+
+
+def raise_if_rate_limited(response):
+    """Raise HostIORateLimitError if host.io rejected the request with HTTP 429."""
+    if response.status_code != 429:
+        return
+    message = "host.io rate limit reached (HTTP 429)"
+    retry_after = response.headers.get("Retry-After")
+    if retry_after:
+        message += f", Retry-After: {retry_after}"
+    raise HostIORateLimitError(message)
+
+
 def is_json_string(json_string: str):
     """Determine whether the provided string is a valid JSON string."""
     try:

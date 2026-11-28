@@ -4,7 +4,7 @@ import random
 
 import pytest
 from hostio.hostio_ip_to_domain import HostIOIPtoDomain
-from hostio.hostio_utils import create_author
+from hostio.hostio_utils import HostIORateLimitError, create_author
 from stix2 import DomainName, IPv4Address, Relationship
 
 DEFAULT_IP = "8.8.8.8"
@@ -124,3 +124,22 @@ class TestHostIOIPToDomain:
         hostio_ip.request_ip_to_domain()
         assert hostio_ip.has_next is False
         assert hostio_ip.domains == []
+
+    @pytest.mark.parametrize("headers", [{"Retry-After": "60"}, {}])
+    def test_request_ip_rate_limited(self, hostio_ip, mocker, headers):
+        """A 429 must fail the enrichment instead of returning no domains."""
+        response = mocker.Mock(status_code=429, headers=headers)
+        response.json.return_value = {"error": "Rate limit exceeded"}
+        mocker.patch("requests.get", return_value=response)
+        with pytest.raises(HostIORateLimitError, match="429") as exc_info:
+            hostio_ip.request_ip_to_domain()
+        assert ("Retry-After: 60" in str(exc_info.value)) == bool(headers)
+
+    def test_request_ip_not_found_is_empty_result(self, hostio_ip, mocker):
+        """A 404 with an error message means host.io has no data for the IP."""
+        response = mocker.Mock(status_code=404, headers={})
+        response.json.return_value = load_fixture("ip_error.json")
+        mocker.patch("requests.get", return_value=response)
+        hostio_ip.request_ip_to_domain()
+        assert hostio_ip.domains == []
+        assert hostio_ip.has_next is False

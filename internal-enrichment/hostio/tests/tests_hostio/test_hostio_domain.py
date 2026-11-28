@@ -5,7 +5,7 @@ import random
 
 import pytest
 from hostio import HostIODomain
-from hostio.hostio_utils import create_author
+from hostio.hostio_utils import HostIORateLimitError, create_author
 from stix2 import TLP_GREEN, DomainName, IPv4Address, IPv6Address, Relationship
 
 LOGGER = logging.getLogger(__name__)
@@ -122,3 +122,14 @@ class TestHostioDomain:
         assert domain.dns == {}
         assert domain.web == {}
         assert domain.related == {}
+
+    def test_request_full_domain_rate_limited(self, mocker):
+        """A 429 must fail the enrichment instead of returning an empty result."""
+        response = mocker.Mock(status_code=429, headers={"Retry-After": "60"})
+        mocker.patch("requests.get", return_value=response)
+        with pytest.raises(HostIORateLimitError, match="Retry-After: 60"):
+            HostIODomain(
+                token=generate_random_token(),
+                domain=DEFAULT_DOMAIN,
+                author=AUTHOR,
+            )
