@@ -28,7 +28,11 @@ from pycti import OpenCTIConnectorHelper
 # In the near future, the error type should be imported from connectors-sdk exceptions module
 from pydantic import ValidationError
 from rf_client.models import ObservableEnrichment
-from rflib.rf_utils import get_hash_algorithm, validate_ip_or_cidr
+from rflib.rf_utils import (
+    get_file_hash_pattern,
+    get_hash_algorithm,
+    validate_ip_or_cidr,
+)
 
 
 class ObservableEnrichmentError(Exception):
@@ -102,7 +106,7 @@ class ObservableEnricher:
                         Indicator(
                             name=entity_value,
                             score=risk_score,
-                            pattern=f"[file:hashes.'{hash_algorithm}' = '{entity_value}']",
+                            pattern=get_file_hash_pattern(hash_algorithm, entity_value),
                             pattern_type="stix",
                             main_observable_type="StixFile",
                             author=self.author,
@@ -279,7 +283,9 @@ class ObservableEnricher:
                                 Indicator(
                                     name=entity_value,
                                     score=risk_score,
-                                    pattern=f"[file:hashes.'{hash_algorithm}' = '{entity_value}']",
+                                    pattern=get_file_hash_pattern(
+                                        hash_algorithm, entity_value
+                                    ),
                                     pattern_type="stix",
                                     main_observable_type="StixFile",
                                     author=self.author,
