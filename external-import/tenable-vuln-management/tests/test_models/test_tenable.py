@@ -110,3 +110,43 @@ def test_asset_without_operating_system_should_not_raise(
     vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
     # Then no ValidationError is raised and operating_system is None
     assert vf.asset.operating_system is None
+
+
+@pytest.mark.parametrize(
+    "tenable_api_response_1_report",
+    [
+        pytest.param(raw_report, id=raw_report["plugin"]["name"])
+        for raw_report in load_responses()
+    ],
+)
+def test_scan_with_only_uuid_should_not_raise(
+    tenable_api_response_1_report,
+):
+    # Given a tenable api response whose scan object holds only its uuid
+    scan_uuid = tenable_api_response_1_report["scan"]["uuid"]
+    tenable_api_response_1_report["scan"] = {"uuid": scan_uuid}
+    # When instantiating a vulnerability_finding
+    vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
+    # Then no ValidationError is raised and the missing scan fields are None
+    assert vf.scan.uuid == scan_uuid
+    assert vf.scan.schedule_uuid is None
+    assert vf.scan.started_at is None
+    assert vf.scan.target is None
+
+
+@pytest.mark.parametrize(
+    "tenable_api_response_1_report",
+    [
+        pytest.param(raw_report, id=raw_report["plugin"]["name"])
+        for raw_report in load_responses()
+    ],
+)
+def test_asset_without_ipv4_should_not_raise(
+    tenable_api_response_1_report,
+):
+    # Given a tenable api response without asset.ipv4 field
+    del tenable_api_response_1_report["asset"]["ipv4"]
+    # When instantiating a vulnerability_finding
+    vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
+    # Then no ValidationError is raised and ipv4 is None
+    assert vf.asset.ipv4 is None
