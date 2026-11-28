@@ -47,6 +47,17 @@ The SDK includes custom exceptions to handle errors gracefully. Use these except
 
 See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
 
+### Using Connector Base Classes
+
+The SDK provides base classes that own the infrastructure of a connector (OpenCTI helper, run loop or
+message listening, bundle sending, error handling). A connector only implements processors that fetch
+data (`collect()`) and convert it to STIX (`transform()`).
+
+| Connector type      | Base classes                                                           | Documentation |
+| ------------------- | ---------------------------------------------------------------------- | ------------- |
+| External import     | `ExternalImportConnector`, `BaseDataProcessor`                         | [External Import Specifications](../docs/02-external-import-specifications.md) |
+| Internal enrichment | `InternalEnrichmentConnector`, `BaseEnrichmentProcessor`, `EnrichmentMessage` | [Internal Enrichment Specifications](../docs/03-internal-enrichment-specifications.md), [how to write an enrichment processor](docs/HOW_TO_Write_an_enrichment_processor.md), [how to migrate an enrichment connector](docs/HOW_TO_Migrate_an_enrichment_connector.md) |
+
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  

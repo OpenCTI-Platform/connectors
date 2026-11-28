@@ -143,25 +143,57 @@ Details: `docs/02-external-import-specifications.md`.
 
 ### Internal-enrichment connectors
 
-- Check the entity scope from the `data["entity_id"]` prefix against
-  `helper.connect_scope`.
-- Check the TLP with `helper.check_max_tlp(entity_tlp, max_tlp)` before any
-  external API call. Both values must be in `TLP:XXX` form: pycti raises
-  `KeyError` on `"amber+strict"`.
+New connectors use `connectors_sdk.InternalEnrichmentConnector` with one or
+more `BaseEnrichmentProcessor`. The base class checks the scope and the TLP,
+picks the processor and sends the bundle (exactly one per playbook message).
+Start from `templates/internal-enrichment/` (processors in
+`src/connector/enrichment_processors/`); `internal-enrichment/spur-enrichment`
+is a complete example.
+
+- A processor declares `handled_entity_types` (OpenCTI types such as
+  `IPv4-Addr` or `StixFile`, not STIX types) and implements `collect(message)`
+  (network, no STIX) and `transform(data, message)` (STIX, no network). Build
+  the client, author and marking in `post_init()`. Override `can_process()`
+  only to filter within a type: exactly one processor must accept an entity.
+- Never check the scope or the TLP, create the helper, call `listen()`,
+  `stix2_create_bundle()` or `send_stix2_bundle()`, or create a work in
+  connector code: the base class does it. Keep no per-message state on
+  `self`, and never modify the `EnrichmentMessage` in place.
+- `transform()` returns the author and the marking with the new objects, and
+  `[]` when there is nothing to add. Never return `message.stix_objects`: the
+  base class adds them.
+- To enrich the entity itself, return it rebuilt with the same id (same
+  value), with only the new fields and without author or markings. OpenCTI
+  merges it with the stored entity: never merge properties in the connector.
+  To only link to the entity, use `Reference(id=message.stix_entity.id)`.
+- When the source does not know the entity, `collect()` returns an empty
+  value. On a source failure it raises `DataRetrievalError` (`from err`).
 - The max TLP is `settings.connector.max_tlp` (`CONNECTOR_MAX_TLP`), a
-  `TLPLevel` from `BaseInternalEnrichmentConnectorConfig`. Pass it to
-  `check_max_tlp` as `f"TLP:{settings.connector.max_tlp.upper()}"`. Never
-  add a max TLP setting to the connector's own section. To change its
-  default, override it as `max_tlp: TLPLevel = Field(default=TLPLevel.AMBER_STRICT)`.
-- When the message comes from a playbook (`data.get("event_type")` is falsy)
-  and the entity is out of scope, send `data["stix_objects"]` back unchanged.
-  Otherwise the playbook stalls.
-- Set `playbook_compatible=True` on the helper and `"playbook_supported": true`
-  in the manifest only when every code path sends a bundle, and keep the
-  original `stix_objects` in it.
+  `TLPLevel` from `BaseInternalEnrichmentConnectorConfig`. Never add a max
+  TLP setting to the connector's own section. To change its default,
+  override it as `max_tlp: TLPLevel = Field(default=TLPLevel.AMBER_STRICT)`.
+- Set `"playbook_supported": true` in the manifest.
+- Keep `CONNECTOR_AUTO` at `false` (the default) for paid or quota-limited
+  sources.
+
+Legacy connectors (own helper and `helper.listen()` callback):
+
+- Check the scope on the OpenCTI type, with
+  `InternalEnrichmentConnector.is_entity_in_scope(data["enrichment_entity"]["entity_type"], settings.connector.scope)`.
+  The `entity_id` prefix fails for `StixFile` (`file--`).
+- Check the TLP before any external API call with
+  `InternalEnrichmentConnector.is_entity_tlp_allowed(tlp_levels, settings.connector.max_tlp)`.
+  Never build `TLP:XXX` by hand for pycti's `check_max_tlp()`, which raises
+  `KeyError` on `"amber+strict"`.
+- When the message comes from a playbook (`data.get("event_type")` is falsy),
+  every code path (out of scope, TLP refused, no data, error) sends exactly
+  one bundle containing the original `data["stix_objects"]`. Otherwise the
+  playbook stalls. Only then set `playbook_compatible=True` on the helper and
+  `"playbook_supported": true` in the manifest.
 - Send results only through `stix2_create_bundle()` and `send_stix2_bundle()`.
   Direct API writes skip confidence checks and deduplication.
-- Default `CONNECTOR_AUTO` to `false` for paid or quota-limited sources.
+- To move one to the base class, follow
+  `connectors-sdk/docs/HOW_TO_Migrate_an_enrichment_connector.md`.
 
 Details: `docs/03-internal-enrichment-specifications.md`.
 
