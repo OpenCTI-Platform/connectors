@@ -341,31 +341,19 @@ class CrowdStrike:
 
             for importer in self.importers:
                 importer_name = importer.name or importer.__class__.__name__
-                work_id = self._initiate_work(timestamp, importer_name)
-
+                # keep running the other importers when one fails; the failed
+                # one's state is not updated, so it retries the same range
+                # next run
                 try:
-                    importer_state = importer.start(work_id, new_state)
-                except CrowdStrikeAPIError as e:
-                    self.helper.api.work.to_processed(
-                        work_id,
-                        str(e),
-                        in_error=True,
-                    )
-                    # keep running the other importers; this one's state is
-                    # not updated, so it retries the same range next run
+                    self._run_importer(importer, importer_name, timestamp, new_state)
+                except CrowdStrikeAPIError:
+                    # already logged by the CrowdStrike client
                     continue
-
-                new_state.update(importer_state)
-
-                self._info("Storing updated new state: {0}", new_state)
-                self.helper.set_state(new_state)
-
-                connect_name = self.helper.connect_name or "CrowdStrike"
-                message = (
-                    f"{connect_name} {importer_name} successfully run, storing last_run as "
-                    + str(timestamp)
-                )
-                self.helper.api.work.to_processed(work_id, message)
+                except Exception as e:  # noqa: B902
+                    self.helper.connector_logger.error(
+                        "Importer failed, running the next one",
+                        {"importer": importer_name, "error": str(e)},
+                    )
 
             new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
@@ -384,6 +372,33 @@ class CrowdStrike:
             message_callback=self.process_message,
             duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
         )
+
+    def _run_importer(
+        self,
+        importer: BaseImporter,
+        importer_name: str,
+        timestamp: int,
+        state: dict[str, Any],
+    ) -> None:
+        work_id = self._initiate_work(timestamp, importer_name)
+
+        try:
+            importer_state = importer.start(work_id, state)
+        except Exception as e:  # noqa: B902
+            self.helper.api.work.to_processed(work_id, str(e), in_error=True)
+            raise
+
+        state.update(importer_state)
+
+        self._info("Storing updated new state: {0}", state)
+        self.helper.set_state(state)
+
+        connect_name = self.helper.connect_name or "CrowdStrike"
+        message = (
+            f"{connect_name} {importer_name} successfully run, storing last_run as "
+            + str(timestamp)
+        )
+        self.helper.api.work.to_processed(work_id, message)
 
     def _initiate_work(self, timestamp: int, importer_name: str) -> str:
         datetime_str = timestamp_to_datetime(timestamp)
