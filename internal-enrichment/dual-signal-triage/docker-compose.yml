@@ -1,0 +1,15 @@
+version: '3'
+services:
+  connector-dual-signal-triage:
+    image: opencti/connector-dual-signal-triage:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Dual Signal Triage
+      - CONNECTOR_SCOPE=Case-Incident,Incident,Report,Indicator
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=false
+      - DUAL_SIGNAL_TRIAGE_MAX_TLP_LEVEL=amber+strict
+      - DUAL_SIGNAL_TRIAGE_CREATE_NOTE=true
+    restart: always
