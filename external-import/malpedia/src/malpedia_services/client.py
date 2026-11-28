@@ -125,6 +125,8 @@ class MalpediaClient:
 
     def token_check(self) -> bool:
         response_json = self.query("check/apikey")
+        if response_json is None:
+            raise ConnectionError("Malpedia API unreachable (check/apikey)")
         if response_json and "Valid token" in response_json["detail"]:
             return True
         else:
@@ -132,4 +134,6 @@ class MalpediaClient:
 
     def current_version(self) -> int:
         response_json = self.query("get/version")
+        if response_json is None:
+            raise ConnectionError("Malpedia API unreachable (get/version)")
         return int(response_json["version"])
