@@ -1308,3 +1308,100 @@ def test_indicator_map_data_without_hits_skips_related_entities(links):
 
     assert indicator.risk_score == 75
     assert not indicator.related_entities
+
+
+# ── Related entities from several sections (#8347) ───────────────────────────
+
+
+def _given_sections(*sections):
+    """Sections as Recorded Future returns them: (section name, [threat actors])."""
+    return [
+        {
+            "section_id": {"name": section_name},
+            "lists": [
+                {
+                    "type": {"name": "Threat Actor"},
+                    "entities": [{"name": name} for name in actor_names],
+                }
+            ],
+        }
+        for section_name, actor_names in sections
+    ]
+
+
+def _threat_actor_names(stix_objects):
+    return [obj["name"] for obj in stix_objects if obj["type"] == "threat-actor"]
+
+
+THREE_SECTIONS = (
+    ("Indicators", ["APT28"]),
+    ("TTPs", ["APT29"]),
+    ("Other", ["APT30"]),
+)
+
+
+# Scenario: each related entity is added once, whatever the number of sections
+def test_indicator_map_data_adds_each_related_entity_once_across_sections():
+    author, tlp = _given_author(), _given_tlp()
+    indicator = _given_ip_indicator("1.1.1.1", author, tlp)
+    links = {"hits": [{"sections": _given_sections(*THREE_SECTIONS)}]}
+
+    indicator.map_data(
+        {"Risk": "80", "Links": json.dumps(links)}, tlp, ["Threat Actor"]
+    )
+
+    assert _threat_actor_names(indicator.related_entities) == [
+        "APT28",
+        "APT29",
+        "APT30",
+    ]
+
+
+def test_vulnerability_map_data_adds_each_related_entity_once_across_sections():
+    author, tlp = _given_author(), _given_tlp()
+    vulnerability = _given_vulnerability("CVE-2026-0001", author, tlp)
+    links = [{"sections": _given_sections(*THREE_SECTIONS)}]
+
+    vulnerability.map_data(
+        {"Risk": "80", "Links": json.dumps(links)}, tlp, ["Threat Actor"]
+    )
+
+    assert _threat_actor_names(vulnerability.related_entities) == [
+        "APT28",
+        "APT29",
+        "APT30",
+    ]
+
+
+# Scenario: an entity listed in two sections is still added once
+def test_indicator_map_data_adds_an_entity_listed_in_two_sections_once():
+    author, tlp = _given_author(), _given_tlp()
+    indicator = _given_ip_indicator("1.1.1.1", author, tlp)
+    sections = _given_sections(("Indicators", ["APT28"]), ("TTPs", ["APT28"]))
+    links = {"hits": [{"sections": sections}]}
+
+    indicator.map_data(
+        {"Risk": "80", "Links": json.dumps(links)}, tlp, ["Threat Actor"]
+    )
+
+    assert _threat_actor_names(indicator.related_entities) == ["APT28"]
+
+
+# Scenario: the bundle sent to OpenCTI is unchanged, one relationship per entity
+def test_indicator_bundle_still_has_one_relationship_per_related_entity():
+    author, tlp = _given_author(), _given_tlp()
+    indicator = _given_ip_indicator("1.1.1.1", author, tlp)
+    links = {"hits": [{"sections": _given_sections(*THREE_SECTIONS)}]}
+    indicator.map_data(
+        {"Risk": "80", "Links": json.dumps(links)}, tlp, ["Threat Actor"]
+    )
+
+    bundle = _when_built_to_stix_bundle(indicator)
+
+    indicates = [
+        obj
+        for obj in bundle.objects
+        if obj["type"] == "relationship" and obj["relationship_type"] == "indicates"
+    ]
+    assert len(indicates) == 3
+    assert len({rel.id for rel in indicates}) == 3
