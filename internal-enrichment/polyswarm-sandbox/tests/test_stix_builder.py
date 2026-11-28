@@ -358,3 +358,45 @@ class TestPolyKGHTTPErrors:
         StixBuilder._POLYKG_CIRCUIT_OPEN = False
         with patch("requests.get", side_effect=requests.RequestException("err")):
             assert b._fetch_polykg_profile("Mirai") is None
+
+
+# ── Scan with no engine verdicts ──────────────────────────────────────────────
+
+
+class TestNoVerdictScan:
+    """A scan with no verdicts leaves the score alone and says so in the note."""
+
+    def _no_verdict_scan(self):
+        scan = dict(SCAN_DATA)
+        scan.update(
+            {
+                "score": 0,
+                "raw_polyscore": 0.0,
+                "has_verdicts": False,
+                "detection_stats": {"malicious": 0, "total": 0},
+            }
+        )
+        return scan
+
+    def test_no_score_written(self, builder):
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=self._no_verdict_scan(), config=CONFIG
+        )
+        updates = [o for o in objects if o.get("id") == ENTITY["id"]]
+        assert updates
+        assert all("x_opencti_score" not in o for o in updates)
+
+    def test_note_says_no_verdicts(self, builder):
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=self._no_verdict_scan(), config=CONFIG
+        )
+        notes = [o for o in objects if o.get("type") == "note"]
+        assert any("No engine verdicts were returned" in n["content"] for n in notes)
+        assert not any("0/0 engines" in n["content"] for n in notes)
+
+    def test_scan_with_verdicts_still_scores(self, builder):
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
+        updates = [o for o in objects if o.get("id") == ENTITY["id"]]
+        assert any("x_opencti_score" in o for o in updates)
