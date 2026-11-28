@@ -1,0 +1,9 @@
+# Domain exclude list: never exported to domain.txt (subdomains included), and URLs on these
+# hosts are never exported to url.txt. One domain per line; blank lines and # comments are ignored.
+# Matching is on whole labels: filigran.io covers docs.filigran.io, not evilfiligran.io.
+# Use the IP exclude list for IPs: this list does not match IP ranges.
+# To use it: copy to domain_exclude.txt, set EXPORT_DOMAIN_EXCLUDE_FILE=/config/domain_exclude.txt
+# in .env, and restart the feed-distributor.
+#
+# filigran.io
+# microsoft.com

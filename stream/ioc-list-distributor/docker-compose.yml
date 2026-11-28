@@ -1,0 +1,267 @@
+# OpenCTI IOC List Distributor 1.0.0
+# Every setting is set below, in the environment of the service that uses it: fill in the
+# ChangeMe values, then run: docker compose up -d
+# After changing a setting: docker compose up -d <service> (a "docker compose restart" does not
+# apply a changed environment). An empty value means the default.
+# Values: write a $ as $$ (Docker Compose expands $). To keep the token out of
+# this file, write - OPENCTI_TOKEN=${OPENCTI_TOKEN} and set OPENCTI_TOKEN in your shell.
+
+# Docker log rotation for both services (json-file driver): each container keeps at most
+# max-file files of max-size (5 x 10m = 50 MB), so the logs never fill the disk. Applied when the
+# containers are recreated (docker compose up -d).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  # OpenCTI live stream -> IOC store (SQLite file /data/ioc.db on the ioc-data volume). Outbound HTTPS only.
+  connector:
+    build:
+      context: .
+      args:
+        # Build-time only. Tested default 7.261023.1; override with
+        # PYCTI_VERSION=8.x.y docker compose build
+        PYCTI_VERSION: ${PYCTI_VERSION:-7.261023.1}
+    image: opencti/connector-ioc-list-distributor:latest
+    command: ["python", "-m", "connector"]
+    environment:
+      # ===================== OpenCTI =====================
+      - OPENCTI_URL=https://ChangeMe.opencti.io
+      - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_SSL_VERIFY=true
+      - CONNECTOR_ID=ChangeMe-uuid-v4
+      - CONNECTOR_NAME=IOC List Distributor
+      # ID of the live stream (Data > Data sharing > Live streams) that holds the filters
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      # Replay only. Used ONLY when the connector has no saved state in OpenCTI
+      # (after "Reset the connector state" or with a new CONNECTOR_ID); ignored otherwise.
+      # Start date in epoch milliseconds, without the "-0" suffix (pycti adds it).
+      # If the state is empty and this is NOT set, pycti replays from the very start of the stream (0-0).
+      # 90 days back from now (macOS):  echo $(( $(date -u -v-90d +%s) * 1000 ))
+      #                    (Linux):     echo $(( $(date -u -d '90 days ago' +%s) * 1000 ))
+      # Remove or comment it out again once the replay is done.
+      # - CONNECTOR_LIVE_STREAM_START_TIMESTAMP=
+      - LOG_LEVEL=info
+
+      # Use the indicator name when the pattern gives no value (off: names are free text)
+      - PARSER_NAME_FALLBACK=false
+
+      # ===================== Outbound proxy (connector -> OpenCTI SaaS) =====================
+      # e.g. http://proxy.corp.local:3128 or http://user:password@proxy.corp.local:3128
+      - OUTBOUND_PROXY_URL=
+      - OUTBOUND_NO_PROXY=localhost,127.0.0.1
+      # Only for a TLS-inspecting proxy: PEM bundle with the proxy CA AND the public CAs
+      - OUTBOUND_PROXY_CA_BUNDLE=
+
+      # ===================== Database (SQLite) =====================
+      # The IOC set is kept in one SQLite file on the ioc-data volume. Nothing to install.
+      # SQLite file inside the container (default /data/ioc.db)
+      # - DB_SQLITE_PATH=/data/ioc.db
+    restart: unless-stopped
+    logging: *default-logging
+    volumes:
+      - ioc-data:/data
+      - ./certs:/certs:ro          # only needed for OUTBOUND_PROXY_CA_BUNDLE
+
+  # Feed distributor: scheduled export (IOC store -> /data/feeds/*.txt) + HTTP(S) download of the
+  # files for the clients. It never talks to OpenCTI, so it gets no OpenCTI token.
+  feed-distributor:
+    build:
+      context: .
+      args:
+        PYCTI_VERSION: ${PYCTI_VERSION:-7.261023.1}
+    image: opencti/connector-ioc-list-distributor:latest
+    command: ["python", "-m", "ioc_distributor"]
+    environment:
+      # LOG_LEVEL: debug, info, warning, error
+      - LOG_LEVEL=info
+
+      # ===================== Export (list files) =====================
+      - EXPORT_INTERVAL_MINUTES=5
+      # IOC types exported, for the main feed and every custom feed (default true).
+      # false = that type's files are not exported and return 404 (the old files stay on disk).
+      # The IOCs are still stored in the database, so turning a type back on needs no replay.
+      # An unreadable value uses the default (true) and logs a WARNING.
+      - EXPORT_ENABLED_IP=true
+      - EXPORT_ENABLED_DOMAIN=true
+      - EXPORT_ENABLED_URL=true
+      - EXPORT_ENABLED_HASH=true
+      # Hard limit for every file of every feed (main and custom). Protects the export from a typo
+      # such as 5000000 or an unintended 0: a cap above it (or 0) is reduced to it, with a WARNING
+      # at startup. 0 = no hard limit (each feed's cap and the rolling window still apply).
+      # Default 500000.
+      - EXPORT_HARD_MAX_ENTRIES=500000
+      # Main feed: entries per file (0 = no cap, up to the hard limit); per-type values override it
+      - EXPORT_MAX_ENTRIES=5000
+      - EXPORT_MAX_ENTRIES_IP=
+      - EXPORT_MAX_ENTRIES_DOMAIN=
+      - EXPORT_MAX_ENTRIES_URL=
+      - EXPORT_MAX_ENTRIES_HASH=
+      # Default rolling window in minutes for every type (0 = no window). 43200 = 30 days
+      - EXPORT_ROLLING_WINDOW_MINUTES=43200
+      # Per-type windows in minutes; blank = the value above, 0 = no window for that type.
+      # Example: hashes rarely go stale, IPs do: _HASH=129600 (90 days), _IP=10080 (7 days)
+      - EXPORT_ROLLING_WINDOW_MINUTES_IP=
+      - EXPORT_ROLLING_WINDOW_MINUTES_DOMAIN=
+      - EXPORT_ROLLING_WINDOW_MINUTES_URL=
+      - EXPORT_ROLLING_WINDOW_MINUTES_HASH=
+      # created | modified (OpenCTI timestamps) | first_seen_local | last_updated_local (connector timestamps)
+      - EXPORT_BASE_ATTRIBUTE=modified
+      # Which entries are kept when over the limit: base_attribute (newest first) | score (highest first)
+      - EXPORT_SORT_ORDER=base_attribute
+      # Leave out indicators past their valid_until
+      - EXPORT_EXCLUDE_EXPIRED=true
+      # Algorithms in hash.txt; EXPORT_HASH_SPLIT_FILES=true also writes hash_md5.txt, hash_sha1.txt...
+      - EXPORT_HASH_ALGORITHMS=md5,sha1,sha256
+      - EXPORT_HASH_SPLIT_FILES=false
+      # Write URLs without http:// / https://
+      - EXPORT_URL_STRIP_SCHEME=true
+      # Last-line safety: drop private, loopback, link-local, multicast and reserved IPs
+      - EXPORT_DROP_NON_PUBLIC_IPS=true
+      # Exclude lists: IOCs this connector never distributes (e.g. your own public IPs and domains,
+      # partners). Not an allowlist: these values are left out of every feed.
+      # Comma-separated IPs/CIDRs, and domains (subdomains included).
+      # Both also apply to url.txt: the IP exclude list to URLs whose host is an IP, the domain
+      # exclude list to URLs whose host is a name.
+      - EXPORT_IP_EXCLUDE=
+      - EXPORT_DOMAIN_EXCLUDE=
+      # Optional: the same lists in a file, one entry per line (blank lines and # comments
+      # ignored), merged with the values above. Put the files in ./exclusions/ on the host: it is
+      # mounted read-only at /config in the feed-distributor. Read at startup only: after editing a
+      # file, docker compose restart feed-distributor; after changing a setting here,
+      # docker compose up -d feed-distributor (the connector is not affected). A missing or unreadable file,
+      # or an invalid IP/CIDR (named with its line number), stops startup.
+      - EXPORT_IP_EXCLUDE_FILE=
+      - EXPORT_DOMAIN_EXCLUDE_FILE=
+      # Example:
+      # EXPORT_IP_EXCLUDE_FILE=/config/ip_exclude.txt
+      # EXPORT_DOMAIN_EXCLUDE_FILE=/config/domain_exclude.txt
+      # Widest IP range exported: a CIDR wider than this is never written to ip.txt and is logged
+      # like a private IP ("too wide"). Protects the clients from one bad indicator such as
+      # 64.0.0.0/3 (an eighth of the IPv4 internet). Applied even if EXPORT_DROP_NON_PUBLIC_IPS=false.
+      # 0 = no limit. Single addresses (/32, /128) are never affected.
+      - EXPORT_IP_MIN_PREFIX_V4=24
+      - EXPORT_IP_MIN_PREFIX_V6=48
+      # Keep the previous file if an export comes out empty
+      - EXPORT_KEEP_PREVIOUS_ON_EMPTY=true
+      # Keep the previous file if the entry count drops by more than this % (0 = off).
+      # A held file stays held until an export passes the check again. To publish the new, smaller set
+      # (e.g. after a large revoke): set 0 here and run docker compose up -d feed-distributor.
+      - EXPORT_MAX_DROP_PERCENT=0
+      # Log a WARNING / ERROR when a file's entry count drops by more than these % since the last
+      # export. Log only: the new file is always published, nothing is held. 0 = off (each separately).
+      # One line per file, at the highest level reached. Example values:
+      # EXPORT_WARN_DROP_PERCENT=30
+      # EXPORT_ERROR_DROP_PERCENT=70
+      - EXPORT_WARN_DROP_PERCENT=0
+      - EXPORT_ERROR_DROP_PERCENT=0
+      # Backups kept per file (one is taken at every export)
+      - BACKUP_RETENTION=5
+      # Delete DB rows not modified for N days (0 = keep everything, the built-in default).
+      # 90 keeps the database from growing without limit. Keep it above the longest rolling window
+      # (EXPORT_ROLLING_WINDOW_MINUTES*), so a deleted row could not have been in any feed.
+      - DB_RETENTION_DAYS=90
+
+      # ===================== Custom feeds (optional) =====================
+      # The main feed (ip.txt, domain.txt, url.txt, hash.txt) is always served.
+      # Each enabled custom feed adds its own set of files next to it:
+      # <name>_ip.txt, <name>_domain.txt, <name>_url.txt, <name>_hash.txt (+ <name>_hash_<algo>.txt if split)
+      #
+      # Every feed is cut from the same export: the same IOCs, types, window, sort order and filters.
+      # Only the cap differs, so a smaller feed always holds the top entries of a larger one, and the
+      # same data always gives the same files. A custom feed may be smaller OR larger than the main
+      # feed (e.g. a client that takes more IOCs); only EXPORT_HARD_MAX_ENTRIES limits it.
+      # Tip: point each client at its own custom feed (e.g. NAME=siem), so its cap
+      # can change later without touching any other client.
+      #
+      # MAX_ENTRIES: the cap for each file of this feed. Blank = the main feed's cap for that type.
+      # 0 = no cap of its own (everything in the window, up to the hard limit).
+      # Per-type caps (optional): add CUSTOM_FEEDn_MAX_ENTRIES_<TYPE> (IP, DOMAIN, URL or HASH) to a
+      # block. They override MAX_ENTRIES for that type, e.g. CUSTOM_FEED1_MAX_ENTRIES_HASH=20000
+      #
+      # NAME: converted to lower case. Letters, digits, - and _ only (1-64). It can't be ip, domain,
+      # url or hash, and each name must be unique. Otherwise the feed distributor won't start.
+      # Disabling or renaming a feed makes its old files return 404. The files stay on disk.
+      # Renaming changes the URLs, so the clients must be repointed.
+      # Keep-previous check (EXPORT_KEEP_PREVIOUS_ON_EMPTY / EXPORT_MAX_DROP_PERCENT): if one feed's
+      # file of a type fails it, every feed keeps its previous file of that type, so the feeds never
+      # get out of step. A feed's first file is always written.
+      # An unreadable ENABLED or MAX_ENTRIES value uses its default and logs a WARNING.
+      # Apply changes here with: docker compose up -d feed-distributor (a "docker compose restart"
+      # does not apply them). The connector isn't affected.
+
+      # Number of blocks read below (0-10, default 3). To add one, raise this and add a block.
+      - CUSTOM_FEED_COUNT=3
+
+      # ----- Custom feed 1 -----
+      - CUSTOM_FEED1_ENABLED=false
+      - CUSTOM_FEED1_NAME=custom1
+      - CUSTOM_FEED1_MAX_ENTRIES=
+      # - CUSTOM_FEED1_MAX_ENTRIES_IP=
+      # - CUSTOM_FEED1_MAX_ENTRIES_DOMAIN=
+      # - CUSTOM_FEED1_MAX_ENTRIES_URL=
+      # - CUSTOM_FEED1_MAX_ENTRIES_HASH=
+
+      # ----- Custom feed 2 -----
+      - CUSTOM_FEED2_ENABLED=false
+      - CUSTOM_FEED2_NAME=custom2
+      - CUSTOM_FEED2_MAX_ENTRIES=
+      # - CUSTOM_FEED2_MAX_ENTRIES_IP=
+      # - CUSTOM_FEED2_MAX_ENTRIES_DOMAIN=
+      # - CUSTOM_FEED2_MAX_ENTRIES_URL=
+      # - CUSTOM_FEED2_MAX_ENTRIES_HASH=
+
+      # ----- Custom feed 3 -----
+      - CUSTOM_FEED3_ENABLED=false
+      - CUSTOM_FEED3_NAME=custom3
+      - CUSTOM_FEED3_MAX_ENTRIES=
+      # - CUSTOM_FEED3_MAX_ENTRIES_IP=
+      # - CUSTOM_FEED3_MAX_ENTRIES_DOMAIN=
+      # - CUSTOM_FEED3_MAX_ENTRIES_URL=
+      # - CUSTOM_FEED3_MAX_ENTRIES_HASH=
+
+      # ===================== Database (SQLite) =====================
+      # The IOC set is kept in one SQLite file on the ioc-data volume. Nothing to install.
+      # SQLite file inside the container (default /data/ioc.db)
+      # - DB_SQLITE_PATH=/data/ioc.db
+
+      # ===================== Feed distributor =====================
+      # The web server the clients download the feed files from (plain GET of /feeds/*.txt)
+      - FEED_DISTRIBUTOR_HOST=0.0.0.0
+      - FEED_DISTRIBUTOR_HTTP_ENABLED=true
+      - FEED_DISTRIBUTOR_HTTP_PORT=8080
+      - FEED_DISTRIBUTOR_HTTPS_ENABLED=false
+      - FEED_DISTRIBUTOR_HTTPS_PORT=8443
+      # Paths inside the container (./certs is mounted on /certs)
+      - FEED_DISTRIBUTOR_TLS_CERT_FILE=/certs/server.crt
+      - FEED_DISTRIBUTOR_TLS_KEY_FILE=/certs/server.key
+      - FEED_DISTRIBUTOR_DOCS_ENABLED=false
+
+      # ----- Optional authentication of the feed downloads -----
+      # none   = no authentication (default): anyone who can reach the port can download the files
+      # basic  = HTTP Basic: the client sends AUTH_USER and AUTH_PASSTOKEN (most clients support this)
+      # bearer = "Authorization: Bearer <AUTH_PASSTOKEN>": AUTH_PASSTOKEN only (scripts, SIEMs, proxies)
+      # When on, the feed files and /stats need it.
+      # Use HTTPS: over plain HTTP the credentials are readable on the network (a warning is logged).
+      # Generate a passtoken: docker compose run --rm feed-distributor python -m ioc_distributor.feed_auth make-token
+      # Write a $ as $$ (Docker Compose expands $); letters, digits, - and _ are always safe.
+      - FEED_DISTRIBUTOR_AUTH_MODE=none
+      - FEED_DISTRIBUTOR_AUTH_USER=
+      - FEED_DISTRIBUTOR_AUTH_PASSTOKEN=
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      - connector
+    ports:
+      # host:container. The container ports are FEED_DISTRIBUTOR_HTTP_PORT / _HTTPS_PORT above.
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - ioc-data:/data
+      - ./certs:/certs:ro          # FEED_DISTRIBUTOR_TLS_CERT_FILE / FEED_DISTRIBUTOR_TLS_KEY_FILE
+      - ./exclusions:/config:ro    # EXPORT_IP_EXCLUDE_FILE / EXPORT_DOMAIN_EXCLUDE_FILE (read-only)
+
+volumes:
+  ioc-data:

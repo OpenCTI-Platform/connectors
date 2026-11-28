@@ -1,0 +1,116 @@
+# OpenCTI IOC List Distributor 1.0.0: settings for running WITHOUT Docker.
+# Copy to src/config.yml (next to the connector, common and ioc_distributor folders) and fill in
+# the ChangeMe values. With Docker, use the environment: list in docker-compose.yml instead.
+# Each key is the environment variable in lower case, split at its section:
+#   opencti: {url: ...} = OPENCTI_URL, custom_feed1: {max_entries: ...} = CUSTOM_FEED1_MAX_ENTRIES.
+# An environment variable always wins over this file. An empty value (or a commented-out key)
+# means the default. Every setting is described in the README.
+# Paths such as /data, /certs and /config are the Docker ones: use your own paths here, and
+# DATA_DIR=<folder> (environment variable) for the data folder (default /data).
+
+opencti:
+  url: "https://ChangeMe.opencti.io"
+  token: "ChangeMe"
+  ssl_verify: true
+
+connector:
+  id: "ChangeMe-uuid-v4"
+  name: "IOC List Distributor"
+  live_stream_id: "ChangeMe"
+  # live_stream_start_timestamp:
+
+parser:
+  name_fallback: false
+
+outbound:
+  proxy_url:
+  no_proxy: "localhost,127.0.0.1"
+  proxy_ca_bundle:
+
+export:
+  interval_minutes: 5
+  enabled_ip: true
+  enabled_domain: true
+  enabled_url: true
+  enabled_hash: true
+  hard_max_entries: 500000
+  max_entries: 5000
+  max_entries_ip:
+  max_entries_domain:
+  max_entries_url:
+  max_entries_hash:
+  rolling_window_minutes: 43200
+  rolling_window_minutes_ip:
+  rolling_window_minutes_domain:
+  rolling_window_minutes_url:
+  rolling_window_minutes_hash:
+  base_attribute: "modified"
+  sort_order: "base_attribute"
+  exclude_expired: true
+  hash_algorithms: "md5,sha1,sha256"
+  hash_split_files: false
+  url_strip_scheme: true
+  drop_non_public_ips: true
+  ip_exclude:
+  domain_exclude:
+  ip_exclude_file:
+  domain_exclude_file:
+  ip_min_prefix_v4: 24
+  ip_min_prefix_v6: 48
+  keep_previous_on_empty: true
+  max_drop_percent: 0
+  warn_drop_percent: 0
+  error_drop_percent: 0
+
+backup:
+  retention: 5
+
+db:
+  retention_days: 90
+  # sqlite_path: "/data/ioc.db"
+
+custom_feed:
+  count: 3
+
+custom_feed1:
+  enabled: false
+  name: "custom1"
+  max_entries:
+  # max_entries_ip:
+  # max_entries_domain:
+  # max_entries_url:
+  # max_entries_hash:
+
+custom_feed2:
+  enabled: false
+  name: "custom2"
+  max_entries:
+  # max_entries_ip:
+  # max_entries_domain:
+  # max_entries_url:
+  # max_entries_hash:
+
+custom_feed3:
+  enabled: false
+  name: "custom3"
+  max_entries:
+  # max_entries_ip:
+  # max_entries_domain:
+  # max_entries_url:
+  # max_entries_hash:
+
+feed_distributor:
+  host: "0.0.0.0"
+  http_enabled: true
+  http_port: 8080
+  https_enabled: false
+  https_port: 8443
+  tls_cert_file: "/certs/server.crt"
+  tls_key_file: "/certs/server.key"
+  docs_enabled: false
+  auth_mode: "none"
+  auth_user:
+  auth_passtoken:
+
+log:
+  level: info

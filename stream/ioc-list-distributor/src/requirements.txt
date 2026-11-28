@@ -1,0 +1,9 @@
+# pycti is installed separately in the Dockerfile so its version can be set at
+# build time (build arg PYCTI_VERSION).
+fastapi>=0.110,<1
+uvicorn>=0.29,<1
+# config.yml (optional; pycti already depends on it)
+PyYAML>=6,<7
+# Typed settings (pydantic itself comes with pycti)
+pydantic>=2.8,<3
+pydantic-settings>=2.9.1,<3
