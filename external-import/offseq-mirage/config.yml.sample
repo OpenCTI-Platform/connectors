@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'OffSeq Mirage'
+  scope: 'Indicator,IPv4-Addr,Url,StixFile,Attack-Pattern,Vulnerability'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+offseq_mirage:
+  # feed_url: 'https://feeds.offseq.com/mirage-feed/latest/stix/mirage.json'
+  # import_relationships: true
+  # create_observables: true
+  # tlp_level: 'clear'
+  # batch_size: 1000

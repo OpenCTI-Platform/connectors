@@ -1,0 +1,27 @@
+{
+  "title": "OffSeq Mirage",
+  "slug": "offseq-mirage",
+  "description": "Imports the OffSeq Mirage Feed, a free daily STIX 2.1 feed from the Mirage honeypot network (CC BY 4.0). It brings in attacker IPv4 indicators, payload and download URLs and payload file hashes, each with a confidence score and an expiry, plus the MITRE ATT&CK techniques and CVEs they are linked to. An address is listed only after at least 3 sensors in 2 networks saw it within 7 days, and expires 7 days after its last activity; research scanners and VPN/Tor exits are excluded. No API key is needed.",
+  "short_description": "Imports the free OffSeq Mirage honeypot feed (attacker IPs, payload URLs and hashes, linked ATT&CK techniques and CVEs) into OpenCTI. No API key needed.",
+  "logo": "external-import/offseq-mirage/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "support@offseq.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 90,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://feeds.offseq.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/offseq-mirage",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-offseq-mirage",
+  "container_type": "EXTERNAL_IMPORT"
+}
