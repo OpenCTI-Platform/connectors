@@ -28,6 +28,8 @@ PAGES = {
     "rapid7": "https://www.rapid7.com/blog/post/em-patch-tuesday-november-2026",
     "bleepingcomputer": "https://www.bleepingcomputer.com/news/security/"
     "tsmc-employee-data-breach-linked-to-cloud-provider/",
+    "malwarebytes": "https://www.malwarebytes.com/blog/bugs/2026/11/"
+    "java4shell-a-critical-flaw-with-a-narrow-reach",
 }
 CODE = r"<code[^>]*>(.*?)</code>"
 
@@ -165,6 +167,21 @@ def test_sponsored_ad_unit_inside_the_article_body_is_dropped():
     text = re.sub(r"\s+", " ", lxml.html.fromstring(article.html).text_content())
     for paragraph in paragraphs:
         assert paragraph in text
+
+
+def test_publisher_promotion_block_at_the_end_of_the_article_is_dropped():
+    html = (FIXTURES / "malwarebytes.html").read_text(encoding="utf-8")
+    article = extract_article(PAGES["malwarebytes"], html)
+    for text in (article.text, article.html):
+        assert "CNET" not in text
+        assert "best cybersecurity suites" not in text
+        assert "malwarebytes.com/premium" not in text
+        assert "cnet.com" not in text
+    assert article.text.rstrip().endswith("paths to remote code execution.")
+    assert not re.search(r"<hr[^>]*>\s*$", article.html)
+    # The article's own links to the publisher's blog are kept.
+    assert "malwarebytes.com/blog/news/2025/11/how-cvss-v4-0-works" in article.html
+    assert "Technical details" in article.text
 
 
 def test_hunting_queries_are_code_blocks_without_a_fence():
