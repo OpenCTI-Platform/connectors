@@ -32,17 +32,16 @@ class ConnectorClient:
         """
         Get observables from the CATALYST API and convert them to STIX objects
         :return: A list of STIX objects
+        :raises Exception: if the data cannot be fetched, so that the caller does
+            not mistake a failed run for a run without new content
         """
-        try:
-            return self.get_member_contents()
-        except Exception as err:
-            self.logger.error(f"Error while fetching data: {str(err)}")
-            return []
+        return self.get_member_contents()
 
     def get_member_contents(self) -> List[Dict]:
         """
         Get member contents from the CATALYST API and convert them to STIX objects
         :return: A list of STIX objects
+        :raises Exception: if the member contents cannot be fetched
         """
         try:
             last_run_datetime = self._get_last_run_datetime()
@@ -64,7 +63,7 @@ class ConnectorClient:
             self.logger.error(f"Error while fetching member contents: {str(err)}")
             if hasattr(err, "response") and hasattr(err.response, "text"):
                 self.logger.error(f"API response error: {err.response.text}")
-            return []
+            raise
 
     def _get_last_run_datetime(self) -> datetime.datetime:
         current_state = self.helper.get_state()

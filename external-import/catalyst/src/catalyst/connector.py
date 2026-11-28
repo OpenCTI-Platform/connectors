@@ -99,6 +99,7 @@ class CatalystConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id = None
         try:
             # Get the current state
             now = datetime.now()
@@ -184,6 +185,14 @@ class CatalystConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            # The state is not updated here: the next run fetches the same
+            # window again instead of skipping the contents of a failed run
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"{self.helper.connect_name} connector failed: {err}",
+                    in_error=True,
+                )
 
     def run(self) -> None:
         """
