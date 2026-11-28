@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -7,6 +7,11 @@ from connectors_sdk import (
     ListFromString,
 )
 from pydantic import Field
+
+CONNECTOR_TYPE_BY_MODE = {
+    "import": "INTERNAL_IMPORT_FILE",
+    "analysis": "INTERNAL_ANALYSIS",
+}
 
 
 class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
@@ -22,8 +27,9 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     )
     type: Literal["INTERNAL_IMPORT_FILE", "INTERNAL_ANALYSIS"] = Field(
         description=(
-            "The type of the connector. Use `INTERNAL_ANALYSIS` to run the connector "
-            "in content mapping mode, along with `only_contextual` set to `true`."
+            "The type of the connector. `INTERNAL_ANALYSIS` runs the connector "
+            "in content mapping mode. Ignored when `IMPORT_DOCUMENT_MODE` is set, "
+            "which catalog deployments must use since they cannot set this value."
         ),
         default="INTERNAL_IMPORT_FILE",
     )
@@ -55,6 +61,16 @@ class ImportDocumentConfig(BaseConfigModel):
         description="If true, creates an Indicator for each extracted observable.",
         default=False,
     )
+    mode: Literal["import", "analysis"] | None = Field(
+        description=(
+            "`import` registers the connector as a file import connector, which "
+            "parses uploaded files into entities. `analysis` registers it as an "
+            "analysis connector, used by 'Ask new mapping' in the Content tab of "
+            "containers. Deploy one instance per mode to use both. When not set, "
+            "the mode follows `CONNECTOR_TYPE`."
+        ),
+        default=None,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -64,3 +80,17 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=InternalImportFileConnectorConfig
     )
     import_document: ImportDocumentConfig = Field(default_factory=ImportDocumentConfig)
+
+    def to_helper_config(self) -> dict[str, Any]:
+        """Convert the settings for pycti, with the connector type set by the mode.
+
+        When `import_document.mode` is set, it takes precedence over
+        `connector.type`. A catalog deployment cannot set `CONNECTOR_TYPE`, which
+        the platform always injects from its own record of the connector.
+        """
+        helper_config = super().to_helper_config()
+        if self.import_document.mode is not None:
+            helper_config["connector"]["type"] = CONNECTOR_TYPE_BY_MODE[
+                self.import_document.mode
+            ]
+        return helper_config
