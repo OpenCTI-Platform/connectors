@@ -305,12 +305,16 @@ class SekoiaConnector(object):
                 item["x_opencti_main_observable_type"] = (
                     OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
                 )
-                if item.get("revoked") is not None and item.get("revoked") is True:
-                    item["valid_until"] = item.get("modified")
                 if confidence_score is not None:
                     item["x_opencti_score"] = confidence_score
                 else:
                     item["x_opencti_score"] = item.get("confidence", None)
+                if item.get("revoked") is True:
+                    item["valid_until"] = item.get("modified")
+                    # Since OpenCTI 6.8.9, an upsert with an unchanged score keeps the
+                    # stored revoked and valid_until values, so the revocation would be
+                    # ignored. A score of 0 changes the score and lets it through.
+                    item["x_opencti_score"] = 0
 
     @staticmethod
     def _remove_confidence_from_items(items: List[Dict]):
