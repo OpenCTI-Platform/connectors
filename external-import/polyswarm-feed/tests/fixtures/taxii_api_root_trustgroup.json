@@ -1,0 +1,8 @@
+{
+  "description": "Guest researcher feeds",
+  "max_content_length": 16777216,
+  "title": "PolySwarm Trust Group",
+  "versions": [
+    "application/taxii+json;version=2.1"
+  ]
+}

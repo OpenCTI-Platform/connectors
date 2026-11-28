@@ -1,0 +1,13 @@
+{
+  "collections": [
+    {
+      "can_read": true,
+      "can_write": false,
+      "id": "3f153afb-5bf5-5cca-bfe9-ee854d92658d",
+      "media_types": [
+        "application/stix+json;version=2.1"
+      ],
+      "title": "14-Day Feed"
+    }
+  ]
+}

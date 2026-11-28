@@ -1,0 +1,13 @@
+{
+  "collections": [
+    {
+      "can_read": true,
+      "can_write": false,
+      "id": "7b6bbecc-95cf-5317-a900-5bb7008eae93",
+      "media_types": [
+        "application/stix+json;version=2.1"
+      ],
+      "title": "Identified ransomware-family feed"
+    }
+  ]
+}
