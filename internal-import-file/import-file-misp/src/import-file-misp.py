@@ -847,6 +847,9 @@ class MispImportFile:
         if resolved_attributes is None:
             return None
 
+        # "comment" is optional in MISP exports: default to an empty string
+        attribute = {**attribute, "comment": attribute.get("comment") or ""}
+
         file_name = None
         for resolved_attribute in resolved_attributes:
             if resolved_attribute["resolver"] == "file-name":
@@ -1830,7 +1833,7 @@ class MispImportFile:
                                 description="Original Relationship: "
                                 + ref["relationship_type"]
                                 + "  \nComment: "
-                                + ref["comment"],
+                                + (ref.get("comment") or ""),
                                 source_ref=src_result["entity"]["id"],
                                 target_ref=target_result["entity"]["id"],
                                 allow_custom=True,
