@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/offensive-agency_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Offensive Agency",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Indicator",
+        "Tool",
+        "IPv4-Addr"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT6H` for six hours). The feed is dated by day, so a shorter period does not bring more data.",
+      "format": "duration",
+      "type": "string"
+    },
+    "OFFENSIVE_AGENCY_API_BASE_URL": {
+      "default": "https://www.offensive.agency/api/v1",
+      "description": "Base URL of the offensive.agency API. The connector reads the STIX feed at `<api_base_url>/feeds/stix.json`.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OFFENSIVE_AGENCY_TLP_LEVEL": {
+      "description": "TLP marking applied to every object the connector creates. The feed is public and carries no marking.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "OFFENSIVE_AGENCY_INDICATOR_VALIDITY": {
+      "default": "P30D",
+      "description": "How long an indicator stays valid after the feed last saw the agent on its IP, as an ISO 8601 duration (e.g. `P30D` for 30 days). The feed only keeps the last 7 days: an IP that leaves it expires in OpenCTI once this period has passed. Minimum `P1D`, since the feed is dated by day.",
+      "format": "duration",
+      "type": "string"
+    },
+    "OFFENSIVE_AGENCY_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Create an IPv4 observable for each indicator, linked by a `based-on` relationship.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,28 @@
+{
+  "title": "Offensive Agency",
+  "slug": "offensive-agency",
+  "description": "offensive.agency (https://www.offensive.agency) publishes a free STIX 2.1 feed of offensive AI agents (autonomous pentest and exploitation agents) whose consoles are exposed on the Internet, based on ONYPHE (https://www.onyphe.io) scans. The feed covers the last 7 days and is updated daily.\n\nThis connector downloads the feed (no authentication required) and imports each exposed instance as an IPv4 Indicator, linked by `indicates` relationships to the agents it runs, imported as Tools. It can also create the IPv4 observables with `based-on` relationships. Indicators get a configurable validity period after the feed last saw them, so the IPs that leave the feed expire in OpenCTI. Later runs only send the entries that changed.\n\nData by ONYPHE, published by offensive.agency. Free to use, please credit both.",
+  "short_description": "Imports the offensive.agency feed of Internet-exposed offensive AI agents (ONYPHE data) as IPv4 indicators linked to the agents they run.",
+  "logo": null,
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "AI Security"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 85,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/offensive-agency",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-offensive-agency",
+  "container_type": "EXTERNAL_IMPORT"
+}

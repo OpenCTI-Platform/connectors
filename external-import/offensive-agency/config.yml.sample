@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Offensive Agency'
+  # scope: 'Indicator,Tool,IPv4-Addr'
+  # log_level: 'error'
+  # duration_period: 'PT6H' # ISO 8601 duration between two runs
+
+offensive_agency:
+  # api_base_url: 'https://www.offensive.agency/api/v1'
+  # tlp_level: 'clear' # 'clear', 'white', 'green', 'amber', 'amber+strict' or 'red'
+  # indicator_validity: 'P30D' # validity after the feed last saw the IP
+  # create_observables: true # IPv4 observables with `based-on` relationships
