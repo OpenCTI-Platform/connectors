@@ -113,9 +113,11 @@ class InfobloxThreatDefenseConnector:
             )
             return
 
-        existing_items = {
-            item["item"] for item in existing_list.get("items_described", [])
+        existing_descriptions = {
+            item["item"]: item.get("description", "")
+            for item in existing_list.get("items_described", [])
         }
+        existing_items = set(existing_descriptions)
         updated_items = (
             set(updated_items)
             if isinstance(updated_items, (list, set))
@@ -137,7 +139,8 @@ class InfobloxThreatDefenseConnector:
             "description": existing_list.get("description", ""),
             "id": existing_list["id"],
             "items_described": [
-                {"description": "", "item": item} for item in combined_items
+                {"description": existing_descriptions.get(item, ""), "item": item}
+                for item in combined_items
             ],
             "name": existing_list["name"],
             "tags": existing_list.get("tags"),
