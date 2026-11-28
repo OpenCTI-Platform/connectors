@@ -140,7 +140,8 @@ Each entry written to the Cloudflare list is tagged with a comment of the form
   restart; nothing is persisted locally.
 - **Removals happen on delete events only.** A revoked or expired indicator is
   dropped from the list when its delete event arrives, which requires
-  `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true`.
+  `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true`. Deleting the last cached IPv4
+  uploads an empty snapshot, which empties the list.
 - **The Cloudflare list is owned by the connector.** Because each sync *replaces*
   the entire list, any items added to it outside the connector are overwritten on
   the next push. Use a dedicated list.

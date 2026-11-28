@@ -228,6 +228,31 @@ def test_sync_to_cloudflare_handles_api_error(connector):
     connector.logger.error.assert_called_once()
 
 
+def test_delete_of_last_indicator_empties_the_list(connector):
+    connector.client.replace_list_items.return_value = {}
+    data = {"id": "ind-1", "type": "ipv4-addr", "value": "1.1.1.1"}
+    connector.process_message(_msg("create", data))
+    connector.client.replace_list_items.reset_mock()
+
+    connector.process_message(_msg("delete", data))
+
+    connector.client.replace_list_items.assert_called_once_with("list-123", [])
+
+
+def test_failed_empty_upload_is_retried_until_it_succeeds(connector):
+    connector.sync_interval = 9999  # keep _handle_delete from syncing on its own
+    connector._last_sync_time = float("inf")
+    connector._indicator_cache = {"ind-1": "1.1.1.1"}
+    connector.client.replace_list_items.side_effect = [CloudflareAPIError("nope"), {}]
+    connector._handle_delete({"id": "ind-1"})
+
+    connector._sync_to_cloudflare()  # fails
+    connector._sync_to_cloudflare()  # retried
+    connector._sync_to_cloudflare()  # nothing left to push
+
+    assert connector.client.replace_list_items.call_count == 2
+
+
 # --------------------------------------------------------------------------- #
 # _full_sync
 # --------------------------------------------------------------------------- #
