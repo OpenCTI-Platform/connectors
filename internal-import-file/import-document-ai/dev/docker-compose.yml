@@ -36,17 +36,21 @@ services:
       - dev-opencti
 
   minio:
-    image: pgsty/silo:latest
+    image: rustfs/rustfs:1.0.4
     volumes:
-      - s3data4:/data
+      # Not s3data4: the volume of the former Silo service is owned by root, and RustFS (uid 10001) cannot start on it
+      - rustfsdata4:/data
     ports:
       - "9000:9000"
       - "9001:9001"
       - "35300:35300"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}    
-    command: server /data --console-address ":9001"
+      RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
+      RUSTFS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_OBS_LOG_DIRECTORY: "" # logs to stdout instead of /logs
+      RUSTFS_CHECK_UPDATE: "false" # no call to version.rustfs.com at each start
     networks:
       - dev-opencti
 
@@ -174,7 +178,7 @@ networks:
 
 volumes:
   esdata4:
-  s3data4:
+  rustfsdata4:
   redisdata4:
   amqpdata4:
   essnapshots:

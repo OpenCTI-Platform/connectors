@@ -18,10 +18,10 @@ class Metrics:
             ["name", "action"],
         )
         self._written_files = Counter(
-            "written_files_total", "Number of written files on MinIO", ["name"]
+            "written_files_total", "Number of written files on S3", ["name"]
         )
         self._write_errors = Counter(
-            "write_errors_total", "Number of errors writing files on MinIO", ["name"]
+            "write_errors_total", "Number of errors writing files on S3", ["name"]
         )
         self._current_state_gauge = Gauge(
             "current_state", "Current connector state", ["name"]
@@ -53,7 +53,7 @@ class Metrics:
         self._current_state_gauge.labels(self.name).set(ts)
 
     def state_last_written(self, event_id: str):
-        """Set the last written state, once written on minio."""
+        """Set the last written state, once written on S3."""
         ts = int(event_id.split("-")[0])
         self._last_written_state_gauge.labels(self.name).set(ts)
 

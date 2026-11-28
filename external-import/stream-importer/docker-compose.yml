@@ -14,13 +14,13 @@ services:
       - CONNECTOR_RUN_EVERY=1m
       # Connector's custom execution parameters:
       - PERFECT_SYNC=false
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
-      - MINIO_SRC_PATH=opencti-export/opencti-stream
-      - MINIO_SRC_RECURSE=false
-      - MINIO_DST_PATH=opencti-export-done
-      - MINIO_ACCESS_KEY=opencti
-      - MINIO_SECRET_KEY=ChangeMe
-      - MINIO_SECURE=false
-      - MINIO_CERT_CHECK=false
+      - STREAM_IMPORTER_S3_ENDPOINT=minio
+      - STREAM_IMPORTER_S3_PORT=9000
+      - STREAM_IMPORTER_S3_SRC_PATH=opencti-export/opencti-stream
+      - STREAM_IMPORTER_S3_SRC_RECURSE=false
+      - STREAM_IMPORTER_S3_DST_PATH=opencti-export-done
+      - STREAM_IMPORTER_S3_ACCESS_KEY=opencti
+      - STREAM_IMPORTER_S3_SECRET_KEY=ChangeMe
+      - STREAM_IMPORTER_S3_SECURE=false
+      - STREAM_IMPORTER_S3_CERT_CHECK=false
     restart: always
