@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Darkmoon' # optional (default: 'Darkmoon')
+  scope: 'Vulnerability,Note,Report,Attack-Pattern'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, ISO-8601 interval between two runs (default: 'PT1H')
+
+darkmoon:
+  export_path: '/opt/darkmoon-data' # path, inside the container, to the mounted Darkmoon OSS data directory
+  tlp_level: 'red' # optional, one of: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'red')
+  import_since: 'P30D' # optional, import campaigns dated since this absolute date or relative period (default: 30 days ago)
+  import_findings: true # optional (default: true)
+  import_attack_patterns: true # optional (default: true)
