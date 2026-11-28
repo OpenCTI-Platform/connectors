@@ -33,7 +33,6 @@ def fixture_config_dict() -> dict[str, Any]:
             "import_iocs": True,
             "tlp_level": "amber",
             "threat_actor_as_intrusion_set": True,
-            "interval": None,
         },
     }
 

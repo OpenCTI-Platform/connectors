@@ -44,6 +44,15 @@ from pydantic.fields import FieldInfo
 from pydantic.json_schema import SkipJsonSchema
 
 
+def _drop_none_values(data: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of `data` without the `None` values, nested dicts included."""
+    return {
+        key: _drop_none_values(value) if isinstance(value, dict) else value
+        for key, value in data.items()
+        if value is not None
+    }
+
+
 class BaseConfigModel(BaseModel, ABC):
     """Base class for global config models
     To prevent attributes from being modified after initialization.
@@ -422,11 +431,19 @@ class BaseConnectorSettings(_ClassLoggerMixin, BaseConfigModel, ABC):
         return handler(config_dict)
 
     def to_helper_config(self) -> dict[str, Any]:
-        """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""
-        return self.model_dump(
+        """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`.
+
+        `None` values are omitted, as `pycti` does not treat them like missing keys
+        (e.g. `int(None)` raises a `TypeError` for numeric options).
+        """
+        config = self.model_dump(
             mode="json",
             context={"mode": "pycti"},
         )
+        # `exclude_none=True` would not do here: pydantic checks the value before calling
+        # the field serializer, so it would drop the "none" keyword that replaces an unset
+        # `live_stream_recover_iso_date` when `live_stream_recover` is disabled.
+        return _drop_none_values(config)
 
 
 class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
