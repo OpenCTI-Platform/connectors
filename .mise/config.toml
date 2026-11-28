@@ -1,5 +1,4 @@
 [tools]
-poetry = "latest"
 pre-commit = "latest"
 ty = "latest"
 ruff = "latest"

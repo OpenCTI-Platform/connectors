@@ -16,3 +16,6 @@ venv/
 *.html
 htmlcov/
 .coverage
+
+# Build output (uv build)
+dist/

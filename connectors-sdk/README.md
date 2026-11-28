@@ -68,31 +68,25 @@ You can add it to your `requirements.txt` or `pyproject.toml` file:
 
 To develop both the SDK and your connector at the same time, you can install the SDK in editable mode. This allows you to make changes to the SDK and see them reflected in your connector code without reinstalling.
 
-Use a `pyproject.toml` file and install your connector using `pip install -e .`:
+From your connector directory, install its requirements, then replace the SDK they pulled with your local checkout:
 
-```toml
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-# Poetry allows relative path dependencies.
-
-[project]
-name = "connector-using-sdk"
-dynamic = ["version"]
-description = "demo"
-requires-python = ">=3.11, <3.13"
-
-[tool.poetry]
-version = "0.0.0"
-packages = [{include = "connector_using_sdk"}]
-
-[tool.poetry.dependencies]
-connectors-sdk = {path = "../../connectors-sdk/", develop = true}
-# NOTE: The 'develop' option is ignored by pip, but the relative path will work.
-# For concurrent local development, you may use:
-# pip install -e . && pip install -e ../../connectors-sdk/
-# or use Poetry: pip install poetry && poetry install
+```bash
+uv venv && source .venv/bin/activate
+uv pip install -r src/requirements.txt
+uv pip install -e ../../connectors-sdk
 ```
+
+`pip install` works the same way if you don't use uv.
+
+#### Building the SDK
+
+The SDK is built with the `uv_build` backend (see the [TDR](TDRs/2026-11-24-uv_build_backend.md)). From the `connectors-sdk` directory:
+
+```bash
+uv build
+```
+
+The sdist and wheel are written to `dist/`. Any PEP 517 frontend (`python -m build`, `pip wheel`) works as well.
 
 ### Unit Testing
 

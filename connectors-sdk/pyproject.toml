@@ -1,10 +1,10 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
 
 [project]
 name = "connectors-sdk"
-dynamic = ["version"]
+version = "0.0.0"
 description = "Connectors SDK for Octi Connectors."
 requires-python = ">=3.11, <3.13"
 
@@ -41,9 +41,10 @@ doc = [
     "sphinx-rtd-theme>=2.0",
 ]
 
-[tool.poetry]
-version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
-packages = [{include = "connectors_sdk"}, {include = "_connectors_sdk_plugins"}]
+[tool.uv.build-backend]
+# Flat layout (no `src/`) with two top-level packages in the same distribution
+module-root = ""
+module-name = ["connectors_sdk", "_connectors_sdk_plugins"]
 
 [tool.pytest.ini_options]
 testpaths = [

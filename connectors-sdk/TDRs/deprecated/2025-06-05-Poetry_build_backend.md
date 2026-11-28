@@ -1,5 +1,7 @@
 # TDR: Use Poetry Build Backend for connectors-sdk
 
+> **Superseded** by [Use the uv Build Backend for connectors-sdk](../2026-11-24-uv_build_backend.md): the SDK is now built with `uv_build`.
+
 ## Overview
 
 This TDR proposes using **Poetry as the build backend** for this connectors-sdk project. The goal is to leverage Poetry's modern, reliable PEP 517-compliant build system to define and manage the build process through `pyproject.toml`, without depending on Poetry for environment or dependency management.
