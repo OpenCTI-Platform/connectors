@@ -79,12 +79,8 @@ class TestConnectorClient:
             with patch.object(
                 client, "get_member_contents", side_effect=Exception("API error")
             ):
-                result = client.get_entities()
-
-                assert result == []
-                mock_opencti_helper.connector_logger.error.assert_called_once_with(
-                    "Error while fetching data: API error"
-                )
+                with pytest.raises(Exception, match="API error"):
+                    client.get_entities()
 
     def test_parse_tlp_filters_all(self, mock_opencti_helper, mock_config):
         """Test parsing TLP filters with 'ALL' value"""
@@ -271,13 +267,34 @@ class TestConnectorClient:
             mock_opencti_helper.get_state.side_effect = Exception("State error")
 
             with patch.object(client.logger, "error") as mock_error:
-                result = client.get_member_contents()
-
-                assert result == []
+                with pytest.raises(Exception, match="State error"):
+                    client.get_member_contents()
 
                 mock_error.assert_called_with(
                     "Error while fetching member contents: State error"
                 )
+
+    def test_get_entities_api_failure_is_not_an_empty_result(
+        self, mock_opencti_helper, mock_config
+    ):
+        """A failing CATALYST API call must not look like 'no updated content'"""
+        mock_opencti_helper.get_state.return_value = None
+
+        with patch("catalyst.client_api.CatalystClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+            mock_client.get_updated_member_contents.side_effect = ConnectionError(
+                "CATALYST API unreachable"
+            )
+
+            client = ConnectorClient(mock_opencti_helper, mock_config)
+
+            with pytest.raises(ConnectionError, match="CATALYST API unreachable"):
+                client.get_entities()
+
+            mock_opencti_helper.connector_logger.error.assert_any_call(
+                "Error while fetching member contents: CATALYST API unreachable"
+            )
 
     def test_get_member_contents_processing_error(
         self, mock_opencti_helper, mock_config

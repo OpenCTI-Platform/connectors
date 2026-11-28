@@ -203,6 +203,34 @@ class TestCatalystConnector:
         # Verify error is logged
         mock_opencti_helper.connector_logger.error.assert_called_once_with("Test error")
 
+    def test_process_message_fetch_failure_keeps_state(self, mock_opencti_helper):
+        """A failed fetch must not advance last_run nor report a successful run"""
+        self.mock_helper = mock_opencti_helper
+        self.connector.helper = mock_opencti_helper
+
+        previous_state = {"last_run": "2023-01-01 00:00:00"}
+        mock_opencti_helper.get_state.return_value = previous_state
+
+        mock_work_id = "work-id-123"
+        mock_opencti_helper.api.work.initiate_work.return_value = mock_work_id
+
+        self.mock_client.get_entities.side_effect = ConnectionError(
+            "CATALYST API unreachable"
+        )
+
+        self.connector.process_message()
+
+        mock_opencti_helper.set_state.assert_not_called()
+        mock_opencti_helper.send_stix2_bundle.assert_not_called()
+        mock_opencti_helper.connector_logger.error.assert_called_once_with(
+            "CATALYST API unreachable"
+        )
+        mock_opencti_helper.api.work.to_processed.assert_called_once()
+        args, kwargs = mock_opencti_helper.api.work.to_processed.call_args
+        assert args[0] == mock_work_id
+        assert "CATALYST API unreachable" in args[1]
+        assert kwargs == {"in_error": True}
+
     def test_run(self, mock_config):
         """Test the run method using the mock_config fixture"""
         self.mock_config = mock_config
